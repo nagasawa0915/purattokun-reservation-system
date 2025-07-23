@@ -290,8 +290,10 @@ class SpineCharacterManager {
             // アセット読み込み
             await this.loadSpineAssets(character);
             
-            // DOM追加
-            container.appendChild(canvas);
+            // DOM追加：Canvasを.heroから独立させてbodyに直接追加
+            console.log('🔧 Moving canvas to body to escape .hero container constraints...');
+            document.body.appendChild(canvas);
+            console.log('✅ Canvas moved to body element (independent positioning)');
             
             // 既存のプレースホルダーを削除
             const existingChar = this.characters.get(name);
@@ -337,6 +339,39 @@ class SpineCharacterManager {
                     console.log(`   - left: ${config.canvas.style.left}`);
                     console.log(`   - top: ${config.canvas.style.top}`);
                     console.log(`   - transform: ${config.canvas.style.transform}`);
+                    
+                    // 詳細診断: 親要素の影響確認
+                    console.log('🔍 Parent element analysis:');
+                    let parent = config.canvas.parentElement;
+                    let level = 0;
+                    while (parent && level < 5) {
+                        const computedStyle = window.getComputedStyle(parent);
+                        console.log(`   Parent ${level}: ${parent.tagName.toLowerCase()}`);
+                        console.log(`     - position: ${computedStyle.position}`);
+                        console.log(`     - transform: ${computedStyle.transform}`);
+                        console.log(`     - contain: ${computedStyle.contain}`);
+                        console.log(`     - overflow: ${computedStyle.overflow}`);
+                        parent = parent.parentElement;
+                        level++;
+                    }
+                    
+                    // 実際の描画位置確認
+                    const rect = config.canvas.getBoundingClientRect();
+                    console.log('📐 Canvas actual screen position:');
+                    console.log(`   - Screen left: ${rect.left}px`);
+                    console.log(`   - Screen top: ${rect.top}px`);
+                    console.log(`   - Width: ${rect.width}px`);
+                    console.log(`   - Height: ${rect.height}px`);
+                    
+                    // ビューポートサイズと期待位置の計算
+                    const expectedLeft = (window.innerWidth * x) / 100;
+                    const expectedTop = (window.innerHeight * y) / 100;
+                    console.log('🎯 Expected vs Actual position:');
+                    console.log(`   - Expected left: ${expectedLeft}px (${x}vw)`);
+                    console.log(`   - Actual left: ${rect.left}px`);
+                    console.log(`   - Expected top: ${expectedTop}px (${y}vh)`);
+                    console.log(`   - Actual top: ${rect.top}px`);
+                    console.log(`   - Position matches: ${Math.abs(rect.left - expectedLeft) < 10 && Math.abs(rect.top - expectedTop) < 10}`);
                 }
             }
         } catch (assetError) {
