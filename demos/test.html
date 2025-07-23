@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>エフェクトテスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-section {
+            background: white;
+            padding: 50px;
+            margin: 50px 0;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            min-height: 300px;
+        }
+        .floating-test {
+            position: fixed;
+            font-size: 2rem;
+            z-index: 1000;
+            animation: testFloat 3s ease-out;
+        }
+        @keyframes testFloat {
+            0% { right: -50px; opacity: 1; }
+            100% { right: 100vw; opacity: 0; transform: rotate(360deg); }
+        }
+        .sparkle-test {
+            position: relative;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>エフェクトテスト</h1>
+    
+    <div class="test-section">
+        <h2>1. 浮遊エフェクト（右から左へ流れる）</h2>
+        <button onclick="testFloating()">浮遊エフェクトをテスト</button>
+        <p>ボタンを押すと猫の絵文字が右から左に流れます</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. キラキラエフェクト</h2>
+        <div class="sparkle-test" onmouseenter="testSparkles(this)">
+            この要素にマウスを乗せてください
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. マウストレイル（足跡）</h2>
+        <p>マウスを動かすと足跡が残ります</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. トリプルクリック（猫パレード）</h2>
+        <p>画面を素早く3回クリックしてください</p>
+    </div>
+    
+    <div class="test-section" style="height: 500px;">
+        <h2>5. スクロールエフェクト</h2>
+        <p>ページをスクロールしながら確認してください</p>
+    </div>
+
+    <script>
+        function testFloating() {
+            const elements = ['🐾', '🐱', '🏠', '❤️'];
+            const element = elements[Math.floor(Math.random() * elements.length)];
+            
+            const floatingEl = document.createElement('div');
+            floatingEl.textContent = element;
+            floatingEl.className = 'floating-test';
+            floatingEl.style.top = Math.random() * (window.innerHeight - 100) + 'px';
+            
+            document.body.appendChild(floatingEl);
+            
+            setTimeout(() => {
+                document.body.removeChild(floatingEl);
+            }, 3000);
+        }
+        
+        function testSparkles(element) {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('div');
+                    sparkle.textContent = '✨';
+                    sparkle.style.cssText = `
+                        position: absolute;
+                        font-size: 1.5rem;
+                        pointer-events: none;
+                        z-index: 100;
+                        left: ${Math.random() * element.offsetWidth}px;
+                        top: ${Math.random() * element.offsetHeight}px;
+                        opacity: 1;
+                        transition: all 1s ease-out;
+                    `;
+                    
+                    element.appendChild(sparkle);
+                    
+                    setTimeout(() => {
+                        sparkle.style.transform = 'translateY(-30px) scale(0)';
+                        sparkle.style.opacity = '0';
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        if (element.contains(sparkle)) {
+                            element.removeChild(sparkle);
+                        }
+                    }, 1100);
+                }, i * 200);
+            }
+        }
+        
+        // マウストレイル
+        document.addEventListener('mousemove', function(e) {
+            if (Math.random() > 0.95) {
+                const paw = document.createElement('div');
+                paw.textContent = '🐾';
+                paw.style.cssText = `
+                    position: fixed;
+                    left: ${e.clientX - 15}px;
+                    top: ${e.clientY - 15}px;
+                    font-size: 1.2rem;
+                    pointer-events: none;
+                    z-index: 1000;
+                    opacity: 0.7;
+                    transition: all 2s ease-out;
+                `;
+                
+                document.body.appendChild(paw);
+                
+                setTimeout(() => {
+                    paw.style.opacity = '0';
+                    paw.style.transform = 'scale(0.5)';
+                }, 100);
+                
+                setTimeout(() => {
+                    if (document.body.contains(paw)) {
+                        document.body.removeChild(paw);
+                    }
+                }, 2100);
+            }
+        });
+        
+        // トリプルクリック
+        let clickCount = 0;
+        let clickTimer;
+        
+        document.addEventListener('click', function(e) {
+            clickCount++;
+            
+            if (clickCount === 1) {
+                clickTimer = setTimeout(() => {
+                    clickCount = 0;
+                }, 1000);
+            } else if (clickCount === 3) {
+                clearTimeout(clickTimer);
+                clickCount = 0;
+                
+                // 猫パレード
+                const cats = ['🐱', '😺', '😸', '😹', '😻', '😽'];
+                
+                for (let i = 0; i < 6; i++) {
+                    setTimeout(() => {
+                        const cat = document.createElement('div');
+                        cat.textContent = cats[i];
+                        cat.style.cssText = `
+                            position: fixed;
+                            left: -50px;
+                            top: ${Math.random() * (window.innerHeight - 100) + 50}px;
+                            font-size: 2rem;
+                            pointer-events: none;
+                            z-index: 1001;
+                            transition: all 3s ease-out;
+                        `;
+                        
+                        document.body.appendChild(cat);
+                        
+                        setTimeout(() => {
+                            cat.style.left = window.innerWidth + 50 + 'px';
+                            cat.style.transform = 'rotate(360deg)';
+                        }, 100);
+                        
+                        setTimeout(() => {
+                            if (document.body.contains(cat)) {
+                                document.body.removeChild(cat);
+                            }
+                        }, 3100);
+                    }, i * 300);
+                }
+            }
+        });
+        
+        // スクロール時の浮遊エフェクト
+        window.addEventListener('scroll', function() {
+            if (Math.random() > 0.97) {
+                testFloating();
+            }
+        });
+    </script>
+</body>
+</html>

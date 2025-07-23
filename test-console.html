@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Spine 4.1.24 Test Console</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #222; color: #0f0; }
+        .log { margin: 5px 0; padding: 5px; background: #111; border-left: 3px solid #0f0; }
+        .error { border-left-color: #f00; color: #f00; }
+        .success { border-left-color: #0f0; color: #0f0; }
+        .info { border-left-color: #ff0; color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>🐱 Spine 4.1.24 動作テスト</h1>
+    <div id="logs"></div>
+    
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    <script>
+        const logs = document.getElementById('logs');
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(div);
+            console.log(message);
+        }
+        
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            addLog(args.join(' '), 'info');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addLog('❌ ' + args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        // Test Spine loading
+        addLog('🔧 Testing Spine WebGL 4.2.* with 4.1.24 data...');
+        
+        if (typeof spine !== 'undefined') {
+            addLog('✅ Spine WebGL loaded successfully from CDN', 'success');
+            addLog('🎯 Available classes: ' + Object.keys(spine).join(', '));
+            
+            // Test creating basic Spine components
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 400;
+                document.body.appendChild(canvas);
+                
+                const context = new spine.ManagedWebGLRenderingContext(canvas);
+                addLog('✅ ManagedWebGLRenderingContext created', 'success');
+                
+                const assetManager = new spine.AssetManager(context);
+                addLog('✅ AssetManager created', 'success');
+                
+                // Load Spine 4.1.24 data
+                assetManager.loadTextureAtlas('assets/spine/characters/purattokun/purattokun.atlas');
+                assetManager.loadText('assets/spine/characters/purattokun/purattokun.json');
+                
+                addLog('📁 Loading Spine 4.1.24 files...');
+                
+                function checkLoading() {
+                    if (assetManager.isLoadingComplete()) {
+                        addLog('✅ All assets loaded successfully!', 'success');
+                        
+                        try {
+                            const atlas = assetManager.require('assets/spine/characters/purattokun/purattokun.atlas');
+                            const skeletonJson = JSON.parse(assetManager.require('assets/spine/characters/purattokun/purattokun.json'));
+                            
+                            addLog(`📊 Spine version: ${skeletonJson.skeleton.spine}`, 'success');
+                            addLog(`🦴 Bones: ${skeletonJson.bones.length}`, 'info');
+                            addLog(`🎭 Animations: ${Object.keys(skeletonJson.animations).join(', ')}`, 'info');
+                            
+                            // Check for physics (should be empty in 4.1.24)
+                            if (skeletonJson.physicsConstraints) {
+                                addLog(`⚠️ Physics constraints found: ${skeletonJson.physicsConstraints.length}`, 'error');
+                            } else {
+                                addLog('✅ No physics constraints - 4.1.24 compatible!', 'success');
+                            }
+                            
+                            const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                            const skeletonLoader = new spine.SkeletonJson(atlasLoader);
+                            const skeletonData = skeletonLoader.readSkeletonData(skeletonJson);
+                            
+                            addLog('✅ SkeletonData created successfully', 'success');
+                            
+                            const skeleton = new spine.Skeleton(skeletonData);
+                            addLog('✅ Skeleton created successfully', 'success');
+                            
+                            // Test physics initialization (should not be needed for 4.1.24)
+                            if (skeleton.data.physicsConstraints) {
+                                addLog(`⚠️ Skeleton has physics constraints: ${skeleton.data.physicsConstraints.length}`, 'error');
+                            } else {
+                                addLog('✅ Skeleton has no physics constraints - perfect!', 'success');
+                            }
+                            
+                            skeleton.setToSetupPose();
+                            skeleton.updateWorldTransform();
+                            addLog('✅ Skeleton pose updated without physics errors!', 'success');
+                            
+                            const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                            addLog('✅ AnimationState created successfully', 'success');
+                            
+                            addLog('🎉 ALL TESTS PASSED - Spine 4.1.24 data is compatible!', 'success');
+                            
+                        } catch (error) {
+                            addLog(`❌ Error during skeleton creation: ${error.message}`, 'error');
+                            console.error('Full error:', error);
+                        }
+                        
+                    } else if (assetManager.hasErrors()) {
+                        addLog('❌ Asset loading failed', 'error');
+                        const errors = assetManager.getErrors();
+                        Object.keys(errors).forEach(path => {
+                            addLog(`❌ ${path}: ${errors[path]}`, 'error');
+                        });
+                    } else {
+                        setTimeout(checkLoading, 100);
+                    }
+                }
+                
+                setTimeout(checkLoading, 100);
+                
+            } catch (error) {
+                addLog(`❌ Canvas/Context error: ${error.message}`, 'error');
+            }
+            
+        } else {
+            addLog('❌ Spine WebGL not loaded', 'error');
+        }
+        
+    </script>
+</body>
+</html>

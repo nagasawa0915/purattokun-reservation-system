@@ -1,0 +1,12 @@
+demo.png
+size: 128,128
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+demo
+  rotate: false
+  xy: 14, 14
+  size: 100, 100
+  orig: 100, 100
+  offset: 0, 0
+  index: -1

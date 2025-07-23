@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas読み込みテスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #ff5252;
+        }
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Spine Atlas読み込み問題 診断ツール</h1>
+    
+    <div class="test-section">
+        <h2>📊 ファイルアクセステスト</h2>
+        <button onclick="testDirectAccess()">直接アクセステスト</button>
+        <button onclick="testMimeTypes()">MIMEタイプチェック</button>
+        <button onclick="testAlternativeExtensions()">代替拡張子テスト</button>
+        <button onclick="clearLog()">ログクリア</button>
+        
+        <div id="results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 ログ出力</h2>
+        <div id="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>💡 解決策ガイド</h2>
+        <div class="info">
+            <h3>🚨 Atlas読み込み404エラーの解決方法:</h3>
+            <ol>
+                <li><strong>カスタムサーバー使用</strong>: <code>python server.py</code></li>
+                <li><strong>NPX Serve使用</strong>: <code>npx serve .</code></li>
+                <li><strong>ファイル拡張子変更</strong>: .atlas → .txt にリネーム</li>
+                <li><strong>ブラウザ直接確認</strong>: <a href="assets/spine/characters/purattokun/purattokun.atlas" target="_blank">Atlas file direct access</a></li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const results = document.getElementById('results');
+
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.textContent += `[${timestamp}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function addResult(type, message) {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        function clearLog() {
+            log.textContent = '';
+            results.innerHTML = '';
+        }
+
+        async function testDirectAccess() {
+            addLog('🔍 開始: 直接アクセステスト');
+            
+            const files = [
+                'assets/spine/characters/purattokun/purattokun.json',
+                'assets/spine/characters/purattokun/purattokun.atlas',
+                'assets/spine/characters/purattokun/purattokun.png'
+            ];
+
+            for (const file of files) {
+                try {
+                    addLog(`📡 Testing: ${file}`);
+                    const response = await fetch(file);
+                    
+                    if (response.ok) {
+                        addLog(`✅ ${file}: ${response.status} OK`);
+                        addLog(`   Content-Type: ${response.headers.get('content-type')}`);
+                        addLog(`   Content-Length: ${response.headers.get('content-length')}`);
+                        addResult('success', `✅ ${file.split('/').pop()}: 読み込み成功`);
+                    } else {
+                        addLog(`❌ ${file}: ${response.status} ${response.statusText}`);
+                        addResult('error', `❌ ${file.split('/').pop()}: ${response.status} エラー`);
+                    }
+                } catch (error) {
+                    addLog(`❌ ${file}: ${error.message}`);
+                    addResult('error', `❌ ${file.split('/').pop()}: ${error.message}`);
+                }
+            }
+        }
+
+        async function testMimeTypes() {
+            addLog('🔍 開始: MIMEタイプ分析');
+            
+            try {
+                const response = await fetch('assets/spine/characters/purattokun/purattokun.atlas');
+                const contentType = response.headers.get('content-type');
+                
+                addLog(`📋 Atlas MIMEタイプ: ${contentType}`);
+                
+                if (!contentType || contentType === 'application/octet-stream') {
+                    addResult('error', '⚠️ MIMEタイプ問題: サーバーが.atlasを認識していません');
+                    addLog('💡 解決策: python server.py を使用してください');
+                } else if (contentType.includes('text')) {
+                    addResult('success', '✅ MIMEタイプ: テキストとして認識されています');
+                } else {
+                    addResult('info', `ℹ️ MIMEタイプ: ${contentType}`);
+                }
+            } catch (error) {
+                addLog(`❌ MIMEタイプテスト失敗: ${error.message}`);
+                addResult('error', 'ファイルアクセスに失敗しました');
+            }
+        }
+
+        async function testAlternativeExtensions() {
+            addLog('🔍 開始: 代替拡張子テスト');
+            
+            // .atlasファイルの内容を読み取って .txtとして保存をシミュレート
+            try {
+                const response = await fetch('assets/spine/characters/purattokun/purattokun.atlas');
+                if (response.ok) {
+                    const content = await response.text();
+                    addLog('✅ Atlas内容読み取り成功');
+                    addLog(`📄 Atlas内容プレビュー:\n${content.substring(0, 200)}...`);
+                    
+                    // ファイルサイズ確認
+                    const size = content.length;
+                    addLog(`📏 Atlas ファイルサイズ: ${size} 文字`);
+                    
+                    if (size < 100) {
+                        addResult('error', '⚠️ Atlasファイルが小さすぎます（破損の可能性）');
+                    } else {
+                        addResult('success', '✅ Atlasファイルの内容は正常です');
+                        addResult('info', '💡 .atlasを.txtにリネームすると読み込める可能性があります');
+                    }
+                } else {
+                    addResult('error', 'Atlasファイルにアクセスできません');
+                }
+            } catch (error) {
+                addLog(`❌ 代替拡張子テスト失敗: ${error.message}`);
+            }
+        }
+
+        // ページ読み込み時に自動テスト実行
+        window.addEventListener('load', () => {
+            addLog('🚀 Atlas診断ツール起動');
+            addLog('💡 各ボタンをクリックして問題を診断してください');
+        });
+    </script>
+</body>
+</html>

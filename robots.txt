@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# 重要なページを特別に指定
+Allow: /index.html
+Allow: /assets/css/styles.css
+Allow: /assets/js/script.js
+Allow: /assets/images/
+
+# デバッグページは検索エンジンから除外
+Disallow: /demos/
+
+# サイトマップの場所を指定
+Sitemap: https://necooya.com/sitemap.xml
+
+# クローラーの遅延設定（サーバー負荷軽減）
+Crawl-delay: 1

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スクロール連動デモ - 動作確認版</title>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #fafafa;
+        }
+
+        /* ヘッダー */
+        .navbar {
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+        }
+
+        .logo h1 {
+            color: #ff6b6b;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        /* ヒーロー */
+        .hero {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+            padding: 120px 20px 80px;
+            min-height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .demo-section {
+            padding: 80px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .demo-section h2 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+
+        /* スクロール連動カード */
+        .scroll-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .scroll-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* 初期状態：非表示 */
+            opacity: 0;
+            transform: translateY(50px) scale(0.9);
+        }
+
+        /* アニメーション発動時 */
+        .scroll-card.animate {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .scroll-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(255, 107, 107, 0.2);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* 左右スライド要素 */
+        .slide-demo {
+            display: flex;
+            gap: 3rem;
+            align-items: center;
+            margin: 4rem 0;
+        }
+
+        .slide-left {
+            flex: 1;
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: all 0.8s ease-out;
+        }
+
+        .slide-left.animate {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .slide-right {
+            flex: 1;
+            opacity: 0;
+            transform: translateX(50px);
+            transition: all 0.8s ease-out 0.3s;
+        }
+
+        .slide-right.animate {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* デバッグ情報 */
+        .debug-info {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1001;
+        }
+
+        /* 高さ確保用 */
+        .spacer {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-info" id="debugInfo">
+        スクロール位置: <span id="scrollPos">0</span>px<br>
+        アニメーション発動: <span id="animCount">0</span>個<br>
+        浮遊要素: <span id="floatCount">0</span>個
+    </div>
+
+    <header>
+        <nav class="navbar" id="navbar">
+            <div class="nav-container">
+                <div class="logo">
+                    <h1>🐱 デモサイト</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero" id="hero">
+            <div class="hero-content">
+                <h2>スクロール連動デモ</h2>
+                <p>下にスクロールして各エフェクトを確認してください</p>
+            </div>
+        </section>
+
+        <section class="demo-section">
+            <h2>1. カードのフェードイン（順次表示）</h2>
+            <div class="scroll-cards">
+                <div class="scroll-card">
+                    <div class="card-icon">🏠</div>
+                    <h3>カード1</h3>
+                    <p>最初に表示されるカード</p>
+                </div>
+                <div class="scroll-card">
+                    <div class="card-icon">🔧</div>
+                    <h3>カード2</h3>
+                    <p>少し遅れて表示</p>
+                </div>
+                <div class="scroll-card">
+                    <div class="card-icon">🏢</div>
+                    <h3>カード3</h3>
+                    <p>さらに遅れて表示</p>
+                </div>
+                <div class="scroll-card">
+                    <div class="card-icon">💡</div>
+                    <h3>カード4</h3>
+                    <p>最後に表示されるカード</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="spacer">スクロールして次のエフェクトへ ↓</div>
+
+        <section class="demo-section">
+            <h2>2. 左右スライドイン</h2>
+            <div class="slide-demo">
+                <div class="slide-left">
+                    <h3>左からスライド</h3>
+                    <p>この要素は左側から滑り込んで表示されます。アニメーションの遅延によって自然な動きを演出しています。</p>
+                </div>
+                <div class="slide-right">
+                    <h3>右からスライド</h3>
+                    <p>この要素は右側から滑り込んで表示されます。少し遅れて表示されることで、視線の流れを作ります。</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="spacer">スクロールで浮遊要素が流れます 🐾</div>
+
+        <section class="demo-section">
+            <h2>3. 追加のカード群</h2>
+            <div class="scroll-cards">
+                <div class="scroll-card">
+                    <div class="card-icon">🐾</div>
+                    <h3>エフェクト5</h3>
+                    <p>さらにスクロールすると表示</p>
+                </div>
+                <div class="scroll-card">
+                    <div class="card-icon">🐱</div>
+                    <h3>エフェクト6</h3>
+                    <p>順次アニメーション</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="spacer">最後まで確認完了！</div>
+    </main>
+
+    <script>
+        // デバッグ情報更新
+        let animationCount = 0;
+        let floatingCount = 0;
+
+        function updateDebugInfo(scrollPos) {
+            document.getElementById('scrollPos').textContent = Math.round(scrollPos);
+            document.getElementById('animCount').textContent = animationCount;
+            document.getElementById('floatCount').textContent = floatingCount;
+        }
+
+        // スクロール連動アニメーション
+        document.addEventListener('DOMContentLoaded', function() {
+            const hero = document.getElementById('hero');
+            const navbar = document.getElementById('navbar');
+
+            // IntersectionObserver の設定
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const animationObserver = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        if (entry.target.classList.contains('scroll-card')) {
+                            // カードは順次表示（遅延付き）
+                            const cards = document.querySelectorAll('.scroll-card');
+                            const index = Array.from(cards).indexOf(entry.target);
+                            setTimeout(() => {
+                                entry.target.classList.add('animate');
+                                animationCount++;
+                                console.log(`カード${index + 1}がアニメーション開始`);
+                            }, index * 150);
+                        } else {
+                            // その他の要素は即座に表示
+                            entry.target.classList.add('animate');
+                            animationCount++;
+                            console.log('要素がアニメーション開始:', entry.target.className);
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            // 監視対象要素の登録
+            const scrollCards = document.querySelectorAll('.scroll-card');
+            const slideLeft = document.querySelector('.slide-left');
+            const slideRight = document.querySelector('.slide-right');
+
+            scrollCards.forEach((card, index) => {
+                animationObserver.observe(card);
+                console.log(`カード${index + 1}を監視対象に登録`);
+            });
+
+            if (slideLeft) {
+                animationObserver.observe(slideLeft);
+                console.log('左スライド要素を監視対象に登録');
+            }
+            if (slideRight) {
+                animationObserver.observe(slideRight);
+                console.log('右スライド要素を監視対象に登録');
+            }
+
+            // スクロール効果
+            let ticking = false;
+
+            function updateOnScroll() {
+                const scrolled = window.pageYOffset;
+                updateDebugInfo(scrolled);
+
+                // パララックス効果
+                if (hero) {
+                    const rate = scrolled * -0.3;
+                    hero.style.transform = `translateY(${rate}px)`;
+                }
+
+                // ヘッダー背景変化
+                if (scrolled > 100) {
+                    navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+                    navbar.style.backdropFilter = 'blur(10px)';
+                } else {
+                    navbar.style.background = '#fff';
+                    navbar.style.backdropFilter = 'none';
+                }
+
+                // 浮遊要素の生成
+                createFloatingElements(scrolled);
+
+                ticking = false;
+            }
+
+            function createFloatingElements(scrollY) {
+                if (Math.random() > 0.95 && scrollY > 200) {
+                    const elements = ['🐾', '🐱', '🏠', '❤️'];
+                    const element = elements[Math.floor(Math.random() * elements.length)];
+                    
+                    floatingCount++;
+                    console.log('浮遊要素を作成:', element);
+
+                    const floatingEl = document.createElement('div');
+                    floatingEl.textContent = element;
+                    floatingEl.style.cssText = `
+                        position: fixed;
+                        right: -50px;
+                        top: ${Math.random() * (window.innerHeight - 100)}px;
+                        font-size: ${1.5 + Math.random() * 1.5}rem;
+                        opacity: 0.8;
+                        pointer-events: none;
+                        z-index: 999;
+                        transition: all 4s ease-out;
+                        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+                    `;
+
+                    document.body.appendChild(floatingEl);
+
+                    setTimeout(() => {
+                        floatingEl.style.right = (window.innerWidth + 100) + 'px';
+                        floatingEl.style.transform = 'rotate(360deg) scale(1.2)';
+                        floatingEl.style.opacity = '0';
+                    }, 100);
+
+                    setTimeout(() => {
+                        if (document.body.contains(floatingEl)) {
+                            document.body.removeChild(floatingEl);
+                        }
+                    }, 4100);
+                }
+            }
+
+            function requestTick() {
+                if (!ticking) {
+                    requestAnimationFrame(updateOnScroll);
+                    ticking = true;
+                }
+            }
+
+            window.addEventListener('scroll', requestTick);
+
+            // 初期デバッグ情報表示
+            updateDebugInfo(0);
+            console.log('スクロール連動デモが初期化されました');
+        });
+    </script>
+</body>
+</html>
