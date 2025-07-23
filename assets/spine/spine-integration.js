@@ -1150,27 +1150,27 @@ class SpineCharacterManager {
     }
 
     /**
-     * キャラクター位置設定（スケール調整対応）
+     * キャラクター位置設定（レスポンシブパーセンテージベース）
      */
     setPosition(characterName, x, y, scale = 1.0) {
         const character = this.characters.get(characterName);
         if (!character) return;
 
-        // 実際のSpineキャラクターの位置設定
+        // 実際のSpineキャラクターの位置設定（パーセンテージベース）
         if (character.canvas) {
-            character.canvas.style.left = x + 'px';
-            character.canvas.style.top = y + 'px';
+            character.canvas.style.left = x + '%';
+            character.canvas.style.top = y + '%';
             character.canvas.style.transform = `scale(${scale})`;
             character.canvas.style.transformOrigin = '0 0'; // 左上を基準にスケール
             character.canvas.style.opacity = '0'; // 初期状態は透明
             
-            console.log(`📍 Character ${characterName} positioned at (${x}, ${y}) with scale ${scale} (initially invisible)`);
+            console.log(`📍 Character ${characterName} positioned at (${x}%, ${y}%) with scale ${scale} (responsive positioning)`);
         }
         
-        // プレースホルダーの位置設定
+        // プレースホルダーの位置設定（パーセンテージベース）
         if (character.placeholder) {
-            character.placeholder.style.left = x + 'px';
-            character.placeholder.style.top = y + 'px';
+            character.placeholder.style.left = x + '%';
+            character.placeholder.style.top = y + '%';
             character.placeholder.style.transform = `scale(${scale})`;
             character.placeholder.style.transformOrigin = '0 0';
             character.placeholder.style.opacity = '0'; // 初期状態は透明
@@ -1213,22 +1213,22 @@ class SpineCharacterManager {
     }
 
     /**
-     * キャラクター位置をアニメーション付きで移動（出現演出用）
+     * キャラクター位置をアニメーション付きで移動（出現演出用・レスポンシブ対応）
      */
     animateToPosition(characterName, fromX, fromY, toX, toY, scale = 1.0, duration = 2000, opacity = true) {
         const character = this.characters.get(characterName);
         if (!character) return;
 
-        console.log(`🎭 Starting animated positioning for ${characterName}: (${fromX}, ${fromY}) → (${toX}, ${toY})`);
+        console.log(`🎭 Starting animated positioning for ${characterName}: (${fromX}%, ${fromY}%) → (${toX}%, ${toY}%)`);
 
         const elements = [];
         if (character.canvas) elements.push(character.canvas);
         if (character.placeholder) elements.push(character.placeholder);
 
         elements.forEach(element => {
-            // 初期位置設定
-            element.style.left = fromX + 'px';
-            element.style.top = fromY + 'px';
+            // 初期位置設定（パーセンテージベース）
+            element.style.left = fromX + '%';
+            element.style.top = fromY + '%';
             element.style.transform = `scale(${scale})`;
             element.style.transformOrigin = '0 0';
             
@@ -1241,18 +1241,18 @@ class SpineCharacterManager {
 
             // 少し遅延してから最終位置へアニメーション
             setTimeout(() => {
-                element.style.left = toX + 'px';
-                element.style.top = toY + 'px';
+                element.style.left = toX + '%';
+                element.style.top = toY + '%';
                 if (opacity) {
                     element.style.opacity = '1'; // フェードイン
                 }
-                console.log(`✨ Animation started for ${characterName}`);
+                console.log(`✨ Animation started for ${characterName} (responsive positioning)`);
             }, 100); // 100ms遅延でスムーズなアニメーション開始
         });
 
         // アニメーション完了時のコールバック
         setTimeout(() => {
-            console.log(`🎯 Animation completed for ${characterName} at (${toX}, ${toY})`);
+            console.log(`🎯 Animation completed for ${characterName} at (${toX}%, ${toY}%)`);
             
             // transitionを削除（後続の位置変更で不要なアニメーションを避ける）
             elements.forEach(element => {
