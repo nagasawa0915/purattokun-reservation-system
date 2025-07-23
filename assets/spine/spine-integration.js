@@ -301,7 +301,6 @@ class SpineCharacterManager {
             
             // 新しいSpineキャラクターに置き換え
             this.characters.set(name, character);
-            this.updateDebugInfo();
             
             console.log(`🎉 Successfully upgraded ${name} to Spine WebGL`);
         } catch (assetError) {
@@ -921,7 +920,6 @@ class SpineCharacterManager {
         };
 
         this.characters.set(name, character);
-        this.updateDebugInfo();
         
         console.log(`📝 Character ${name} loaded (placeholder mode)`);
         if (errorDetails) {
@@ -1024,6 +1022,77 @@ class SpineCharacterManager {
             }, 100);
             console.log(`📝 Placeholder animation: ${animationName} on ${characterName}`);
         }
+    }
+
+    /**
+     * クリック時の出現アニメーション再生（リプレイ機能）
+     */
+    replayEntranceAnimation(characterName) {
+        const character = this.characters.get(characterName);
+        if (!character) {
+            console.warn(`❌ Character ${characterName} not found for replay animation`);
+            return;
+        }
+
+        console.log(`🎭 Replaying entrance animation for ${characterName} (user clicked)`);
+
+        // 一度透明にしてから再度フェードイン + アニメーション
+        const elements = [];
+        if (character.canvas) elements.push(character.canvas);
+        if (character.placeholder) elements.push(character.placeholder);
+
+        // 瞬間的に透明にする
+        elements.forEach(element => {
+            element.style.transition = 'opacity 0.2s ease-out';
+            element.style.opacity = '0';
+        });
+
+        // 少し遅延してから再出現
+        setTimeout(() => {
+            elements.forEach(element => {
+                element.style.transition = 'opacity 1.5s ease-out';
+                element.style.opacity = '1';
+            });
+
+            // 出現アニメーションを再生
+            this.playSequenceAnimation(characterName);
+            console.log(`✨ Entrance animation replay started for ${characterName}`);
+        }, 300);
+
+        // transition削除
+        setTimeout(() => {
+            elements.forEach(element => {
+                element.style.transition = '';
+            });
+        }, 2000);
+    }
+
+    /**
+     * キャラクターにクリックイベントを追加
+     */
+    addClickInteraction(characterName) {
+        const character = this.characters.get(characterName);
+        if (!character) return;
+
+        const addClickHandler = (element) => {
+            if (!element) return;
+            
+            element.style.cursor = 'pointer';
+            element.style.pointerEvents = 'auto'; // クリックを有効化
+            
+            element.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                console.log(`👆 User clicked on ${characterName}`);
+                this.replayEntranceAnimation(characterName);
+            });
+
+            console.log(`🖱️ Click interaction added to ${characterName}`);
+        };
+
+        // Spineキャラクターとプレースホルダー両方にクリック機能を追加
+        if (character.canvas) addClickHandler(character.canvas);
+        if (character.placeholder) addClickHandler(character.placeholder);
     }
 
     /**
@@ -1192,43 +1261,6 @@ class SpineCharacterManager {
         }, duration + 200);
     }
 
-    /**
-     * デバッグ情報更新 - 修正されたPurattokunデータ用強化版
-     */
-    updateDebugInfo() {
-        const debugPanel = document.getElementById('debugPanel');
-        if (!debugPanel) return;
-
-        let spineInfo = debugPanel.querySelector('.spine-debug');
-        if (!spineInfo) {
-            spineInfo = document.createElement('div');
-            spineInfo.className = 'spine-debug debug-line';
-            debugPanel.appendChild(spineInfo);
-        }
-
-        // 詳細な状況表示
-        let statusText = `Spineキャラ: <span>${this.characters.size}</span>個`;
-        
-        // 各キャラクターの詳細状況
-        this.characters.forEach((character, name) => {
-            if (character.isLoaded) {
-                statusText += ` | ${name}: ✅WebGL`;
-            } else {
-                statusText += ` | ${name}: 📝Placeholder`;
-            }
-        });
-        
-        // Purattokunの特別な状況表示
-        const purattokun = this.characters.get('purattokun');
-        if (purattokun) {
-            statusText += `<br>🐱 Purattokun: ${purattokun.isLoaded ? '✅動作中' : '📝プレースホルダー'}`;
-            if (purattokun.path) {
-                statusText += ` (修正データ)`;
-            }
-        }
-
-        spineInfo.innerHTML = statusText;
-    }
 
     /**
      * 全キャラクター削除
@@ -1240,7 +1272,6 @@ class SpineCharacterManager {
             }
         });
         this.characters.clear();
-        this.updateDebugInfo();
     }
 }
 

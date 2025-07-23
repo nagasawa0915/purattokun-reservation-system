@@ -84,6 +84,18 @@ python -m http.server 8000
 npx serve . -p 8000
 ```
 
+### Git/GitHub管理
+```bash
+# 変更をコミット・プッシュ
+git add .
+git commit -m "変更内容の説明"
+git push
+
+# リポジトリ状況確認
+git status
+git log --oneline
+```
+
 ### Atlas読み込み問題の診断
 ```bash
 # 診断ツールでSpineファイルの読み込み状況を確認

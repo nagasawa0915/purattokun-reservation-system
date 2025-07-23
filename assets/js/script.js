@@ -36,34 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return config;
     }
 
-    // デバッグパネル要素
-    const debugPanel = document.getElementById('debugPanel');
-    const scrollPosition = document.getElementById('scrollPosition');
-    const cardCount = document.getElementById('cardCount');
-    const floatingElements = document.getElementById('floatingElements');
-    const conceptStatus = document.getElementById('conceptStatus');
-    const spineStatus = document.getElementById('spineStatus');
-
-    // デバッグパネルの非表示機能
-    if (debugPanel) {
-        debugPanel.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            this.style.display = 'none';
-        });
-    }
-
-    // デバッグ情報更新関数
-    function updateDebugInfo(scrollY) {
-        if (scrollPosition) scrollPosition.textContent = Math.round(scrollY);
-        if (cardCount) cardCount.textContent = animatedCards;
-        if (floatingElements) floatingElements.textContent = floatingElementsCount;
-        if (conceptStatus) conceptStatus.textContent = conceptAnimated ? '表示済み' : '待機中';
-    }
-    
-    // Spine ステータス更新関数
-    function updateSpineStatus(status) {
-        if (spineStatus) spineStatus.textContent = status;
-    }
+    // デバッグ関連は削除済み
 
     // ヒーローセクションのパララックス効果
     const hero = document.querySelector('.hero');
@@ -89,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         entry.target.classList.add('animate');
                         animatedCards++;
                         console.log(`サービスカード${index + 1}がアニメーション開始`);
-                        updateDebugInfo(window.pageYOffset);
+                        (window.pageYOffset);
                     }, index * 150);
                 } else if (entry.target.classList.contains('concept-text') || 
                           entry.target.classList.contains('concept-image')) {
@@ -97,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     entry.target.classList.add('animate');
                     conceptAnimated = true;
                     console.log('コンセプト要素がアニメーション開始:', entry.target.className);
-                    updateDebugInfo(window.pageYOffset);
+                    (window.pageYOffset);
                 } else {
                     entry.target.classList.add('animate');
                     console.log('要素がアニメーション開始:', entry.target.className);
@@ -181,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const rate = scrolled * -0.5;
         
         // デバッグ情報更新
-        updateDebugInfo(scrolled);
+        (scrolled);
         
         // ヒーローセクションのパララックス効果
         if (hero) {
@@ -449,13 +422,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Spine統合の初期化
-    updateSpineStatus('初期化中...');
+    console.log('🔧 Spine統合システム初期化中...');
     
     if (window.spineManager) {
         spineManager.init().then(success => {
             if (success) {
                 console.log('🎯 Spine WebGL ready - setting up Purattokun with 4.1.24 data');
-                updateSpineStatus('WebGL準備完了');
+                console.log('✅ WebGL準備完了');
                 
                 const heroSection = document.querySelector('.hero');
                 if (heroSection) {
@@ -463,7 +436,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('📁 Path: assets/spine/characters/purattokun/');
                     console.log('🆕 Using Spine 4.1.24 data (physics-free)');
                     
-                    updateSpineStatus('ぷらっとくん読み込み中...');
+                    console.log('🐱 ぷらっとくん読み込み中...');
                     
                     // プラットくんを読み込み（お店の裏側から出現演出付き）
                     spineManager.loadCharacter('purattokun', 'assets/spine/characters/purattokun/', heroSection);
@@ -479,12 +452,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log(`📍 Fixed position: (${entranceConfig.x}, ${entranceConfig.y}) scale: ${entranceConfig.scale}`);
                     
                     // キャラクター数をデバッグ表示に反映
-                    updateSpineStatus('ぷらっとくん(4.1.24)配置完了');
+                    console.log('📍 ぷらっとくん(4.1.24)配置完了');
                     
                     // 透明度でのフェードイン演出開始
                     setTimeout(() => {
                         console.log('🎭 Starting fade-in entrance for Purattokun (no movement)');
-                        updateSpineStatus('ぷらっとくん出現中...');
+                        console.log('✨ ぷらっとくん出現中...');
                         
                         // 透明度のみのフェードイン演出
                         spineManager.fadeInCharacter('purattokun', entranceConfig.fadeDuration);
@@ -494,8 +467,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.log('🎬 Starting Purattokun Spine sequence: syutugen → taiki loop');
                             console.log('🔧 Using physics-free Spine 4.1.24 data');
                             spineManager.playSequenceAnimation('purattokun');
-                            updateSpineStatus('ぷらっとくんアニメーション実行中');
+                            console.log('🎬 ぷらっとくんアニメーション実行中');
                             console.log('✨ Purattokun fade-in complete with sequence animation');
+                            
+                            // クリック機能を有効化（アニメーション開始後）
+                            setTimeout(() => {
+                                spineManager.addClickInteraction('purattokun');
+                                console.log('🖱️ Purattokun click interaction enabled');
+                            }, 1000); // さらに1秒後にクリック機能有効化
                         }, 300); // 0.3秒後にSpineアニメーション開始
                         
                     }, entranceConfig.fadeDelay); // 設定した遅延後に演出開始
@@ -515,12 +494,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 console.log('⏳ Spine WebGL not ready, using placeholder mode');
-                updateSpineStatus('📝Placeholder');
+                console.log('📝 Spine読み込み失敗 - プレースホルダーモード');
             }
         });
     } else {
         console.log('❌ spineManager not found');
-        updateSpineStatus('❌読み込み失敗');
+        console.log('❌ SpineManager読み込み失敗');
     }
 
     // 初期化完了ログとデバッグ情報の初期表示
@@ -548,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('');
     console.log('🛠️ 変更方法: index.htmlのdata-*属性の数値を変更してリロード');
     
-    updateDebugInfo(0);
+    (0);
 });
 
 // メールアドレス検証のヘルパー関数
