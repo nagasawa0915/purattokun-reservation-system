@@ -1,6 +1,6 @@
 // 高度なスクロールアニメーションとエフェクト - 完全統合版
 document.addEventListener('DOMContentLoaded', function() {
-    // デバッグ用変数
+    // アニメーション管理用変数
     let animatedCards = 0;
     let floatingElementsCount = 0;
     let conceptAnimated = false;
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return config;
     }
 
-    // デバッグ関連は削除済み
+    // スクロール連動アニメーション設定読み込み完了
 
     // ヒーローセクションのパララックス効果
     const hero = document.querySelector('.hero');
@@ -153,8 +153,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const scrolled = window.pageYOffset;
         const rate = scrolled * -0.5;
         
-        // デバッグ情報更新
-        (scrolled);
+        // スクロール位置処理
+        // scrolled position: updated
         
         // ヒーローセクションのパララックス効果
         if (hero) {
@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     console.log(`📍 Viewport position: (${entranceConfig.x}vw, ${entranceConfig.y}vh) scale: ${entranceConfig.scale}`);
                     
-                    // キャラクター数をデバッグ表示に反映
+                    // キャラクター配置完了
                     console.log('📍 ぷらっとくん(4.1.24)配置完了');
                     
                     // 透明度でのフェードイン演出開始
@@ -502,12 +502,12 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('❌ SpineManager読み込み失敗');
     }
 
-    // 初期化完了ログとデバッグ情報の初期表示
+    // 初期化完了ログと状況表示
     console.log('🐱 ネコヤサイト - スクロール連動機能初期化完了');
     console.log('- サービスカード:', serviceCards.length, '個を監視');
     console.log('- コンセプト要素:', conceptText ? 'あり' : 'なし', conceptImage ? 'あり' : 'なし');
     console.log('- Spine統合:', window.spineManager ? '有効' : '無効');
-    console.log('右上のデバッグパネルで動作確認できます');
+    console.log('コンソールで動作確認できます');
     console.log('');
     console.log('🎭 ぷらっとくん設定ガイド (HTML制御対応):');
     console.log('✅ 設定はindex.html内の #purattokun-config で変更可能');
