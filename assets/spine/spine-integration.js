@@ -290,10 +290,16 @@ class SpineCharacterManager {
             // アセット読み込み
             await this.loadSpineAssets(character);
             
-            // DOM追加：Canvasを.heroから独立させてbodyに直接追加
-            console.log('🔧 Moving canvas to body to escape .hero container constraints...');
-            document.body.appendChild(canvas);
-            console.log('✅ Canvas moved to body element (independent positioning)');
+            // DOM追加：Canvasをheroセクション内に配置（背景画像と同期）
+            console.log('🔧 Adding canvas to hero section for background synchronization...');
+            const heroSection = document.querySelector('.hero');
+            if (heroSection) {
+                heroSection.appendChild(canvas);
+                console.log('✅ Canvas added to hero section (background-synchronized positioning)');
+            } else {
+                console.warn('⚠️ Hero section not found, falling back to body');
+                document.body.appendChild(canvas);
+            }
             
             // 既存のプレースホルダーを削除
             const existingChar = this.characters.get(name);
@@ -324,13 +330,14 @@ class SpineCharacterManager {
                     const scale = parseFloat(configElement.dataset.scale) || 0.25;
                     
                     console.log('🔧 Re-applying position settings...');
-                    console.log(`   - Target: (${x}vw, ${y}vh) scale: ${scale}`);
+                    console.log(`   - Target: (${x}%, ${y}%) scale: ${scale}`);
                     
-                    // 背景画像同期位置設定（スクロール連動）
+                    console.log('✅ Applying position correction for scale-based system');
+                    // ヒーローセクション基準の相対位置設定
                     config.canvas.style.setProperty('position', 'absolute', 'important');
-                    config.canvas.style.setProperty('left', x + 'vw', 'important');
-                    config.canvas.style.setProperty('top', y + 'vh', 'important');
-                    config.canvas.style.transform = `scale(${scale})`;
+                    config.canvas.style.setProperty('left', x + '%', 'important');
+                    config.canvas.style.setProperty('top', y + '%', 'important');
+                    config.canvas.style.setProperty('transform', `translate(-50%, -50%) scale(${scale})`, 'important');
                     config.canvas.style.transformOrigin = '0 0';
                     config.canvas.style.zIndex = '10';
                     
@@ -396,13 +403,35 @@ class SpineCharacterManager {
         
         try {
             // ファイル名の推定（修正されたpurattokunデータ用）
-            // キャッシュバスティングは一旦無効化してテスト
-            const jsonPath = `${path}${name}.json`;
-            const atlasPath = `${path}${name}.atlas`;
+            // 🔧 開発時キャッシュバスティング機能（localhost検出時のみ有効）
+            const isDevelopment = window.location.hostname === 'localhost' || 
+                                 window.location.hostname === '127.0.0.1' || 
+                                 window.location.port === '8000';
             
-            console.log('🔧 Updated for corrected purattokun data (n-count fixed)');
+            const cacheBuster = isDevelopment ? `?t=${Date.now()}` : '';
+            const jsonPath = `${path}${name}.json${cacheBuster}`;
+            const atlasPath = `${path}${name}.atlas${cacheBuster}`;
             
-            console.log(`📁 Loading Spine assets (no cache busting):`, { jsonPath, atlasPath });
+            console.log('🔧 Smart cache busting system activated');
+            console.log(`   Development mode: ${isDevelopment}`);
+            console.log(`   Cache buster: ${cacheBuster || 'disabled (production)'}`);
+            
+            console.log(`📁 Loading Spine assets:`, { jsonPath, atlasPath });
+            
+            // 読み込み時のパスをキャラクターオブジェクトに保存（後で取得時に使用）
+            character.actualJsonPath = jsonPath;
+            character.actualAtlasPath = atlasPath;
+            
+            if (isDevelopment && cacheBuster) {
+                console.log('💡 Cache busting active - fresh Spine data will be loaded');
+                console.log('🔄 If you updated Spine files, this prevents cache issues');
+                console.log('');
+                console.log('🔧 DEVELOPER TIP: If character parts are missing after Spine data update:');
+                console.log('   1. Try hard refresh: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)');
+                console.log('   2. Clear browser cache: Shift+Ctrl+Delete');
+                console.log('   3. Check browser Network tab for 304 responses (cached files)');
+                console.log('');
+            }
             
             // パス検証 + 直接アクセステスト
             console.log('🔍 Path verification:');
@@ -745,14 +774,58 @@ class SpineCharacterManager {
             const atlasPath = `${character.path}${character.name}.atlas`;
             const jsonPath = `${character.path}${character.name}.json`;
             
-            const atlas = assetManager.get(atlasPath);
-            const skeletonJson = assetManager.get(jsonPath);
+            // 🔍 読み込み時に保存された実際のパスを使用
+            const actualAtlasPath = character.actualAtlasPath || atlasPath;
+            const actualJsonPath = character.actualJsonPath || jsonPath;
             
+            console.log('📋 AssetManager path resolution:');
+            console.log('   Basic atlas path:', atlasPath);
+            console.log('   Stored atlas path:', character.actualAtlasPath);
+            console.log('   Using atlas path:', actualAtlasPath);
+            console.log('   Basic JSON path:', jsonPath);
+            console.log('   Stored JSON path:', character.actualJsonPath);
+            console.log('   Using JSON path:', actualJsonPath);
+            
+            // AssetManager内の全アセットを確認
+            console.log('🗂️ AssetManager loaded assets:');
+            if (assetManager.assets) {
+                const assetKeys = Object.keys(assetManager.assets);
+                console.log(`   Total assets: ${assetKeys.length}`);
+                assetKeys.forEach(key => {
+                    console.log(`   - "${key}": ${typeof assetManager.assets[key]}`);
+                });
+            } else {
+                console.log('   ❌ AssetManager.assets is undefined');
+            }
+            
+            // キャッシュバスター対応: 実際に読み込まれたパスでアセット取得
+            let atlas = assetManager.get(actualAtlasPath);
+            let skeletonJson = assetManager.get(actualJsonPath);
+            
+            // フォールバック: キャッシュバスターなしでも試行
             if (!atlas) {
-                throw new Error(`Atlas not found: ${atlasPath}`);
+                console.log('🔄 Trying fallback without cache buster for atlas...');
+                atlas = assetManager.get(atlasPath);
             }
             if (!skeletonJson) {
-                throw new Error(`Skeleton JSON not found: ${jsonPath}`);
+                console.log('🔄 Trying fallback without cache buster for JSON...');
+                skeletonJson = assetManager.get(jsonPath);
+            }
+            
+            console.log('🔍 Asset retrieval results:');
+            console.log('   Atlas retrieved:', !!atlas, typeof atlas);
+            console.log('   JSON retrieved:', !!skeletonJson, typeof skeletonJson);
+            
+            if (!atlas) {
+                console.error(`❌ Atlas not found in AssetManager cache`);
+                console.error(`   Tried paths: "${actualAtlasPath}" and "${atlasPath}"`);
+                console.error(`   Available keys: [${Object.keys(assetManager.assets || {}).join(', ')}]`);
+                throw new Error(`Atlas not found: ${actualAtlasPath}`);
+            }
+            if (!skeletonJson) {
+                console.error(`❌ JSON not found in AssetManager cache`);
+                console.error(`   Tried paths: "${actualJsonPath}" and "${jsonPath}"`);
+                throw new Error(`Skeleton JSON not found: ${actualJsonPath}`);
             }
             
             console.log('✅ Assets retrieved successfully');
@@ -771,14 +844,67 @@ class SpineCharacterManager {
                 throw new Error('Canvas.getContext is not a function');
             }
             
-            // Spine オブジェクト作成
+            // Spine オブジェクト作成（詳細エラーハンドリング）
             console.log('🏗️ Creating Spine objects...');
-            const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
-            const skeletonLoader = new spine.SkeletonJson(atlasLoader);
-            const skeletonData = skeletonLoader.readSkeletonData(skeletonJson);
             
-            const skeleton = new spine.Skeleton(skeletonData);
-            const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+            // 1. AtlasAttachmentLoader作成
+            console.log('🔧 Creating AtlasAttachmentLoader...');
+            const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+            console.log('✅ AtlasAttachmentLoader created:', !!atlasLoader);
+            
+            // 2. SkeletonJson作成
+            console.log('🔧 Creating SkeletonJson...');
+            const skeletonLoader = new spine.SkeletonJson(atlasLoader);
+            console.log('✅ SkeletonJson created:', !!skeletonLoader);
+            
+            // 3. SkeletonData作成（エラーハンドリング強化）
+            console.log('🔧 Creating SkeletonData from JSON...');
+            console.log('📄 Skeleton JSON keys:', Object.keys(skeletonJson));
+            console.log('📄 JSON skeleton property:', !!skeletonJson.skeleton);
+            
+            let skeletonData;
+            try {
+                skeletonData = skeletonLoader.readSkeletonData(skeletonJson);
+                console.log('✅ SkeletonData created successfully:', !!skeletonData);
+                
+                if (skeletonData) {
+                    console.log('📊 SkeletonData details:');
+                    console.log('   - Name:', skeletonData.name || 'N/A');
+                    console.log('   - Bones count:', skeletonData.bones?.length || 0);
+                    console.log('   - Slots count:', skeletonData.slots?.length || 0);
+                    console.log('   - Animations count:', skeletonData.animations?.length || 0);
+                }
+            } catch (error) {
+                console.error('❌ SkeletonData creation failed:', error);
+                console.error('📋 Error details:', {
+                    message: error.message,
+                    stack: error.stack?.substring(0, 200)
+                });
+                throw new Error(`SkeletonData creation failed: ${error.message}`);
+            }
+            
+            // 4. Skeleton作成（エラーハンドリング）
+            console.log('🔧 Creating Skeleton from SkeletonData...');
+            let skeleton;
+            try {
+                skeleton = new spine.Skeleton(skeletonData);
+                console.log('✅ Skeleton created successfully:', !!skeleton);
+            } catch (error) {
+                console.error('❌ Skeleton creation failed:', error);
+                throw new Error(`Skeleton creation failed: ${error.message}`);
+            }
+            
+            // 5. AnimationState作成（エラーハンドリング）
+            console.log('🔧 Creating AnimationState...');
+            let animationState;
+            try {
+                const animationStateData = new spine.AnimationStateData(skeletonData);
+                animationState = new spine.AnimationState(animationStateData);
+                console.log('✅ AnimationState created successfully:', !!animationState);
+            } catch (error) {
+                console.error('❌ AnimationState creation failed:', error);
+                throw new Error(`AnimationState creation failed: ${error.message}`);
+            }
             
             console.log('🎨 Creating Spine renderer...');
             // レンダラー作成時のエラーキャッチ
@@ -866,6 +992,81 @@ class SpineCharacterManager {
             console.log('🔧 Setting skeleton to setup pose...');
             skeleton.setToSetupPose();
             
+            // 🔧 キャラクター位置をCanvas内の(0, 0)に設定
+            let targetX = 0;  // Canvas内座標 (0, 0)
+            let targetY = 0;  // Canvas内座標 (0, 0)
+            
+            console.log(`🔧 CHARACTER POSITION SET TO CANVAS (0, 0):`);
+            console.log(`📍 Canvas size: ${canvas.width}x${canvas.height}px`);
+            console.log(`📍 Character position: (${targetX}, ${targetY})`);
+            console.log(`🔍 Character will be positioned at Canvas origin (0, 0)`);
+            
+            // スケルトンの初期状態設定（HTML設定座標、通常スケールで表示）
+            skeleton.x = targetX;           // HTML設定に基づく座標
+            skeleton.y = targetY;           // HTML設定に基づく座標
+            skeleton.scaleX = 1.0;          // 初期スケール1.0（表示状態）
+            skeleton.scaleY = 1.0;          // 初期スケール1.0（表示状態）
+            
+            // Canvas内(0, 0)座標をキャラクターオブジェクトに保存（レンダリングループとクリック判定で使用）
+            character.targetX = targetX;  // Canvas内座標 (0)
+            character.targetY = targetY;  // Canvas内座標 (0)
+            
+            // 🔍 プロパティ設定の確認ログ（数値0対応の検証）
+            console.log('🔧 Character target coordinates saved:');
+            console.log(`   character.targetX: ${character.targetX} (type: ${typeof character.targetX})`);
+            console.log(`   character.targetY: ${character.targetY} (type: ${typeof character.targetY})`);
+            console.log(`   Value 0 check: targetX === 0? ${targetX === 0}, targetY === 0? ${targetY === 0}`);
+            console.log(`   Undefined check: targetX !== undefined? ${targetX !== undefined}, targetY !== undefined? ${targetY !== undefined}`);
+            
+            console.log(`🎯 Skeleton initialized: position=(${skeleton.x}, ${skeleton.y}), scale=(${skeleton.scaleX}, ${skeleton.scaleY})`);
+            console.log(`📐 Skeleton scale verification: scaleX=${skeleton.scaleX}, scaleY=${skeleton.scaleY} (should be 1.0)`);
+            
+            // 🔍 詳細デバッグ: キャラクターの境界とCanvas情報
+            console.log('🔍 CHARACTER VISIBILITY DEBUG:');
+            console.log(`   Canvas dimensions: ${canvas.width}x${canvas.height}px`);
+            console.log(`   Canvas screen position: ${canvas.getBoundingClientRect().left.toFixed(0)}, ${canvas.getBoundingClientRect().top.toFixed(0)}`);
+            console.log(`   Skeleton data dimensions: ${skeleton.data.width}x${skeleton.data.height}`);
+            console.log(`   Skeleton bounds: x=${skeleton.data.x}, y=${skeleton.data.y}`);
+            console.log(`   Skeleton position: (${skeleton.x}, ${skeleton.y})`);
+            console.log(`   Skeleton scale: (${skeleton.scaleX}, ${skeleton.scaleY})`);
+            console.log(`   Canvas style opacity: ${canvas.style.opacity}`);
+            console.log(`   Canvas style display: ${canvas.style.display}`);
+            console.log(`   Canvas style visibility: ${canvas.style.visibility}`);
+            console.log(`   Canvas parent: ${canvas.parentElement?.tagName || 'none'}`);
+            
+            // 🔍 スロット・アタッチメント詳細デバッグ（データ更新問題調査）
+            console.log('🔍 SLOT ATTACHMENT DEBUG:');
+            console.log(`   Total slots: ${skeleton.slots.length}`);
+            skeleton.slots.forEach((slot, index) => {
+                const attachment = slot.getAttachment();
+                console.log(`   Slot ${index}: "${slot.data.name}"`);
+                console.log(`     - Bone: ${slot.bone.data.name}`);
+                console.log(`     - Attachment: ${attachment ? attachment.name : 'NULL'}`);
+                console.log(`     - Attachment type: ${attachment ? attachment.constructor.name : 'N/A'}`);
+                if (slot.data.name === 'karada') {
+                    console.log(`     ⚠️ BODY SLOT FOUND: attachment=${attachment ? 'YES' : 'NO'}`);
+                    if (!attachment) {
+                        console.log(`     ❌ BODY SLOT HAS NO ATTACHMENT - This is the problem!`);
+                    }
+                }
+            });
+            
+            // スケルトン骨の状態確認
+            if (skeleton.bones && skeleton.bones.length > 0) {
+                console.log(`   Skeleton bones count: ${skeleton.bones.length}`);
+                console.log(`   Root bone: ${skeleton.bones[0].data.name}`);
+            }
+            
+            // スロット（描画要素）の状態確認
+            if (skeleton.slots && skeleton.slots.length > 0) {
+                console.log(`   Skeleton slots count: ${skeleton.slots.length}`);
+                skeleton.slots.forEach((slot, i) => {
+                    if (slot.attachment) {
+                        console.log(`   Slot ${i}: ${slot.data.name} → ${slot.attachment.name || 'unnamed'}`);
+                    }
+                });
+            }
+            
             console.log('🔧 Pre-updateWorldTransform physics verification...');
             console.log('   - skeleton.physics defined:', typeof skeleton.physics !== 'undefined');
             console.log('   - skeleton.physics value:', skeleton.physics);
@@ -948,6 +1149,28 @@ class SpineCharacterManager {
                 // アニメーション更新
                 animationState.update(0.016); // 60fps
                 animationState.apply(skeleton);
+                
+                // 座標固定処理（HTML設定座標で位置変化を防ぐ - 数値0対応修正）
+                const fixedX = character.targetX !== undefined ? character.targetX : (canvas.width / 2);
+                const fixedY = character.targetY !== undefined ? character.targetY : (canvas.height / 2);
+                
+                // デバッグ: 座標固定処理の詳細ログ（問題診断用）
+                if (Math.random() < 0.001) { // 0.1%の確率でログ出力
+                    console.log('🔍 座標固定処理デバッグ:');
+                    console.log(`   character.targetX: ${character.targetX} (type: ${typeof character.targetX})`);
+                    console.log(`   character.targetY: ${character.targetY} (type: ${typeof character.targetY})`);
+                    console.log(`   fixedX: ${fixedX} (fallback used: ${character.targetX === undefined})`);
+                    console.log(`   fixedY: ${fixedY} (fallback used: ${character.targetY === undefined})`);
+                }
+                
+                skeleton.x = fixedX;
+                skeleton.y = fixedY;
+                
+                // デバッグ: スケール値監視（5秒に1回）
+                if (Math.floor(Date.now() / 5000) % 1 === 0 && Math.random() < 0.001) {
+                    console.log(`📊 Scale monitoring for ${character.name}: scaleX=${skeleton.scaleX}, scaleY=${skeleton.scaleY}`);
+                }
+                
                 skeleton.updateWorldTransform();
                 
                 // レンダリング
@@ -1107,35 +1330,67 @@ class SpineCharacterManager {
 
         console.log(`🎭 Replaying entrance animation for ${characterName} (user clicked)`);
 
-        // 一度透明にしてから再度フェードイン + アニメーション
-        const elements = [];
-        if (character.canvas) elements.push(character.canvas);
-        if (character.placeholder) elements.push(character.placeholder);
+        // スケールを0にしてから再度syutugenアニメーション
+        if (character.skeleton) {
+            // スケルトンを一度スケール0に戻す
+            character.skeleton.scaleX = 0;
+            character.skeleton.scaleY = 0;
+            console.log(`🔄 Skeleton scale reset to (0, 0) for replay`);
+            
+            // 少し遅延してからスケール復元＋syutugenアニメーション再生
+            setTimeout(() => {
+                // 手動でスケールを復元
+                character.skeleton.scaleX = 1.0;
+                character.skeleton.scaleY = 1.0;
+                console.log(`🎯 Scale manually restored to (1.0, 1.0) for replay`);
+                
+                this.playSequenceAnimation(characterName);
+                console.log(`⚡ Scale-based entrance animation replay started for ${characterName}`);
+            }, 300); // 0.3秒後にアニメーション開始
+        }
 
-        // 瞬間的に透明にする
-        elements.forEach(element => {
-            element.style.transition = 'opacity 0.2s ease-out';
-            element.style.opacity = '0';
-        });
+        // リプレイ処理完了
+        console.log(`🎯 Scale-based replay setup complete for ${characterName}`);
+    }
 
-        // 少し遅延してから再出現
-        setTimeout(() => {
-            elements.forEach(element => {
-                element.style.transition = 'opacity 1.5s ease-out';
-                element.style.opacity = '1';
-            });
+    /**
+     * クリック時のやられアニメーション再生
+     */
+    playYarareAnimation(characterName) {
+        const character = this.characters.get(characterName);
+        if (!character) {
+            console.warn(`❌ Character ${characterName} not found for yarare animation`);
+            return;
+        }
 
-            // 出現アニメーションを再生
-            this.playSequenceAnimation(characterName);
-            console.log(`✨ Entrance animation replay started for ${characterName}`);
-        }, 300);
+        console.log(`🎭 Playing yarare animation for ${characterName} (user clicked)`);
 
-        // transition削除
-        setTimeout(() => {
-            elements.forEach(element => {
-                element.style.transition = '';
-            });
-        }, 2000);
+        // Spineキャラクターの場合
+        if (character.skeleton && character.animationState) {
+            // yarareアニメーション再生（ループしない）
+            const yarareTrack = character.animationState.setAnimation(0, 'yarare', false);
+            console.log(`🎭 Yarare animation started for ${characterName}`);
+            
+            // yarareアニメーション終了後にtaikiループを開始
+            yarareTrack.listener = {
+                complete: () => {
+                    console.log(`🎭 Yarare animation completed for ${characterName}, starting taiki loop`);
+                    character.animationState.setAnimation(0, 'taiki', true); // taikをループ再生
+                    console.log(`🔄 Taiki loop animation started for ${characterName}`);
+                }
+            };
+        } else {
+            // プレースホルダーの場合は簡単なリアクション
+            console.log(`📝 Placeholder ${characterName} clicked - showing yarare reaction`);
+            if (character.element) {
+                character.element.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    character.element.style.transform = 'scale(1)';
+                }, 200);
+            }
+        }
+
+        console.log(`🎯 Yarare animation setup complete for ${characterName}`);
     }
 
     /**
@@ -1148,22 +1403,178 @@ class SpineCharacterManager {
         const addClickHandler = (element) => {
             if (!element) return;
             
-            element.style.cursor = 'pointer';
             element.style.pointerEvents = 'auto'; // クリックを有効化
             
             element.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                console.log(`👆 User clicked on ${characterName}`);
-                this.replayEntranceAnimation(characterName);
+                // キャラクターの境界内でのクリック判定
+                if (this.isClickInsideCharacter(characterName, event, element)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    console.log(`👆 User clicked inside ${characterName} bounds`);
+                    this.playYarareAnimation(characterName);
+                    
+                    // クリック時のカーソル変更（視覚的フィードバック）
+                    element.style.cursor = 'pointer';
+                } else {
+                    // キャラクター外をクリックした場合
+                    console.log(`📍 Click outside ${characterName} bounds - ignoring`);
+                    element.style.cursor = 'default';
+                }
+            });
+            
+            // マウスオーバー時の判定とカーソル変更
+            element.addEventListener('mousemove', (event) => {
+                if (this.isClickInsideCharacter(characterName, event, element)) {
+                    element.style.cursor = 'pointer';
+                } else {
+                    element.style.cursor = 'default';
+                }
             });
 
-            console.log(`🖱️ Click interaction added to ${characterName}`);
+            console.log(`🖱️ Character-bounded click interaction added to ${characterName}`);
         };
 
         // Spineキャラクターとプレースホルダー両方にクリック機能を追加
         if (character.canvas) addClickHandler(character.canvas);
         if (character.placeholder) addClickHandler(character.placeholder);
+    }
+
+    /**
+     * クリック座標がキャラクターの境界内にあるかどうかを判定
+     */
+    isClickInsideCharacter(characterName, event, element) {
+        const character = this.characters.get(characterName);
+        if (!character) return false;
+
+        // Canvas上でのクリック座標を取得（スケール補正付き）
+        const rect = element.getBoundingClientRect();
+        const rawX = event.clientX - rect.left;
+        const rawY = event.clientY - rect.top;
+        
+        // Canvas のtransform解析（scale + translate を考慮）
+        const computedStyle = window.getComputedStyle(element);
+        const transform = computedStyle.transform;
+        let scaleX = 1, scaleY = 1, translateX = 0, translateY = 0;
+        
+        if (transform && transform !== 'none') {
+            const matrix = transform.match(/matrix.*\((.+)\)/);
+            if (matrix) {
+                const values = matrix[1].split(', ').map(v => parseFloat(v));
+                scaleX = values[0];   // m11
+                scaleY = values[3];   // m22
+                translateX = values[4]; // m41 (translateX)
+                translateY = values[5]; // m42 (translateY)
+            }
+        }
+        
+        // 修正された座標変換：translate(-50%, -50%)を考慮
+        // transform: translate(-50%, -50%) により、実際の中心は(0,0)
+        const centerOffsetX = element.width / 2;   // 300px (600/2)
+        const centerOffsetY = element.height / 2;  // 250px (500/2)
+        
+        // 座標補正: 左上基準のクリック位置をCanvas中心基準に変換
+        // 1. 中心基準に変換：クリック位置 - Canvas中心
+        // 2. スケール補正：変換後の位置をスケールで割る
+        const canvasX = (rawX - centerOffsetX) / scaleX;
+        const canvasY = (rawY - centerOffsetY) / scaleY;
+
+        console.log(`🎯 Click position analysis for ${characterName}:`);
+        console.log(`   Element bounds: left=${rect.left.toFixed(1)}, top=${rect.top.toFixed(1)}, width=${rect.width.toFixed(1)}, height=${rect.height.toFixed(1)}`);
+        console.log(`   Canvas size: ${element.width}x${element.height}px`);
+        console.log(`   Raw click: (${rawX.toFixed(1)}, ${rawY.toFixed(1)})`);
+        console.log(`   Transform: scale=(${scaleX.toFixed(2)}, ${scaleY.toFixed(2)}), translate=(${translateX.toFixed(1)}, ${translateY.toFixed(1)})`);
+        console.log(`   Center offset: (${centerOffsetX}, ${centerOffsetY})`);
+        console.log(`   Final Canvas coordinate: (${canvasX.toFixed(1)}, ${canvasY.toFixed(1)})`);
+
+        // Spineキャラクターの場合
+        if (character.skeleton) {
+            return this.isClickInsideSpineCharacter(character, canvasX, canvasY);
+        }
+        
+        // プレースホルダーの場合
+        if (character.placeholder) {
+            return this.isClickInsidePlaceholder(character, canvasX, canvasY, element);
+        }
+
+        // デフォルトは false
+        return false;
+    }
+
+    /**
+     * Spineキャラクターの境界内クリック判定（修正版）
+     */
+    isClickInsideSpineCharacter(character, canvasX, canvasY) {
+        const skeleton = character.skeleton;
+        if (!skeleton) return false;
+
+        console.log(`🔍 === Click Detection Debug for ${character.name} ===`);
+        
+        // 修正：中心基準の座標系で統一
+        // skeletonの位置はsetPosition()で設定された中心基準の座標
+        const characterX = skeleton.x;  // 既に中心基準で設定済み
+        const characterY = skeleton.y;  // 既に中心基準で設定済み
+        const scaleX = skeleton.scaleX;
+        const scaleY = skeleton.scaleY;
+        
+        console.log(`📍 Character coordinates (center-based):`);
+        console.log(`   Skeleton position: (${characterX}, ${characterY}) [center-based]`);
+        console.log(`   Scale: (${scaleX}, ${scaleY})`);
+        
+        // SkeletonDataの境界情報
+        const dataWidth = skeleton.data.width;
+        const dataHeight = skeleton.data.height;
+        
+        console.log(`📐 SkeletonData bounds:`);
+        console.log(`   Size: ${dataWidth} x ${dataHeight}`);
+        
+        // スケール適用後のサイズ
+        const scaledWidth = dataWidth * Math.abs(scaleX);
+        const scaledHeight = dataHeight * Math.abs(scaleY);
+        
+        // 中心基準の境界計算：キャラクター中心から半分ずつ左右上下に広がる
+        const boundsLeft = characterX - scaledWidth / 2;
+        const boundsRight = characterX + scaledWidth / 2;
+        const boundsTop = characterY - scaledHeight / 2;
+        const boundsBottom = characterY + scaledHeight / 2;
+        
+        console.log(`🎯 Character bounds (center-based system):`);
+        console.log(`   Character center: (${characterX}, ${characterY})`);
+        console.log(`   Scaled size: ${scaledWidth.toFixed(1)} x ${scaledHeight.toFixed(1)}`);
+        console.log(`   Left: ${boundsLeft.toFixed(1)}, Right: ${boundsRight.toFixed(1)}`);
+        console.log(`   Top: ${boundsTop.toFixed(1)}, Bottom: ${boundsBottom.toFixed(1)}`);
+        console.log(`   Bounds rect: (${boundsLeft.toFixed(1)}, ${boundsTop.toFixed(1)}) to (${boundsRight.toFixed(1)}, ${boundsBottom.toFixed(1)})`);
+        
+        // クリック判定
+        const isInside = (canvasX >= boundsLeft && canvasX <= boundsRight && 
+                         canvasY >= boundsTop && canvasY <= boundsBottom);
+        
+        console.log(`👆 Click analysis:`);
+        console.log(`   Click position: (${canvasX.toFixed(1)}, ${canvasY.toFixed(1)})`);
+        console.log(`   X in bounds: ${canvasX.toFixed(1)} >= ${boundsLeft.toFixed(1)} && ${canvasX.toFixed(1)} <= ${boundsRight.toFixed(1)} = ${canvasX >= boundsLeft && canvasX <= boundsRight}`);
+        console.log(`   Y in bounds: ${canvasY.toFixed(1)} >= ${boundsTop.toFixed(1)} && ${canvasY.toFixed(1)} <= ${boundsBottom.toFixed(1)} = ${canvasY >= boundsTop && canvasY <= boundsBottom}`);
+        console.log(`   Result: ${isInside ? '✅ INSIDE' : '❌ OUTSIDE'}`);
+        console.log(`🔍 ===============================`);
+        
+        return isInside;
+    }
+
+    /**
+     * プレースホルダーの境界内クリック判定
+     */
+    isClickInsidePlaceholder(character, canvasX, canvasY, element) {
+        // プレースホルダーの場合は簡易的に中央の範囲で判定
+        const centerX = element.offsetWidth / 2;
+        const centerY = element.offsetHeight / 2;
+        const radius = 60; // プレースホルダーのクリック範囲（半径）
+
+        const distance = Math.sqrt(Math.pow(canvasX - centerX, 2) + Math.pow(canvasY - centerY, 2));
+        const isInside = distance <= radius;
+
+        console.log(`📝 Placeholder bounds for ${character.name}:`);
+        console.log(`   Center: (${centerX}, ${centerY}), radius: ${radius}`);
+        console.log(`   Click distance: ${distance.toFixed(1)}, is inside: ${isInside}`);
+
+        return isInside;
     }
 
     /**
@@ -1187,6 +1598,12 @@ class SpineCharacterManager {
                     const animations = character.skeleton.data.animations;
                     console.log('📋 Available animations:', animations.map(a => a.name));
                 }
+                
+                // スケールアニメーション: 0 → 1.0 (手動制御)
+                console.log(`🎯 Manual scale animation: 0 → 1.0 for ${characterName}`);
+                character.skeleton.scaleX = 1.0;
+                character.skeleton.scaleY = 1.0;
+                console.log(`📊 Scale manually set to: scaleX=${character.skeleton.scaleX}, scaleY=${character.skeleton.scaleY}`);
                 
                 // 出現アニメーション再生（ループしない）
                 const syutugenTrack = character.animationState.setAnimation(0, 'syutugen', false);
@@ -1227,68 +1644,78 @@ class SpineCharacterManager {
         const character = this.characters.get(characterName);
         if (!character) return;
 
-        // 実際のSpineキャラクターの位置設定（背景画像同期・スクロール連動）
+        // 実際のSpineキャラクターの位置設定（ヒーローセクション基準の相対位置）
         if (character.canvas) {
-            // 背景画像と同期するabsoluteポジション設定
+            // Canvas要素を目標位置に直接配置（スケールベース演出のため移動不要）
             character.canvas.style.setProperty('position', 'absolute', 'important');
-            character.canvas.style.setProperty('left', x + 'vw', 'important');
-            character.canvas.style.setProperty('top', y + 'vh', 'important');
-            character.canvas.style.transform = `scale(${scale})`;
+            character.canvas.style.setProperty('left', x + '%', 'important'); // 目標位置に直接配置
+            character.canvas.style.setProperty('top', y + '%', 'important');
+            character.canvas.style.setProperty('transform', `translate(-50%, -50%) scale(${scale})`, 'important');
             character.canvas.style.transformOrigin = '0 0'; // 左上を基準にスケール
-            character.canvas.style.opacity = '0'; // 初期状態は透明
+            character.canvas.style.opacity = '1'; // 初期状態は不透明
             character.canvas.style.zIndex = '10';      // 他要素より前面に
             
-            console.log(`📍 Character ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (background-sync scroll-relative positioning)`);
+            console.log(`🎯 Canvas positioned directly at target: (${x}%, ${y}%) - no movement needed`);
+            
+            console.log(`📍 Character ${characterName} positioned at (${x}%, ${y}%) with scale ${scale} (hero-section relative positioning)`);
             console.log(`🔧 Canvas position verification: position=${character.canvas.style.position}, left=${character.canvas.style.left}, top=${character.canvas.style.top}`);
         }
         
-        // プレースホルダーの位置設定（背景画像同期・スクロール連動）
+        // プレースホルダーの位置設定（ヒーローセクション基準の相対位置）
         if (character.placeholder) {
+            // プレースホルダーを目標位置に直接配置（スケールベース演出のため移動不要）
             character.placeholder.style.setProperty('position', 'absolute', 'important');
-            character.placeholder.style.setProperty('left', x + 'vw', 'important');
-            character.placeholder.style.setProperty('top', y + 'vh', 'important');
-            character.placeholder.style.transform = `scale(${scale})`;
+            character.placeholder.style.setProperty('left', x + '%', 'important'); // 目標位置に直接配置
+            character.placeholder.style.setProperty('top', y + '%', 'important');
+            character.placeholder.style.setProperty('transform', `translate(-50%, -50%) scale(${scale})`, 'important');
             character.placeholder.style.transformOrigin = '0 0';
-            character.placeholder.style.opacity = '0'; // 初期状態は透明
+            character.placeholder.style.opacity = '1'; // 初期状態は不透明
             character.placeholder.style.zIndex = '10';      // 他要素より前面に
+            
+            console.log(`🎯 Placeholder positioned directly at target: (${x}%, ${y}%) - no movement needed`);
             
             console.log(`📍 Placeholder ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (background-sync scroll-relative positioning)`);
         }
     }
 
     /**
-     * キャラクターをフェードインさせる（透明度のみ）
+     * キャラクターを2秒後にスケール0から出現させる（スケールベース演出）
      */
-    fadeInCharacter(characterName, duration = 2000) {
+    startScaleAnimation(characterName, delay = 2000) {
         const character = this.characters.get(characterName);
         if (!character) return;
 
-        console.log(`✨ Starting fade-in for ${characterName} (duration: ${duration}ms)`);
+        console.log(`🎯 Starting scale-based animation for ${characterName} (delay: ${delay}ms)`);
+        console.log(`   - Current skeleton scale: (${character.skeleton?.scaleX || 'N/A'}, ${character.skeleton?.scaleY || 'N/A'})`);
+        console.log(`   - Position: fixed at canvas center`);
 
-        const elements = [];
-        if (character.canvas) elements.push(character.canvas);
-        if (character.placeholder) elements.push(character.placeholder);
-
-        elements.forEach(element => {
-            // CSS transitionを設定
-            element.style.transition = `opacity ${duration}ms ease-out`;
+        // デバッグ: スケール変更前の状態
+        if (character.skeleton) {
+            console.log(`📊 BEFORE scale reset: scaleX=${character.skeleton.scaleX}, scaleY=${character.skeleton.scaleY}`);
             
-            // 少し遅延してからフェードイン開始
-            setTimeout(() => {
-                element.style.opacity = '1';
-                console.log(`🌟 Fade-in started for ${characterName}`);
-            }, 100);
-        });
+            // 即座にスケルトンを0にして非表示にする
+            character.skeleton.scaleX = 0;
+            character.skeleton.scaleY = 0;
+            console.log(`🔄 Skeleton scale immediately set to (0, 0) for hidden start`);
+            console.log(`📊 AFTER scale reset: scaleX=${character.skeleton.scaleX}, scaleY=${character.skeleton.scaleY}`);
+        }
 
-        // フェードイン完了後の処理
         setTimeout(() => {
-            console.log(`🎯 Fade-in completed for ${characterName}`);
+            // syutugenアニメーション開始（スケール0→通常サイズ）
+            console.log(`🎬 Starting syutugen animation for scale-based appearance`);
+            console.log(`📊 PRE-ANIMATION scale: scaleX=${character.skeleton?.scaleX}, scaleY=${character.skeleton?.scaleY}`);
             
-            // transitionを削除
-            elements.forEach(element => {
-                element.style.transition = '';
-            });
-        }, duration + 200);
+            this.playSequenceAnimation(characterName);
+            
+            // アニメーション開始直後の状態確認
+            setTimeout(() => {
+                if (character.skeleton) {
+                    console.log(`📊 POST-ANIMATION START scale: scaleX=${character.skeleton.scaleX}, scaleY=${character.skeleton.scaleY}`);
+                }
+            }, 100);
+        }, delay);
+
+        console.log(`⏰ Character ${characterName} will start scale animation in ${delay}ms`);
     }
 
     /**
@@ -1390,5 +1817,220 @@ const style = document.createElement('style');
 style.textContent = spineCSS;
 document.head.appendChild(style);
 
+// デバッグウィンドウクラス
+class SpineDebugWindow {
+    constructor() {
+        this.debugWindow = null;
+        this.isVisible = false;
+        this.updateInterval = null;
+        this.createDebugWindow();
+    }
+
+    createDebugWindow() {
+        // デバッグウィンドウ作成
+        this.debugWindow = document.createElement('div');
+        this.debugWindow.id = 'spine-debug-window';
+        this.debugWindow.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 350px;
+            max-height: 400px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #00ff00;
+            z-index: 9999;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 255, 0, 0.3);
+            backdrop-filter: blur(5px);
+            display: none;
+        `;
+
+        // ヘッダー作成
+        const header = document.createElement('div');
+        header.style.cssText = `
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `;
+        header.innerHTML = `
+            <span>🔍 Spine Debug Monitor</span>
+            <button id="debug-close" style="
+                background: #ff4444;
+                color: white;
+                border: none;
+                padding: 2px 8px;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 10px;
+            ">✕</button>
+        `;
+
+        // コンテンツ領域
+        const content = document.createElement('div');
+        content.id = 'debug-content';
+        content.style.cssText = `
+            line-height: 1.4;
+            white-space: pre-wrap;
+        `;
+
+        this.debugWindow.appendChild(header);
+        this.debugWindow.appendChild(content);
+        document.body.appendChild(this.debugWindow);
+
+        // 閉じるボタンのイベント
+        document.getElementById('debug-close').addEventListener('click', () => {
+            this.hide();
+        });
+
+        console.log('🔍 Spine Debug Window created - Press F12 then type "spineDebug.show()" to display');
+    }
+
+    show() {
+        this.debugWindow.style.display = 'block';
+        this.isVisible = true;
+        this.startMonitoring();
+        console.log('👁️ Spine Debug Window shown');
+    }
+
+    hide() {
+        this.debugWindow.style.display = 'none';
+        this.isVisible = false;
+        this.stopMonitoring();
+        console.log('👁️ Spine Debug Window hidden');
+    }
+
+    toggle() {
+        if (this.isVisible) {
+            this.hide();
+        } else {
+            this.show();
+        }
+    }
+
+    startMonitoring() {
+        this.stopMonitoring(); // 重複防止
+        
+        this.updateInterval = setInterval(() => {
+            this.updateDebugInfo();
+        }, 100); // 100ms間隔で更新
+    }
+
+    stopMonitoring() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+    }
+
+    updateDebugInfo() {
+        const content = document.getElementById('debug-content');
+        if (!content) return;
+
+        let debugInfo = '';
+        const timestamp = new Date().toLocaleTimeString();
+        
+        debugInfo += `⏰ ${timestamp}\n\n`;
+
+        // Spine Manager状態
+        if (window.spineManager) {
+            debugInfo += `🎮 Spine Manager Status:\n`;
+            debugInfo += `   Initialized: ${window.spineManager.initialized}\n`;
+            debugInfo += `   Characters: ${window.spineManager.characters.size}\n\n`;
+
+            // 各キャラクターの詳細情報
+            window.spineManager.characters.forEach((character, name) => {
+                debugInfo += `🐱 Character: ${name}\n`;
+                debugInfo += `   Type: ${character.isLoaded ? 'Spine WebGL' : 'Placeholder'}\n`;
+                
+                if (character.skeleton) {
+                    debugInfo += `   📍 Skeleton Position:\n`;
+                    debugInfo += `      X: ${character.skeleton.x.toFixed(2)}\n`;
+                    debugInfo += `      Y: ${character.skeleton.y.toFixed(2)}\n`;
+                    debugInfo += `   📏 Skeleton Scale:\n`;
+                    debugInfo += `      ScaleX: ${character.skeleton.scaleX.toFixed(3)}\n`;
+                    debugInfo += `      ScaleY: ${character.skeleton.scaleY.toFixed(3)}\n`;
+                    
+                    // アニメーション状態
+                    if (character.animationState && character.animationState.tracks.length > 0) {
+                        const track = character.animationState.tracks[0];
+                        if (track && track.animation) {
+                            debugInfo += `   🎬 Animation:\n`;
+                            debugInfo += `      Name: ${track.animation.name}\n`;
+                            debugInfo += `      Time: ${track.trackTime.toFixed(2)}s\n`;
+                            debugInfo += `      Duration: ${track.animation.duration.toFixed(2)}s\n`;
+                            debugInfo += `      Loop: ${track.loop}\n`;
+                        }
+                    } else {
+                        debugInfo += `   🎬 Animation: None\n`;
+                    }
+                } else {
+                    debugInfo += `   📍 No Skeleton Data\n`;
+                }
+
+                if (character.canvas) {
+                    const rect = character.canvas.getBoundingClientRect();
+                    debugInfo += `   🎨 Canvas Info:\n`;
+                    debugInfo += `      Size: ${character.canvas.width}x${character.canvas.height}px\n`;
+                    debugInfo += `      Screen Pos: (${rect.left.toFixed(0)}, ${rect.top.toFixed(0)})\n`;
+                    debugInfo += `      CSS Position: ${character.canvas.style.position}\n`;
+                    debugInfo += `      CSS Left: ${character.canvas.style.left}\n`;
+                    debugInfo += `      CSS Top: ${character.canvas.style.top}\n`;
+                    debugInfo += `      CSS Transform: ${character.canvas.style.transform || 'none'}\n`;
+                    debugInfo += `      CSS Opacity: ${character.canvas.style.opacity || '1'}\n`;
+                } else if (character.placeholder) {
+                    const rect = character.placeholder.getBoundingClientRect();
+                    debugInfo += `   📝 Placeholder Info:\n`;
+                    debugInfo += `      Screen Pos: (${rect.left.toFixed(0)}, ${rect.top.toFixed(0)})\n`;
+                    debugInfo += `      CSS Position: ${character.placeholder.style.position}\n`;
+                    debugInfo += `      CSS Left: ${character.placeholder.style.left}\n`;
+                    debugInfo += `      CSS Top: ${character.placeholder.style.top}\n`;
+                    debugInfo += `      CSS Transform: ${character.placeholder.style.transform || 'none'}\n`;
+                }
+
+                debugInfo += `\n`;
+            });
+        } else {
+            debugInfo += `❌ Spine Manager not available\n\n`;
+        }
+
+        // ビューポート情報
+        debugInfo += `🖥️ Viewport Info:\n`;
+        debugInfo += `   Size: ${window.innerWidth}x${window.innerHeight}px\n`;
+        debugInfo += `   Scroll: ${window.scrollX}, ${window.scrollY}\n\n`;
+
+        // HTML設定情報
+        const configElement = document.getElementById('purattokun-config');
+        if (configElement) {
+            debugInfo += `⚙️ HTML Config:\n`;
+            debugInfo += `   data-x: ${configElement.dataset.x}%\n`;
+            debugInfo += `   data-y: ${configElement.dataset.y}%\n`;
+            debugInfo += `   data-scale: ${configElement.dataset.scale}\n`;
+            debugInfo += `   data-fade-delay: ${configElement.dataset.fadeDelay}ms\n`;
+            debugInfo += `   data-fade-duration: ${configElement.dataset.fadeDuration}ms\n`;
+        }
+
+        content.textContent = debugInfo;
+    }
+}
+
 // グローバルインスタンス
 window.spineManager = new SpineCharacterManager();
+window.spineDebug = new SpineDebugWindow();
+
+// キーボードショートカット（Ctrl+D でデバッグウィンドウ切り替え）
+document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.key === 'd') {
+        event.preventDefault();
+        window.spineDebug.toggle();
+        console.log('🔍 Debug window toggled via Ctrl+D');
+    }
+});

@@ -454,28 +454,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     // キャラクター配置完了
                     console.log('📍 ぷらっとくん(4.1.24)配置完了');
                     
-                    // 透明度でのフェードイン演出開始
+                    // スケールベース演出開始
                     setTimeout(() => {
-                        console.log('🎭 Starting fade-in entrance for Purattokun (no movement)');
-                        console.log('✨ ぷらっとくん出現中...');
+                        console.log('🎯 Starting scale-based entrance for Purattokun (scale 0→1)');
+                        console.log('✨ ぷらっとくん出現予約中...');
                         
-                        // 透明度のみのフェードイン演出
-                        spineManager.fadeInCharacter('purattokun', entranceConfig.fadeDuration);
+                        // スケールベース演出
+                        spineManager.startScaleAnimation('purattokun', entranceConfig.fadeDelay);
                         
-                        // フェードインと同時にSpineアニメーション開始
+                        // クリック機能を有効化（スケール演出後）
                         setTimeout(() => {
-                            console.log('🎬 Starting Purattokun Spine sequence: syutugen → taiki loop');
-                            console.log('🔧 Using physics-free Spine 4.1.24 data');
-                            spineManager.playSequenceAnimation('purattokun');
-                            console.log('🎬 ぷらっとくんアニメーション実行中');
-                            console.log('✨ Purattokun fade-in complete with sequence animation');
-                            
-                            // クリック機能を有効化（アニメーション開始後）
-                            setTimeout(() => {
-                                spineManager.addClickInteraction('purattokun');
-                                console.log('🖱️ Purattokun click interaction enabled');
-                            }, 1000); // さらに1秒後にクリック機能有効化
-                        }, 300); // 0.3秒後にSpineアニメーション開始
+                            spineManager.addClickInteraction('purattokun');
+                            console.log('🖱️ Purattokun click interaction enabled');
+                        }, entranceConfig.fadeDelay + 1000); // スケールアニメーション開始の1秒後にクリック機能有効化
                         
                     }, entranceConfig.fadeDelay); // 設定した遅延後に演出開始
 

@@ -472,6 +472,28 @@ if (typeof skeleton.physics === 'undefined') { skeleton.physics = []; }
 
 #### よくある問題と解決策
 
+**0. キャラクターの体（karada）が見えない問題（解決済み）**
+- **症状**: Spineデータ更新後、キャラクターの体部分のみが表示されない
+- **原因**: ブラウザがSpineファイル（JSON/Atlas/PNG）を古いバージョンでキャッシュ
+- **解決策**: ブラウザキャッシュのクリア
+  ```bash
+  # 方法1: ハードリフレッシュ
+  Ctrl+Shift+R (Windows/Linux)
+  Cmd+Shift+R (Mac)
+  
+  # 方法2: キャッシュクリア（推奨）
+  Shift+Ctrl+Delete → すべてのキャッシュをクリア
+  
+  # 方法3: 開発者向け
+  F12 → Network タブ → "Disable cache"にチェック
+  ```
+- **予防策**: 
+  - 開発時は自動キャッシュバスティング機能が有効（localhost検出時）
+  - Spineファイル更新後は必ずハードリフレッシュを実行
+- **確認方法**: 
+  - F12コンソールで「💡 Cache busting active」メッセージを確認
+  - Network タブで304（キャッシュ）ではなく200（新規取得）を確認
+
 **1. Physics Initialization Error（解決済み）**
 - **症状**: `Error: physics is undefined` at `Skeleton.updateWorldTransform()`
 - **原因**: Spine Runtime 4.2.*とData 4.1.24のバージョン不一致
@@ -614,3 +636,21 @@ Spine WebGL統合で遭遇した全問題の詳細記録：
 # Spine関連の問題発生時は必ずこのファイルを参照
 cat SPINE_TROUBLESHOOTING.md
 ```
+
+### 重要：Spine関連修正時の記録ルール
+**Spine WebGL統合に関する修正を行った場合は、必ずSPINE_TROUBLESHOOTING.mdに記録すること**
+
+#### 記録すべき内容
+1. **問題の症状**: 何が起きていたか
+2. **原因分析**: なぜその問題が発生したか
+3. **解決策**: 具体的にどのように修正したか
+4. **影響範囲**: 他の機能への影響はないか
+5. **テスト結果**: 修正後の動作確認結果
+
+#### 記録のタイミング
+- Spine関連のファイル修正時（spine-integration.js、関連CSS、HTML設定）
+- 位置調整システムの変更時
+- バージョン互換性に関する変更時
+- 新しいSpine関連エラーの解決時
+
+これにより、将来同様の問題が発生した際の迅速な解決と、ナレッジの蓄積が可能になります。
