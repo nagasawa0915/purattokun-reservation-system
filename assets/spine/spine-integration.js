@@ -209,7 +209,7 @@ class SpineCharacterManager {
             canvas.width = 600;  // 500→600に拡大（吹き出し306px対応）
             canvas.height = 500; // 400→500に拡大（吹き出し142px対応）
             canvas.style.cssText = `
-                position: absolute;
+                position: fixed;
                 pointer-events: none;
                 z-index: 1;
             `;
@@ -1158,26 +1158,30 @@ class SpineCharacterManager {
 
         // 実際のSpineキャラクターの位置設定（ビューポート基準）
         if (character.canvas) {
-            character.canvas.style.position = 'fixed'; // ビューポート基準に変更
-            character.canvas.style.left = x + 'vw';    // ビューポート幅基準
-            character.canvas.style.top = y + 'vh';     // ビューポート高さ基準
+            // 強制的にfixedポジションを設定（上書き防止）
+            character.canvas.style.setProperty('position', 'fixed', 'important');
+            character.canvas.style.setProperty('left', x + 'vw', 'important');
+            character.canvas.style.setProperty('top', y + 'vh', 'important');
             character.canvas.style.transform = `scale(${scale})`;
             character.canvas.style.transformOrigin = '0 0'; // 左上を基準にスケール
             character.canvas.style.opacity = '0'; // 初期状態は透明
             character.canvas.style.zIndex = '10';      // 他要素より前面に
             
-            console.log(`📍 Character ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (viewport-relative positioning)`);
+            console.log(`📍 Character ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (viewport-relative positioning with !important)`);
+            console.log(`🔧 Canvas position verification: position=${character.canvas.style.position}, left=${character.canvas.style.left}, top=${character.canvas.style.top}`);
         }
         
         // プレースホルダーの位置設定（ビューポート基準）
         if (character.placeholder) {
-            character.placeholder.style.position = 'fixed'; // ビューポート基準に変更
-            character.placeholder.style.left = x + 'vw';    // ビューポート幅基準
-            character.placeholder.style.top = y + 'vh';     // ビューポート高さ基準
+            character.placeholder.style.setProperty('position', 'fixed', 'important');
+            character.placeholder.style.setProperty('left', x + 'vw', 'important');
+            character.placeholder.style.setProperty('top', y + 'vh', 'important');
             character.placeholder.style.transform = `scale(${scale})`;
             character.placeholder.style.transformOrigin = '0 0';
             character.placeholder.style.opacity = '0'; // 初期状態は透明
             character.placeholder.style.zIndex = '10';      // 他要素より前面に
+            
+            console.log(`📍 Placeholder ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (viewport-relative positioning with !important)`);
         }
     }
 
