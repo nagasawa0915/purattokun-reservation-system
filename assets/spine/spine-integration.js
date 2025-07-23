@@ -209,7 +209,7 @@ class SpineCharacterManager {
             canvas.width = 600;  // 500→600に拡大（吹き出し306px対応）
             canvas.height = 500; // 400→500に拡大（吹き出し142px対応）
             canvas.style.cssText = `
-                position: fixed;
+                position: absolute;
                 pointer-events: none;
                 z-index: 1;
             `;
@@ -326,8 +326,8 @@ class SpineCharacterManager {
                     console.log('🔧 Re-applying position settings...');
                     console.log(`   - Target: (${x}vw, ${y}vh) scale: ${scale}`);
                     
-                    // 強制的に位置設定
-                    config.canvas.style.setProperty('position', 'fixed', 'important');
+                    // 背景画像同期位置設定（スクロール連動）
+                    config.canvas.style.setProperty('position', 'absolute', 'important');
                     config.canvas.style.setProperty('left', x + 'vw', 'important');
                     config.canvas.style.setProperty('top', y + 'vh', 'important');
                     config.canvas.style.transform = `scale(${scale})`;
@@ -1227,10 +1227,10 @@ class SpineCharacterManager {
         const character = this.characters.get(characterName);
         if (!character) return;
 
-        // 実際のSpineキャラクターの位置設定（ビューポート基準）
+        // 実際のSpineキャラクターの位置設定（背景画像同期・スクロール連動）
         if (character.canvas) {
-            // 強制的にfixedポジションを設定（上書き防止）
-            character.canvas.style.setProperty('position', 'fixed', 'important');
+            // 背景画像と同期するabsoluteポジション設定
+            character.canvas.style.setProperty('position', 'absolute', 'important');
             character.canvas.style.setProperty('left', x + 'vw', 'important');
             character.canvas.style.setProperty('top', y + 'vh', 'important');
             character.canvas.style.transform = `scale(${scale})`;
@@ -1238,13 +1238,13 @@ class SpineCharacterManager {
             character.canvas.style.opacity = '0'; // 初期状態は透明
             character.canvas.style.zIndex = '10';      // 他要素より前面に
             
-            console.log(`📍 Character ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (viewport-relative positioning with !important)`);
+            console.log(`📍 Character ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (background-sync scroll-relative positioning)`);
             console.log(`🔧 Canvas position verification: position=${character.canvas.style.position}, left=${character.canvas.style.left}, top=${character.canvas.style.top}`);
         }
         
-        // プレースホルダーの位置設定（ビューポート基準）
+        // プレースホルダーの位置設定（背景画像同期・スクロール連動）
         if (character.placeholder) {
-            character.placeholder.style.setProperty('position', 'fixed', 'important');
+            character.placeholder.style.setProperty('position', 'absolute', 'important');
             character.placeholder.style.setProperty('left', x + 'vw', 'important');
             character.placeholder.style.setProperty('top', y + 'vh', 'important');
             character.placeholder.style.transform = `scale(${scale})`;
@@ -1252,7 +1252,7 @@ class SpineCharacterManager {
             character.placeholder.style.opacity = '0'; // 初期状態は透明
             character.placeholder.style.zIndex = '10';      // 他要素より前面に
             
-            console.log(`📍 Placeholder ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (viewport-relative positioning with !important)`);
+            console.log(`📍 Placeholder ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (background-sync scroll-relative positioning)`);
         }
     }
 
