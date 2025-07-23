@@ -303,6 +303,42 @@ class SpineCharacterManager {
             this.characters.set(name, character);
             
             console.log(`🎉 Successfully upgraded ${name} to Spine WebGL`);
+            
+            // 強制的に位置を再設定（アップグレード完了後）
+            console.log('🔧 Forcing canvas position re-check after Spine upgrade...');
+            const config = this.characters.get(name);
+            if (config && config.canvas) {
+                console.log('📊 Current canvas position BEFORE fix:');
+                console.log(`   - position: ${config.canvas.style.position}`);
+                console.log(`   - left: ${config.canvas.style.left}`);
+                console.log(`   - top: ${config.canvas.style.top}`);
+                console.log(`   - transform: ${config.canvas.style.transform}`);
+                
+                // HTML設定を再読み込み
+                const configElement = document.getElementById('purattokun-config');
+                if (configElement) {
+                    const x = parseInt(configElement.dataset.x) || 18;
+                    const y = parseInt(configElement.dataset.y) || 50;
+                    const scale = parseFloat(configElement.dataset.scale) || 0.25;
+                    
+                    console.log('🔧 Re-applying position settings...');
+                    console.log(`   - Target: (${x}vw, ${y}vh) scale: ${scale}`);
+                    
+                    // 強制的に位置設定
+                    config.canvas.style.setProperty('position', 'fixed', 'important');
+                    config.canvas.style.setProperty('left', x + 'vw', 'important');
+                    config.canvas.style.setProperty('top', y + 'vh', 'important');
+                    config.canvas.style.transform = `scale(${scale})`;
+                    config.canvas.style.transformOrigin = '0 0';
+                    config.canvas.style.zIndex = '10';
+                    
+                    console.log('📊 Canvas position AFTER fix:');
+                    console.log(`   - position: ${config.canvas.style.position}`);
+                    console.log(`   - left: ${config.canvas.style.left}`);
+                    console.log(`   - top: ${config.canvas.style.top}`);
+                    console.log(`   - transform: ${config.canvas.style.transform}`);
+                }
+            }
         } catch (assetError) {
             console.error(`❌ Spine upgrade failed for ${name}:`, assetError.message);
             if (canvas && canvas.parentNode) {
