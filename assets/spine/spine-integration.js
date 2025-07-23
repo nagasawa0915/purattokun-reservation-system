@@ -1150,30 +1150,34 @@ class SpineCharacterManager {
     }
 
     /**
-     * キャラクター位置設定（レスポンシブパーセンテージベース）
+     * キャラクター位置設定（ビューポート基準の絶対位置）
      */
     setPosition(characterName, x, y, scale = 1.0) {
         const character = this.characters.get(characterName);
         if (!character) return;
 
-        // 実際のSpineキャラクターの位置設定（パーセンテージベース）
+        // 実際のSpineキャラクターの位置設定（ビューポート基準）
         if (character.canvas) {
-            character.canvas.style.left = x + '%';
-            character.canvas.style.top = y + '%';
+            character.canvas.style.position = 'fixed'; // ビューポート基準に変更
+            character.canvas.style.left = x + 'vw';    // ビューポート幅基準
+            character.canvas.style.top = y + 'vh';     // ビューポート高さ基準
             character.canvas.style.transform = `scale(${scale})`;
             character.canvas.style.transformOrigin = '0 0'; // 左上を基準にスケール
             character.canvas.style.opacity = '0'; // 初期状態は透明
+            character.canvas.style.zIndex = '10';      // 他要素より前面に
             
-            console.log(`📍 Character ${characterName} positioned at (${x}%, ${y}%) with scale ${scale} (responsive positioning)`);
+            console.log(`📍 Character ${characterName} positioned at (${x}vw, ${y}vh) with scale ${scale} (viewport-relative positioning)`);
         }
         
-        // プレースホルダーの位置設定（パーセンテージベース）
+        // プレースホルダーの位置設定（ビューポート基準）
         if (character.placeholder) {
-            character.placeholder.style.left = x + '%';
-            character.placeholder.style.top = y + '%';
+            character.placeholder.style.position = 'fixed'; // ビューポート基準に変更
+            character.placeholder.style.left = x + 'vw';    // ビューポート幅基準
+            character.placeholder.style.top = y + 'vh';     // ビューポート高さ基準
             character.placeholder.style.transform = `scale(${scale})`;
             character.placeholder.style.transformOrigin = '0 0';
             character.placeholder.style.opacity = '0'; // 初期状態は透明
+            character.placeholder.style.zIndex = '10';      // 他要素より前面に
         }
     }
 
@@ -1213,24 +1217,26 @@ class SpineCharacterManager {
     }
 
     /**
-     * キャラクター位置をアニメーション付きで移動（出現演出用・レスポンシブ対応）
+     * キャラクター位置をアニメーション付きで移動（出現演出用・ビューポート基準）
      */
     animateToPosition(characterName, fromX, fromY, toX, toY, scale = 1.0, duration = 2000, opacity = true) {
         const character = this.characters.get(characterName);
         if (!character) return;
 
-        console.log(`🎭 Starting animated positioning for ${characterName}: (${fromX}%, ${fromY}%) → (${toX}%, ${toY}%)`);
+        console.log(`🎭 Starting animated positioning for ${characterName}: (${fromX}vw, ${fromY}vh) → (${toX}vw, ${toY}vh)`);
 
         const elements = [];
         if (character.canvas) elements.push(character.canvas);
         if (character.placeholder) elements.push(character.placeholder);
 
         elements.forEach(element => {
-            // 初期位置設定（パーセンテージベース）
-            element.style.left = fromX + '%';
-            element.style.top = fromY + '%';
+            // 初期位置設定（ビューポート基準）
+            element.style.position = 'fixed';
+            element.style.left = fromX + 'vw';
+            element.style.top = fromY + 'vh';
             element.style.transform = `scale(${scale})`;
             element.style.transformOrigin = '0 0';
+            element.style.zIndex = '10';
             
             if (opacity) {
                 element.style.opacity = '0'; // 最初は透明
@@ -1241,18 +1247,18 @@ class SpineCharacterManager {
 
             // 少し遅延してから最終位置へアニメーション
             setTimeout(() => {
-                element.style.left = toX + '%';
-                element.style.top = toY + '%';
+                element.style.left = toX + 'vw';
+                element.style.top = toY + 'vh';
                 if (opacity) {
                     element.style.opacity = '1'; // フェードイン
                 }
-                console.log(`✨ Animation started for ${characterName} (responsive positioning)`);
+                console.log(`✨ Animation started for ${characterName} (viewport positioning)`);
             }, 100); // 100ms遅延でスムーズなアニメーション開始
         });
 
         // アニメーション完了時のコールバック
         setTimeout(() => {
-            console.log(`🎯 Animation completed for ${characterName} at (${toX}%, ${toY}%)`);
+            console.log(`🎯 Animation completed for ${characterName} at (${toX}vw, ${toY}vh)`);
             
             // transitionを削除（後続の位置変更で不要なアニメーションを避ける）
             elements.forEach(element => {

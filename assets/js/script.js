@@ -5,14 +5,14 @@ document.addEventListener('DOMContentLoaded', function() {
     let floatingElementsCount = 0;
     let conceptAnimated = false;
 
-    // ぷらっとくん設定をHTMLから読み込む関数（レスポンシブパーセンテージベース）
+    // ぷらっとくん設定をHTMLから読み込む関数（ビューポート基準）
     function loadPurattokunsettings() {
         const configElement = document.getElementById('purattokun-config');
         
-        // デフォルト設定（HTMLに設定がない場合のフォールバック・パーセンテージベース）
+        // デフォルト設定（HTMLに設定がない場合のフォールバック・ビューポート基準）
         const defaultConfig = {
-            x: 18,      // 左から18%（背景画像のお店付近）
-            y: 55,      // 上から55%（背景画像の地面レベル）
+            x: 18,      // 左から18vw（画面幅の18%）
+            y: 20,      // 上から20vh（画面高さの20%）
             scale: 0.75,
             fadeDelay: 1500,
             fadeDuration: 2000
@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // 最初から最終位置に配置（透明状態）
                     spineManager.setPosition('purattokun', entranceConfig.x, entranceConfig.y, entranceConfig.scale);
                     
-                    console.log(`📍 Responsive position: (${entranceConfig.x}%, ${entranceConfig.y}%) scale: ${entranceConfig.scale}`);
+                    console.log(`📍 Viewport position: (${entranceConfig.x}vw, ${entranceConfig.y}vh) scale: ${entranceConfig.scale}`);
                     
                     // キャラクター数をデバッグ表示に反映
                     console.log('📍 ぷらっとくん(4.1.24)配置完了');
