@@ -202,6 +202,10 @@ class SpineCharacterManager {
             const mvp = new spine.Matrix4();
             mvp.ortho2d(0, 0, canvas.width, canvas.height);
             console.log('✅ DEBUG: Matrix4 created');
+            console.log('📐 DEBUG: Projection matrix setup:');
+            console.log('  - Canvas size:', canvas.width, 'x', canvas.height);
+            console.log('  - Ortho2D bounds: (0,0) to (', canvas.width, ',', canvas.height, ')');
+            console.log('  - Matrix values:', mvp.values);
             
             const context = new spine.ManagedWebGLRenderingContext(gl);
             console.log('✅ DEBUG: ManagedWebGLRenderingContext created');
@@ -217,25 +221,53 @@ class SpineCharacterManager {
             const jsonPath = `${basePath}${name}.json`;
             const imagePath = `${basePath}${name}.png`;
 
+            console.log('📁 DEBUG: Loading assets:');
+            console.log('  - Atlas:', atlasPath);
+            console.log('  - JSON:', jsonPath);
+            console.log('  - Image:', imagePath);
+
             assetManager.loadTextureAtlas(atlasPath);
             assetManager.loadText(jsonPath);
             assetManager.loadTexture(imagePath);
 
+            console.log('⏳ DEBUG: Waiting for asset loading...');
             // 読み込み完了まで待機
             await this.waitForAssetLoading(assetManager);
+            console.log('✅ DEBUG: All assets loaded successfully');
 
             // Skeleton作成
+            console.log('🦴 DEBUG: Creating Skeleton...');
             const atlas = assetManager.require(atlasPath);
+            console.log('📖 DEBUG: Atlas loaded:', atlas);
+            console.log('📖 DEBUG: Atlas pages:', atlas.pages?.length || 'unknown');
+            console.log('📖 DEBUG: Atlas regions:', atlas.regions?.length || 'unknown');
+            
             const skeletonJson = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
+            console.log('🔧 DEBUG: SkeletonJson created');
+            
             const skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonPath));
+            console.log('📊 DEBUG: SkeletonData created');
+            console.log('📊 DEBUG: Bones count:', skeletonData.bones?.length || 'unknown');
+            console.log('📊 DEBUG: Slots count:', skeletonData.slots?.length || 'unknown');
+            console.log('📊 DEBUG: Animations:', skeletonData.animations?.map(a => a.name) || 'unknown');
             
             const skeleton = new spine.Skeleton(skeletonData);
+            console.log('🦴 DEBUG: Skeleton instance created');
+            console.log('🦴 DEBUG: Skeleton bones:', skeleton.bones?.length || 'unknown');
+            console.log('🦴 DEBUG: Skeleton slots:', skeleton.slots?.length || 'unknown');
+            
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
+            console.log('🎭 DEBUG: AnimationState created');
 
             // 位置設定
             skeleton.x = canvas.width / 2;
             skeleton.y = canvas.height - 50;
             skeleton.scaleX = skeleton.scaleY = 0.5;
+            console.log('📍 DEBUG: Skeleton position set:');
+            console.log('  - x:', skeleton.x);
+            console.log('  - y:', skeleton.y);
+            console.log('  - scaleX:', skeleton.scaleX);
+            console.log('  - scaleY:', skeleton.scaleY);
 
             // キャラクター登録
             const character = {
@@ -256,6 +288,17 @@ class SpineCharacterManager {
             canvas.style.border = '2px solid red'; // デバッグ用の境界線
             document.body.appendChild(canvas);
             console.log('✅ DEBUG: Canvas added to DOM with red border for visibility');
+            
+            // Canvas配置の詳細確認
+            setTimeout(() => {
+                console.log('🖼️ DEBUG: Canvas position verification:');
+                console.log('  - Canvas width:', canvas.width, 'height:', canvas.height);
+                console.log('  - Canvas style width:', canvas.style.width, 'height:', canvas.style.height);
+                console.log('  - Canvas offset:', { left: canvas.offsetLeft, top: canvas.offsetTop });
+                console.log('  - Canvas client size:', { width: canvas.clientWidth, height: canvas.clientHeight });
+                console.log('  - Canvas in DOM:', document.body.contains(canvas));
+                console.log('  - WebGL context size:', gl.drawingBufferWidth, 'x', gl.drawingBufferHeight);
+            }, 100);
 
             // 既存プレースホルダーを削除
             const placeholder = document.querySelector(`[data-character="${name}"]`);
@@ -305,28 +348,59 @@ class SpineCharacterManager {
         const character = this.characters.get(name);
         if (!character || character.type !== 'spine') return;
 
+        console.log('🎬 DEBUG: Starting render loop for', name);
+        console.log('🎬 DEBUG: Character type:', character.type);
+        console.log('🎬 DEBUG: Canvas exists:', !!character.canvas);
+        console.log('🎬 DEBUG: Skeleton exists:', !!character.skeleton);
+        console.log('🎬 DEBUG: AnimationState exists:', !!character.animationState);
+        console.log('🎬 DEBUG: Renderer exists:', !!character.renderer);
+
+        let frameCount = 0;
         const render = () => {
-            if (!character.canvas.parentNode) return; // DOM削除時は停止
+            if (!character.canvas.parentNode) {
+                console.log('❌ DEBUG: Canvas not in DOM, stopping render loop');
+                return; // DOM削除時は停止
+            }
+
+            frameCount++;
+            if (frameCount <= 5 || frameCount % 60 === 0) {
+                console.log(`🎬 DEBUG: Rendering frame ${frameCount} for ${name}`);
+            }
 
             const { skeleton, animationState, renderer, mvp, canvas } = character;
             const gl = canvas.getContext('webgl');
             
-            animationState.update(0.016); // 60fps
-            animationState.apply(skeleton);
-            skeleton.updateWorldTransform();
+            if (!gl) {
+                console.error('❌ DEBUG: No WebGL context in render loop');
+                return;
+            }
 
-            gl.clearColor(0, 0, 0, 0);
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            try {
+                animationState.update(0.016); // 60fps
+                animationState.apply(skeleton);
+                skeleton.updateWorldTransform();
 
-            renderer.camera.position.x = 0;
-            renderer.camera.position.y = 0;
-            renderer.camera.viewportWidth = canvas.width;
-            renderer.camera.viewportHeight = canvas.height;
-            renderer.camera.update();
+                gl.clearColor(0, 0, 0, 0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
 
-            renderer.begin();
-            renderer.drawSkeleton(skeleton);
-            renderer.end();
+                renderer.camera.position.x = 0;
+                renderer.camera.position.y = 0;
+                renderer.camera.viewportWidth = canvas.width;
+                renderer.camera.viewportHeight = canvas.height;
+                renderer.camera.update();
+
+                renderer.begin();
+                renderer.drawSkeleton(skeleton);
+                renderer.end();
+
+                if (frameCount === 5) {
+                    console.log('✅ DEBUG: First 5 frames rendered successfully');
+                }
+
+            } catch (error) {
+                console.error('❌ DEBUG: Render loop error:', error);
+                return;
+            }
 
             requestAnimationFrame(render);
         };
@@ -334,9 +408,13 @@ class SpineCharacterManager {
         // 初期アニメーション設定
         if (character.skeleton.data.animations.length > 0) {
             const animName = character.skeleton.data.animations[0].name;
+            console.log(`🎭 DEBUG: Setting initial animation: ${animName}`);
             character.animationState.setAnimation(0, animName, true);
+        } else {
+            console.log('⚠️ DEBUG: No animations found in skeleton data');
         }
 
+        console.log('🚀 DEBUG: Starting animation frame requests');
         render();
     }
 
