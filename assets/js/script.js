@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let animatedCards = 0;
     let floatingElementsCount = 0;
     let conceptAnimated = false;
+    
 
     // ぷらっとくん設定をHTMLから読み込む関数（ビューポート基準）
     function loadPurattokunsettings() {
@@ -58,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // サービスカードは少し遅らせて順次表示
                     const cards = document.querySelectorAll('.service-card');
                     const index = Array.from(cards).indexOf(entry.target);
+                    
                     setTimeout(() => {
                         entry.target.classList.add('animate');
                         animatedCards++;

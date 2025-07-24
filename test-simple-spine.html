@@ -49,7 +49,7 @@
         #purattokun-canvas {
             position: absolute;
             left: 18%;
-            top: 49%;
+            top: 65%;    /* 49% → 65% に変更（白い枠の下に配置） */
             transform: translate(-50%, -50%);
             width: 16%;  /* 背景画像の16%の幅 */
             height: 16%; /* 背景画像の16%の高さ */
@@ -70,23 +70,196 @@
             border-radius: 4px;
             font-family: monospace;
         }
+        
+        /* ガタンテスト用サービスセクション */
+        .services {
+            padding: 80px 0;
+            background: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .services h2 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+        
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        
+        .service-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+        }
+        
+        .service-card.animate {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .service-card h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .service-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        /* Hero構造テスト用CSS（現在のサイトと同じ） */
+        .hero {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 120px 20px 40px;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hero-content {
+            position: absolute;
+            z-index: 20;
+            max-width: 280px;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            backdrop-filter: blur(8px);
+            left: 40px;
+            top: 130px;
+        }
+        
+        .hero-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.8rem;
+            line-height: 1.2;
+            font-weight: 600;
+        }
+        
+        .series-text {
+            display: block;
+            font-size: 0.9em;
+            margin-top: 0.2rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        
+        .cta-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .cta-button:hover {
+            background: #ff5252;
+        }
     </style>
 </head>
 <body>
     <div class="info">
-        <h1>シンプルSpine統合テスト</h1>
-        <p>最小限のコードでSpineキャラクターを配置します。</p>
+        <h1>シンプルSpine統合テスト + Hero構造</h1>
+        <p>シンプルサンプルに.hero構造を追加してガタンを再現テスト</p>
         <div class="status" id="status">初期化中...</div>
     </div>
     
-    <!-- 背景コンテナ -->
-    <div class="background-container">
-        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
-        <img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
-        <img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
-        <img src="assets/images/kumo3.png" alt="雲3" class="cloud cloud3">
-        <canvas id="purattokun-canvas"></canvas>
-    </div>
+    <!-- Hero構造テスト -->
+    <section class="hero">
+        <!-- 背景コンテナ -->
+        <div class="background-container">
+            <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+            <img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
+            <img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
+            <img src="assets/images/kumo3.png" alt="雲3" class="cloud cloud3">
+            <canvas id="purattokun-canvas"></canvas>
+        </div>
+        
+        <!-- UI要素（現在のサイトと同じ） -->
+        <header class="hero-content">
+            <h1 class="hero-title">ぷらっとくん<br><span class="series-text">シリーズ</span></h1>
+            <p class="hero-subtitle">あなたのビジネスをサポート</p>
+            <button class="cta-button" type="button">詳しく見る</button>
+        </header>
+    </section>
+    
+    <!-- ガタンテスト用サービスセクション -->
+    <section class="services">
+        <div class="container">
+            <h2>ガタンテスト - サービス内容</h2>
+            <div class="service-grid">
+                <div class="service-card">
+                    <div class="service-icon">📅</div>
+                    <h3>サービス1</h3>
+                    <p>これはガタンテスト用のサービスカード1です。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">💰</div>
+                    <h3>サービス2</h3>
+                    <p>これはガタンテスト用のサービスカード2です。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🎓</div>
+                    <h3>サービス3</h3>
+                    <p>これはガタンテスト用のサービスカード3です。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🐱</div>
+                    <h3>サービス4</h3>
+                    <p>これはガタンテスト用のサービスカード4です。</p>
+                </div>
+            </div>
+        </div>
+    </section>
     
     <!-- Spine WebGL Runtime -->
     <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
@@ -251,6 +424,108 @@
         
         // 開始
         waitForSpine();
+        
+        // ガタンテスト用IntersectionObserver
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const animationObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const cards = document.querySelectorAll('.service-card');
+                    const index = Array.from(cards).indexOf(entry.target);
+                    
+                    console.log(`🔍 [GATAN TEST] サービスカード${index + 1}が画面に入りました`);
+                    
+                    // 背景画像とCanvasの測定（BEFORE）
+                    const backgroundImage = document.querySelector('.background-image');
+                    const purattokuCanvas = document.querySelector('#purattokun-canvas');
+                    
+                    let beforeBgRect = null;
+                    let beforeCanvasRect = null;
+                    
+                    if (backgroundImage) {
+                        beforeBgRect = backgroundImage.getBoundingClientRect();
+                        console.log(`📏 [BEFORE] 背景画像:`, {
+                            width: beforeBgRect.width,
+                            height: beforeBgRect.height,
+                            left: beforeBgRect.left,
+                            top: beforeBgRect.top
+                        });
+                    }
+                    
+                    if (purattokuCanvas) {
+                        beforeCanvasRect = purattokuCanvas.getBoundingClientRect();
+                        console.log(`📏 [BEFORE] ぷらっとくん:`, {
+                            width: beforeCanvasRect.width,
+                            height: beforeCanvasRect.height,
+                            left: beforeCanvasRect.left,
+                            top: beforeCanvasRect.top
+                        });
+                    }
+                    
+                    setTimeout(() => {
+                        entry.target.classList.add('animate');
+                        console.log(`🎬 [GATAN TEST] サービスカード${index + 1}アニメーション開始`);
+                        
+                        // アニメーション後の測定
+                        setTimeout(() => {
+                            if (backgroundImage && beforeBgRect) {
+                                const afterBgRect = backgroundImage.getBoundingClientRect();
+                                console.log(`📏 [AFTER] 背景画像:`, {
+                                    width: afterBgRect.width,
+                                    height: afterBgRect.height,
+                                    left: afterBgRect.left,
+                                    top: afterBgRect.top,
+                                    changeX: afterBgRect.left - beforeBgRect.left,
+                                    changeY: afterBgRect.top - beforeBgRect.top,
+                                    changeW: afterBgRect.width - beforeBgRect.width,
+                                    changeH: afterBgRect.height - beforeBgRect.height
+                                });
+                            }
+                            
+                            if (purattokuCanvas && beforeCanvasRect) {
+                                const afterCanvasRect = purattokuCanvas.getBoundingClientRect();
+                                console.log(`📏 [AFTER] ぷらっとくん:`, {
+                                    width: afterCanvasRect.width,
+                                    height: afterCanvasRect.height,
+                                    left: afterCanvasRect.left,
+                                    top: afterCanvasRect.top,
+                                    changeX: afterCanvasRect.left - beforeCanvasRect.left,
+                                    changeY: afterCanvasRect.top - beforeCanvasRect.top,
+                                    changeW: afterCanvasRect.width - beforeCanvasRect.width,
+                                    changeH: afterCanvasRect.height - beforeCanvasRect.height
+                                });
+                                
+                                // 相関分析
+                                if (beforeBgRect) {
+                                    const bgChangeY = afterBgRect ? afterBgRect.top - beforeBgRect.top : 0;
+                                    const canvasChangeY = afterCanvasRect.top - beforeCanvasRect.top;
+                                    const difference = canvasChangeY - bgChangeY;
+                                    const isOutOfSync = Math.abs(difference) >= 2;
+                                    
+                                    console.log(`📊 [GATAN ANALYSIS] サービスカード${index + 1} - シンプル構造での相関:`, {
+                                        backgroundChangeY: bgChangeY,
+                                        canvasChangeY: canvasChangeY,
+                                        difference: difference,
+                                        syncStatus: isOutOfSync ? '❌ズレ' : '✅同期',
+                                        note: 'シンプルサンプルでのガタンテスト結果'
+                                    });
+                                }
+                            }
+                        }, 100);
+                        
+                    }, index * 150);
+                }
+            });
+        }, observerOptions);
+        
+        // サービスカードを監視対象に追加
+        document.querySelectorAll('.service-card').forEach(card => {
+            animationObserver.observe(card);
+        });
     </script>
 </body>
 </html>
