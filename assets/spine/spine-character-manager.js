@@ -242,6 +242,26 @@ class SpineCharacterManager {
             console.log('📖 DEBUG: Atlas pages:', atlas.pages?.length || 'unknown');
             console.log('📖 DEBUG: Atlas regions:', atlas.regions?.length || 'unknown');
             
+            // テクスチャ詳細確認
+            if (atlas.pages && atlas.pages.length > 0) {
+                console.log('🖼️ DEBUG: Atlas page details:');
+                atlas.pages.forEach((page, index) => {
+                    console.log(`  Page ${index}:`, page);
+                    console.log(`  - Name: ${page.name}`);
+                    console.log(`  - Texture: ${page.texture}`);
+                    console.log(`  - Width: ${page.width}, Height: ${page.height}`);
+                });
+            }
+            
+            if (atlas.regions && atlas.regions.length > 0) {
+                console.log('🗂️ DEBUG: Atlas regions:');
+                atlas.regions.forEach((region, index) => {
+                    if (index < 3) { // 最初の3つのみ表示
+                        console.log(`  Region ${index}: ${region.name}`);
+                    }
+                });
+            }
+            
             const skeletonJson = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
             console.log('🔧 DEBUG: SkeletonJson created');
             
@@ -256,6 +276,16 @@ class SpineCharacterManager {
             console.log('🦴 DEBUG: Skeleton bones:', skeleton.bones?.length || 'unknown');
             console.log('🦴 DEBUG: Skeleton slots:', skeleton.slots?.length || 'unknown');
             
+            // スロットとアタッチメントの詳細確認
+            console.log('🎪 DEBUG: Skeleton slot details:');
+            if (skeleton.slots && skeleton.slots.length > 0) {
+                skeleton.slots.forEach((slot, index) => {
+                    console.log(`  Slot ${index}: ${slot.data.name}`);
+                    console.log(`    - Attachment: ${slot.attachment?.name || 'none'}`);
+                    console.log(`    - Color: r=${slot.color?.r || 'N/A'}, g=${slot.color?.g || 'N/A'}, b=${slot.color?.b || 'N/A'}, a=${slot.color?.a || 'N/A'}`);
+                });
+            }
+            
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
@@ -268,6 +298,11 @@ class SpineCharacterManager {
             console.log('  - y:', skeleton.y);
             console.log('  - scaleX:', skeleton.scaleX);
             console.log('  - scaleY:', skeleton.scaleY);
+            
+            // Skeletonの初期状態を設定
+            skeleton.setToSetupPose();
+            skeleton.updateWorldTransform();
+            console.log('⚙️ DEBUG: Skeleton setup pose applied and world transform updated');
 
             // キャラクター登録
             const character = {
@@ -396,8 +431,22 @@ class SpineCharacterManager {
                 renderer.drawSkeleton(skeleton);
                 renderer.end();
 
+                // WebGLエラーチェック
+                const glError = gl.getError();
+                if (glError !== gl.NO_ERROR && frameCount <= 5) {
+                    console.error(`❌ DEBUG: WebGL error in frame ${frameCount}:`, glError);
+                }
+
                 if (frameCount === 5) {
                     console.log('✅ DEBUG: First 5 frames rendered successfully');
+                    console.log('🎨 DEBUG: Checking Skeleton render state:');
+                    skeleton.slots.forEach((slot, index) => {
+                        if (slot.attachment) {
+                            console.log(`  Slot ${index} (${slot.data.name}): ${slot.attachment.name} - visible`);
+                        } else {
+                            console.log(`  Slot ${index} (${slot.data.name}): no attachment`);
+                        }
+                    });
                 }
 
             } catch (error) {
