@@ -349,13 +349,15 @@ class SpineCharacterManager {
 
             this.characters.set(name, character);
 
-            // DOM配置 - 自然な配置
+            // DOM配置 - デバッグ用に境界線を一時的に復活
             canvas.style.left = '0px';
             canvas.style.top = '0px';
-            canvas.style.zIndex = '1'; // 背景画像の上に配置
+            canvas.style.border = '3px solid blue'; // デバッグ用境界線
+            canvas.style.backgroundColor = 'rgba(255, 255, 0, 0.3)'; // 半透明黄色
+            canvas.style.zIndex = '9999'; // 最前面
             canvas.style.pointerEvents = 'auto'; // クリック可能
             document.body.appendChild(canvas);
-            console.log('✅ DEBUG: Canvas added to DOM for natural display');
+            console.log('✅ DEBUG: Canvas added to DOM with blue border and yellow background for debugging');
             
             // Canvas配置の詳細確認
             setTimeout(() => {
@@ -511,6 +513,16 @@ class SpineCharacterManager {
                 renderer.begin();
                 renderer.drawSkeleton(skeleton);
                 renderer.end();
+                
+                // デバッグ用：ぷらっとくんの位置に赤い点を描画
+                if (frameCount <= 10) {
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.fillStyle = 'red';
+                        ctx.fillRect(skeleton.x - 5, skeleton.y - 5, 10, 10);
+                        console.log(`🔴 Debug red dot at Spine coords: (${skeleton.x}, ${skeleton.y})`);
+                    }
+                }
 
                 // WebGLエラーチェック
                 const glError = gl.getError();
