@@ -259,10 +259,10 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // 位置設定
-            skeleton.x = canvas.width / 2;
-            skeleton.y = canvas.height - 50;
-            skeleton.scaleX = skeleton.scaleY = 0.5;
+            // 位置設定（中央に配置して視認性向上）
+            skeleton.x = canvas.width / 2;  // 300px (中央)
+            skeleton.y = canvas.height / 2; // 250px (中央)
+            skeleton.scaleX = skeleton.scaleY = 1.0; // スケールを大きくして視認性向上
             console.log('📍 DEBUG: Skeleton position set:');
             console.log('  - x:', skeleton.x);
             console.log('  - y:', skeleton.y);
@@ -282,10 +282,12 @@ class SpineCharacterManager {
 
             this.characters.set(name, character);
 
-            // DOM配置 - 位置を明示的に設定
+            // DOM配置 - 位置を明示的に設定（視認性向上）
             canvas.style.left = '100px';
             canvas.style.top = '100px';
             canvas.style.border = '2px solid red'; // デバッグ用の境界線
+            canvas.style.backgroundColor = 'rgba(255, 255, 0, 0.1)'; // 薄い黄色背景
+            canvas.style.zIndex = '9999'; // 最前面に配置
             document.body.appendChild(canvas);
             console.log('✅ DEBUG: Canvas added to DOM with red border for visibility');
             
@@ -380,7 +382,8 @@ class SpineCharacterManager {
                 animationState.apply(skeleton);
                 skeleton.updateWorldTransform();
 
-                gl.clearColor(0, 0, 0, 0);
+                // 白い背景で視認性向上
+                gl.clearColor(1, 1, 1, 1);
                 gl.clear(gl.COLOR_BUFFER_BIT);
 
                 renderer.camera.position.x = 0;
