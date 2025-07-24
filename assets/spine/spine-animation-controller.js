@@ -86,7 +86,7 @@ class SpineAnimationController {
     }
 
     /**
-     * プレースホルダーアニメーション再生
+     * プレースホルダーアニメーション再生（シーケンス対応版）
      * @param {object} character - キャラクターオブジェクト
      * @param {string} animationName - アニメーション名
      */
@@ -96,6 +96,7 @@ class SpineAnimationController {
         const animations = {
             'syutugen': 'placeholderAppear 1s ease-out',
             'taiki': 'placeholderFloat 3s ease-in-out infinite',
+            'yarare': 'placeholderDamage 1.2s ease-out',
             'click': 'placeholderBounce 0.5s ease-out'
         };
 
@@ -103,6 +104,19 @@ class SpineAnimationController {
         character.element.style.animation = animationCSS;
 
         log(LogLevel.DEBUG, 'animation', `Placeholder animation applied: ${animationCSS}`);
+
+        // アニメーションシーケンス処理（プレースホルダー用）
+        if (animationName === 'syutugen') {
+            setTimeout(() => {
+                character.element.style.animation = animations['taiki'];
+                log(LogLevel.DEBUG, 'animation', 'Placeholder: syutugen → taiki transition completed');
+            }, 1000); // syutugen アニメーション時間後にtaikiに切り替え
+        } else if (animationName === 'yarare') {
+            setTimeout(() => {
+                character.element.style.animation = animations['taiki'];
+                log(LogLevel.DEBUG, 'animation', 'Placeholder: yarare → taiki transition completed');
+            }, 1200); // yarare アニメーション時間後にtaikiに切り替え
+        }
     }
 
     /**
@@ -122,6 +136,15 @@ class SpineAnimationController {
             character.animationState.setAnimation(0, animationName, loop);
             log(LogLevel.INFO, 'animation', `Spine animation ${animationName} set with loop: ${loop}`);
 
+            // アニメーション完了イベントの設定（→ taiki遷移用）
+            if ((animationName === 'syutugen' || animationName === 'yarare') && !loop) {
+                this.setupAnimationCompleteListener(character, () => {
+                    const transitionType = animationName === 'syutugen' ? 'appearance' : 'damage';
+                    log(LogLevel.INFO, 'animation', `${animationName} animation completed (${transitionType}), transitioning to taiki`);
+                    this.playSpineAnimation(character, 'taiki', true);
+                });
+            }
+
         } catch (error) {
             log(LogLevel.ERROR, 'animation', `Failed to set Spine animation: ${error.message}`);
             // フォールバックとしてプレースホルダーアニメーション
@@ -130,13 +153,63 @@ class SpineAnimationController {
     }
 
     /**
-     * アニメーションシーケンス実行
+     * アニメーション完了リスナーを設定
+     * @param {object} character - キャラクターオブジェクト
+     * @param {function} callback - 完了時のコールバック
+     */
+    setupAnimationCompleteListener(character, callback) {
+        if (!character.animationState) return;
+
+        try {
+            // Spine AnimationStateの完了イベントを監視
+            const listener = {
+                complete: (entry) => {
+                    log(LogLevel.DEBUG, 'animation', `Animation ${entry.animation.name} completed`);
+                    callback();
+                    // リスナーを削除してメモリリークを防ぐ
+                    character.animationState.removeListener(listener);
+                }
+            };
+
+            character.animationState.addListener(listener);
+            log(LogLevel.DEBUG, 'animation', 'Animation complete listener set up');
+
+        } catch (error) {
+            log(LogLevel.WARN, 'animation', 'Failed to set up animation listener, using timeout fallback');
+            // フォールバック：タイマーベースの完了判定
+            setTimeout(() => {
+                callback();
+            }, 2000); // syutugenアニメーションの推定時間
+        }
+    }
+
+    /**
+     * アニメーションシーケンス実行（改良版：自然な遷移対応）
      * @param {string} characterName - キャラクター名
      * @param {Array} sequence - アニメーションシーケンス
      */
     async playSequence(characterName, sequence = ['syutugen', 'taiki']) {
-        log(LogLevel.INFO, 'animation', `Starting animation sequence for ${characterName}:`, sequence);
+        log(LogLevel.INFO, 'animation', `Starting enhanced animation sequence for ${characterName}:`, sequence);
 
+        // 特別処理：自然な遷移アニメーション
+        if (sequence.length === 2 && sequence[1] === 'taiki') {
+            const firstAnim = sequence[0];
+            
+            if (firstAnim === 'syutugen') {
+                // 出現→待機の遷移
+                this.playAnimation(characterName, 'syutugen', false);
+                log(LogLevel.INFO, 'animation', `Playing syutugen (appearance) animation once for ${characterName}`);
+            } else if (firstAnim === 'yarare') {
+                // やられ→待機の遷移
+                this.playAnimation(characterName, 'yarare', false);
+                log(LogLevel.INFO, 'animation', `Playing yarare (damage) animation once for ${characterName}`);
+            }
+            
+            // アニメーション完了は playSpineAnimation 内で自動的にtaikiに遷移
+            return;
+        }
+
+        // 通常のシーケンス処理（旧来互換性）
         for (let i = 0; i < sequence.length; i++) {
             const animationName = sequence[i];
             const isLast = i === sequence.length - 1;
@@ -254,6 +327,37 @@ class SpineAnimationController {
                 25% { transform: scale(1.2) rotate(5deg); }
                 50% { transform: scale(0.9) rotate(-3deg); }
                 75% { transform: scale(1.1) rotate(2deg); }
+            }
+
+            @keyframes placeholderDamage {
+                0% { 
+                    transform: scale(1) rotate(0deg); 
+                    opacity: 1; 
+                }
+                15% { 
+                    transform: scale(0.8) rotate(-10deg); 
+                    opacity: 0.7; 
+                }
+                30% { 
+                    transform: scale(1.1) rotate(8deg); 
+                    opacity: 0.9; 
+                }
+                45% { 
+                    transform: scale(0.9) rotate(-5deg); 
+                    opacity: 0.6; 
+                }
+                60% { 
+                    transform: scale(1.05) rotate(3deg); 
+                    opacity: 0.8; 
+                }
+                80% { 
+                    transform: scale(0.95) rotate(-2deg); 
+                    opacity: 0.9; 
+                }
+                100% { 
+                    transform: scale(1) rotate(0deg); 
+                    opacity: 1; 
+                }
             }
         `;
         

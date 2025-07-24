@@ -136,6 +136,11 @@ git log --oneline
 - **普通: 0.55（現在の設定）**
 - 小さめ: 0.25
 
+> ⚠️ **重要**: Spineキャラクターのサイズは**Canvas要素のCSS設定**と**Skeletonオブジェクトのscale値**の**両方**が影響します。どちらか一方だけでは変更できません。
+> - CSS側: `width`, `height`属性
+> - JS側: `skeleton.scaleX`, `skeleton.scaleY`値
+> 両方を同時に調整する必要があります。
+
 ---
 
 ## 🎯 Canvas配置システム（モジュール化・2024年7月24日導入）
@@ -275,6 +280,44 @@ emergencyDiagnosis();
 - ページ遷移連動演出  
 - 管理画面からの設定変更
 - A/Bテスト対応
+
+---
+
+## 🎬 Spineアニメーション改良システム（2024年7月24日実装）
+
+### アニメーションシーケンスの実装
+ぷらっとくんのアニメーションを「登場→待機モーション」の自然な流れに改良しました。
+
+#### 実装内容
+- **syutugen（出現）**: キャラクターの登場アニメーション（1回のみ再生）
+- **taiki（待機）**: アイドル状態のループアニメーション（無限ループ）
+- **自動遷移**: syutugen完了後、自動的にtaikiに移行
+
+#### 技術仕様
+```javascript
+// アニメーションシーケンスの開始
+this.animationController.playSequence(name, ['syutugen', 'taiki']);
+
+// Spine WebGL: AnimationState完了イベントで自動遷移
+// Placeholder: タイマーベースで1秒後に遷移（1000ms）
+```
+
+#### クリック動作の変更
+- **旧仕様**: クリック→click アニメーション→taiki復帰
+- **更新仕様**:クリック→syutugen→taiki のフルシーケンス再生
+- **最新仕様**: クリック→yarare（やられ）→taiki のダメージシーケンス再生
+
+#### プレースホルダー対応
+SpineWebGL読み込み失敗時もCSS keyframeアニメーションで同様の動作を実現：
+- `placeholderAppear`: 出現アニメーション（1秒）
+- `placeholderFloat`: 浮遊アニメーション（3秒ループ）
+
+#### デバッグ確認方法
+```javascript
+// コンソールで確認できるログ
+// "Playing syutugen (appearance) animation once for purattokun"
+// "Syutugen animation completed, transitioning to taiki"
+```
 
 ---
 

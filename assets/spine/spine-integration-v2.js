@@ -199,18 +199,15 @@ class SpineIntegrationManager {
     }
 
     /**
-     * クリックイベント処理
+     * クリックイベント処理（やられアニメーション対応）
      */
     handleCharacterClick(name) {
-        log(LogLevel.DEBUG, 'animation', `Character ${name} clicked`);
+        log(LogLevel.DEBUG, 'animation', `Character ${name} clicked - playing yarare sequence`);
         
-        // クリックアニメーション再生
-        this.animationController.playAnimation(name, 'click', false);
+        // クリック時はやられ→待機のアニメーションシーケンスを再生
+        this.animationController.playSequence(name, ['yarare', 'taiki']);
         
-        // 短時間後に通常アニメーションに戻す
-        setTimeout(() => {
-            this.animationController.playAnimation(name, 'taiki', true);
-        }, 1000);
+        log(LogLevel.INFO, 'animation', `Yarare animation sequence triggered for ${name}`);
     }
 
     /**

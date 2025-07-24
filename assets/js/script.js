@@ -60,10 +60,200 @@ document.addEventListener('DOMContentLoaded', function() {
                     const cards = document.querySelectorAll('.service-card');
                     const index = Array.from(cards).indexOf(entry.target);
                     
+                    // 🔍 Phase C: 詳細ガタン測定システム
+                    console.log(`🔍 [PHASE C] サービスカード${index + 1} - 詳細測定開始`);
+                    
+                    // 測定対象要素を収集
+                    const measurementTargets = {
+                        backgroundImage: document.querySelector('.background-image'),
+                        backgroundContainer: document.querySelector('.background-container'),
+                        heroSection: document.querySelector('.hero'),
+                        purattokuCanvas: document.querySelector('canvas[data-spine-character]'),
+                        navbar: document.querySelector('.navbar'),
+                        servicesSection: document.querySelector('.services'),
+                        body: document.body,
+                        html: document.documentElement
+                    };
+                    
+                    // BEFORE測定
+                    const beforeMeasurements = {};
+                    Object.keys(measurementTargets).forEach(key => {
+                        const element = measurementTargets[key];
+                        if (element) {
+                            const rect = element.getBoundingClientRect();
+                            const computedStyle = window.getComputedStyle(element);
+                            beforeMeasurements[key] = {
+                                bounds: {
+                                    left: rect.left,
+                                    top: rect.top,
+                                    width: rect.width,
+                                    height: rect.height,
+                                    right: rect.right,
+                                    bottom: rect.bottom
+                                },
+                                styles: {
+                                    position: computedStyle.position,
+                                    transform: computedStyle.transform,
+                                    top: computedStyle.top,
+                                    left: computedStyle.left,
+                                    width: computedStyle.width,
+                                    height: computedStyle.height,
+                                    margin: computedStyle.margin,
+                                    padding: computedStyle.padding
+                                },
+                                scrollOffset: {
+                                    scrollTop: element.scrollTop || 0,
+                                    scrollLeft: element.scrollLeft || 0
+                                }
+                            };
+                        }
+                    });
+                    
+                    // ウィンドウ情報も測定
+                    beforeMeasurements.window = {
+                        innerWidth: window.innerWidth,
+                        innerHeight: window.innerHeight,
+                        scrollX: window.scrollX,
+                        scrollY: window.scrollY,
+                        devicePixelRatio: window.devicePixelRatio
+                    };
+                    
+                    console.log(`📏 [BEFORE] 全要素測定完了:`, beforeMeasurements);
+                    
                     setTimeout(() => {
                         entry.target.classList.add('animate');
                         animatedCards++;
-                        console.log(`サービスカード${index + 1}がアニメーション開始`);
+                        console.log(`🎬 [GATAN] サービスカード${index + 1}アニメーション実行`);
+                        
+                        // AFTER測定（アニメーション完了を待つ）
+                        setTimeout(() => {
+                            console.log(`🔍 [PHASE C] サービスカード${index + 1} - AFTER測定開始`);
+                            
+                            const afterMeasurements = {};
+                            Object.keys(measurementTargets).forEach(key => {
+                                const element = measurementTargets[key];
+                                if (element) {
+                                    const rect = element.getBoundingClientRect();
+                                    const computedStyle = window.getComputedStyle(element);
+                                    afterMeasurements[key] = {
+                                        bounds: {
+                                            left: rect.left,
+                                            top: rect.top,
+                                            width: rect.width,
+                                            height: rect.height,
+                                            right: rect.right,
+                                            bottom: rect.bottom
+                                        },
+                                        styles: {
+                                            position: computedStyle.position,
+                                            transform: computedStyle.transform,
+                                            top: computedStyle.top,
+                                            left: computedStyle.left,
+                                            width: computedStyle.width,
+                                            height: computedStyle.height,
+                                            margin: computedStyle.margin,
+                                            padding: computedStyle.padding
+                                        },
+                                        scrollOffset: {
+                                            scrollTop: element.scrollTop || 0,
+                                            scrollLeft: element.scrollLeft || 0
+                                        }
+                                    };
+                                }
+                            });
+                            
+                            afterMeasurements.window = {
+                                innerWidth: window.innerWidth,
+                                innerHeight: window.innerHeight,
+                                scrollX: window.scrollX,
+                                scrollY: window.scrollY,
+                                devicePixelRatio: window.devicePixelRatio
+                            };
+                            
+                            console.log(`📏 [AFTER] 全要素測定完了:`, afterMeasurements);
+                            
+                            // 🎯 詳細差分分析
+                            console.group(`🔍 [PHASE C ANALYSIS] サービスカード${index + 1} - 詳細差分分析`);
+                            
+                            Object.keys(beforeMeasurements).forEach(key => {
+                                if (key === 'window') return; // ウィンドウ情報は後で処理
+                                
+                                const before = beforeMeasurements[key];
+                                const after = afterMeasurements[key];
+                                
+                                if (before && after) {
+                                    const boundsChanges = {};
+                                    const styleChanges = {};
+                                    let hasChanges = false;
+                                    
+                                    // 位置・サイズ変化をチェック
+                                    Object.keys(before.bounds).forEach(prop => {
+                                        const diff = after.bounds[prop] - before.bounds[prop];
+                                        if (Math.abs(diff) >= 0.1) { // 0.1px以上の変化
+                                            boundsChanges[prop] = {
+                                                before: before.bounds[prop],
+                                                after: after.bounds[prop],
+                                                change: diff
+                                            };
+                                            hasChanges = true;
+                                        }
+                                    });
+                                    
+                                    // スタイル変化をチェック
+                                    Object.keys(before.styles).forEach(prop => {
+                                        if (before.styles[prop] !== after.styles[prop]) {
+                                            styleChanges[prop] = {
+                                                before: before.styles[prop],
+                                                after: after.styles[prop]
+                                            };
+                                            hasChanges = true;
+                                        }
+                                    });
+                                    
+                                    if (hasChanges) {
+                                        console.log(`🚨 [CHANGE DETECTED] ${key}:`, {
+                                            boundsChanges,
+                                            styleChanges
+                                        });
+                                        
+                                        // 重要な変化の特定
+                                        if (boundsChanges.width || boundsChanges.height) {
+                                            console.warn(`📐 [SIZE CHANGE] ${key} - サイズ変化を検出!`);
+                                        }
+                                        if (boundsChanges.left || boundsChanges.top) {
+                                            console.warn(`📍 [POSITION CHANGE] ${key} - 位置変化を検出!`);
+                                        }
+                                    } else {
+                                        console.log(`✅ [NO CHANGE] ${key} - 変化なし`);
+                                    }
+                                }
+                            });
+                            
+                            // ウィンドウ情報の変化チェック
+                            const windowBefore = beforeMeasurements.window;
+                            const windowAfter = afterMeasurements.window;
+                            const windowChanges = {};
+                            let windowHasChanges = false;
+                            
+                            Object.keys(windowBefore).forEach(prop => {
+                                if (windowBefore[prop] !== windowAfter[prop]) {
+                                    windowChanges[prop] = {
+                                        before: windowBefore[prop],
+                                        after: windowAfter[prop],
+                                        change: windowAfter[prop] - windowBefore[prop]
+                                    };
+                                    windowHasChanges = true;
+                                }
+                            });
+                            
+                            if (windowHasChanges) {
+                                console.warn(`🖥️ [WINDOW CHANGE] ウィンドウ状態変化:`, windowChanges);
+                            }
+                            
+                            console.groupEnd();
+                            
+                        }, 700); // アニメーション完了後に測定
+                        
                         (window.pageYOffset);
                     }, index * 150);
                 } else if (entry.target.classList.contains('concept-text') || 
@@ -73,6 +263,112 @@ document.addEventListener('DOMContentLoaded', function() {
                     conceptAnimated = true;
                     console.log('コンセプト要素がアニメーション開始:', entry.target.className);
                     (window.pageYOffset);
+                } else if (entry.target.classList.contains('concept') || 
+                          entry.target.classList.contains('contact')) {
+                    // 🔍 コンセプト・お問い合わせセクションの詳細測定
+                    const sectionName = entry.target.classList.contains('concept') ? 'コンセプト' : 'お問い合わせ';
+                    console.log(`🔍 [PHASE C] ${sectionName}セクション - 詳細測定開始`);
+                    
+                    // 測定対象要素を収集
+                    const measurementTargets = {
+                        backgroundImage: document.querySelector('.background-image'),
+                        backgroundContainer: document.querySelector('.background-container'),
+                        heroSection: document.querySelector('.hero'),
+                        purattokuCanvas: document.querySelector('canvas[data-spine-character]'),
+                        navbar: document.querySelector('.navbar'),
+                        targetSection: entry.target,
+                        body: document.body,
+                        html: document.documentElement
+                    };
+                    
+                    // BEFORE測定
+                    const beforeMeasurements = {};
+                    Object.keys(measurementTargets).forEach(key => {
+                        const element = measurementTargets[key];
+                        if (element) {
+                            const rect = element.getBoundingClientRect();
+                            const computedStyle = window.getComputedStyle(element);
+                            beforeMeasurements[key] = {
+                                bounds: {
+                                    left: rect.left,
+                                    top: rect.top,
+                                    width: rect.width,
+                                    height: rect.height
+                                },
+                                styles: {
+                                    position: computedStyle.position,
+                                    margin: computedStyle.margin,
+                                    padding: computedStyle.padding
+                                }
+                            };
+                        }
+                    });
+                    
+                    console.log(`📏 [${sectionName}] BEFORE測定完了:`, beforeMeasurements);
+                    
+                    // セクション表示時の処理
+                    entry.target.classList.add('animate');
+                    console.log(`🎬 ${sectionName}セクションが画面に入りました`);
+                    
+                    // AFTER測定
+                    setTimeout(() => {
+                        const afterMeasurements = {};
+                        Object.keys(measurementTargets).forEach(key => {
+                            const element = measurementTargets[key];
+                            if (element) {
+                                const rect = element.getBoundingClientRect();
+                                const computedStyle = window.getComputedStyle(element);
+                                afterMeasurements[key] = {
+                                    bounds: {
+                                        left: rect.left,
+                                        top: rect.top,
+                                        width: rect.width,
+                                        height: rect.height
+                                    },
+                                    styles: {
+                                        position: computedStyle.position,
+                                        margin: computedStyle.margin,
+                                        padding: computedStyle.padding
+                                    }
+                                };
+                            }
+                        });
+                        
+                        console.log(`📏 [${sectionName}] AFTER測定完了:`, afterMeasurements);
+                        
+                        // 差分分析
+                        console.group(`🔍 [${sectionName}セクション] 差分分析`);
+                        Object.keys(beforeMeasurements).forEach(key => {
+                            const before = beforeMeasurements[key];
+                            const after = afterMeasurements[key];
+                            
+                            if (before && after) {
+                                const boundsChanges = {};
+                                let hasChanges = false;
+                                
+                                Object.keys(before.bounds).forEach(prop => {
+                                    const diff = after.bounds[prop] - before.bounds[prop];
+                                    if (Math.abs(diff) >= 0.1) {
+                                        boundsChanges[prop] = {
+                                            before: before.bounds[prop],
+                                            after: after.bounds[prop],
+                                            change: diff
+                                        };
+                                        hasChanges = true;
+                                    }
+                                });
+                                
+                                if (hasChanges) {
+                                    console.log(`🚨 [CHANGE DETECTED] ${key}:`, boundsChanges);
+                                } else {
+                                    console.log(`✅ [NO CHANGE] ${key}`);
+                                }
+                            }
+                        });
+                        console.groupEnd();
+                        
+                    }, 700);
+                    
                 } else {
                     entry.target.classList.add('animate');
                     console.log('要素がアニメーション開始:', entry.target.className);
@@ -85,6 +381,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const serviceCards = document.querySelectorAll('.service-card');
     const conceptText = document.querySelector('.concept-text');
     const conceptImage = document.querySelector('.concept-image');
+    const conceptSection = document.querySelector('.concept');
+    const contactSection = document.querySelector('.contact');
     
     // 各要素を監視対象に追加
     serviceCards.forEach((card, index) => {
@@ -112,6 +410,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (conceptImage) {
         animationObserver.observe(conceptImage);
         console.log('コンセプト画像を監視対象に追加');
+    }
+    
+    // コンセプトセクションとお問い合わせセクションも監視対象に追加
+    if (conceptSection) {
+        animationObserver.observe(conceptSection);
+        console.log('コンセプトセクション全体を監視対象に追加');
+    }
+    if (contactSection) {
+        animationObserver.observe(contactSection);
+        console.log('お問い合わせセクションを監視対象に追加');
     }
     
     // キラキラエフェクト関数
@@ -165,12 +473,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // ヘッダーの動的背景
         const navbar = document.querySelector('.navbar');
-        if (scrolled > 100) {
-            navbar.style.background = 'rgba(255, 255, 255, 0.95)';
-            navbar.style.backdropFilter = 'blur(10px)';
-        } else {
-            navbar.style.background = '#fff';
-            navbar.style.backdropFilter = 'none';
+        if (navbar) {
+            if (scrolled > 100) {
+                navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+                navbar.style.backdropFilter = 'blur(10px)';
+            } else {
+                navbar.style.background = '#fff';
+                navbar.style.backdropFilter = 'none';
+            }
         }
         
         // スクロールに基づく浮遊要素の生成
