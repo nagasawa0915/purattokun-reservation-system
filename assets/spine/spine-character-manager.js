@@ -292,44 +292,14 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // 座標系マッピング用の初期位置設定
-            skeleton.x = 0;
-            skeleton.y = 0;
-            skeleton.scaleX = skeleton.scaleY = 0.8; // 見やすいサイズ
-            console.log('📍 DEBUG: Starting coordinate system mapping...');
-            console.log('🗺️ Canvas size:', canvas.width, 'x', canvas.height);
-            
-            // 座標系マッピングテスト
-            const testPositions = [
-                {name: "左上", x: 0, y: 0},
-                {name: "右上", x: canvas.width, y: 0}, 
-                {name: "左下", x: 0, y: canvas.height},
-                {name: "右下", x: canvas.width, y: canvas.height},
-                {name: "中央", x: canvas.width/2, y: canvas.height/2}
-            ];
-            
-            let currentTest = 0;
-            console.log('🧪 Starting coordinate mapping test...');
-            console.log(`テスト ${currentTest + 1}/5: ${testPositions[currentTest].name} (${testPositions[currentTest].x}, ${testPositions[currentTest].y})`);
-            
-            // 3秒ごとに次の位置をテスト
-            const testInterval = setInterval(() => {
-                currentTest++;
-                if (currentTest < testPositions.length) {
-                    const pos = testPositions[currentTest];
-                    skeleton.x = pos.x;
-                    skeleton.y = pos.y;
-                    console.log(`🧪 テスト ${currentTest + 1}/5: ${pos.name} (${pos.x}, ${pos.y})`);
-                } else {
-                    clearInterval(testInterval);
-                    console.log('✅ 座標マッピングテスト完了');
-                    console.log('💡 どの位置で希望の場所に表示されましたか？');
-                    
-                    // テスト完了後、(0,0)に戻す
-                    skeleton.x = 0;
-                    skeleton.y = 0;
-                }
-            }, 3000);
+            // 最適化された位置設定（ユーザー確認済み）
+            skeleton.x = 100;   // お店の上に配置
+            skeleton.y = -120;  // 適切な高さ
+            skeleton.scaleX = skeleton.scaleY = 0.8; // 適切なサイズ
+            console.log('📍 Optimized position applied:');
+            console.log('  - Skeleton x:', skeleton.x);
+            console.log('  - Skeleton y:', skeleton.y); 
+            console.log('  - Scale:', skeleton.scaleX);
             
             // Skeletonの初期状態を設定
             skeleton.setToSetupPose();
@@ -349,15 +319,13 @@ class SpineCharacterManager {
 
             this.characters.set(name, character);
 
-            // DOM配置 - デバッグ用に境界線を一時的に復活
-            canvas.style.left = '0px';
-            canvas.style.top = '0px';
-            canvas.style.border = '3px solid blue'; // デバッグ用境界線
-            canvas.style.backgroundColor = 'rgba(255, 255, 0, 0.3)'; // 半透明黄色
-            canvas.style.zIndex = '9999'; // 最前面
+            // DOM配置 - 最適化された位置（ユーザー確認済み）
+            canvas.style.left = '300px'; // お店の上に配置
+            canvas.style.top = '200px';  // 適切な高さ
+            canvas.style.zIndex = '1';   // 背景画像の上に配置
             canvas.style.pointerEvents = 'auto'; // クリック可能
             document.body.appendChild(canvas);
-            console.log('✅ DEBUG: Canvas added to DOM with blue border and yellow background for debugging');
+            console.log('✅ Canvas positioned at optimized location: (300px, 200px)');
             
             // Canvas配置の詳細確認
             setTimeout(() => {
@@ -514,15 +482,7 @@ class SpineCharacterManager {
                 renderer.drawSkeleton(skeleton);
                 renderer.end();
                 
-                // デバッグ用：ぷらっとくんの位置に赤い点を描画
-                if (frameCount <= 10) {
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.fillStyle = 'red';
-                        ctx.fillRect(skeleton.x - 5, skeleton.y - 5, 10, 10);
-                        console.log(`🔴 Debug red dot at Spine coords: (${skeleton.x}, ${skeleton.y})`);
-                    }
-                }
+                // デバッグ用赤い点は削除（最適化完了）
 
                 // WebGLエラーチェック
                 const glError = gl.getError();
