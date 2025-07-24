@@ -292,15 +292,44 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // 位置設定（適切なサイズと位置に調整）
-            skeleton.x = 200; // 適度に右に配置
-            skeleton.y = 100; // 適度に下に配置
-            skeleton.scaleX = skeleton.scaleY = 0.75; // 適切なサイズ
-            console.log('📍 DEBUG: Skeleton position set to proper coordinates:');
-            console.log('  - x:', skeleton.x);
-            console.log('  - y:', skeleton.y);
-            console.log('  - scaleX:', skeleton.scaleX);
-            console.log('  - scaleY:', skeleton.scaleY);
+            // 座標系マッピング用の初期位置設定
+            skeleton.x = 0;
+            skeleton.y = 0;
+            skeleton.scaleX = skeleton.scaleY = 0.8; // 見やすいサイズ
+            console.log('📍 DEBUG: Starting coordinate system mapping...');
+            console.log('🗺️ Canvas size:', canvas.width, 'x', canvas.height);
+            
+            // 座標系マッピングテスト
+            const testPositions = [
+                {name: "左上", x: 0, y: 0},
+                {name: "右上", x: canvas.width, y: 0}, 
+                {name: "左下", x: 0, y: canvas.height},
+                {name: "右下", x: canvas.width, y: canvas.height},
+                {name: "中央", x: canvas.width/2, y: canvas.height/2}
+            ];
+            
+            let currentTest = 0;
+            console.log('🧪 Starting coordinate mapping test...');
+            console.log(`テスト ${currentTest + 1}/5: ${testPositions[currentTest].name} (${testPositions[currentTest].x}, ${testPositions[currentTest].y})`);
+            
+            // 3秒ごとに次の位置をテスト
+            const testInterval = setInterval(() => {
+                currentTest++;
+                if (currentTest < testPositions.length) {
+                    const pos = testPositions[currentTest];
+                    skeleton.x = pos.x;
+                    skeleton.y = pos.y;
+                    console.log(`🧪 テスト ${currentTest + 1}/5: ${pos.name} (${pos.x}, ${pos.y})`);
+                } else {
+                    clearInterval(testInterval);
+                    console.log('✅ 座標マッピングテスト完了');
+                    console.log('💡 どの位置で希望の場所に表示されましたか？');
+                    
+                    // テスト完了後、(0,0)に戻す
+                    skeleton.x = 0;
+                    skeleton.y = 0;
+                }
+            }, 3000);
             
             // Skeletonの初期状態を設定
             skeleton.setToSetupPose();
@@ -351,6 +380,38 @@ class SpineCharacterManager {
             // アニメーションループ開始
             this.startRenderLoop(name);
 
+            // リアルタイム調整機能をグローバルに登録
+            window.adjustPurattokun = function(x, y, scale) {
+                if (skeleton) {
+                    skeleton.x = x;
+                    skeleton.y = y;
+                    if (scale !== undefined) {
+                        skeleton.scaleX = skeleton.scaleY = scale;
+                    }
+                    console.log(`🎯 位置調整: (${x}, ${y})${scale !== undefined ? `, スケール: ${scale}` : ''}`);
+                    console.log('💡 良い位置が見つかったら座標をメモしてください');
+                } else {
+                    console.log('❌ スケルトンが見つかりません');
+                }
+            };
+            
+            window.getPurattokunsettings = function() {
+                if (skeleton) {
+                    console.log('📍 現在の設定:');
+                    console.log(`  位置: (${skeleton.x}, ${skeleton.y})`);
+                    console.log(`  スケール: ${skeleton.scaleX}`);
+                    return {
+                        x: skeleton.x,
+                        y: skeleton.y,
+                        scale: skeleton.scaleX
+                    };
+                }
+            };
+            
+            console.log('🛠️ 調整機能が利用可能になりました:');
+            console.log('  adjustPurattokun(x, y, scale) - 位置とサイズを調整');
+            console.log('  getPurattokunsettings() - 現在の設定を確認');
+            
             log(LogLevel.INFO, 'animation', `${name} successfully upgraded to Spine WebGL`);
             return character;
 
