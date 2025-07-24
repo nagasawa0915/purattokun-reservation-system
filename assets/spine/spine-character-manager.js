@@ -206,14 +206,21 @@ class SpineCharacterManager {
     fallbackPositioning(canvas, name) {
         console.log('🔄 従来配置システムを使用...');
         
-        // .heroコンテナ内に配置
-        const heroSection = document.querySelector('.hero');
-        if (heroSection) {
-            heroSection.appendChild(canvas);
-            console.log('📍 Canvas配置: .hero内に配置（従来方式）');
+        // .background-containerに配置（シンプル構造適用）
+        const backgroundContainer = document.querySelector('.background-container');
+        if (backgroundContainer) {
+            backgroundContainer.appendChild(canvas);
+            console.log('📍 Canvas配置: .background-container内に配置（成功パターン適用）');
         } else {
-            document.body.appendChild(canvas);
-            console.log('⚠️ .heroが見つからないため、bodyに配置');
+            // フォールバック: .hero内に配置
+            const heroSection = document.querySelector('.hero');
+            if (heroSection) {
+                heroSection.appendChild(canvas);
+                console.log('⚠️ .background-containerが見つからないため、.hero内に配置');
+            } else {
+                document.body.appendChild(canvas);
+                console.log('⚠️ コンテナが見つからないため、bodyに配置');
+            }
         }
         
         // CSS制御による位置設定

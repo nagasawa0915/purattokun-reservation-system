@@ -4,6 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ※重要　深く考えてください。
 
+## 🚨 このファイルの管理方針（Claude向け）
+
+1. **このファイルは簡潔に保つ** - 詳細はdocs/フォルダへ
+2. **構造を変更しない** - 既存の構造を維持して追記のみ
+3. **新しい情報の追加先**:
+   - 技術的詳細 → docs/DEVELOPMENT_GUIDE.md
+   - 問題解決 → docs/SPINE_TROUBLESHOOTING.md または docs/LAYER_DEBUGGING.md
+   - 設計思想 → docs/ARCHITECTURE_NOTES.md
+4. **このファイルには参照リンクのみ追加**
+
+---
+
 ## 📚 ドキュメント構成
 
 **このファイル**: 日常的な開発作業用のクイックリファレンス  
@@ -222,6 +234,7 @@ emergencyDiagnosis();
 
 ### 3. ウィンドウリサイズで位置がずれる
 **→ [レイヤー診断ガイド](./docs/LAYER_DEBUGGING.md) の「診断ツール」を実行**
+**→ [背景同期の成功事例](./docs/DEVELOPMENT_GUIDE.md#背景画像とキャラクターの完全同期2024年7月実装) も参照**
 
 ### 4. Spine関連エラー
 **→ [Spineトラブルシューティング](./docs/SPINE_TROUBLESHOOTING.md) を参照**

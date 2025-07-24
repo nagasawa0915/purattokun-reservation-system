@@ -147,38 +147,45 @@ body {
     color: #ff6b6b;
 }
 
-/* Hero Section - 背景画像と要素の完全同期 */
+/* Hero Section - シンプルな構造（成功パターン適用） */
 .hero {
-    /* 背景画像をビューポート全体に表示 */
-    background: url('../images/クラウドパートナーTOP.png') center top/cover no-repeat;
-    background-attachment: scroll;   /* 要素と一緒にスクロール（雲・ぷらっとくんと同期） */
-    padding: 120px 20px 80px;
+    min-height: 900px;
+    position: relative;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    width: 100vw;               /* ビューポート全幅 */
-    margin-left: calc(50% - 50vw); /* 中央揃えを維持しつつ全幅表示 */
-    min-height: 900px;
-    position: relative;
-    overflow: hidden;
+    padding: 120px 20px 80px;
 }
 
-/* Spine Canvas - 背景画像完全同期（.hero基準絶対配置） */
-canvas[data-spine-character] {
-    position: absolute !important;               /* .hero基準の絶対配置 */
-    /* 背景画像の「どこ」に置くかを%で決める（.hero基準） */
-    left: 20% !important;                        /* 左端から20%の位置（お店付近） */
-    top: 70% !important;                         /* 上端から70%の位置（地面レベル） */
-    transform: translate(-50%, -50%) !important;  /* キャラクター中心を座標に吸着 */
-    width: clamp(100px, 12vw, 200px) !important; /* レスポンシブサイズ */
-    height: auto !important;
+/* 背景コンテナ（背景画像・雲・キャラクターの親） */
+.background-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+/* 背景画像（<img>タグで配置） */
+.background-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+}
+
+/* Spine Canvas - 背景画像基準配置（成功パターン適用） */
+.background-container canvas[data-spine-character] {
+    position: absolute !important;
+    left: 18% !important;                        /* 背景画像基準の位置 */
+    top: 49% !important;                         /* 背景画像基準の位置 */
+    width: 16% !important;                       /* 背景画像基準のサイズ */
+    height: 16% !important;                      /* 背景画像基準のサイズ */
+    transform: translate(-50%, -50%) !important;
     pointer-events: auto !important;
     z-index: 10 !important;
-    
-    /* 🔥 Flexレイアウトから完全分離 */
-    flex: none !important;           /* Flex子要素としての動作を無効化 */
-    align-self: auto !important;     /* Flex alignの影響を無効化 */
-    margin: 0 !important;            /* Flexマージンをリセット */
 }
 
 .hero::before {
@@ -208,12 +215,12 @@ canvas[data-spine-character] {
    雲のアニメーション設定
    ================================ */
 
-/* 雲の共通スタイル（背景画像完全同期） */
-.cloud {
-    position: absolute !important;  /* .hero基準の絶対配置（背景画像と同期） */
-    opacity: 0.7;                   /* 透明度: 0.1〜1.0で調整可能（0.7 = 30%透明） */
-    z-index: 0;                     /* 背景レイヤーに配置（コンテンツより後ろ） */
-    pointer-events: none;           /* マウスイベントを無効化（クリック等を通過） */
+/* 雲の共通スタイル（背景画像基準配置） */
+.background-container .cloud {
+    position: absolute !important;  /* 背景コンテナ基準の絶対配置 */
+    opacity: 0.7;                   /* 透明度 */
+    z-index: 5;                     /* 背景画像より上、キャラクターより下 */
+    pointer-events: none;           /* マウスイベントを無効化 */
 }
 
 /* ================================
@@ -429,7 +436,8 @@ canvas[data-spine-character] {
    ================================ */
 
 .hero-content {
-    flex: 1;
+    position: relative;
+    z-index: 20;                    /* 背景要素より上に配置 */
     max-width: 280px;
     background: rgba(255, 255, 255, 0.6);
     padding: 20px;

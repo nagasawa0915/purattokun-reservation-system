@@ -1,0 +1,101 @@
+[
+    {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "ネコヤ（クラウドパートナー）",
+        "description": "LINEで簡単に使える予約販売システム「ぷらっとくん」。給与管理、教育機関向けPTAシステム、猫ファーストの住環境アドバイスを提供",
+        "url": "https://necooya.com",
+        "telephone": "03-1234-5678",
+        "email": "info@necooya.com",
+        "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "JP",
+            "addressLocality": "東京都"
+        },
+        "openingHours": "Mo-Fr 09:00-18:00",
+        "sameAs": [
+            "https://necooya.com"
+        ],
+        "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "ぷらっとくんサービス",
+            "itemListElement": [
+                {
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": "予約販売システム",
+                        "description": "LINEで簡単予約管理、ハンドメイド販売サポート"
+                    }
+                },
+                {
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": "給与システム",
+                        "description": "LINEで出勤退勤管理、給与明細自動作成"
+                    }
+                },
+                {
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": "教育機関向けシステム",
+                        "description": "PTA活動支援、保護者連絡システム"
+                    }
+                },
+                {
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": "トレーニング教材",
+                        "description": "猫との暮らしに関する住環境アドバイス"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "ぷらっとくん｜クラウドパートナー",
+        "url": "https://necooya.com",
+        "description": "LINEで簡単に使える予約販売システム「ぷらっとくん」シリーズ",
+        "publisher": {
+            "@type": "Organization",
+            "name": "ネコヤ",
+            "url": "https://necooya.com"
+        },
+        "inLanguage": "ja-JP"
+    },
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "ホーム",
+                "item": "https://necooya.com/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "サービス",
+                "item": "https://necooya.com/#services"
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
+                "name": "コンセプト",
+                "item": "https://necooya.com/#concept"
+            },
+            {
+                "@type": "ListItem",
+                "position": 4,
+                "name": "お問い合わせ",
+                "item": "https://necooya.com/#contact"
+            }
+        ]
+    }
+]

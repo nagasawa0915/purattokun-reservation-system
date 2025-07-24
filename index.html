@@ -49,22 +49,31 @@
 
     <main role="main">
         <section id="home" class="hero">
-            <!-- 雲のアニメーション -->
-            <img src="assets/images/kumo1.png" alt="ふわふわ浮かぶ白い雲（装飾用アニメーション）" class="cloud cloud1" loading="lazy">
-            <img src="assets/images/kumo2.png" alt="ゆったり流れる雲（装飾用アニメーション）" class="cloud cloud2" loading="lazy">
-            <img src="assets/images/kumo3.png" alt="青空に漂う雲（装飾用アニメーション）" class="cloud cloud3" loading="lazy">
-            <img src="assets/images/kumo1.png" alt="穏やかに移動する雲（装飾用アニメーション）" class="cloud cloud4" loading="lazy">
-            <img src="assets/images/kumo2.png" alt="空を舞う雲（装飾用アニメーション）" class="cloud cloud5" loading="lazy">
-            <img src="assets/images/kumo3.png" alt="優雅に流れる雲（装飾用アニメーション）" class="cloud cloud6" loading="lazy">
+            <!-- シンプルな背景コンテナ（成功パターン適用） -->
+            <div class="background-container">
+                <!-- 背景画像（<img>タグで配置） -->
+                <img src="assets/images/クラウドパートナーTOP.png" 
+                     alt="クラウドパートナー背景画像" 
+                     class="background-image">
+                
+                <!-- 雲（背景画像基準で配置） -->
+                <img src="assets/images/kumo1.png" alt="ふわふわ浮かぶ白い雲" class="cloud cloud1" loading="lazy">
+                <img src="assets/images/kumo2.png" alt="ゆったり流れる雲" class="cloud cloud2" loading="lazy">
+                <img src="assets/images/kumo3.png" alt="青空に漂う雲" class="cloud cloud3" loading="lazy">
+                <img src="assets/images/kumo1.png" alt="穏やかに移動する雲" class="cloud cloud4" loading="lazy">
+                <img src="assets/images/kumo2.png" alt="空を舞う雲" class="cloud cloud5" loading="lazy">
+                <img src="assets/images/kumo3.png" alt="優雅に流れる雲" class="cloud cloud6" loading="lazy">
+                
+                <!-- ぷらっとくんCanvas（背景画像基準で配置） -->
+                <!-- JavaScriptでここに配置される -->
+            </div>
             
+            <!-- UI要素（背景から独立） -->
             <header class="hero-content">
                 <h1 class="hero-title">ぷらっとくん<br><span class="series-text">シリーズ</span></h1>
                 <p class="hero-subtitle">あなたのビジネスをサポート</p>
                 <button class="cta-button" type="button" aria-label="サービス詳細を見る">詳しく見る</button>
             </header>
-            <div class="hero-image" aria-hidden="true">
-                <div class="cat-silhouette">🐾</div>
-            </div>
         </section>
 
         <section id="services" class="services">
@@ -117,18 +126,18 @@
                         <p>5匹の子猫を保護した経験から、一般的な住宅が<strong>猫にとって必ずしも快適ではない</strong>ことに気づきました。</p>
                         <p><strong>猫の習性と行動</strong>を深く理解し、人間の生活にも配慮した<strong>住空間設計</strong>を行うことで、<strong>猫と飼い主の両方が幸せに暮らせる環境</strong>を実現します。</p>
                         <ul class="concept-features" role="list">
-                            <li role="listitem">キャットウォーク・キャットタワーの設置</li>
-                            <li role="listitem">脱走防止扉の設置</li>
-                            <li role="listitem">猫専用スペースの確保</li>
-                            <li role="listitem">安全性を重視した素材選び</li>
-                            <li role="listitem">お手入れしやすい設計</li>
+                        <li role="listitem">キャットウォーク・キャットタワーの設置</li>
+                        <li role="listitem">脱走防止扉の設置</li>
+                        <li role="listitem">猫専用スペースの確保</li>
+                        <li role="listitem">安全性を重視した素材選び</li>
+                        <li role="listitem">お手入れしやすい設計</li>
                         </ul>
                     </article>
                     <aside class="concept-image" aria-label="猫と住宅のイラスト">
-                        <div class="cat-house-illustration">
-                            <div class="house" aria-hidden="true">🏠</div>
-                            <div class="cats" aria-hidden="true">🐱🐱🐱</div>
-                        </div>
+                    <div class="cat-house-illustration">
+                        <div class="house" aria-hidden="true">🏠</div>
+                        <div class="cats" aria-hidden="true">🐱🐱🐱</div>
+                    </div>
                     </aside>
                 </div>
             </div>
@@ -144,18 +153,18 @@
                         <h3 class="contact-subtitle">ご相談・お見積りは無料です</h3>
                         <p>猫との理想の暮らしについて、お気軽にご相談ください。</p>
                         <address class="contact-details">
-                            <div class="contact-item">
-                                <span class="icon" aria-hidden="true">📞</span>
-                                <span>03-1234-5678</span>
-                            </div>
-                            <div class="contact-item">
-                                <span class="icon" aria-hidden="true">✉️</span>
-                                <span>info@necooya.com</span>
-                            </div>
-                            <div class="contact-item">
-                                <span class="icon" aria-hidden="true">🕒</span>
-                                <span>平日 9:00-18:00</span>
-                            </div>
+                        <div class="contact-item">
+                            <span class="icon" aria-hidden="true">📞</span>
+                            <span>03-1234-5678</span>
+                        </div>
+                        <div class="contact-item">
+                            <span class="icon" aria-hidden="true">✉️</span>
+                            <span>info@necooya.com</span>
+                        </div>
+                        <div class="contact-item">
+                            <span class="icon" aria-hidden="true">🕒</span>
+                            <span>平日 9:00-18:00</span>
+                        </div>
                         </address>
                     </div>
                     <form class="contact-form" role="form" aria-label="お問い合わせフォーム">
@@ -173,10 +182,10 @@
         <div class="container">
             <p>&copy; 2024 ネコヤ. All rights reserved.</p>
             <nav class="footer-nav" aria-label="フッターナビゲーション">
-                <a href="#home">ホーム</a>
-                <a href="#services">サービス</a>
-                <a href="#concept">コンセプト</a>
-                <a href="#contact">お問い合わせ</a>
+            <a href="#home">ホーム</a>
+            <a href="#services">サービス</a>
+            <a href="#concept">コンセプト</a>
+            <a href="#contact">お問い合わせ</a>
             </nav>
         </div>
     </footer>
@@ -243,113 +252,20 @@
     <!-- Main Scripts -->
     <script src="assets/js/script.js"></script>
     
-    <!-- 構造化データ (JSON-LD) -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": "ネコヤ（クラウドパートナー）",
-        "description": "LINEで簡単に使える予約販売システム「ぷらっとくん」。給与管理、教育機関向けPTAシステム、猫ファーストの住環境アドバイスを提供",
-        "url": "https://necooya.com",
-        "telephone": "03-1234-5678",
-        "email": "info@necooya.com",
-        "address": {
-            "@type": "PostalAddress",
-            "addressCountry": "JP",
-            "addressLocality": "東京都"
-        },
-        "openingHours": "Mo-Fr 09:00-18:00",
-        "sameAs": [
-            "https://necooya.com"
-        ],
-        "hasOfferCatalog": {
-            "@type": "OfferCatalog",
-            "name": "ぷらっとくんサービス",
-            "itemListElement": [
-                {
-                    "@type": "Offer",
-                    "itemOffered": {
-                        "@type": "Service",
-                        "name": "予約販売システム",
-                        "description": "LINEで簡単予約管理、ハンドメイド販売サポート"
-                    }
-                },
-                {
-                    "@type": "Offer",
-                    "itemOffered": {
-                        "@type": "Service",
-                        "name": "給与システム",
-                        "description": "LINEで出勤退勤管理、給与明細自動作成"
-                    }
-                },
-                {
-                    "@type": "Offer",
-                    "itemOffered": {
-                        "@type": "Service",
-                        "name": "教育機関向けシステム",
-                        "description": "PTA活動支援、保護者連絡システム"
-                    }
-                },
-                {
-                    "@type": "Offer",
-                    "itemOffered": {
-                        "@type": "Service",
-                        "name": "トレーニング教材",
-                        "description": "猫との暮らしに関する住環境アドバイス"
-                    }
-                }
-            ]
-        }
-    }
-    </script>
-    
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "ぷらっとくん｜クラウドパートナー",
-        "url": "https://necooya.com",
-        "description": "LINEで簡単に使える予約販売システム「ぷらっとくん」シリーズ",
-        "publisher": {
-            "@type": "Organization",
-            "name": "ネコヤ",
-            "url": "https://necooya.com"
-        },
-        "inLanguage": "ja-JP"
-    }
-    </script>
-    
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-            {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "ホーム",
-                "item": "https://necooya.com/"
-            },
-            {
-                "@type": "ListItem",
-                "position": 2,
-                "name": "サービス",
-                "item": "https://necooya.com/#services"
-            },
-            {
-                "@type": "ListItem",
-                "position": 3,
-                "name": "コンセプト",
-                "item": "https://necooya.com/#concept"
-            },
-            {
-                "@type": "ListItem",
-                "position": 4,
-                "name": "お問い合わせ",
-                "item": "https://necooya.com/#contact"
-            }
-        ]
-    }
+    <!-- 構造化データを外部ファイル化してシンプル化 -->
+    <script>
+        // 構造化データを動的に読み込み（ネスト軽減）
+        fetch('structured-data.json')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(schema => {
+                    const script = document.createElement('script');
+                    script.type = 'application/ld+json';
+                    script.textContent = JSON.stringify(schema);
+                    document.head.appendChild(script);
+                });
+            })
+            .catch(err => console.log('構造化データの読み込みをスキップ:', err));
     </script>
 </body>
 </html>

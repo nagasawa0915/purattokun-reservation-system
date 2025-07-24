@@ -26,6 +26,83 @@
 
 ---
 
+## 背景画像とキャラクターの完全同期（2024年7月実装）
+
+### 成功したアプローチ（test-simple-spine.html）
+
+#### HTML構造
+```html
+<!-- 親コンテナ: position: relative -->
+<div class="background-container">
+    <!-- 背景画像: <img>タグで配置 -->
+    <img src="assets/images/クラウドパートナーTOP.png" class="background-image">
+    
+    <!-- 雲: position: absolute -->
+    <img src="assets/images/kumo1.png" class="cloud cloud1">
+    
+    <!-- Spineキャラクター: position: absolute -->
+    <canvas id="purattokun-canvas"></canvas>
+</div>
+```
+
+#### CSS設計
+```css
+/* 親コンテナ */
+.background-container {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* 背景画像 */
+.background-image {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Spineキャラクター */
+#purattokun-canvas {
+    position: absolute;
+    left: 18%;    /* 背景画像基準 */
+    top: 49%;     /* 背景画像基準 */
+    width: 16%;   /* レスポンシブサイズ */
+    height: 16%;  /* レスポンシブサイズ */
+    transform: translate(-50%, -50%);
+}
+```
+
+#### JavaScript実装
+```javascript
+// Skeleton座標は固定値
+skeleton.x = 0;  // Canvas内での位置
+skeleton.y = 0;  // Canvas内での位置
+skeleton.scaleX = skeleton.scaleY = 0.3;
+
+// Canvasサイズは動的に調整
+const updateCanvasSize = () => {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+};
+window.addEventListener('resize', updateCanvasSize);
+```
+
+### 重要な設計原則
+1. **背景画像は`<img>`タグ** - CSS背景ではなくDOM要素として扱う
+2. **親要素は`position: relative`** - 子要素の配置基準点
+3. **子要素は`position: absolute`** - 親要素基準で配置  
+4. **Canvasサイズは%指定** - レスポンシブ対応
+5. **キャラクター座標は固定** - Canvas内での絶対位置
+
+### この方法を選んだ理由
+- **問題**: 複数の座標システムが混在し、背景とキャラクターがずれる
+- **解決**: すべての要素を同一の親要素基準で配置
+- **結果**: ウィンドウサイズ変更時も完全に同期
+
+---
+
 ## 重要な実装パターン
 
 ### CSS アニメーション制御
