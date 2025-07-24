@@ -66,9 +66,13 @@ class SpineCharacterManager {
      * @param {HTMLElement} container - 配置先コンテナ
      */
     async loadCharacter(name, basePath, container) {
+        console.log('📥 DEBUG: loadCharacter called for', name, 'from', basePath);
+        console.log('📥 DEBUG: this.initialized =', this.initialized);
+        
         log(LogLevel.INFO, 'animation', `Starting character load: ${name} from ${basePath}`);
         
         if (!this.initialized) {
+            console.log('⚠️ DEBUG: Spine not initialized, using placeholder mode');
             log(LogLevel.WARN, 'animation', 'Spine not initialized, using placeholder mode');
             return this.createPlaceholderCharacter(name, basePath, container);
         }
@@ -87,10 +91,15 @@ class SpineCharacterManager {
         log(LogLevel.DEBUG, 'animation', `Placeholder created for ${name}, attempting Spine upgrade...`);
 
         // 非同期でSpine WebGL化を試行
+        console.log('🔄 DEBUG: Starting upgrade timer for', name);
         setTimeout(async () => {
+            console.log('🔄 DEBUG: Upgrade timer triggered for', name);
             try {
+                console.log('🔄 DEBUG: Calling upgradeToSpineWebGL for', name);
                 await this.upgradeToSpineWebGL(name, basePath, container);
+                console.log('✅ DEBUG: upgradeToSpineWebGL completed for', name);
             } catch (error) {
+                console.error('❌ DEBUG: Spine upgrade failed for', name, ':', error.message);
                 log(LogLevel.DEBUG, 'animation', `Spine upgrade failed for ${name}, keeping placeholder: ${error.message}`);
             }
         }, 100);
@@ -144,10 +153,16 @@ class SpineCharacterManager {
      * プレースホルダーからSpine WebGLにアップグレード
      */
     async upgradeToSpineWebGL(name, basePath, container) {
+        console.log('🚀 DEBUG: upgradeToSpineWebGL called for', name, 'from', basePath);
+        console.log('🚀 DEBUG: spine object available:', typeof spine !== 'undefined');
+        console.log('🚀 DEBUG: spine object:', spine);
+        
         if (typeof spine === 'undefined') {
+            console.error('❌ DEBUG: Spine runtime not available!');
             throw new Error('Spine runtime not available');
         }
 
+        console.log('✅ DEBUG: Spine runtime is available, proceeding...');
         log(LogLevel.INFO, 'animation', `Upgrading ${name} to Spine WebGL...`);
 
         try {
