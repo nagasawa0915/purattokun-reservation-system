@@ -12,8 +12,9 @@
 6. [パフォーマンス・メモリ管理](#6-パフォーマンスメモリ管理)
 7. [デバッグ・診断システム](#7-デバッグ診断システム)
 8. [CDN依存管理](#8-cdn依存管理)
-9. [クイック診断チェックリスト](#9-クイック診断チェックリスト)
-10. [今後の問題記録](#10-今後の問題記録)
+9. [コードリファクタリング記録](#9-コードリファクタリング記録)
+10. [クイック診断チェックリスト](#10-クイック診断チェックリスト)
+11. [今後の問題記録](#11-今後の問題記録)
 
 ---
 
@@ -812,7 +813,96 @@ isClickInsideSpineCharacter(character, canvasX, canvasY) {
 
 ---
 
-## 🎯 まとめ
+## 9. コードリファクタリング記録
+
+### 🔄 Spine統合システム v2.0 リファクタリング (2024-07-23)
+
+**実施理由**：
+- 元のspine-integration.jsが2,035行で保守性が低下
+- 391個のconsole.logによるパフォーマンス影響
+- 単一責任原則違反による影響範囲予測困難
+
+**リファクタリング成果**：
+
+#### Phase 1: ログシステム整理
+- **実装内容**：階層化ログレベル管理システム（ERROR/WARN/INFO/DEBUG）
+- **効果**：本番環境でのデバッグログ無効化、カテゴリ別制御
+- **ファイル**：新しいログシステムを全ファイルで統一
+
+#### Phase 2: モジュール分割
+```
+spine-integration.js (2,035行) → 分割後:
+├── spine-integration-v2.js (292行) - メイン統合管理
+├── spine-character-manager.js (198行) - キャラクター管理
+├── spine-debug-window.js (201行) - デバッグUI
+├── spine-coordinate-utils.js (185行) - 座標計算
+└── spine-animation-controller.js (260行) - アニメーション制御
+```
+
+**定量的改善**：
+- **ファイルサイズ削減**：2,035行 → 1,136行 (44%削減)
+- **デバッグログ最適化**：391個 → 必要最小限 (約80%削減)
+- **保守性向上**：単一責任原則適用、機能別分離
+
+#### 新しいアーキテクチャの特徴
+
+**1. ログレベル管理**
+```javascript
+const DEBUG_CONFIG = {
+    level: window.location.hostname === 'localhost' ? LogLevel.DEBUG : LogLevel.ERROR,
+    categories: {
+        initialization: true,
+        animation: true,
+        physics: true,
+        performance: true,
+        position: true,
+        cache: true,
+        debug_ui: false  // 本番では無効
+    }
+};
+```
+
+**2. モジュラー初期化**
+```javascript
+class SpineIntegrationManager {
+    async init() {
+        this.coordinateUtils = new SpineCoordinateUtils();
+        this.animationController = new SpineAnimationController();
+        this.characterManager = new SpineCharacterManager();
+        // デバッグUIは開発モードのみ
+        if (DEBUG_CONFIG.categories.debug_ui) {
+            this.debugWindow = new SpineDebugWindow();
+        }
+    }
+}
+```
+
+**3. 責任分離**
+- **SpineCharacterManager**: キャラクター読み込み・管理専用
+- **SpineAnimationController**: アニメーション制御・シーケンス管理
+- **SpineCoordinateUtils**: 座標変換・レスポンシブ計算
+- **SpineDebugWindow**: 開発時デバッグ機能（本番無効）
+
+#### 互換性確保
+- **API互換性**：既存の`window.spineManager`インターフェースを維持
+- **機能互換性**：HTML設定制御システムをそのまま継承
+- **エラー処理**：段階的フォールバック（Spine → Placeholder → Error）
+
+#### テスト検証項目
+1. **機能テスト**：ぷらっとくんクリック→アニメーション再生
+2. **位置テスト**：HTMLdata-*設定→正確な位置表示
+3. **パフォーマンステスト**：初期化時間・メモリ使用量
+4. **ブラウザ互換性**：Chrome/Firefox/Safari確認
+
+#### 今後の保守指針
+- **1ファイル500行以内**を目標とした責任分離
+- **新機能追加時**は適切なモジュールに配置
+- **デバッグログ**は本番モードで自動無効化
+- **定期的なコード品質チェック**の実施
+
+---
+
+## 10. クイック診断チェックリスト
 
 このガイドは、Spine WebGL統合における包括的なトラブルシューティング知識を提供します：
 
