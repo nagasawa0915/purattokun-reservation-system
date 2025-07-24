@@ -292,28 +292,15 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // 位置設定（0,0で確実に見えるか確認）
-            skeleton.x = 0;   // 左端
-            skeleton.y = 0;   // 上端（または下端 - Spine座標系による）
-            skeleton.scaleX = skeleton.scaleY = 2.0; // さらに大きくして確実に見えるように
-            console.log('📍 DEBUG: Skeleton position set to (0,0):');
+            // 位置設定（適切なサイズと位置に調整）
+            skeleton.x = 200; // 適度に右に配置
+            skeleton.y = 100; // 適度に下に配置
+            skeleton.scaleX = skeleton.scaleY = 0.75; // 適切なサイズ
+            console.log('📍 DEBUG: Skeleton position set to proper coordinates:');
             console.log('  - x:', skeleton.x);
             console.log('  - y:', skeleton.y);
             console.log('  - scaleX:', skeleton.scaleX);
             console.log('  - scaleY:', skeleton.scaleY);
-            
-            // 10秒後に別の座標もテスト
-            setTimeout(() => {
-                console.log('🔄 DEBUG: Testing position (300, 0)...');
-                skeleton.x = 300;
-                skeleton.y = 0;
-            }, 10000);
-            
-            setTimeout(() => {
-                console.log('🔄 DEBUG: Testing position (0, 500)...');
-                skeleton.x = 0;
-                skeleton.y = 500;
-            }, 20000);
             
             // Skeletonの初期状態を設定
             skeleton.setToSetupPose();
@@ -333,14 +320,13 @@ class SpineCharacterManager {
 
             this.characters.set(name, character);
 
-            // DOM配置 - 位置を明示的に設定（視認性向上）
-            canvas.style.left = '100px';
-            canvas.style.top = '100px';
-            canvas.style.border = '2px solid red'; // デバッグ用の境界線
-            canvas.style.backgroundColor = 'rgba(255, 255, 0, 0.1)'; // 薄い黄色背景
-            canvas.style.zIndex = '9999'; // 最前面に配置
+            // DOM配置 - 自然な配置
+            canvas.style.left = '0px';
+            canvas.style.top = '0px';
+            canvas.style.zIndex = '1'; // 背景画像の上に配置
+            canvas.style.pointerEvents = 'auto'; // クリック可能
             document.body.appendChild(canvas);
-            console.log('✅ DEBUG: Canvas added to DOM with red border for visibility');
+            console.log('✅ DEBUG: Canvas added to DOM for natural display');
             
             // Canvas配置の詳細確認
             setTimeout(() => {
@@ -433,8 +419,8 @@ class SpineCharacterManager {
                 animationState.apply(skeleton);
                 skeleton.updateWorldTransform();
 
-                // 白い背景で視認性向上
-                gl.clearColor(1, 1, 1, 1);
+                // 透明背景で自然な表示
+                gl.clearColor(0, 0, 0, 0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
 
                 // カメラ設定の詳細ログ
