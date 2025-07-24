@@ -107,7 +107,7 @@ class SpineCharacterManager {
         const character = {
             name: name,
             type: 'placeholder',
-            element: this.createPlaceholderElement()
+            element: this.createPlaceholderElement(name)
         };
         
         // コンテナに追加
@@ -124,9 +124,10 @@ class SpineCharacterManager {
     /**
      * プレースホルダーDOM要素作成
      */
-    createPlaceholderElement() {
+    createPlaceholderElement(name) {
         const element = document.createElement('div');
         element.innerHTML = '🐱';
+        element.setAttribute('data-character', name);
         element.style.cssText = `
             position: absolute;
             font-size: 40px;
@@ -149,10 +150,156 @@ class SpineCharacterManager {
 
         log(LogLevel.INFO, 'animation', `Upgrading ${name} to Spine WebGL...`);
 
-        // この部分は元のファイルから詳細な実装をコピーする必要があります
-        // 現在は基本構造のみ
-        
-        throw new Error('Full Spine WebGL implementation pending migration');
+        try {
+            // Canvas要素作成
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 500;
+            canvas.style.cssText = `
+                position: absolute;
+                pointer-events: auto;
+                z-index: 1;
+            `;
+
+            // WebGL Context取得
+            const gl = canvas.getContext('webgl', { 
+                alpha: true, 
+                premultipliedAlpha: false 
+            });
+            
+            if (!gl) {
+                throw new Error('WebGL context creation failed');
+            }
+
+            log(LogLevel.DEBUG, 'animation', 'WebGL context created successfully');
+
+            // Spine WebGL初期化
+            const mvp = new spine.webgl.Matrix4();
+            mvp.ortho2d(0, 0, canvas.width, canvas.height);
+            
+            const context = new spine.webgl.ManagedWebGLRenderingContext(gl);
+            const renderer = new spine.webgl.SceneRenderer(canvas, context);
+            const assetManager = new spine.webgl.AssetManager(context);
+
+            // アセット読み込み
+            const atlasPath = `${basePath}${name}.atlas`;
+            const jsonPath = `${basePath}${name}.json`;
+            const imagePath = `${basePath}${name}.png`;
+
+            assetManager.loadTextureAtlas(atlasPath);
+            assetManager.loadText(jsonPath);
+            assetManager.loadTexture(imagePath);
+
+            // 読み込み完了まで待機
+            await this.waitForAssetLoading(assetManager);
+
+            // Skeleton作成
+            const atlas = assetManager.require(atlasPath);
+            const skeletonJson = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
+            const skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonPath));
+            
+            const skeleton = new spine.Skeleton(skeletonData);
+            const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
+
+            // 位置設定
+            skeleton.x = canvas.width / 2;
+            skeleton.y = canvas.height - 50;
+            skeleton.scaleX = skeleton.scaleY = 0.5;
+
+            // キャラクター登録
+            const character = {
+                name: name,
+                type: 'spine',
+                canvas: canvas,
+                skeleton: skeleton,
+                animationState: animationState,
+                renderer: renderer,
+                mvp: mvp
+            };
+
+            this.characters.set(name, character);
+
+            // DOM配置
+            document.body.appendChild(canvas);
+
+            // 既存プレースホルダーを削除
+            const placeholder = document.querySelector(`[data-character="${name}"]`);
+            if (placeholder) {
+                placeholder.remove();
+            }
+
+            // アニメーションループ開始
+            this.startRenderLoop(name);
+
+            log(LogLevel.INFO, 'animation', `${name} successfully upgraded to Spine WebGL`);
+            return character;
+
+        } catch (error) {
+            log(LogLevel.ERROR, 'animation', `Spine WebGL upgrade failed for ${name}:`, error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * アセット読み込み完了待機
+     */
+    async waitForAssetLoading(assetManager) {
+        return new Promise((resolve, reject) => {
+            const checkLoading = () => {
+                if (assetManager.isLoadingComplete()) {
+                    if (assetManager.hasErrors()) {
+                        reject(new Error('Asset loading errors occurred'));
+                    } else {
+                        resolve();
+                    }
+                } else {
+                    setTimeout(checkLoading, 100);
+                }
+            };
+            checkLoading();
+        });
+    }
+
+    /**
+     * Spineレンダリングループ開始
+     */
+    startRenderLoop(name) {
+        const character = this.characters.get(name);
+        if (!character || character.type !== 'spine') return;
+
+        const render = () => {
+            if (!character.canvas.parentNode) return; // DOM削除時は停止
+
+            const { skeleton, animationState, renderer, mvp, canvas } = character;
+            const gl = canvas.getContext('webgl');
+            
+            animationState.update(0.016); // 60fps
+            animationState.apply(skeleton);
+            skeleton.updateWorldTransform();
+
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            renderer.camera.position.x = 0;
+            renderer.camera.position.y = 0;
+            renderer.camera.viewportWidth = canvas.width;
+            renderer.camera.viewportHeight = canvas.height;
+            renderer.camera.update();
+
+            renderer.begin();
+            renderer.drawSkeleton(skeleton);
+            renderer.end();
+
+            requestAnimationFrame(render);
+        };
+
+        // 初期アニメーション設定
+        if (character.skeleton.data.animations.length > 0) {
+            const animName = character.skeleton.data.animations[0].name;
+            character.animationState.setAnimation(0, animName, true);
+        }
+
+        render();
     }
 
     /**
