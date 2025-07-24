@@ -250,13 +250,20 @@ class SpineCharacterManager {
 
             this.characters.set(name, character);
 
-            // DOM配置
+            // DOM配置 - 位置を明示的に設定
+            canvas.style.left = '100px';
+            canvas.style.top = '100px';
+            canvas.style.border = '2px solid red'; // デバッグ用の境界線
             document.body.appendChild(canvas);
+            console.log('✅ DEBUG: Canvas added to DOM with red border for visibility');
 
             // 既存プレースホルダーを削除
             const placeholder = document.querySelector(`[data-character="${name}"]`);
             if (placeholder) {
+                console.log('🗑️ DEBUG: Removing placeholder:', placeholder);
                 placeholder.remove();
+            } else {
+                console.log('⚠️ DEBUG: Placeholder not found for removal');
             }
 
             // アニメーションループ開始

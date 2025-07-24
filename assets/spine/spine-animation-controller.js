@@ -70,9 +70,11 @@ class SpineAnimationController {
     playAnimation(characterName, animationName = 'taiki', loop = true) {
         log(LogLevel.DEBUG, 'animation', `Playing animation ${animationName} for ${characterName}, loop: ${loop}`);
 
-        const character = window.spineManager?.characters?.get(characterName);
+        // v2.0では characterManager.characters が正しいパス
+        const character = window.spineManager?.characterManager?.characters?.get(characterName);
         if (!character) {
             log(LogLevel.WARN, 'animation', `Character ${characterName} not found for animation`);
+            console.log('🔍 DEBUG: Available characters:', window.spineManager?.characterManager?.characters?.keys());
             return;
         }
 
@@ -195,7 +197,7 @@ class SpineAnimationController {
      * @param {string} characterName - キャラクター名
      */
     stopAllAnimations(characterName) {
-        const character = window.spineManager?.characters?.get(characterName);
+        const character = window.spineManager?.characterManager?.characters?.get(characterName);
         if (!character) return;
 
         if (character.type === 'placeholder' && character.element) {
