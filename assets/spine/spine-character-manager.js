@@ -196,4 +196,5 @@ class SpineCharacterManager {
             // Implementation pending
         }
     }
+
 }
