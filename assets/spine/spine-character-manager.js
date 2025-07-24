@@ -163,6 +163,13 @@ class SpineCharacterManager {
         }
 
         console.log('✅ DEBUG: Spine runtime is available, proceeding...');
+        console.log('🔍 DEBUG: spine object structure:', Object.keys(spine));
+        console.log('🔍 DEBUG: spine.webgl exists:', !!spine.webgl);
+        if (spine.webgl) {
+            console.log('🔍 DEBUG: spine.webgl keys:', Object.keys(spine.webgl));
+        }
+        console.log('🔍 DEBUG: Matrix4 available at:', typeof spine.Matrix4, typeof spine.webgl?.Matrix4);
+        
         log(LogLevel.INFO, 'animation', `Upgrading ${name} to Spine WebGL...`);
 
         try {
@@ -188,13 +195,22 @@ class SpineCharacterManager {
 
             log(LogLevel.DEBUG, 'animation', 'WebGL context created successfully');
 
-            // Spine WebGL初期化
-            const mvp = new spine.webgl.Matrix4();
-            mvp.ortho2d(0, 0, canvas.width, canvas.height);
+            // Spine WebGL初期化 (4.1.*正しいAPI)
+            console.log('🔧 DEBUG: Creating Spine WebGL components...');
             
-            const context = new spine.webgl.ManagedWebGLRenderingContext(gl);
-            const renderer = new spine.webgl.SceneRenderer(canvas, context);
-            const assetManager = new spine.webgl.AssetManager(context);
+            // Matrix4は直接spineから取得
+            const mvp = new spine.Matrix4();
+            mvp.ortho2d(0, 0, canvas.width, canvas.height);
+            console.log('✅ DEBUG: Matrix4 created');
+            
+            const context = new spine.ManagedWebGLRenderingContext(gl);
+            console.log('✅ DEBUG: ManagedWebGLRenderingContext created');
+            
+            const renderer = new spine.SceneRenderer(canvas, context);
+            console.log('✅ DEBUG: SceneRenderer created');
+            
+            const assetManager = new spine.AssetManager(context);
+            console.log('✅ DEBUG: AssetManager created');
 
             // アセット読み込み
             const atlasPath = `${basePath}${name}.atlas`;
