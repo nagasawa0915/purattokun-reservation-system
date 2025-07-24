@@ -437,38 +437,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('🆕 Using Spine 4.1.24 data (physics-free)');
                     
                     console.log('🐱 ぷらっとくん読み込み中...');
+                    console.log('🎭 Setting up Purattokun with v2.0 API (HTML-configurable)');
                     
-                    // プラットくんを読み込み（お店の裏側から出現演出付き）
-                    spineManager.loadCharacter('purattokun', 'assets/spine/characters/purattokun/', heroSection);
-                    
-                    console.log('🎭 Setting up Purattokun with fade-in entrance (HTML-configurable)');
-                    
-                    // HTMLから設定を読み込み
-                    const entranceConfig = loadPurattokunsettings();
-                    
-                    // 最初から最終位置に配置（透明状態）
-                    spineManager.setPosition('purattokun', entranceConfig.x, entranceConfig.y, entranceConfig.scale);
-                    
-                    console.log(`📍 Viewport position: (${entranceConfig.x}vw, ${entranceConfig.y}vh) scale: ${entranceConfig.scale}`);
-                    
-                    // キャラクター配置完了
-                    console.log('📍 ぷらっとくん(4.1.24)配置完了');
-                    
-                    // スケールベース演出開始
-                    setTimeout(() => {
-                        console.log('🎯 Starting scale-based entrance for Purattokun (scale 0→1)');
-                        console.log('✨ ぷらっとくん出現予約中...');
-                        
-                        // スケールベース演出
-                        spineManager.startScaleAnimation('purattokun', entranceConfig.fadeDelay);
-                        
-                        // クリック機能を有効化（スケール演出後）
-                        setTimeout(() => {
-                            spineManager.addClickInteraction('purattokun');
-                            console.log('🖱️ Purattokun click interaction enabled');
-                        }, entranceConfig.fadeDelay + 1000); // スケールアニメーション開始の1秒後にクリック機能有効化
-                        
-                    }, entranceConfig.fadeDelay); // 設定した遅延後に演出開始
+                    // v2.0 API: HTML設定を使用したキャラクター配置（統合API）
+                    spineManager.setupCharacterFromHTML(
+                        'purattokun', 
+                        'assets/spine/characters/purattokun/', 
+                        heroSection, 
+                        'purattokun-config'
+                    ).then(character => {
+                        if (character) {
+                            console.log('✅ Purattokun setup completed with v2.0 modular API');
+                            console.log('📍 Position, scale, and fade animations handled by coordinate utils');
+                            
+                            // クリック機能を有効化
+                            if (character.element || character.canvas) {
+                                const clickTarget = character.element || character.canvas;
+                                clickTarget.addEventListener('click', () => {
+                                    console.log('🖱️ Purattokun clicked - v2.0 animation system');
+                                    spineManager.handleCharacterClick('purattokun');
+                                });
+                                console.log('🖱️ Purattokun click interaction enabled with v2.0 API');
+                            }
+                            
+                            console.log('🎯 v2.0 modular system: All animations handled automatically');
+                        } else {
+                            console.warn('⚠️ Character setup returned null - check console for details');
+                        }
+                    }).catch(error => {
+                        console.warn('⚠️ Purattokun setup failed, check error:', error.message);
+                        console.log('🔄 Fallback: Character might still work in placeholder mode');
+                    });
 
                     // デモキャラクターは無効化中（ファイルなし）
                     // spineManager.loadCharacter('cat1', 'assets/spine/characters/demo/', heroSection);
