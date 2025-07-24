@@ -292,15 +292,28 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // 位置設定（Spine座標系に合わせて調整）
-            skeleton.x = canvas.width / 2;   // 300px (中央)
-            skeleton.y = canvas.height - 50; // 450px (下部) - Spineは下が原点
-            skeleton.scaleX = skeleton.scaleY = 1.5; // さらに大きくして確実に見えるように
-            console.log('📍 DEBUG: Skeleton position set:');
+            // 位置設定（0,0で確実に見えるか確認）
+            skeleton.x = 0;   // 左端
+            skeleton.y = 0;   // 上端（または下端 - Spine座標系による）
+            skeleton.scaleX = skeleton.scaleY = 2.0; // さらに大きくして確実に見えるように
+            console.log('📍 DEBUG: Skeleton position set to (0,0):');
             console.log('  - x:', skeleton.x);
             console.log('  - y:', skeleton.y);
             console.log('  - scaleX:', skeleton.scaleX);
             console.log('  - scaleY:', skeleton.scaleY);
+            
+            // 10秒後に別の座標もテスト
+            setTimeout(() => {
+                console.log('🔄 DEBUG: Testing position (300, 0)...');
+                skeleton.x = 300;
+                skeleton.y = 0;
+            }, 10000);
+            
+            setTimeout(() => {
+                console.log('🔄 DEBUG: Testing position (0, 500)...');
+                skeleton.x = 0;
+                skeleton.y = 500;
+            }, 20000);
             
             // Skeletonの初期状態を設定
             skeleton.setToSetupPose();
