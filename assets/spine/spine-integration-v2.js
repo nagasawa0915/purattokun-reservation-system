@@ -71,6 +71,13 @@ class SpineIntegrationManager {
             this.animationController = new SpineAnimationController();
             this.characterManager = new SpineCharacterManager();
             
+            // ドラッグ配置システム初期化（レスポンシブ座標システムに依存）
+            this.dragPositioning = new SpineDragPositioning(this.coordinateUtils);
+            this.dragPositioning.setupGlobalToggle();
+            
+            // デバッグ関数の設定
+            this.coordinateUtils.setupDebugFunctions();
+            
             // デバッグUIは開発モードのみ
             if (DEBUG_CONFIG.categories.debug_ui) {
                 this.debugWindow = new SpineDebugWindow();
@@ -109,27 +116,36 @@ class SpineIntegrationManager {
     }
 
     /**
-     * HTML設定を使用したキャラクター配置
+     * HTML設定を使用したキャラクター配置（レスポンシブ対応版）
      */
     async setupCharacterFromHTML(name, basePath, container, configElementId) {
-        // HTML設定読み込み
-        const config = this.coordinateUtils.getConfigFromHTML(configElementId);
-        const responsiveConfig = this.coordinateUtils.calculateResponsivePosition(config);
+        console.log('🎯 レスポンシブ対応のキャラクター配置開始:', name);
+        
+        // レスポンシブ座標システムからHTML設定読み込み
+        const config = this.coordinateUtils.loadConfigFromHTML(configElementId);
+        
+        // デバッグ情報表示
+        this.coordinateUtils.debugCoordinateTransformation(config);
 
         // キャラクター読み込み
         const character = await this.loadCharacter(name, basePath, container);
         if (!character) return null;
 
-        // 位置設定
-        this.setCharacterPosition(name, responsiveConfig.x, responsiveConfig.y, responsiveConfig.scale);
+        // CSS基準配置: Canvasは.heroを基準に％で配置される
+        console.log('🎯 CSS基準配置: Canvasは背景画像と同じ.hero基準で自動配置');
+        console.log('📍 位置設定: left=' + config.x + '%, top=' + config.y + '%');
+        console.log('📏 スケール設定: ' + config.scale);
+
+        // CSS基準配置により、リサイズハンドラーは不要
+        console.log('📱 CSS基準配置: リサイズ時も背景画像と自動同期');
 
         // フェードイン効果
         await this.animationController.executeHtmlFadeIn(
             name, 
             character.element || character.canvas, 
             {
-                fadeDelay: responsiveConfig.fadeDelay,
-                fadeDuration: responsiveConfig.fadeDuration
+                fadeDelay: config.fadeDelay,
+                fadeDuration: config.fadeDuration
             }
         );
 

@@ -181,28 +181,26 @@
         </div>
     </footer>
 
-    <!-- ぷらっとくん設定（このセクションで位置や演出を調整できます） -->
+    <!-- ぷらっとくん設定（レスポンシブ対応版 - ビューポート基準） -->
     <!--
-    ■ ヒーローセクション基準位置の調整方法（%単位）：
-    data-x: 横位置（ヒーローセクション幅からの%）
-      - 左端: 10
-      - 道路付近: 20
-      - お店の入口付近: 40
-      - お店付近: 60（推奨・背景画像のお店の位置に合わせて）
-      - 右寄り: 80（吹き出しが切れる可能性あり）
+    ■ ビューポート基準位置の調整方法（画面全体に対する%）：
+    data-x: 横位置（画面幅に対する%）
+      - 道路側: 8（画面幅の8%）
+      - お店の入口付近: 15（画面幅の15%）
+      - お店付近: 18（推奨・背景画像のお店の位置に合わせて、画面幅の18%）
+      - 右寄り: 25（画面幅の25%）
     
-    data-y: 縦位置（ヒーローセクション高さからの%）
-      - 上の方: 20
-      - 中央付近: 50
-      - 地面レベル: 70（推奨・背景画像の地面に合わせて）
-      - 下の方: 85
+    data-y: 縦位置（画面高さに対する%）
+      - 上の方: 40（画面高さの40%）
+      - 地面レベル: 49（推奨・背景画像の地面に合わせて、画面高さの49%）
+      - 下の方: 55（画面高さの55%）
     
     ■ サイズの調整：
     data-scale: サイズ倍率
       - 大きめ: 1.0
-      - 普通: 0.75（推奨）
-      - 小さめ: 0.6
-      - 非常に小さめ: 0.3
+      - 普通: 0.55（推奨・レスポンシブ対応）
+      - 小さめ: 0.4
+      - 非常に小さめ: 0.25
     
     ■ 演出タイミングの調整：
     data-fade-delay: 出現までの待機時間（ミリ秒）
@@ -215,12 +213,13 @@
       - 普通: 2000（現在の設定）
       - ゆっくり: 3000
     
-    ※ ヒーローセクション基準により、ウィンドウサイズが変わっても背景画像との相対位置が完全に固定されます
+    ※ 【重要】レスポンシブ対応により、ウィンドウサイズが変わっても背景画像との相対位置が自動的に維持されます
+    ※ 設定変更後は必ずF5でリロードして確認してください
     -->
     <div id="purattokun-config" style="display: none;"
-         data-x="40"
-         data-y="67" 
-         data-scale="0.80"
+         data-x="18"
+         data-y="49" 
+         data-scale="1.00"
          data-fade-delay="1500"
          data-fade-duration="2000">
     </div>
@@ -228,10 +227,14 @@
     <!-- Spine WebGL Runtime from CDN - 4.1.* for compatibility with 4.1.24 data -->
     <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
     
-    <!-- Spine Integration v2.0 - Modular Architecture (Production) -->
+    <!-- Canvas配置システム v1.0 (モジュール化・段階的統合) -->
+    <script src="assets/spine/positioning/canvas-positioning-system.js"></script>
+    
+    <!-- Spine統合システム v2.0 (レスポンシブ対応・ドラッグ配置機能付き) -->
+    <script src="assets/spine/spine-coordinate-utils.js"></script>
+    <script src="assets/spine/spine-drag-positioning.js"></script>
     <script src="assets/spine/spine-character-manager.js"></script>
     <script src="assets/spine/spine-debug-window.js"></script>
-    <script src="assets/spine/spine-coordinate-utils.js"></script>
     <script src="assets/spine/spine-animation-controller.js"></script>
     <script src="assets/spine/spine-integration-v2.js"></script>
     

@@ -4,67 +4,52 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ※重要　深く考えてください。
 
+## 📚 ドキュメント構成
+
+**このファイル**: 日常的な開発作業用のクイックリファレンス  
+**詳細情報**: [📁 docs フォルダ](./docs/) に整理済み
+
+| 目的 | ドキュメント |
+|------|-------------|
+| **技術仕様・実装詳細** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
+| **レイヤー問題診断** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
+| **Spine問題解決** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
+| **設計思想・アーキテクチャ** | [🏛️ docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) |
+
+---
+
 ## プロジェクト概要
 
 「ぷらっとくんの予約システム」はレスポンシブWebサイトです。ネコヤ（猫と人が幸せに暮らす住まいづくり）をコンセプトとした、スクロール連動アニメーションが豊富な静的サイトです。
 
-## ファイル構造
+## ファイル構造（主要部分）
 
 ```
 /
 ├── index.html              - メインサイト（SEO最適化済み、Spine WebGL統合済み）
 ├── server.py              - Spine対応カスタムHTTPサーバー（.atlas配信対応）
-├── simple-server.py       - バックアップ用シンプルサーバー
-├── test-atlas-fix.html    - Atlas読み込み問題診断ツール
-├── robots.txt             - SEO：クローラー制御
-├── sitemap.xml           - SEO：サイトマップ
+├── docs/                  - 📁 技術ドキュメント集
+│   ├── README.md           - ドキュメントナビゲーション
+│   ├── DEVELOPMENT_GUIDE.md - 技術仕様・実装詳細
+│   ├── LAYER_DEBUGGING.md  - レイヤー問題診断
+│   ├── SPINE_TROUBLESHOOTING.md - Spine問題解決
+│   └── ARCHITECTURE_NOTES.md - 設計思想・アーキテクチャ
 ├── assets/
-│   ├── css/
-│   │   └── styles.css      - スタイルシート（猫テーマ + 雲アニメーション + SEO対応）
-│   ├── js/
-│   │   └── script.js       - JavaScript統合版（全機能 + Spine統合 + SEO対応）
-│   ├── images/
-│   │   ├── クラウドパートナーTOP.png - ヒーロー背景画像
-│   │   ├── kumo1-3.png     - 雲アニメーション画像セット
-│   │   ├── nezumi.png       - ネズミ画像
-│   │   └── purattokunn.png - ぷらっとくん画像
-│   └── spine/
-│       ├── spine-integration.js    - Spine統合管理システム（エラーハンドリング強化）
-│       └── characters/
-│           ├── README.md           - キャラクター配置ガイド
-│           ├── demo/               - デモ用キャラクターデータ
-│           └── purattokun/        - メインキャラクター（修正済みデータ）
-│               ├── purattokun.json
-│               ├── purattokun.atlas
-│               └── purattokun.png
-└── demos/
-    ├── demo.html           - スクロール効果テスト専用ページ
-    └── test.html           - エフェクト個別テスト用ページ
+│   ├── css/styles.css      - スタイルシート
+│   ├── js/script.js        - JavaScript統合版
+│   ├── images/             - 画像ファイル
+│   └── spine/              - Spine WebGL関連
+│       ├── positioning/     - 📁 Canvas配置システム（モジュール化）
+│       │   ├── canvas-positioning-system.js - 配置システム本体
+│       │   └── placement-config.json        - 配置設定JSON
+│       ├── spine-character-manager.js       - キャラクター管理（統合済み）
+│       └── spine-integration-v2.js          - Spine統合システム
+└── demos/                 - テスト用ページ
 ```
 
-## アーキテクチャの特徴
+---
 
-### 1. スクロール連動アニメーション システム
-- **IntersectionObserver** を使用した要素の表示制御
-- サービスカードの順次フェードイン（150ms遅延）
-- コンセプト要素の左右スライドイン
-- パララックス効果（ヒーローセクション）
-
-### 2. インタラクティブエフェクト
-- **浮遊要素システム**: スクロール時に🐾🐱🏠❤️が右から左に流れる
-- **マウストレイル**: カーソル移動で🐾の足跡が残る
-- **キラキラエフェクト**: サービスカードホバー時に✨が発生
-- **猫パレード**: 画面トリプルクリックで猫の絵文字が横断
-- **雲の流れるアニメーション**: ヒーローセクションで6つの雲が異なる速度で流れる
-- **Spine WebGLキャラクター**: 背景画像上にインタラクティブなキャラクターアニメーション
-
-### 3. デバッグシステム（削除済み）
-- デバッグパネルは本番仕様のため削除済み
-- コンソールログによる詳細な動作追跡は継続
-- **Spine統合監視**: 初期化→WebGL準備→キャラクター読み込み→アニメーション実行の各段階を表示
-- F12開発者ツールでの監視を推奨
-
-## 開発コマンド
+## 🚀 開発コマンド
 
 ### ローカルサーバー起動（重要）
 このサイトは**HTTPサーバー経由での実行が必須**です。file://プロトコルでは多くの機能が制限されます。
@@ -96,218 +81,23 @@ git status
 git log --oneline
 ```
 
-### Atlas読み込み問題の診断
-```bash
-# 診断ツールでSpineファイルの読み込み状況を確認
-# ブラウザで http://localhost:8000/test-atlas-fix.html にアクセス
-```
+---
 
-### 動作確認手順
-1. **メイン機能**: `index.html` を開く
-2. **エフェクトテスト**: `demos/demo.html` で個別機能確認
-3. **デバッグ**: F12でコンソール確認、右上パネルで数値監視
-4. **レスポンシブ**: デベロッパーツールでモバイル表示確認
+## 🎯 ぷらっとくん位置調整（HTML設定制御システム）
 
-## 重要な実装パターン
-
-### CSS アニメーション制御
-```css
-/* 初期状態: 非表示 */
-.service-card {
-    opacity: 0;
-    transform: translateY(50px) scale(0.9);
-}
-
-/* アニメーション発動時 */
-.service-card.animate {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-}
-```
-
-### JavaScript 統合パターン
-- **単一DOMContentLoadedイベント**内にすべての機能を統合
-- 変数重複回避のための関数スコープ管理
-- エラーハンドリング付きDOM要素アクセス
-
-### デバッグ機能
-- `console.log()`による詳細ログ出力
-- ブラウザ開発者ツール（F12）での監視
-- Spine統合の段階的ログ確認
-
-## スタイリング規約
-
-### カラーパレット
-- メインカラー: `#ff6b6b` (猫らしいピンク)
-- 背景: `#fafafa` (優しいグレー)
-- テキスト: `#333` (ダークグレー)
-
-### レスポンシブ breakpoint
-- モバイル: `max-width: 768px`
-- 最大幅: `1200px` (コンテナ幅)
-
-## 注意事項
-
-### パフォーマンス
-- `requestAnimationFrame` を使用したスクロール処理の最適化
-- 浮遊要素の適切なDOM削除処理
-- アニメーション遅延によるCPU負荷分散
-
-### ブラウザ互換性
-- Modern browsers (ES6+ features使用)
-- IntersectionObserver API 必須
-- CSS Grid, Flexbox 使用
-
-### メンテナンス
-- 新しいアニメーション追加時は `animationObserver` に要素を登録
-- 日本語コメントで可読性を重視
-- Spine統合問題は `SPINE_TROUBLESHOOTING.md` を参照
-
-## トラブルシューティング
-
-### よくある問題
-
-#### 一般的な問題
-1. **アニメーションが動かない**: CSS の `opacity: 0` 初期状態を確認
-2. **浮遊要素が表示されない**: スクロール位置200px以上で確認
-3. **変数重複エラー**: `script.js` の統合版使用を確認
-
-#### サーバー関連
-4. **ERR_EMPTY_RESPONSE**: カスタムサーバーのguess_typeエラー → 修正版`server.py`使用
-5. **file://プロトコル問題**: 必ずHTTPサーバー経由で実行
-6. **CORS エラー**: CDNからのSpine読み込み失敗 → サーバー使用必須
-
-## 装飾エフェクトシステム
-
-### 雲の絵文字エフェクト
-「サービス内容」セクションの見出しに雲の絵文字（☁️）を背景として配置するシステム：
-
-```css
-.services h2::before {
-    content: '☁️';
-    position: absolute;
-    top: -190px;  /* 位置調整が重要 */
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 15rem;  /* 文字を覆うサイズ */
-    opacity: 0.4;
-    z-index: -1;
-    animation: cloudFloat 4s ease-in-out infinite;
-}
-```
-
-### 雲エフェクトの実装ポイント
-- **位置調整**: 絵文字のサイズ変更時は `top` 値の再調整が必要
-- **サイズバランス**: h2の文字サイズ（2.2rem）に対して適切な比率を保つ
-- **アニメーション**: 上下3pxの微細な浮遊で文字範囲内に維持
-- **z-index**: `-1` で文字の背景に配置
-
-### 絵文字エフェクトの注意点
-1. **ブラウザ依存**: 絵文字の表示サイズはOS/ブラウザにより異なる可能性
-2. **基準点の変化**: `font-size` 変更時は絵文字の基準点（baseline）が変わる
-3. **位置計算**: 大きなサイズでは予想以上に下に配置される場合がある
-
-## ヒーローセクションの背景画像システム
-
-### 背景画像の実装
-トップページのヒーローセクションには `クラウドパートナーTOP.png` を背景画像として使用：
-
-```css
-.hero {
-    background: url('../images/クラウドパートナーTOP.png') center top/cover no-repeat;
-    min-height: 900px;
-    align-items: flex-start;
-}
-```
-
-### ヒーローコンテンツの配置
-背景画像の上に半透明の白いカードを配置してテキストの可読性を確保：
-
-```css
-.hero-content {
-    max-width: 280px;
-    background: rgba(255, 255, 255, 0.6);
-    padding: 20px;
-    border-radius: 12px;
-    backdrop-filter: blur(8px);
-    margin-left: 40px;
-    margin-top: 10px;
-}
-```
-
-### 背景画像システムの重要ポイント
-- **画像配置**: `center top/cover` で画像上部を基準に全画面カバー
-- **透明オーバーレイなし**: 画像をクリアに表示するため透明グラデーションは使用しない
-- **コンテンツ位置**: `align-items: flex-start` で上寄せ配置
-- **可読性確保**: 半透明白背景 + ブラー効果でテキストを読みやすく
-
-### サービスアイコンシステム
-各サービスカードには内容に適したアイコンを使用：
-- 📅 予約販売システム（カレンダー）
-- 💰 給与システム（お金袋）
-- 🎓 教育機関向けシステム（卒業帽）
-- 🐱 トレーニング教材（猫）
-
-## 雲の流れるアニメーションシステム
-
-### アーキテクチャ
-ヒーローセクションで6つの雲画像（kumo1.png, kumo2.png, kumo3.png を2セット使用）が画面を横断するアニメーション：
-
-```html
-<img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
-<img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
-<!-- ... 計6つの雲要素 -->
-```
-
-### CSS設計パターン
-- **共通クラス `.cloud`**: position: absolute, opacity: 0.7, z-index: 0
-- **個別クラス `.cloud1-6`**: 各雲のサイズ、位置、速度、初期遅延を個別設定
-- **@keyframes**: 各雲専用のアニメーション定義（上下の揺らぎパターンが異なる）
-
-### 調整可能パラメータ
-```css
-/* 各雲の設定例 */
-.cloud1 {
-    top: 10%;                           /* 垂直位置: 5%〜20% */
-    width: 100px;                       /* サイズ: 50px〜200px */
-    animation: cloudFloat1 25s linear infinite;  /* 速度: 20s〜40s */
-    animation-delay: -1s;               /* 初期位置: 負の値で途中開始 */
-}
-
-@keyframes cloudFloat1 {
-    0% { left: -80px; transform: translateY(0px); }
-    50% { transform: translateY(-10px); }           /* 上下の揺らぎ: -20px〜20px */
-    100% { left: calc(100% + 100px); transform: translateY(0px); }
-}
-```
-
-### 実装のポイント
-- **自然な初期配置**: `animation-delay`の負の値で雲が既に画面内にある状態でスタート
-- **パフォーマンス**: `transform`のみでアニメーション、`requestAnimationFrame`不要
-- **レスポンシブ**: `calc(100% + 余裕px)`で画面幅に関係なく動作
-- **詳細コメント**: CSS内に調整方法の完全ガイドを記載済み
-
-### メンテナンス
-雲の追加時は以下3点をセットで実装：
-1. HTMLに`<img>`タグ追加
-2. CSS個別クラス定義（`.cloud7`等）
-3. CSS専用`@keyframes`定義（`cloudFloat7`等）
-
-## Spine WebGLアニメーションシステム
-
-### HTML設定制御システム（重要）
+### 簡単調整方法
 **ぷらっとくんの位置・演出設定をHTMLから直接制御可能**
 
-#### 設定方法
-`index.html`内の`#purattokun-config`セクションで設定：
+#### 設定場所
+`index.html`内の`#purattokun-config`セクション：
+
 ```html
-<!-- ぷらっとくん設定（このセクションで位置や演出を調整できます） -->
 <div id="purattokun-config" style="display: none;"
-     data-x="220"           <!-- 横位置：お店付近=220, 入口=200, 道路側=100 -->
-     data-y="180"           <!-- 縦位置：地面=180, 上=150, 下=220 -->
-     data-scale="0.75"      <!-- サイズ：1.0=等倍, 0.75=普通, 0.6=小さめ -->
-     data-fade-delay="1500" <!-- 出現遅延（ms）：早い=500, 普通=1500, 遅い=3000 -->
-     data-fade-duration="2000"> <!-- フェード時間（ms）：早い=1000, 普通=2000, 遅い=3000 -->
+     data-x="18"            <!-- 横位置：18vw（背景画像同期） -->
+     data-y="49"            <!-- 縦位置：49vh（地面レベル） -->
+     data-scale="0.55"      <!-- サイズ：0.55倍 -->
+     data-fade-delay="1500" <!-- 出現遅延（ms） -->
+     data-fade-duration="2000"> <!-- フェード時間（ms） -->
 </div>
 ```
 
@@ -317,500 +107,219 @@ git log --oneline
 3. ファイル保存 → ブラウザリロード（F5）
 4. 変更を即座に確認
 
-#### 主要設定項目
-- **位置調整**: `data-x`, `data-y` で画面上の配置
-- **サイズ調整**: `data-scale` でキャラクターサイズ
-- **演出調整**: `data-fade-delay`, `data-fade-duration` で出現タイミング
+#### よく使う設定値
+**横位置（data-x）:**
+- 道路側: 8vw
+- お店の入口: 15vw  
+- **お店付近: 18vw（推奨・現在の設定）**
+- 右寄り: 25vw
 
-### アーキテクチャとバージョン管理
-CDN経由でSpine WebGLランタイムを読み込み、背景画像上にキャラクターアニメーションを配置：
+**縦位置（data-y）:**
+- 上の方: 40vh
+- **地面レベル: 49vh（推奨・現在の設定）**
+- 下の方: 55vh
 
-#### **重要：バージョン一致の原則**
-**Spine Runtime と データファイルのバージョンは必ず一致させること**
-
-```html
-<!-- 現在の推奨構成 -->
-<!-- Runtime: 4.1.* -->
-<script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
-<!-- Data: 4.1.24 -->
-assets/spine/characters/purattokun/purattokun.json ("spine":"4.1.24")
-```
-
-#### **バージョン選択指針**
-
-| Runtime版 | データ版 | 互換性 | 特徴 |
-|----------|---------|--------|------|
-| 4.1.* | 4.1.24 | ✅完全一致 | シンプル、安定、Physics制約なし |
-| 4.2.* | 4.1.24 | ❌Physics Error | Runtime側がphysics配列を要求するが、データに存在しない |
-| 4.2.* | 4.2.* | ✅完全一致 | 高度なPhysics制約、最新機能 |
-
-**推奨**: 現在の4.1.*構成を維持（安定性重視）
-
-### 統合管理システム
-`SpineCharacterManager`クラスが全てのキャラクターを統合管理：
-
-- **初期化**: CDNからの非同期読み込み完了まで最大5秒待機
-- **キャラクター管理**: Map()によるキャラクターインスタンス管理
-- **デバッグ統合**: 右上パネルにSpineキャラクター数とステータスを表示
-- **エラーハンドリング**: Spine未読み込み時はプレースホルダー表示
-- **Physics多層防御**: バージョン不一致に対応した段階的初期化システム
-
-### 現在のキャラクター配置
-```javascript
-// メインキャラクター：ぷらっとくん（修正済みデータ）
-spineManager.loadCharacter('purattokun', 'assets/spine/characters/purattokun/', heroSection);
-spineManager.setPosition('purattokun', 180, 250);  // 左側の山近く
-spineManager.playSequenceAnimation('purattokun');  // syutugen → taiki loop
-```
-
-### Spineファイル構造
-```
-assets/spine/characters/キャラクター名/
-├── キャラクター名.json    # スケルトンデータ
-├── キャラクター名.atlas   # テクスチャアトラス情報  
-└── キャラクター名.png     # テクスチャ画像
-```
-
-### HTML設定制御システム
-
-#### HTMLからの直接制御機能
-`index.html`内の設定セクションでぷらっとくんの表示を簡単に調整可能：
-
-```html
-<!-- ぷらっとくん設定（このセクションで位置や演出を調整できます） -->
-<div id="purattokun-config" style="display: none;"
-     data-x="220"
-     data-y="180" 
-     data-scale="0.75"
-     data-fade-delay="1500"
-     data-fade-duration="2000">
-</div>
-```
-
-#### 設定パラメータの詳細
-
-**位置設定（data-x, data-y）** - ビューポート基準（vw/vh）
-- `data-x`: 横位置の調整（画面幅の%）
-  - 道路側: 8vw
-  - お店の入口付近: 15vw
-  - お店付近: 18vw（推奨・背景画像同期）
-  - 右寄り: 25vw（吹き出しが切れる可能性あり）
-
-- `data-y`: 縦位置の調整（画面高さの%）
-  - 上の方: 15vh
-  - 地面レベル: 49vh（推奨・背景画像同期）
-  - 下の方: 55vh
-
-**サイズ設定（data-scale）**
+**サイズ（data-scale）:**
 - 大きめ: 1.0
-- 普通: 0.55（現在の設定）
+- **普通: 0.55（現在の設定）**
 - 小さめ: 0.25
 
-**演出タイミング設定**
-- `data-fade-delay`: 出現までの待機時間（ミリ秒）
-  - すぐ出現: 500
-  - 普通: 1500（推奨）
-  - ゆっくり出現: 3000
+---
 
-- `data-fade-duration`: フェードイン時間（ミリ秒）
-  - 早い: 1000
-  - 普通: 2000（推奨）
-  - ゆっくり: 3000
+## 🎯 Canvas配置システム（モジュール化・2024年7月24日導入）
 
-#### 調整手順
-1. `index.html`を開く
-2. `#purattokun-config`のdata-*属性を変更
-3. ブラウザをリロード（F5）
-4. F12開発者ツールのコンソールで結果確認
+### 新配置システムの特徴
+**JSON設定による宣言的配置管理** - 設定とコードの分離により保守性向上
 
-### 透明度ベース演出システム
+#### システム構成
+```
+assets/spine/positioning/
+├── canvas-positioning-system.js - 配置システム本体
+└── placement-config.json        - 配置設定（JSON）
+```
 
-#### 実装の特徴
-- **位置移動なし**: キャラクターは最初から最終位置に配置
-- **透明度のみ**: `opacity: 0 → 1` のフェードインアニメーション
-- **自然な出現**: 移動による不自然さを排除
-- **Canvas最適化**: 600x500pxで吹き出し表示に対応
+#### 利用可能な調整機能
+ブラウザコンソール（F12）で以下のコマンドが利用可能：
 
-#### 演出フロー
-1. **初期配置**: 透明状態で最終位置に配置
-2. **遅延待機**: `data-fade-delay`で指定した時間待機
-3. **フェードイン**: `data-fade-duration`で透明から不透明に
-4. **Spineアニメーション**: syutugen → taiki ループ開始
-
-### 実装の重要ポイント
-- **バージョン管理**: Runtime と データの完全一致が必須（4.1.* + 4.1.24）
-- **HTML制御**: プログラム知識不要でdata-*属性による簡単設定
-- **CDN依存**: 手動インストール不要、CDNから自動読み込み
-- **背景同期**: position: absolute でスクロールと連動、背景画像と同期
-- **白い枠から独立**: Canvas要素をdocument.bodyに配置、.heroから独立
-- **クリック機能**: キャラクタークリックで出現アニメーション再生
-- **パフォーマンス**: WebGL活用でCPU負荷を軽減
-
-### Physics初期化システム（多層防御）
-バージョン不一致に対応した段階的初期化：
 ```javascript
-// 1. SkeletonDataレベル確認
-if (skeleton.data.physicsConstraints) { /* 制約無効化 */ }
+// 【新配置システム】
+adjustCanvasPosition("hero-purattokun", "25%", "65%");  // 位置調整
+getCanvasPlacement("hero-purattokun");                   // 配置情報確認
+getAllCanvasPlacements();                                // 全配置情報確認
 
-// 2. Skeletonオブジェクトレベル強制初期化
-Object.defineProperty(skeleton, 'physics', { value: [] });
-
-// 3. updateWorldTransform()実行前最終チェック
-if (typeof skeleton.physics === 'undefined') { skeleton.physics = []; }
-
-// 4. try-catch with retry mechanism
+// 【従来システム（互換性保持）】
+adjustCanvas(25, 65);            // 直接位置調整
+testBackgroundAlignment();       // 背景画像との位置関係確認
 ```
 
-### デバッグとモニタリング
-- **コンソールログ**: `✅ Spine WebGL 4.1.* initialized successfully from CDN`
-- **ブラウザ開発者ツール**: F12でSpineステータス監視（初期化中→WebGL準備完了→アニメーション実行中）
-- **プレースホルダーモード**: Spine未読み込み時も動作確認可能（🐱浮遊表示）
-- **位置検証ログ**: Canvas position verification でBEFORE/AFTER位置確認
-- **Physics詳細ログ**: 初期化の各段階とエラーハンドリング状況を詳細表示
+#### JSON設定による位置制御
+`assets/spine/positioning/placement-config.json` で詳細設定：
 
-### Spine関連のトラブルシューティング
-
-#### よくある問題と解決策
-
-**0. キャラクターの体（karada）が見えない問題（解決済み）**
-- **症状**: Spineデータ更新後、キャラクターの体部分のみが表示されない
-- **原因**: ブラウザがSpineファイル（JSON/Atlas/PNG）を古いバージョンでキャッシュ
-- **解決策**: ブラウザキャッシュのクリア
-  ```bash
-  # 方法1: ハードリフレッシュ
-  Ctrl+Shift+R (Windows/Linux)
-  Cmd+Shift+R (Mac)
-  
-  # 方法2: キャッシュクリア（推奨）
-  Shift+Ctrl+Delete → すべてのキャッシュをクリア
-  
-  # 方法3: 開発者向け
-  F12 → Network タブ → "Disable cache"にチェック
-  ```
-- **予防策**: 
-  - 開発時は自動キャッシュバスティング機能が有効（localhost検出時）
-  - Spineファイル更新後は必ずハードリフレッシュを実行
-- **確認方法**: 
-  - F12コンソールで「💡 Cache busting active」メッセージを確認
-  - Network タブで304（キャッシュ）ではなく200（新規取得）を確認
-
-**1. Physics Initialization Error（解決済み）**
-- **症状**: `Error: physics is undefined` at `Skeleton.updateWorldTransform()`
-- **原因**: Spine Runtime 4.2.*とData 4.1.24のバージョン不一致
-- **解決策**: CDN URLを`4.1.*`に変更（現在の設定）
-  ```bash
-  # 修正済み設定
-  # Runtime: 4.1.* (CDN)
-  # Data: 4.1.24 (ローカルファイル)
-  # → 完全互換性確保
-  ```
-- **確認方法**: 
-  - コンソールで `"spine":"4.1.24"` を確認
-  - `✅ Spine WebGL 4.1.* initialized successfully` ログを確認
-
-**2. Atlas読み込み404エラー**
-- **症状**: `purattokun.atlas` が404エラーで読み込めない
-- **原因**: サーバーが`.atlas`拡張子を認識していない
-- **解決策**: `python server.py`（カスタムサーバー）を使用
-
-**3. プレースホルダーモード（🐱が浮遊）**
-- **症状**: 本物のSpineアニメーションではなく、CSS基盤の代替表示
-- **確認方法**: 右上デバッグパネルで "📝Placeholder" と表示
-- **解決手順**:
-  1. コンソールで404エラー確認
-  2. `test-atlas-fix.html`で詳細診断
-  3. カスタムサーバー使用
-
-**4. キャラクター切れ（解決済み）**
-- **症状**: ぷらっとくんの一部が画面外に切れて表示される
-- **原因**: Canvas サイズが小さすぎる（200x200px）
-- **解決策**: Canvas サイズを600x500pxに拡張（現在の設定）
-
-**5. 吹き出し切れ（解決済み）**
-- **症状**: 「予約完了」の吹き出しが画面右端で切れる
-- **解決策**: キャラクター位置を左寄り（x=220）に調整
-
-**6. WebGL getContext エラー**
-- **原因**: Atlas読み込み失敗の副次的効果
-- **解決**: Atlas問題を先に解決
-
-#### 診断ツール
-- **専用テストページ**: `test-console.html`でSpine 4.1.24互換性確認
-- **詳細診断**: `test-atlas-fix.html`でファイル読み込み状況確認
-
-#### 診断コマンド
-```bash
-# サーバー起動確認
-netstat -an | grep :8000  # Windows
-lsof -i :8000             # macOS/Linux
-
-# 直接ファイルアクセステスト
-curl -I http://localhost:8000/assets/spine/characters/purattokun/purattokun.atlas
+```json
+{
+  "placements": {
+    "hero-purattokun": {
+      "positioning": {
+        "desktop": { "left": "20%", "top": "70%" },
+        "mobile": { "left": "50%", "top": "75%" }
+      }
+    }
+  }
+}
 ```
 
-#### バージョン互換性
-- **Runtime**: Spine WebGL 4.1.*（CDNから自動取得）
-- **Data**: 4.1.24（Physicsなし）
-- **推奨組み合わせ**: 完全互換性のため4.1.*系で統一
-
-### ライセンス要件
-- **Spine Essential**: 無料（個人・教育用）
-- **Spine Professional**: 有料（商用利用）
-- 使用前に適切なライセンスの確認が必要
-
-### Spine WebGL ベストプラクティス
-
-#### 1. バージョン管理
-- **絶対ルール**: Runtime と データバージョンを一致させる
-- **推奨**: CDN URLでバージョンを固定（@4.1.*, @4.2.*）
-- **避ける**: @latest や @* での自動更新
-
-#### 2. トラブルシューティング優先順位
-1. **Physics Error** → バージョン不一致確認
-2. **Atlas 404** → カスタムサーバー使用
-3. **Placeholder mode** → コンソールログ確認
-4. **WebGL Error** → 上記問題の解決後に対処
-
-#### 3. 開発フロー
-1. `python server.py` でカスタムサーバー起動
-2. F12開発者ツールでSpineステータス監視
-3. コンソールログでエラー詳細確認
-4. バージョン一致確認（JSON内の"spine"フィールド）
-
-## SEO最適化システム
-
-### 実装済みSEO機能
-- **メタタグ最適化**: title, description, keywords, OGP, Twitter Cards
-- **構造化データ**: LocalBusiness, WebSite, BreadcrumbList (JSON-LD)
-- **セマンティックHTML**: 適切なheading階層、ARIA属性、role属性
-- **パフォーマンス**: 画像遅延読み込み、font-display: swap、リソースヒント
-- **内部リンク**: サービス間の適切な導線設計
-
-### SEO監視コマンド
-```bash
-# robots.txt確認
-curl http://localhost:8000/robots.txt
-
-# sitemap.xml確認  
-curl http://localhost:8000/sitemap.xml
-
-# 構造化データ検証
-# Google構造化データテストツールでindex.htmlを確認
-```
-
-## サーバー設定アーキテクチャ
-
-### MIMEタイプ処理システム
-カスタムサーバー(`server.py`)は以下のファイルタイプを適切に処理：
-
-```python
-# .atlasファイルの特別処理
-if path.endswith('.atlas'):
-    return 'text/plain', None
-
-# エラーハンドリング付きguess_type実装
-try:
-    result = super().guess_type(path)
-    # 複数の戻り値形式に対応
-except Exception:
-    # フォールバック処理
-```
-
-### プレースホルダーシステム  
-Spine読み込み失敗時の段階的フォールバック：
-1. **WebGL Spine**: 正常時の本格アニメーション
-2. **Placeholder**: CSS基盤の代替表示（🐱浮遊）
-3. **Error Mode**: 赤い❌で明確なエラー表示
-
-## 重要なドキュメント
-
-### SPINE_TROUBLESHOOTING.md
-Spine WebGL統合で遭遇した全問題の詳細記録：
-- バージョン互換性問題の解決策
-- Canvas位置指定問題の段階的解決
-- サーバー設定とアセット読み込み問題
-- クイック診断チェックリスト
-- **新しい問題はこのファイルに記録すること**
-
-```bash
-# Spine関連の問題発生時は必ずこのファイルを参照
-cat SPINE_TROUBLESHOOTING.md
-```
-
-### 重要：Spine関連修正時の記録ルール
-**Spine WebGL統合に関する修正を行った場合は、必ずSPINE_TROUBLESHOOTING.mdに記録すること**
-
-#### 記録すべき内容
-1. **問題の症状**: 何が起きていたか
-2. **原因分析**: なぜその問題が発生したか
-3. **解決策**: 具体的にどのように修正したか
-4. **影響範囲**: 他の機能への影響はないか
-5. **テスト結果**: 修正後の動作確認結果
-
-#### 記録のタイミング
-- Spine関連のファイル修正時（spine-integration.js、関連CSS、HTML設定）
-- 位置調整システムの変更時
-- バージョン互換性に関する変更時
-- 新しいSpine関連エラーの解決時
-
-これにより、将来同様の問題が発生した際の迅速な解決と、ナレッジの蓄積が可能になります。
+### フォールバック機能
+- 新システム読み込み失敗時は自動的に従来方式で動作
+- 既存機能の完全保持を保証
 
 ---
 
-## リファクタリング設計ガイド
+## 🚨 よくある問題とクイック解決
 
-### 📋 Spine統合システム リファクタリング設計書（2024年7月23日策定）
+### 1. ぷらっとくんが表示されない
+```bash
+# ブラウザキャッシュクリア
+Ctrl+Shift+R (Windows/Linux)
+Cmd+Shift+R (Mac)
 
-#### 🎯 リファクタリングの目的
-
-**現状の課題**：
-- **ファイルサイズ**: 2,035行（推奨: 500-1000行）
-- **デバッグログ過多**: 391個のconsole.log
-- **単一責任原則違反**: 複数の責任が混在
-- **保守性低下**: 影響範囲の予測困難
-
-**重視する設計原則**：
-1. **機能安定性の維持** - 既存動作の保護
-2. **段階的リファクタリング** - 小刻みな変更とテスト
-3. **責任の分離** - 単一責任原則の適用
-4. **テスタビリティ向上** - 個別機能テストの実現
-
-#### 🏗️ 設計アーキテクチャ
-
-**フェーズ1: デバッグシステムの整理**
-- **目標**: ログレベル管理とデバッグモード切り替え
-- **リスク**: 低
-- **作業**: console.logの分類（ERROR/WARN/INFO/DEBUG）
-- **成果物**: ログレベル設定機能
-
-**フェーズ2: ファイル分割**
-- **目標**: 責任範囲による論理分割
-```
-spine-integration.js (統合・初期化のみ)
-├── spine-character-manager.js (キャラクター管理)
-├── spine-debug-window.js (デバッグUI)
-├── spine-coordinate-utils.js (座標計算)
-└── spine-animation-controller.js (アニメーション制御)
+# サーバー確認
+python server.py  # カスタムサーバー使用
 ```
 
-**フェーズ3: コード構造改善**
-- **目標**: 長大メソッドの分割と関数化
-- **対象**: 100行超のメソッド
-- **手法**: 機能単位での関数抽出
+### 2. 白い枠と同じ動きをする
+**→ [レイヤー診断ガイド](./docs/LAYER_DEBUGGING.md) を参照**
 
-#### 🧪 テスト戦略
+ブラウザコンソール（F12）で診断実行：
+```javascript
+// 緊急診断ツール
+function emergencyDiagnosis() {
+    const canvas = document.querySelector('canvas[data-spine-character]');
+    if (!canvas) {
+        console.log('❌ Canvas要素が見つかりません！');
+        return;
+    }
+    
+    // 親要素チェック
+    console.log('親要素:', canvas.parentElement?.tagName);
+    
+    // 強制修正
+    if (canvas.parentElement !== document.body) {
+        document.body.appendChild(canvas);
+        console.log('🔧 Canvas を body に移動');
+    }
+    
+    canvas.style.position = 'absolute';
+    canvas.style.left = '18vw';
+    canvas.style.top = '49vh';
+    canvas.style.transform = 'translate(-50%, -50%)';
+    canvas.style.zIndex = '10';
+    
+    console.log('🎯 緊急修正完了');
+}
 
-**各フェーズでの検証項目**：
-1. **機能テスト**: ぷらっとくんクリック→アニメーション再生
-2. **位置テスト**: HTMLdata-*設定→正確な位置表示
-3. **パフォーマンステスト**: 初期化時間の測定
-4. **ブラウザ互換性**: Chrome/Firefox/Safari確認
+emergencyDiagnosis();
+```
 
-**リグレッション防止**：
-- 各フェーズ後にgitコミット
-- 問題発生時の即座ロールバック準備
-- SPINE_TROUBLESHOOTING.mdへの記録
+### 3. ウィンドウリサイズで位置がずれる
+**→ [レイヤー診断ガイド](./docs/LAYER_DEBUGGING.md) の「診断ツール」を実行**
 
-#### 📋 実装手順
-
-**Phase 1: ログシステム整理（1-2時間）**
-1. ログレベル定数定義
-2. console.logの分類・置換
-3. デバッグモード切り替え実装
-4. テスト→コミット
-
-**Phase 2: ファイル分割（2-3時間）**
-1. SpineCharacterManager抽出
-2. SpineDebugWindow抽出
-3. ユーティリティ関数分離
-4. 各段階でテスト→コミット
-
-**Phase 3: 構造改善（1-2時間）**
-1. 長大メソッド分割
-2. 重複コード統合
-3. 最終テスト→コミット
-
-#### ⚡ 期待される成果
-
-**定量的効果**：
-- ファイルサイズ: 50%削減（2035行→1000行程度）
-- デバッグログ: 80%削減（391個→78個程度）
-- 初期化時間: 微改善
-
-**定性的効果**：
-- 可読性向上: 新規開発者のオンボーディング時間短縮
-- 保守性向上: バグ修正・機能追加の容易性
-- テスト容易性: 個別機能の単体テスト実現
-
-#### 📖 品質管理ルール
-
-**コーディング規約**：
-- 1ファイル500行以内を目標
-- デバッグログは本番モードで無効化
-- 新機能追加時は影響範囲を明記
-- 定期的なコード品質チェック
-
-**保守性ガイドライン**：
-- 各クラス・関数は単一責任を持つ
-- 変更時は必ずテストを実行
-- リファクタリング結果をドキュメント更新
-- 同種問題の予防策を記録
-
-この設計に基づいて段階的にリファクタリングを実行し、各段階で動作確認とドキュメント更新を行う。
+### 4. Spine関連エラー
+**→ [Spineトラブルシューティング](./docs/SPINE_TROUBLESHOOTING.md) を参照**
 
 ---
 
-## 📋 リファクタリング実行完了報告（2024年7月24日）
+## 📋 段階的実装記録（2024年7月24日）
 
-### 🎉 v2.0 本格運用開始
+### 問題：白い枠との動きの同期
+**症状**: Canvas要素が`.hero-content`（白い枠）と同じ動きをしてしまう
 
-**実行済み作業：**
-✅ Phase 1: ログレベル管理システム実装
-✅ Phase 2: 5つのモジュールへの分割
-✅ Phase 3: 構造改善と最適化
-✅ v2.0への完全移行とAPI互換性更新
-✅ パフォーマンスベンチマーク完了
+### 解決アプローチ：段階的モジュール化
+❌ **避けた手法**: いきなりのフル構造変更（リスク大）  
+✅ **採用した手法**: 段階的なモジュール化戦略（リスク分散）
 
-### 📊 最終成果実績
+#### Phase 1: 基盤構築（30分）
+- `CanvasPositioningSystem`クラス作成
+- JSON設定による配置管理システム
+- **既存システム影響なし**
 
-**定量的改善（実測値）：**
-- **ファイルサイズ削減**: 2,075行 → 1,136行 (45%削減)
-- **データサイズ削減**: 103KB → 39KB (60.8%削減)
-- **デバッグログ最適化**: 391個 → 新ログシステム（カテゴリ別制御）
-- **保守性向上**: 単一責任原則適用、5つの責任分離モジュール
+#### Phase 2: 段階的統合（15分）
+- 既存`spine-character-manager.js`との統合
+- フォールバック機能による安全性確保
+- **既存機能完全保持**
 
-**本番稼働システム：**
-```
-assets/spine/ (本番v2.0)
-├── spine-integration-v2.js (292行) - メイン統合管理
-├── spine-character-manager.js (198行) - キャラクター管理  
-├── spine-debug-window.js (201行) - デバッグUI
-├── spine-coordinate-utils.js (185行) - 座標計算
-├── spine-animation-controller.js (260行) - アニメーション制御
-└── spine-integration-v1-backup.js (2,075行) - v1バックアップ
-```
+#### Phase 3: 動作検証（完了）
+- 新旧システムの並行動作確認
+- ブラウザテストと調整機能確認
 
-### 🔧 v2.0の主要改善点
+### 実装ルール（今後のガイドライン）
+1. **最小変更の原則**: 問題解決に必要最小限の変更
+2. **段階的実装**: 各段階でテスト・ロールバック準備
+3. **フォールバック必須**: 新機能失敗時の安全機能
+4. **ドキュメント化**: 解決プロセスの記録と予防策策定
 
-1. **自動環境検出**: localhost=デバッグモード、本番=エラーのみ
-2. **モジュラーアーキテクチャ**: 各機能の独立性確保
-3. **API統合**: `setupCharacterFromHTML`による簡潔な設定
-4. **パフォーマンス**: 60.8%のファイルサイズ削減
-5. **後方互換性**: 既存HTML設定システムの完全継承
+### 将来拡張可能機能
+- 動的キャラクター切り替え
+- ページ遷移連動演出  
+- 管理画面からの設定変更
+- A/Bテスト対応
 
-### 🚀 今後の運用指針
+---
 
-**開発時：**
-- F12コンソールで詳細ログ確認可能
-- `window.spineDebug.show()`でデバッグUI表示
-- カテゴリ別ログ制御システム活用
+## 💡 開発時の注意事項
 
-**本番環境：**
-- エラーログのみ自動出力
-- デバッグUIは自動無効化
-- 最適化されたパフォーマンス
+### 必須事項
+- **HTTPサーバー必須**: file://プロトコルでは動作しません
+- **ブラウザキャッシュ**: Spineファイル更新時は必ずハードリフレッシュ
+- **F12コンソール**: エラー確認の習慣化
 
-**保守作業：**
-- 新機能は適切なモジュールに追加
-- 1ファイル500行以内を維持
-- 変更時は必ずテスト実行
+### パフォーマンス
+- 画像遅延読み込み使用
+- CSS Grid, Flexbox 使用
+- モダンブラウザ対応（ES6+）
+
+### デバッグ
+- F12開発者ツールでコンソール確認
+- 右上デバッグパネル（開発時のみ表示）
+- レスポンシブ表示確認（デベロッパーツール）
+
+---
+
+## 🔗 問題発生時の参照先
+
+| 問題の種類 | 参照ドキュメント |
+|-----------|----------------|
+| **レイヤー・位置問題** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
+| **Spine表示・エラー** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
+| **新機能・技術仕様** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
+| **設計・リファクタリング** | [🏛️ docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) |
+
+---
+
+## 🎨 基本的なスタイリング
+
+### カラーパレット
+- メインカラー: `#ff6b6b` (猫らしいピンク)
+- 背景: `#fafafa` (優しいグレー)
+- テキスト: `#333` (ダークグレー)
+
+### レスポンシブ breakpoint
+- モバイル: `max-width: 768px`
+- コンテナ最大幅: `1200px`
+
+---
+
+## 🔄 メンテナンス
+
+### 新しい問題を解決した時
+1. 問題の種類を判断（レイヤー/Spine/一般）
+2. 適切なdocsファイルに解決策を記録
+3. このCLAUDE.mdのクイック解決に追加（必要に応じて）
+
+### 新機能を追加した時
+1. [DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) に技術詳細を記録
+2. このCLAUDE.mdに日常操作方法を記録
+3. [ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) に設計思想を記録（必要に応じて）
+
+---
+
+**📚 詳細な技術情報は [docs フォルダ](./docs/) を参照してください**

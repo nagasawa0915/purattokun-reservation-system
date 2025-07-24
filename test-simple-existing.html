@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプル配置テスト（既存システム使用）</title>
+    <style>
+        /* リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 背景コンテナ */
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        /* 背景画像 */
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* 雲の共通スタイル */
+        .cloud {
+            position: absolute;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* 各雲の位置 */
+        .cloud1 { left: -5%; top: 10%; width: 8%; animation: moveCloud1 25s linear infinite; }
+        .cloud2 { left: -5%; top: 15%; width: 8%; animation: moveCloud2 30s linear infinite; }
+        .cloud3 { left: -5%; top: 8%; width: 8%; animation: moveCloud3 35s linear infinite; }
+        
+        /* 雲のアニメーション */
+        @keyframes moveCloud1 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
+        
+        /* SpineのCanvasを背景コンテナ基準で配置 */
+        .background-container canvas[data-spine-character] {
+            position: absolute !important;
+            left: 18% !important;
+            top: 49% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 200px !important;
+            height: 200px !important;
+            pointer-events: auto !important;
+            z-index: 10 !important;
+        }
+        
+        .info {
+            margin: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>シンプル配置テスト（既存システム使用）</h1>
+        <p>既存のSpineCharacterManagerを使用しますが、配置は.background-container基準です。</p>
+    </div>
+    
+    <!-- 背景コンテナ（ここが配置の基準） -->
+    <div class="background-container" id="game-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        <img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
+        <img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
+        <img src="assets/images/kumo3.png" alt="雲3" class="cloud cloud3">
+    </div>
+    
+    <!-- 設定（非表示） -->
+    <div id="purattokun-config" style="display: none;"
+         data-x="18"
+         data-y="49" 
+         data-scale="0.5"
+         data-fade-delay="500"
+         data-fade-duration="1000">
+    </div>
+    
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <!-- 既存のSpineマネージャー（最小限） -->
+    <script src="assets/spine/spine-character-manager.js"></script>
+    
+    <script>
+        // Spine初期化待ち
+        function waitForSpine() {
+            if (typeof spine !== 'undefined' && typeof SpineCharacterManager !== 'undefined') {
+                console.log('✅ Spine準備完了');
+                initCharacter();
+            } else {
+                setTimeout(waitForSpine, 100);
+            }
+        }
+        
+        async function initCharacter() {
+            try {
+                // マネージャー作成
+                const manager = new SpineCharacterManager();
+                
+                // コンテナ取得
+                const container = document.getElementById('game-container');
+                
+                // キャラクター読み込み
+                const character = await manager.loadCharacter(
+                    'purattokun',
+                    'assets/spine/characters/purattokun/',
+                    container  // .background-containerに配置
+                );
+                
+                if (character) {
+                    console.log('✅ ぷらっとくん配置完了');
+                    
+                    // Canvas位置を強制的に設定（CSSで上書き済み）
+                    const canvas = container.querySelector('canvas[data-spine-character]');
+                    if (canvas) {
+                        console.log('Canvas確認:', canvas);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ エラー:', error);
+            }
+        }
+        
+        waitForSpine();
+    </script>
+</body>
+</html>

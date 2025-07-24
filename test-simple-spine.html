@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプルSpine統合テスト - ぷらっとくん</title>
+    <style>
+        /* リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 背景コンテナ */
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        /* 背景画像 */
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* 雲の共通スタイル */
+        .cloud {
+            position: absolute;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* 各雲の位置 */
+        .cloud1 { left: -5%; top: 10%; width: 8%; animation: moveCloud1 25s linear infinite; }
+        .cloud2 { left: -5%; top: 15%; width: 8%; animation: moveCloud2 30s linear infinite; }
+        .cloud3 { left: -5%; top: 8%; width: 8%; animation: moveCloud3 35s linear infinite; }
+        
+        /* 雲のアニメーション */
+        @keyframes moveCloud1 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
+        
+        /* ぷらっとくんCanvas */
+        #purattokun-canvas {
+            position: absolute;
+            left: 18%;
+            top: 49%;
+            transform: translate(-50%, -50%);
+            width: 16%;  /* 背景画像の16%の幅 */
+            height: 16%; /* 背景画像の16%の高さ */
+            pointer-events: auto;
+        }
+        
+        .info {
+            margin: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>シンプルSpine統合テスト</h1>
+        <p>最小限のコードでSpineキャラクターを配置します。</p>
+        <div class="status" id="status">初期化中...</div>
+    </div>
+    
+    <!-- 背景コンテナ -->
+    <div class="background-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        <img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
+        <img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
+        <img src="assets/images/kumo3.png" alt="雲3" class="cloud cloud3">
+        <canvas id="purattokun-canvas"></canvas>
+    </div>
+    
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <!-- 最小限のSpine統合 -->
+    <script>
+        const status = document.getElementById('status');
+        
+        // Spine初期化を待つ
+        function waitForSpine() {
+            if (typeof spine !== 'undefined') {
+                status.textContent = '✅ Spine読み込み完了';
+                initSpineCharacter();
+            } else {
+                status.textContent = '⏳ Spine読み込み中...';
+                setTimeout(waitForSpine, 100);
+            }
+        }
+        
+        // Spineキャラクター初期化
+        async function initSpineCharacter() {
+            try {
+                const canvas = document.getElementById('purattokun-canvas');
+                const gl = canvas.getContext('webgl', { alpha: true });
+                
+                if (!gl) {
+                    throw new Error('WebGLサポートなし');
+                }
+                
+                // Canvasサイズ設定（レスポンシブ対応）
+                const updateCanvasSize = () => {
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                    console.log('Canvas実サイズ:', canvas.width + 'x' + canvas.height);
+                };
+                updateCanvasSize();
+                
+                // ウィンドウリサイズ時にCanvasサイズも更新
+                window.addEventListener('resize', updateCanvasSize);
+                
+                status.textContent = '📁 Spineファイル読み込み中...';
+                
+                // アセットマネージャー（パス修正）
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了待ち（デバッグ付き）
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100; // 10秒でタイムアウト
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        
+                        if (assetManager.isLoadingComplete()) {
+                            console.log('✅ アセット読み込み完了');
+                            resolve();
+                        } else if (checkCount > maxChecks) {
+                            const errors = assetManager.getErrors();
+                            console.error('❌ 読み込みタイムアウト:', errors);
+                            reject(new Error('アセット読み込みタイムアウト: ' + JSON.stringify(errors)));
+                        } else {
+                            if (checkCount % 10 === 0) {
+                                console.log(`⏳ 読み込み中... (${checkCount}/100)`);
+                            }
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    checkAssets();
+                });
+                
+                status.textContent = '🎬 アニメーション開始...';
+                
+                // Atlas取得
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                
+                // SkeletonData読み込み
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                // Skeleton作成
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 0;  // 固定値 0
+                skeleton.y = 0;  // 固定値 0
+                skeleton.scaleX = skeleton.scaleY = 0.3;  // スケールを小さく
+                
+                console.log('📊 Skeleton情報:', {
+                    x: skeleton.x,
+                    y: skeleton.y,
+                    scale: skeleton.scaleX,
+                    animations: skeleton.data.animations.map(a => a.name)
+                });
+                
+                // AnimationState
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーション設定
+                if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                    console.log('✅ アニメーション設定: taiki');
+                } else if (skeleton.data.animations.length > 0) {
+                    const animName = skeleton.data.animations[0].name;
+                    animationState.setAnimation(0, animName, true);
+                    console.log('✅ アニメーション設定:', animName);
+                } else {
+                    console.warn('⚠️ アニメーションが見つかりません');
+                }
+                
+                // レンダラー
+                const shader = spine.Shader.newTwoColoredTextured(gl);
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                
+                // レンダリングループ
+                let lastTime = Date.now() / 1000;
+                let frameCount = 0;
+                
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    // 更新
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    // 描画
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    
+                    // ビューポート設定
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    frameCount++;
+                    if (frameCount === 1) {
+                        console.log('🎬 最初のフレームレンダリング完了');
+                    }
+                    if (frameCount % 60 === 0) {
+                        console.log(`📹 ${frameCount}フレーム描画済み`);
+                    }
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                status.textContent = '✅ Spineキャラクター動作中';
+                
+            } catch (error) {
+                status.textContent = '❌ エラー: ' + error.message;
+                console.error('Spine初期化エラー:', error);
+            }
+        }
+        
+        // 開始
+        waitForSpine();
+    </script>
+</body>
+</html>

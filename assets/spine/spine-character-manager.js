@@ -150,6 +150,84 @@ class SpineCharacterManager {
     }
 
     /**
+     * 新配置システムとの統合
+     */
+    async integrateWithPositioningSystem(canvas, name) {
+        try {
+            // 配置システムが利用可能かチェック
+            if (typeof window.canvasPositioning === 'undefined') {
+                console.log('⚠️ 新配置システム未利用可能、従来方式で配置');
+                return this.fallbackPositioning(canvas, name);
+            }
+
+            // JSON設定の読み込み
+            const configLoaded = await window.canvasPositioning.loadConfig('./assets/spine/positioning/placement-config.json');
+            if (!configLoaded) {
+                console.log('⚠️ JSON設定読み込み失敗、従来方式で配置');
+                return this.fallbackPositioning(canvas, name);
+            }
+
+            // 配置IDの決定（キャラクター名に基づく）
+            const placementId = this.getPlacementId(name);
+            
+            // 新配置システムで配置実行
+            const success = window.canvasPositioning.placeCanvas(canvas, placementId);
+            if (success) {
+                console.log('✅ 新配置システムで配置完了:', placementId);
+                
+                // グローバル調整機能の公開
+                window.canvasPositioning.exposeGlobalFunctions();
+                
+                return true;
+            } else {
+                console.log('⚠️ 新配置システムで配置失敗、従来方式で配置');
+                return this.fallbackPositioning(canvas, name);
+            }
+
+        } catch (error) {
+            console.error('❌ 新配置システム統合エラー:', error);
+            console.log('⚠️ 従来方式で配置');
+            return this.fallbackPositioning(canvas, name);
+        }
+    }
+
+    /**
+     * 配置IDの決定ロジック
+     */
+    getPlacementId(characterName) {
+        // キャラクター名とシーンに基づいて配置IDを決定
+        const scene = 'hero'; // 現在はヒーローセクションのみ
+        return `${scene}-${characterName}`;
+    }
+
+    /**
+     * 従来方式での配置（フォールバック）
+     */
+    fallbackPositioning(canvas, name) {
+        console.log('🔄 従来配置システムを使用...');
+        
+        // .heroコンテナ内に配置
+        const heroSection = document.querySelector('.hero');
+        if (heroSection) {
+            heroSection.appendChild(canvas);
+            console.log('📍 Canvas配置: .hero内に配置（従来方式）');
+        } else {
+            document.body.appendChild(canvas);
+            console.log('⚠️ .heroが見つからないため、bodyに配置');
+        }
+        
+        // CSS制御による位置設定
+        canvas.style.position = 'absolute';
+        canvas.style.left = '20%';
+        canvas.style.top = '70%';
+        canvas.style.transform = 'translate(-50%, -50%)';
+        canvas.style.zIndex = '10';
+        
+        console.log('📍 従来CSS設定適用: left: 20%, top: 70%');
+        return true;
+    }
+
+    /**
      * プレースホルダーからSpine WebGLにアップグレード
      */
     async upgradeToSpineWebGL(name, basePath, container) {
@@ -175,13 +253,12 @@ class SpineCharacterManager {
         try {
             // Canvas要素作成
             const canvas = document.createElement('canvas');
-            canvas.width = 600;
-            canvas.height = 500;
-            canvas.style.cssText = `
-                position: absolute;
-                pointer-events: auto;
-                z-index: 1;
-            `;
+            canvas.width = 400;  // 適切なサイズに調整
+            canvas.height = 400;
+            // CSS基準配置用のdata属性を追加
+            canvas.setAttribute('data-spine-character', name);
+            // CSS制御モード：JavaScript側はstyleを一切設定しない
+            console.log('🎨 CSS制御モード：Canvas styleはCSS側で完全制御');
 
             // WebGL Context取得
             const gl = canvas.getContext('webgl', { 
@@ -292,11 +369,15 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // 最適化された位置設定（ユーザー確認済み）
+            // レスポンシブ座標システムによる位置設定
+            // 座標変換ユーティリティを使用して適切な位置を計算
+            console.log('📍 レスポンシブ座標システムによる位置設定を適用...');
+            
+            // 一時的に最適化された位置を設定（後でレスポンシブシステムが上書き）
             skeleton.x = 100;   // お店の上に配置
             skeleton.y = -120;  // 適切な高さ
             skeleton.scaleX = skeleton.scaleY = 0.8; // 適切なサイズ
-            console.log('📍 Optimized position applied:');
+            console.log('📍 一時的な位置設定:');
             console.log('  - Skeleton x:', skeleton.x);
             console.log('  - Skeleton y:', skeleton.y); 
             console.log('  - Scale:', skeleton.scaleX);
@@ -318,14 +399,15 @@ class SpineCharacterManager {
             };
 
             this.characters.set(name, character);
-
-            // DOM配置 - 最適化された位置（ユーザー確認済み）
-            canvas.style.left = '300px'; // お店の上に配置
-            canvas.style.top = '200px';  // 適切な高さ
-            canvas.style.zIndex = '1';   // 背景画像の上に配置
-            canvas.style.pointerEvents = 'auto'; // クリック可能
-            document.body.appendChild(canvas);
-            console.log('✅ Canvas positioned at optimized location: (300px, 200px)');
+            
+            // Spineアップグレード完了をマネージャーに通知
+            console.log('🔄 Spineアップグレード完了、レスポンシブハンドラーを更新...');
+            
+            // 新配置システムの統合実行
+            console.log('🎯 新配置システム統合開始...');
+            await this.integrateWithPositioningSystem(canvas, name);
+            
+            console.log('🎯 CSS基準配置: 背景画像と同じ.hero基準で位置固定');
             
             // Canvas配置の詳細確認
             setTimeout(() => {
@@ -378,18 +460,51 @@ class SpineCharacterManager {
                 }
             };
             
-            // Canvas位置調整機能も追加
-            window.adjustCanvas = function(left, top) {
+            // Canvas位置調整機能（.hero基準%対応版）
+            window.adjustCanvas = function(xPercent, yPercent) {
                 if (canvas) {
-                    canvas.style.left = left + 'px';
-                    canvas.style.top = top + 'px';
-                    console.log(`🖼️ Canvas位置調整: (${left}px, ${top}px)`);
+                    canvas.style.left = `${xPercent}%`;
+                    canvas.style.top = `${yPercent}%`;
+                    console.log(`🖼️ Canvas位置調整: ${xPercent}%, ${yPercent}% (.hero基準)`);
+                    console.log('💡 良い位置が見つかったらCSS styles.css を更新:');
+                    console.log(`   left: ${xPercent}%; top: ${yPercent}%;`);
+                } else {
+                    console.error('❌ Canvas要素が見つかりません');
                 }
             };
             
+            // 背景画像との位置確認用
+            window.testBackgroundAlignment = function() {
+                const heroRect = document.querySelector('.hero').getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                console.log('📐 背景画像と位置関係:');
+                console.log('  Hero section:', { 
+                    width: heroRect.width, 
+                    height: heroRect.height, 
+                    top: heroRect.top, 
+                    left: heroRect.left 
+                });
+                console.log('  Canvas:', { 
+                    width: canvasRect.width, 
+                    height: canvasRect.height, 
+                    top: canvasRect.top, 
+                    left: canvasRect.left 
+                });
+                console.log('  相対位置:', {
+                    xPercent: ((canvasRect.left - heroRect.left) / heroRect.width * 100).toFixed(1) + '%',
+                    yPercent: ((canvasRect.top - heroRect.top) / heroRect.height * 100).toFixed(1) + '%'
+                });
+            };
+            
             console.log('🛠️ 調整機能が利用可能になりました:');
+            console.log('【新配置システム】');
+            console.log('  adjustCanvasPosition("hero-purattokun", "25%", "65%") - 新システムで位置調整');
+            console.log('  getCanvasPlacement("hero-purattokun") - 配置情報確認');
+            console.log('  getAllCanvasPlacements() - 全配置情報確認');
+            console.log('【従来システム（互換性）】');
             console.log('  adjustPurattokun(x, y, scale) - Spine内の位置とサイズを調整');
-            console.log('  adjustCanvas(left, top) - Canvas自体の位置を調整');
+            console.log('  adjustCanvas(xPercent, yPercent) - Canvas位置を直接調整');
+            console.log('  testBackgroundAlignment() - 背景画像との位置関係を確認');
             console.log('  getPurattokunsettings() - 現在の設定を確認');
             
             log(LogLevel.INFO, 'animation', `${name} successfully upgraded to Spine WebGL`);

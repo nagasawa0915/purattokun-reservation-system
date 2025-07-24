@@ -147,19 +147,38 @@ body {
     color: #ff6b6b;
 }
 
-/* Hero Section */
+/* Hero Section - 背景画像と要素の完全同期 */
 .hero {
+    /* 背景画像をビューポート全体に表示 */
     background: url('../images/クラウドパートナーTOP.png') center top/cover no-repeat;
+    background-attachment: scroll;   /* 要素と一緒にスクロール（雲・ぷらっとくんと同期） */
     padding: 120px 20px 80px;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 100vw;               /* ビューポート全幅 */
+    margin-left: calc(50% - 50vw); /* 中央揃えを維持しつつ全幅表示 */
     min-height: 900px;
     position: relative;
     overflow: hidden;
+}
+
+/* Spine Canvas - 背景画像完全同期（.hero基準絶対配置） */
+canvas[data-spine-character] {
+    position: absolute !important;               /* .hero基準の絶対配置 */
+    /* 背景画像の「どこ」に置くかを%で決める（.hero基準） */
+    left: 20% !important;                        /* 左端から20%の位置（お店付近） */
+    top: 70% !important;                         /* 上端から70%の位置（地面レベル） */
+    transform: translate(-50%, -50%) !important;  /* キャラクター中心を座標に吸着 */
+    width: clamp(100px, 12vw, 200px) !important; /* レスポンシブサイズ */
+    height: auto !important;
+    pointer-events: auto !important;
+    z-index: 10 !important;
+    
+    /* 🔥 Flexレイアウトから完全分離 */
+    flex: none !important;           /* Flex子要素としての動作を無効化 */
+    align-self: auto !important;     /* Flex alignの影響を無効化 */
+    margin: 0 !important;            /* Flexマージンをリセット */
 }
 
 .hero::before {
@@ -189,12 +208,12 @@ body {
    雲のアニメーション設定
    ================================ */
 
-/* 雲の共通スタイル */
+/* 雲の共通スタイル（背景画像完全同期） */
 .cloud {
-    position: absolute;        /* 絶対位置指定で自由配置 */
-    opacity: 0.7;             /* 透明度: 0.1〜1.0で調整可能（0.7 = 30%透明） */
-    z-index: 0;               /* 背景レイヤーに配置（コンテンツより後ろ） */
-    pointer-events: none;     /* マウスイベントを無効化（クリック等を通過） */
+    position: absolute !important;  /* .hero基準の絶対配置（背景画像と同期） */
+    opacity: 0.7;                   /* 透明度: 0.1〜1.0で調整可能（0.7 = 30%透明） */
+    z-index: 0;                     /* 背景レイヤーに配置（コンテンツより後ろ） */
+    pointer-events: none;           /* マウスイベントを無効化（クリック等を通過） */
 }
 
 /* ================================
@@ -803,6 +822,13 @@ footer {
 
     .hero-content h2 {
         font-size: 2rem;
+    }
+
+    /* Spine Canvas - モバイル向け微調整 */
+    canvas[data-spine-character] {
+        left: 50%;   /* 小画面では中央寄せ */
+        top: 75%;    /* やや下に配置 */
+        width: clamp(80px, 10vw, 150px) !important; /* モバイル用サイズ */
     }
 
     .concept-content {

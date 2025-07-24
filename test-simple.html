@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプル配置テスト - ぷらっとくん</title>
+    <style>
+        /* リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 背景コンテナ（画像と同じサイズ） */
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        /* 背景画像 */
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* 雲の共通スタイル */
+        .cloud {
+            position: absolute;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* 各雲の位置（背景画像に対する%） */
+        .cloud1 {
+            left: -5%;
+            top: 10%;
+            width: 8%;
+            animation: moveCloud1 25s linear infinite;
+        }
+        
+        .cloud2 {
+            left: -5%;
+            top: 15%;
+            width: 8%;
+            animation: moveCloud2 30s linear infinite;
+        }
+        
+        .cloud3 {
+            left: -5%;
+            top: 8%;
+            width: 8%;
+            animation: moveCloud3 35s linear infinite;
+        }
+        
+        /* 雲のアニメーション */
+        @keyframes moveCloud1 {
+            from { left: -10%; }
+            to { left: 110%; }
+        }
+        
+        @keyframes moveCloud2 {
+            from { left: -10%; }
+            to { left: 110%; }
+        }
+        
+        @keyframes moveCloud3 {
+            from { left: -10%; }
+            to { left: 110%; }
+        }
+        
+        /* ぷらっとくんCanvas */
+        #purattokun-canvas {
+            position: absolute;
+            left: 18%;  /* お店付近 */
+            top: 49%;   /* 地面レベル */
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            pointer-events: auto;
+        }
+        
+        /* デバッグ用の枠線（確認後削除） */
+        .debug-border {
+            border: 2px solid red;
+        }
+        
+        /* 説明テキスト */
+        .info {
+            margin: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>シンプル配置テスト</h1>
+        <p>背景画像、雲、ぷらっとくんが一体となって動くかテストします。</p>
+        <p>ウィンドウサイズを変更して確認してください。</p>
+    </div>
+    
+    <!-- 背景コンテナ -->
+    <div class="background-container">
+        <!-- 背景画像 -->
+        <img src="assets/images/クラウドパートナーTOP.png" 
+             alt="背景" 
+             class="background-image">
+        
+        <!-- 雲 -->
+        <img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
+        <img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
+        <img src="assets/images/kumo3.png" alt="雲3" class="cloud cloud3">
+        
+        <!-- ぷらっとくんCanvas（後でSpineで置き換え） -->
+        <canvas id="purattokun-canvas" class="debug-border"></canvas>
+    </div>
+    
+    <!-- 最小限のJavaScript -->
+    <script>
+        // Canvasに仮の内容を描画（確認用）
+        const canvas = document.getElementById('purattokun-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 150;
+        canvas.height = 150;
+        
+        // 仮のキャラクター（赤い円）
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.beginPath();
+        ctx.arc(75, 75, 50, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'black';
+        ctx.font = '20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('ぷらっとくん', 75, 80);
+        
+        // 位置確認用のログ
+        console.log('✅ シンプル配置テスト開始');
+        console.log('- 背景画像: img タグで配置');
+        console.log('- 雲: position: absolute で背景画像基準');
+        console.log('- Canvas: position: absolute で背景画像基準');
+        
+        // ウィンドウリサイズ時の確認
+        window.addEventListener('resize', () => {
+            const container = document.querySelector('.background-container');
+            const rect = container.getBoundingClientRect();
+            console.log(`コンテナサイズ: ${rect.width}x${rect.height}`);
+        });
+    </script>
+</body>
+</html>
