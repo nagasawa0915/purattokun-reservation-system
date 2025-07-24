@@ -198,7 +198,7 @@ class SpineCharacterManager {
             // Spine WebGL初期化 (4.1.*正しいAPI)
             console.log('🔧 DEBUG: Creating Spine WebGL components...');
             
-            // Matrix4は直接spineから取得
+            // Matrix4は直接spineから取得（Y軸反転対応）
             const mvp = new spine.Matrix4();
             mvp.ortho2d(0, 0, canvas.width, canvas.height);
             console.log('✅ DEBUG: Matrix4 created');
@@ -206,6 +206,9 @@ class SpineCharacterManager {
             console.log('  - Canvas size:', canvas.width, 'x', canvas.height);
             console.log('  - Ortho2D bounds: (0,0) to (', canvas.width, ',', canvas.height, ')');
             console.log('  - Matrix values:', mvp.values);
+            
+            // 追加：もしY軸が問題なら、異なる座標も試してみる準備
+            console.log('🧪 DEBUG: Testing different coordinate systems...');
             
             const context = new spine.ManagedWebGLRenderingContext(gl);
             console.log('✅ DEBUG: ManagedWebGLRenderingContext created');
@@ -289,10 +292,10 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // 位置設定（中央に配置して視認性向上）
-            skeleton.x = canvas.width / 2;  // 300px (中央)
-            skeleton.y = canvas.height / 2; // 250px (中央)
-            skeleton.scaleX = skeleton.scaleY = 1.0; // スケールを大きくして視認性向上
+            // 位置設定（Spine座標系に合わせて調整）
+            skeleton.x = canvas.width / 2;   // 300px (中央)
+            skeleton.y = canvas.height - 50; // 450px (下部) - Spineは下が原点
+            skeleton.scaleX = skeleton.scaleY = 1.5; // さらに大きくして確実に見えるように
             console.log('📍 DEBUG: Skeleton position set:');
             console.log('  - x:', skeleton.x);
             console.log('  - y:', skeleton.y);
@@ -421,11 +424,19 @@ class SpineCharacterManager {
                 gl.clearColor(1, 1, 1, 1);
                 gl.clear(gl.COLOR_BUFFER_BIT);
 
+                // カメラ設定の詳細ログ
                 renderer.camera.position.x = 0;
                 renderer.camera.position.y = 0;
                 renderer.camera.viewportWidth = canvas.width;
                 renderer.camera.viewportHeight = canvas.height;
                 renderer.camera.update();
+                
+                if (frameCount === 1) {
+                    console.log('📹 DEBUG: Camera settings:');
+                    console.log('  - Position:', renderer.camera.position.x, renderer.camera.position.y);
+                    console.log('  - Viewport:', renderer.camera.viewportWidth, 'x', renderer.camera.viewportHeight);
+                    console.log('  - Projection matrix:', renderer.camera.projectionView?.values || 'N/A');
+                }
 
                 renderer.begin();
                 renderer.drawSkeleton(skeleton);
