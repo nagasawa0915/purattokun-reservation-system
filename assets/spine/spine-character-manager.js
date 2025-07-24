@@ -408,8 +408,18 @@ class SpineCharacterManager {
                 }
             };
             
+            // Canvas位置調整機能も追加
+            window.adjustCanvas = function(left, top) {
+                if (canvas) {
+                    canvas.style.left = left + 'px';
+                    canvas.style.top = top + 'px';
+                    console.log(`🖼️ Canvas位置調整: (${left}px, ${top}px)`);
+                }
+            };
+            
             console.log('🛠️ 調整機能が利用可能になりました:');
-            console.log('  adjustPurattokun(x, y, scale) - 位置とサイズを調整');
+            console.log('  adjustPurattokun(x, y, scale) - Spine内の位置とサイズを調整');
+            console.log('  adjustCanvas(left, top) - Canvas自体の位置を調整');
             console.log('  getPurattokunsettings() - 現在の設定を確認');
             
             log(LogLevel.INFO, 'animation', `${name} successfully upgraded to Spine WebGL`);
