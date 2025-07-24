@@ -1,0 +1,293 @@
+/**
+ * Spine WebGL統合モジュール v2.0 (リファクタリング版)
+ * モジュラー設計による保守性とパフォーマンスの向上
+ */
+
+// =======================================
+// ログレベル管理システム
+// =======================================
+
+const LogLevel = {
+    ERROR: 0,   // エラー・重要な問題
+    WARN: 1,    // 警告・注意事項
+    INFO: 2,    // 一般的な情報・ステータス
+    DEBUG: 3    // 詳細デバッグ情報
+};
+
+// デバッグモード設定（本番では ERROR のみ有効）
+const DEBUG_CONFIG = {
+    // 本番モード: localhost 以外では ERROR レベルのみ
+    level: window.location.hostname === 'localhost' ? LogLevel.DEBUG : LogLevel.ERROR,
+    
+    // 各カテゴリーの有効/無効切り替え
+    categories: {
+        initialization: true,    // 初期化ログ
+        animation: true,        // アニメーション関連
+        physics: true,          // Physics処理
+        performance: true,      // パフォーマンス監視
+        position: true,         // 位置計算
+        cache: true,           // キャッシュ処理
+        debug_ui: false        // デバッグUI（本番では無効）
+    }
+};
+
+// ログ出力関数
+function log(level, category, message, ...args) {
+    if (level > DEBUG_CONFIG.level) return;
+    if (category && !DEBUG_CONFIG.categories[category]) return;
+    
+    const prefix = {
+        [LogLevel.ERROR]: '❌',
+        [LogLevel.WARN]: '⚠️',
+        [LogLevel.INFO]: 'ℹ️',
+        [LogLevel.DEBUG]: '🔍'
+    }[level] || '📝';
+    
+    console.log(`${prefix} [${category || 'GENERAL'}] ${message}`, ...args);
+}
+
+// =======================================
+// メインSpine統合マネージャー
+// =======================================
+
+class SpineIntegrationManager {
+    constructor() {
+        this.characterManager = null;
+        this.debugWindow = null;
+        this.coordinateUtils = null;
+        this.animationController = null;
+        this.initialized = false;
+    }
+
+    /**
+     * 統合システム初期化
+     */
+    async init() {
+        log(LogLevel.INFO, 'initialization', 'Initializing Spine Integration v2.0...');
+
+        try {
+            // 依存モジュールの初期化
+            this.coordinateUtils = new SpineCoordinateUtils();
+            this.animationController = new SpineAnimationController();
+            this.characterManager = new SpineCharacterManager();
+            
+            // デバッグUIは開発モードのみ
+            if (DEBUG_CONFIG.categories.debug_ui) {
+                this.debugWindow = new SpineDebugWindow();
+            }
+
+            // Spine WebGL初期化
+            const spineInitialized = await this.characterManager.init();
+            if (!spineInitialized) {
+                log(LogLevel.WARN, 'initialization', 'Spine WebGL initialization failed, using placeholder mode');
+            }
+
+            // プレースホルダーアニメーション定義追加
+            this.animationController.addPlaceholderAnimations();
+
+            this.initialized = true;
+            log(LogLevel.INFO, 'initialization', 'Spine Integration v2.0 initialized successfully');
+
+            return true;
+
+        } catch (error) {
+            log(LogLevel.ERROR, 'initialization', 'Failed to initialize Spine Integration:', error);
+            return false;
+        }
+    }
+
+    /**
+     * キャラクター読み込み（簡略化インターフェース）
+     */
+    async loadCharacter(name, basePath, container) {
+        if (!this.initialized) {
+            log(LogLevel.WARN, 'animation', 'Integration manager not initialized');
+            return null;
+        }
+
+        return await this.characterManager.loadCharacter(name, basePath, container);
+    }
+
+    /**
+     * HTML設定を使用したキャラクター配置
+     */
+    async setupCharacterFromHTML(name, basePath, container, configElementId) {
+        // HTML設定読み込み
+        const config = this.coordinateUtils.getConfigFromHTML(configElementId);
+        const responsiveConfig = this.coordinateUtils.calculateResponsivePosition(config);
+
+        // キャラクター読み込み
+        const character = await this.loadCharacter(name, basePath, container);
+        if (!character) return null;
+
+        // 位置設定
+        this.setCharacterPosition(name, responsiveConfig.x, responsiveConfig.y, responsiveConfig.scale);
+
+        // フェードイン効果
+        await this.animationController.executeHtmlFadeIn(
+            name, 
+            character.element || character.canvas, 
+            {
+                fadeDelay: responsiveConfig.fadeDelay,
+                fadeDuration: responsiveConfig.fadeDuration
+            }
+        );
+
+        // アニメーションシーケンス開始
+        this.animationController.playSequence(name, ['syutugen', 'taiki']);
+
+        return character;
+    }
+
+    /**
+     * キャラクター位置設定
+     */
+    setCharacterPosition(name, x, y, scale = 1.0) {
+        if (!this.coordinateUtils) return;
+
+        // 安全な位置に制限
+        const safePosition = this.coordinateUtils.constrainToViewport(x, y, scale);
+        
+        // キャラクターマネージャーに位置設定を委任
+        this.characterManager.setPosition(name, safePosition.x, safePosition.y);
+        
+        // スケール設定（実装はキャラクターマネージャー側で）
+        if (scale !== 1.0) {
+            this.setCharacterScale(name, scale);
+        }
+    }
+
+    /**
+     * キャラクタースケール設定
+     */
+    setCharacterScale(name, scale) {
+        const character = this.characterManager.characters.get(name);
+        if (!character) return;
+
+        if (character.type === 'placeholder' && character.element) {
+            character.element.style.transform = `scale(${scale})`;
+        } else if (character.type === 'spine' && character.skeleton) {
+            character.skeleton.scaleX = scale;
+            character.skeleton.scaleY = scale;
+        }
+
+        log(LogLevel.DEBUG, 'position', `Scale set for ${name}: ${scale}`);
+    }
+
+    /**
+     * アニメーション再生
+     */
+    playAnimation(name, animationName, loop = true) {
+        if (!this.animationController) return;
+        this.animationController.playAnimation(name, animationName, loop);
+    }
+
+    /**
+     * クリックイベント処理
+     */
+    handleCharacterClick(name) {
+        log(LogLevel.DEBUG, 'animation', `Character ${name} clicked`);
+        
+        // クリックアニメーション再生
+        this.animationController.playAnimation(name, 'click', false);
+        
+        // 短時間後に通常アニメーションに戻す
+        setTimeout(() => {
+            this.animationController.playAnimation(name, 'taiki', true);
+        }, 1000);
+    }
+
+    /**
+     * デバッグウィンドウ表示切り替え
+     */
+    toggleDebugWindow() {
+        if (this.debugWindow) {
+            this.debugWindow.toggle();
+        } else {
+            log(LogLevel.INFO, 'debug_ui', 'Debug window not available in production mode');
+        }
+    }
+
+    /**
+     * パフォーマンス情報取得
+     */
+    getPerformanceInfo() {
+        return {
+            charactersLoaded: this.characterManager ? this.characterManager.characters.size : 0,
+            memoryUsage: performance.memory ? {
+                used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+                total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024)
+            } : null,
+            debugLevel: DEBUG_CONFIG.level,
+            isInitialized: this.initialized
+        };
+    }
+
+    /**
+     * 全体のクリーンアップ
+     */
+    cleanup() {
+        log(LogLevel.INFO, 'initialization', 'Cleaning up Spine Integration...');
+
+        if (this.debugWindow) {
+            this.debugWindow.hide();
+        }
+
+        if (this.characterManager) {
+            // 全キャラクターのクリーンアップ
+            this.characterManager.characters.forEach((character, name) => {
+                this.animationController.stopAllAnimations(name);
+            });
+        }
+
+        this.initialized = false;
+        log(LogLevel.INFO, 'initialization', 'Spine Integration cleanup completed');
+    }
+}
+
+// =======================================
+// グローバル初期化
+// =======================================
+
+// グローバルマネージャーインスタンス
+window.spineManager = null;
+window.spineDebug = null;
+
+// DOM読み込み完了後の初期化
+document.addEventListener('DOMContentLoaded', async function() {
+    log(LogLevel.INFO, 'initialization', 'DOM loaded, starting Spine Integration initialization...');
+
+    try {
+        // メインマネージャー初期化
+        window.spineManager = new SpineIntegrationManager();
+        const initialized = await window.spineManager.init();
+
+        if (initialized) {
+            log(LogLevel.INFO, 'initialization', 'Spine Integration ready for use');
+            
+            // デバッグアクセス用のグローバル参照
+            if (window.spineManager.debugWindow) {
+                window.spineDebug = window.spineManager.debugWindow;
+            }
+
+            // パフォーマンス情報をコンソールに出力
+            const perfInfo = window.spineManager.getPerformanceInfo();
+            log(LogLevel.INFO, 'performance', 'System ready:', perfInfo);
+
+        } else {
+            log(LogLevel.WARN, 'initialization', 'Spine Integration initialized with limitations');
+        }
+
+    } catch (error) {
+        log(LogLevel.ERROR, 'initialization', 'Critical error during initialization:', error);
+    }
+});
+
+// ページアンロード時のクリーンアップ
+window.addEventListener('beforeunload', function() {
+    if (window.spineManager) {
+        window.spineManager.cleanup();
+    }
+});
+
+log(LogLevel.INFO, 'initialization', 'Spine Integration v2.0 module loaded');
