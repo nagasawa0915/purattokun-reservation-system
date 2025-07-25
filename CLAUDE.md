@@ -27,6 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **技術仕様・実装詳細** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
 | **レイヤー問題診断** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
 | **Spine問題解決** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
+| **Canvasサイズ変更問題** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) |
 | **設計思想・アーキテクチャ** | [🏛️ docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) |
 
 ---
@@ -242,7 +243,19 @@ emergencyDiagnosis();
 **→ [レイヤー診断ガイド](./docs/LAYER_DEBUGGING.md) の「診断ツール」を実行**
 **→ [背景同期の成功事例](./docs/DEVELOPMENT_GUIDE.md#背景画像とキャラクターの完全同期2024年7月実装) も参照**
 
-### 4. Spine関連エラー
+### 4. Canvasのサイズが変更できない
+**→ [Canvasサイズ変更トラブルシューティング](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) を参照**
+
+ブラウザコンソール（F12）で緊急診断：
+```javascript
+// 表示中の要素を特定
+const canvas = document.querySelector('canvas[id*="purattokun"]');
+const fallback = document.querySelector('img[src*="purattokunn"]');
+console.log('Canvas表示:', canvas?.style.display !== 'none');
+console.log('フォールバック表示:', fallback?.style.display !== 'none');
+```
+
+### 5. Spine関連エラー
 **→ [Spineトラブルシューティング](./docs/SPINE_TROUBLESHOOTING.md) を参照**
 
 ---
@@ -380,8 +393,11 @@ SpineWebGL読み込み失敗時もCSS keyframeアニメーションで同様の�
 |-----------|----------------|
 | **レイヤー・位置問題** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
 | **Spine表示・エラー** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
+| **Canvasサイズ変更問題** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) |
 | **新機能・技術仕様** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
 | **設計・リファクタリング** | [🏛️ docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) |
+| **開発時のチェックリスト** | [📋 docs/DEVELOPMENT_CHECKLIST.md](./docs/DEVELOPMENT_CHECKLIST.md) |
+| **失敗事例・再発防止** | [🚨 docs/FAILURE_ANALYSIS_CANVAS_SIZE.md](./docs/FAILURE_ANALYSIS_CANVAS_SIZE.md) |
 
 ---
 

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine キャラクター配置 - システム統合前</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            background: white;
+            padding: 30px 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #ff6b6b;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .main-scene {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .scene-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* 共通キャラクター設定（Canvas・フォールバック画像 両対応） */
+        .spine-character,
+        .fallback-character {
+            position: absolute !important;
+            left: 35% !important;
+            top: 75% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 160px;  /* ← ここを変更すると両方に反映 */
+            height: 160px; /* ← ここを変更すると両方に反映 */
+            z-index: 10 !important;
+        }
+
+        /* フォールバック画像専用設定 */
+        .fallback-character {
+            object-fit: contain;
+            display: block;
+        }
+
+        .info-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .info-panel h2 {
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .status-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .comparison-note {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .comparison-note h3 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .demo-button {
+            display: inline-block;
+            background: #ff6b6b;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .demo-button:hover {
+            background: #ff5252;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .spine-character,
+            .fallback-character {
+                width: 140px;  /* モバイルでは少し小さく */
+                height: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <h1>🎮 Spine キャラクター配置サンプル</h1>
+            <p class="subtitle">Positioning System 統合前 - 固定配置版</p>
+        </div>
+
+        <!-- メインシーン -->
+        <div class="main-scene">
+            <div class="scene-container">
+                <!-- 背景画像 -->
+                <img src="assets/images/クラウドパートナーTOP.png" 
+                     alt="背景画像" 
+                     class="background-image">
+                
+                <!-- Spineキャラクター（Canvas） -->
+                <canvas id="spine-character-canvas" 
+                        class="spine-character"
+                        style="display: none;">
+                </canvas>
+                
+                <!-- フォールバック画像 -->
+                <img src="assets/images/purattokunn.png" 
+                     alt="ぷらっとくん" 
+                     class="fallback-character"
+                     id="fallback-character"
+                     style="display: block;"
+                     onload="console.log('✅ フォールバック画像読み込み成功')"
+                     onerror="console.error('❌ フォールバック画像読み込み失敗')">
+            </div>
+        </div>
+
+        <!-- 現在の状態パネル -->
+        <div class="info-panel">
+            <h2>📊 現在の状態</h2>
+            
+            <div class="status-item">
+                <span class="status-icon">❌</span>
+                <div>
+                    <strong>Positioning System:</strong> 未統合<br>
+                    <small>キャラクターは固定位置（35%, 75%）に配置されています</small>
+                </div>
+            </div>
+            
+            <div class="status-item">
+                <span class="status-icon">❌</span>
+                <div>
+                    <strong>ドラッグ&ドロップ:</strong> 利用不可<br>
+                    <small>キャラクターの位置を変更するにはCSSを直接編集する必要があります</small>
+                </div>
+            </div>
+            
+            <div class="status-item">
+                <span class="status-icon">❌</span>
+                <div>
+                    <strong>レスポンシブ座標:</strong> 基本的なCSS%のみ<br>
+                    <small>ウィンドウリサイズ時の詳細調整機能はありません</small>
+                </div>
+            </div>
+            
+            <div class="status-item">
+                <span class="status-icon">❌</span>
+                <div>
+                    <strong>設定管理:</strong> 手動コーディング<br>
+                    <small>位置変更には直接HTMLファイルを編集する必要があります</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 比較用リンク -->
+        <div class="comparison-note">
+            <h3>🚀 Positioning System の効果を確認</h3>
+            <p>このページと同じ内容で、システム統合後の違いを体験してください</p>
+            <a href="spine-sample-with-positioning.html" class="demo-button">
+                統合版デモを見る →
+            </a>
+        </div>
+    </div>
+
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        // index.htmlと同じ成功パターンのSpine初期化
+        async function initBasicSpineCharacter() {
+            try {
+                const canvas = document.getElementById('spine-character-canvas');
+                const fallback = document.getElementById('fallback-character');
+                
+                const gl = canvas.getContext('webgl', { alpha: true });
+                
+                if (!gl) {
+                    throw new Error('WebGLサポートなし');
+                }
+                
+                // Canvas サイズ設定（基本設定）
+                // 注意：CSS側の共通設定(.spine-character, .fallback-character)と同期
+                canvas.width = 160;
+                canvas.height = 160;
+                
+                console.log('📁 Spineファイル読み込み中...');
+                
+                // アセットマネージャー（index.htmlと同じパス）
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了待ち（index.htmlと同じ方式）
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100;
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        if (assetManager.isLoadingComplete()) {
+                            resolve();
+                        } else if (checkCount >= maxChecks) {
+                            reject(new Error('アセット読み込みタイムアウト'));
+                        } else {
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    
+                    checkAssets();
+                });
+                
+                console.log('🎬 アニメーション開始...');
+                
+                // Atlas取得（index.htmlと同じ）
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                
+                // SkeletonData読み込み
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                // Skeleton作成
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 0;  // 左下原点
+                skeleton.y = 0;  // 左下原点
+                skeleton.scaleX = skeleton.scaleY = 0.5;
+                
+                // AnimationState作成
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // taikiアニメーション設定
+                if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                    console.log('🎭 taikiアニメーション設定完了');
+                }
+                
+                // レンダラー作成
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                let lastTime = Date.now() / 1000;
+                
+                // レンダリングループ
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    // アニメーション更新
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    // 描画
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                
+                // 成功時の表示切り替え
+                canvas.style.display = 'block';
+                fallback.style.display = 'none';
+                console.log('✅ Spine初期化成功（index.htmlパターン使用）');
+                
+            } catch (error) {
+                console.error('Spine初期化エラー:', error);
+                // フォールバック画像を表示
+                const fallback = document.getElementById('fallback-character');
+                const canvas = document.getElementById('spine-character-canvas');
+                if (fallback && canvas) {
+                    fallback.style.display = 'block';
+                    canvas.style.display = 'none';
+                    console.log('⚠️ フォールバック画像に切り替えました');
+                }
+            }
+        }
+
+        // フォールバック画像を確実に表示する関数
+        function showFallback() {
+            const canvas = document.getElementById('spine-character-canvas');
+            const fallback = document.getElementById('fallback-character');
+            
+            if (canvas) canvas.style.display = 'none';
+            if (fallback) {
+                fallback.style.display = 'block';
+                console.log('✅ フォールバック画像を表示中');
+            }
+        }
+
+        // ページ読み込み時に初期化
+        window.addEventListener('load', () => {
+            console.log('📄 クリーンサンプルページ読み込み完了');
+            
+            // 初期状態でフォールバック画像を表示
+            showFallback();
+            
+            // Spine初期化を試行（成功すればアニメーション、失敗すればフォールバック）
+            console.log('🎮 Spine初期化を開始...');
+            setTimeout(initBasicSpineCharacter, 1000);
+        });
+
+        // 緊急時の手動フォールバック表示機能
+        function forceShowFallback() {
+            showFallback();
+            console.log('🔧 手動でフォールバック画像を表示しました');
+        }
+    </script>
+</body>
+</html>
