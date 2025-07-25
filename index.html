@@ -24,6 +24,8 @@
     <meta property="twitter:title" content="ぷらっとくん｜クラウドパートナー - LINE予約システム・給与システム・教育機関システム">
     <meta property="twitter:description" content="LINEで簡単に使える予約販売システム「ぷらっとくん」。給与管理、教育機関向けPTAシステム、猫ファーストの住環境アドバイスまで。">
     <meta property="twitter:image" content="https://necooya.com/assets/images/クラウドパートナーTOP.png">
+    
+    <!-- External CSS and Optimization -->
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -56,7 +58,7 @@
                      alt="クラウドパートナー背景画像" 
                      class="background-image">
                 
-                <!-- 雲（背景画像基準で配置） -->
+                <!-- 雲（背景画像基準で配置） - 6個に増加 -->
                 <img src="assets/images/kumo1.png" alt="ふわふわ浮かぶ白い雲" class="cloud cloud1" loading="lazy">
                 <img src="assets/images/kumo2.png" alt="ゆったり流れる雲" class="cloud cloud2" loading="lazy">
                 <img src="assets/images/kumo3.png" alt="青空に漂う雲" class="cloud cloud3" loading="lazy">
@@ -64,8 +66,8 @@
                 <img src="assets/images/kumo2.png" alt="空を舞う雲" class="cloud cloud5" loading="lazy">
                 <img src="assets/images/kumo3.png" alt="優雅に流れる雲" class="cloud cloud6" loading="lazy">
                 
-                <!-- ぷらっとくんCanvas（背景画像基準で配置） -->
-                <!-- JavaScriptでここに配置される -->
+                <!-- ぷらっとくんCanvas（背景画像基準で配置・成功パターン適用） -->
+                <canvas id="purattokun-canvas"></canvas>
             </div>
             
             <!-- UI要素（背景から独立） -->
@@ -88,7 +90,7 @@
                         <p class="service-description">お客様からの来店予約を管理する「<strong>LINE予約機能</strong>」が実質0円、
                             かわいいリッチメニューで注目を集めよう。
                             <strong>ハンドメイド販売</strong>の小物、もっと気軽に売ってみよう。
-あなたの「好き」を、カンタンに<strong>販売システム</strong>できるお手伝いをします。<br><a href="#contact" class="service-link">予約システムでお問い合わせ</a></p>
+                あなたの「好き」を、カンタンに<strong>販売システム</strong>できるお手伝いをします。<br><a href="#contact" class="service-link">予約システムでお問い合わせ</a></p>
                     </article>
                     <article class="service-card" role="listitem">
                         <div class="service-icon" aria-hidden="true">💰</div>
@@ -99,17 +101,17 @@
                     </article>
                     <article class="service-card" role="listitem">
                         <div class="service-icon" aria-hidden="true">🎓</div>
-                        <h3 class="service-title">教育機関向けシステム</h3>
-                        <p class="service-description"><strong>LINEでつながる PTAシステム</strong>。
-                            <strong>保護者連絡システム</strong>、名簿の自動作成、役員選出アンケート、当番表の作成まで、
-                            面倒な作業をぐっと減らす<strong>教育機関向けシステム</strong>です。
-                            基本機能はすべて<strong>無料</strong>でご利用可能。
-                            さらに、通知の一斉送信や自動抽選など、便利なオプション（有料）もご用意しています。<br><a href="#contact" class="service-link">教育機関システムでお問い合わせ</a></p>
+                        <h3 class="service-title">教育機関システム</h3>
+                        <p class="service-description">小中学校の<strong>PTA活動</strong>や<strong>学校行事</strong>をLINEで楽にしよう！
+                            出欠確認から連絡網まで、<strong>学校コミュニケーション</strong>を現代的に。
+                            保護者の負担を減らし、子どもたちにもっと時間を。<br><a href="#contact" class="service-link">教育機関システムでお問い合わせ</a></p>
                     </article>
                     <article class="service-card" role="listitem">
                         <div class="service-icon" aria-hidden="true">🐱</div>
-                        <h3 class="service-title">トレーニング教材</h3>
-                        <p class="service-description"><strong>猫との暮らし</strong>に関する<strong>住環境アドバイス</strong>を提供。<strong>猫ファースト</strong>の専門知識を活かした最適な<strong>住空間設計</strong>をサポートします。<strong>キャットウォーク</strong>や<strong>キャットタワー</strong>の設計もお任せください。<br><a href="#contact" class="service-link">住環境アドバイスでお問い合わせ</a></p>
+                        <h3 class="service-title">ネコヤ</h3>
+                        <p class="service-description">猫との理想の暮らしを実現する<strong>住環境アドバイス</strong>。
+                            5匹の保護猫との生活経験から、<strong>猫ファースト</strong>の住まいづくりをサポート。
+                            人も猫も快適に過ごせる空間設計をご提案します。<br><a href="#contact" class="service-link">ネコヤでお問い合わせ</a></p>
                     </article>
                 </div>
             </div>
@@ -125,19 +127,19 @@
                         <h3 class="concept-title">猫ファーストの住まいづくり</h3>
                         <p>5匹の子猫を保護した経験から、一般的な住宅が<strong>猫にとって必ずしも快適ではない</strong>ことに気づきました。</p>
                         <p><strong>猫の習性と行動</strong>を深く理解し、人間の生活にも配慮した<strong>住空間設計</strong>を行うことで、<strong>猫と飼い主の両方が幸せに暮らせる環境</strong>を実現します。</p>
-                        <ul class="concept-features" role="list">
-                        <li role="listitem">キャットウォーク・キャットタワーの設置</li>
-                        <li role="listitem">脱走防止扉の設置</li>
-                        <li role="listitem">猫専用スペースの確保</li>
-                        <li role="listitem">安全性を重視した素材選び</li>
-                        <li role="listitem">お手入れしやすい設計</li>
+                        <ul class="concept-features">
+                            <li>キャットウォーク・キャットタワーの設置</li>
+                            <li>脱走防止扉の設置</li>
+                            <li>猫専用スペースの確保</li>
+                            <li>安全性を重視した素材選び</li>
+                            <li>お手入れしやすい設計</li>
                         </ul>
                     </article>
-                    <aside class="concept-image" aria-label="猫と住宅のイラスト">
-                    <div class="cat-house-illustration">
-                        <div class="house" aria-hidden="true">🏠</div>
-                        <div class="cats" aria-hidden="true">🐱🐱🐱</div>
-                    </div>
+                    <aside class="concept-image">
+                        <div class="cat-house-illustration">
+                            <div class="house">🏠</div>
+                            <div class="cats">🐱🐱🐱</div>
+                        </div>
                     </aside>
                 </div>
             </div>
@@ -151,27 +153,35 @@
                 <div class="contact-content">
                     <div class="contact-info">
                         <h3 class="contact-subtitle">ご相談・お見積りは無料です</h3>
-                        <p>猫との理想の暮らしについて、お気軽にご相談ください。</p>
+                        <p>あなたのビジネスや猫との理想の暮らしについて、お気軽にご相談ください。</p>
                         <address class="contact-details">
-                        <div class="contact-item">
-                            <span class="icon" aria-hidden="true">📞</span>
-                            <span>03-1234-5678</span>
-                        </div>
-                        <div class="contact-item">
-                            <span class="icon" aria-hidden="true">✉️</span>
-                            <span>info@necooya.com</span>
-                        </div>
-                        <div class="contact-item">
-                            <span class="icon" aria-hidden="true">🕒</span>
-                            <span>平日 9:00-18:00</span>
-                        </div>
+                            <div class="contact-item">
+                                <span class="icon" aria-hidden="true">📞</span>
+                                <span>03-1234-5678</span>
+                            </div>
+                            <div class="contact-item">
+                                <span class="icon" aria-hidden="true">✉️</span>
+                                <span>info@necooya.com</span>
+                            </div>
+                            <div class="contact-item">
+                                <span class="icon" aria-hidden="true">🕒</span>
+                                <span>平日 9:00-18:00</span>
+                            </div>
                         </address>
                     </div>
                     <form class="contact-form" role="form" aria-label="お問い合わせフォーム">
-                        <input type="text" placeholder="お名前" required aria-label="お名前を入力してください">
-                        <input type="email" placeholder="メールアドレス" required aria-label="メールアドレスを入力してください">
-                        <textarea placeholder="お問い合わせ内容" rows="5" required aria-label="お問い合わせ内容を入力してください"></textarea>
-                        <button type="submit" aria-label="お問い合わせ内容を送信する">送信する</button>
+                        <input type="text" placeholder="お名前" required aria-label="お名前">
+                        <input type="email" placeholder="メールアドレス" required aria-label="メールアドレス">
+                        <select required aria-label="お問い合わせ内容">
+                            <option value="">お問い合わせ内容を選択</option>
+                            <option value="reservation">予約販売システム</option>
+                            <option value="payroll">給与システム</option>
+                            <option value="education">教育機関システム</option>
+                            <option value="necooya">ネコヤ（住環境アドバイス）</option>
+                            <option value="other">その他</option>
+                        </select>
+                        <textarea placeholder="詳しい内容をお聞かせください" rows="5" required aria-label="お問い合わせ詳細"></textarea>
+                        <button type="submit">送信する</button>
                     </form>
                 </div>
             </div>
@@ -180,13 +190,7 @@
 
     <footer role="contentinfo">
         <div class="container">
-            <p>&copy; 2024 ネコヤ. All rights reserved.</p>
-            <nav class="footer-nav" aria-label="フッターナビゲーション">
-            <a href="#home">ホーム</a>
-            <a href="#services">サービス</a>
-            <a href="#concept">コンセプト</a>
-            <a href="#contact">お問い合わせ</a>
-            </nav>
+            <p>&copy; 2024 クラウドパートナー（ネコヤ）. All rights reserved.</p>
         </div>
     </footer>
 
@@ -211,23 +215,23 @@
       - 小さめ: 0.2
       - 非常に小さめ: 0.1
     
-    ■ 演出タイミングの調整：
-    data-fade-delay: 出現までの待機時間（ミリ秒）
-      - すぐ出現: 500
-      - 普通: 1500（現在の設定）
-      - ゆっくり出現: 3000
+    ■ アニメーション設定：
+    data-fade-delay: 出現遅延時間（ミリ秒）
+      - すぐ: 500
+      - 普通: 1500（推奨）
+      - ゆっくり: 3000
     
-    data-fade-duration: フェードイン時間（ミリ秒）
-      - 早い: 1000
-      - 普通: 2000（現在の設定）
+    data-fade-duration: フェード時間（ミリ秒）
+      - 速い: 1000
+      - 普通: 2000（推奨）
       - ゆっくり: 3000
     
     ※ 【重要】レスポンシブ対応により、ウィンドウサイズが変わっても背景画像との相対位置が自動的に維持されます
     ※ 設定変更後は必ずF5でリロードして確認してください
     -->
     <div id="purattokun-config" style="display: none;"
-         data-x="18"
-         data-y="49" 
+         data-x="35"
+         data-y="75" 
          data-scale="0.9"
          data-fade-delay="1500"
          data-fade-duration="2000">
@@ -236,36 +240,256 @@
     <!-- Spine WebGL Runtime from CDN - 4.1.* for compatibility with 4.1.24 data -->
     <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
     
-    <!-- Canvas配置システム v1.0 (モジュール化・段階的統合) -->
-    <script src="assets/spine/positioning/canvas-positioning-system.js"></script>
-    
-    <!-- Spine統合システム v2.0 (レスポンシブ対応・ドラッグ配置機能付き) -->
+    <!-- Spine統合システム（安定版統合） -->
     <script src="assets/spine/spine-coordinate-utils.js"></script>
-    <script src="assets/spine/spine-drag-positioning.js"></script>
     <script src="assets/spine/spine-character-manager.js"></script>
     <script src="assets/spine/spine-debug-window.js"></script>
     <script src="assets/spine/spine-animation-controller.js"></script>
     <script src="assets/spine/spine-integration-v2.js"></script>
     
-    <!-- Legacy v1 (Backup Available: spine-integration-v1-backup.js) -->
+    <!-- Canvas配置システム（モジュール化版） -->
+    <script src="assets/spine/positioning/canvas-positioning-system.js"></script>
     
-    <!-- Main Scripts -->
+    <!-- メインJavaScript -->
     <script src="assets/js/script.js"></script>
     
-    <!-- 構造化データを外部ファイル化してシンプル化 -->
+    <!-- 構造化データ（SEO最適化） -->
     <script>
-        // 構造化データを動的に読み込み（ネスト軽減）
-        fetch('structured-data.json')
+        fetch('./structured-data.json')
             .then(response => response.json())
             .then(data => {
-                data.forEach(schema => {
-                    const script = document.createElement('script');
-                    script.type = 'application/ld+json';
-                    script.textContent = JSON.stringify(schema);
-                    document.head.appendChild(script);
-                });
+                const script = document.createElement('script');
+                script.type = 'application/ld+json';
+                script.textContent = JSON.stringify(data);
+                document.head.appendChild(script);
             })
             .catch(err => console.log('構造化データの読み込みをスキップ:', err));
+    </script>
+    
+    <!-- 安定したSpine初期化（test-simple-spine.htmlと同じ方式） -->
+    <script>
+        // Spine初期化を待つ
+        function waitForSpine() {
+            if (typeof spine !== 'undefined') {
+                console.log('✅ Spine読み込み完了');
+                initSpineCharacter();
+            } else {
+                console.log('⏳ Spine読み込み中...');
+                setTimeout(waitForSpine, 100);
+            }
+        }
+        
+        // Spineキャラクター初期化（test-simple-spine.htmlと同じ）
+        async function initSpineCharacter() {
+            try {
+                // 既存のCanvas要素を取得（HTML配置済み）
+                const canvas = document.getElementById('purattokun-canvas');
+                if (!canvas) {
+                    console.error('❌ Canvas要素（#purattokun-canvas）が見つかりません');
+                    return;
+                }
+                
+                console.log('✅ Canvas要素を取得: #purattokun-canvas');
+                console.log('🎨 位置・サイズはCSS（成功パターン）で制御: left: 35%, top: 75%, size: 80%×80%');
+                
+                const gl = canvas.getContext('webgl', { alpha: true });
+                
+                if (!gl) {
+                    throw new Error('WebGLサポートなし');
+                }
+                
+                // Canvasサイズ設定（test-simple-spine.htmlと同じ方式）
+                const updateCanvasSize = () => {
+                    const rect = canvas.getBoundingClientRect();
+                    // シンプルなサイズ設定（成功パターンと同じ）
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                    
+                    console.log('📐 Canvas解像度更新（シンプル方式）:', {
+                        cssSize: rect.width.toFixed(1) + '×' + rect.height.toFixed(1),
+                        internalSize: canvas.width + '×' + canvas.height,
+                        position: 'CSS制御 (35%, 75%)',
+                        clickArea: '✅ 1:1対応'
+                    });
+                };
+                updateCanvasSize();
+                
+                // ウィンドウリサイズ時にCanvasサイズも更新
+                window.addEventListener('resize', updateCanvasSize);
+                
+                console.log('📁 Spineファイル読み込み中...');
+                
+                // アセットマネージャー（パス修正）
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了待ち（デバッグ付き）
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100; // 10秒でタイムアウト
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        
+                        if (assetManager.isLoadingComplete()) {
+                            console.log('✅ アセット読み込み完了');
+                            resolve();
+                        } else if (checkCount > maxChecks) {
+                            const errors = assetManager.getErrors();
+                            console.error('❌ 読み込みタイムアウト:', errors);
+                            reject(new Error('アセット読み込みタイムアウト: ' + JSON.stringify(errors)));
+                        } else {
+                            if (checkCount % 10 === 0) {
+                                console.log(`⏳ 読み込み中... (${checkCount}/100)`);
+                            }
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    checkAssets();
+                });
+                
+                console.log('🎬 アニメーション開始...');
+                
+                // Atlas取得
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                
+                // SkeletonData読み込み
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                // Skeleton作成
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 0;  // 固定値 0
+                skeleton.y = 0;  // 固定値 0
+                skeleton.scaleX = skeleton.scaleY = 0.8;  // サイズ調整
+                
+                console.log('📊 Skeleton情報:', {
+                    x: skeleton.x,
+                    y: skeleton.y,
+                    scale: skeleton.scaleX,
+                    animations: skeleton.data.animations.map(a => a.name)
+                });
+                
+                // AnimationState
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーションシーケンス設定（登場→待機）
+                console.log('🎬 利用可能なアニメーション:', skeleton.data.animations.map(a => a.name));
+                
+                if (skeleton.data.findAnimation('syutugen') && skeleton.data.findAnimation('taiki')) {
+                    // syutugen（登場）アニメーションを最初に1回再生
+                    animationState.setAnimation(0, 'syutugen', false);
+                    console.log('✅ アニメーションシーケンス開始: syutugen（登場）→ taiki（待機）');
+                    
+                    // syutugen完了後にtaikiに自動遷移するリスナー設定
+                    const listener = {
+                        complete: (entry) => {
+                            if (entry.animation.name === 'syutugen') {
+                                console.log('🎯 syutugen完了 → taikiに遷移');
+                                animationState.setAnimation(0, 'taiki', true);
+                                animationState.removeListener(listener);
+                            }
+                        }
+                    };
+                    animationState.addListener(listener);
+                    
+                } else if (skeleton.data.findAnimation('taiki')) {
+                    // フォールバック：taikiのみ
+                    animationState.setAnimation(0, 'taiki', true);
+                    console.log('✅ フォールバック: taikiのみ再生');
+                } else if (skeleton.data.animations.length > 0) {
+                    // 最終フォールバック：最初のアニメーション
+                    const animName = skeleton.data.animations[0].name;
+                    animationState.setAnimation(0, animName, true);
+                    console.log('✅ 最終フォールバック:', animName);
+                } else {
+                    console.warn('⚠️ アニメーションが見つかりません');
+                }
+                
+                // レンダラー
+                const shader = spine.Shader.newTwoColoredTextured(gl);
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                
+                // レンダリングループ
+                let lastTime = Date.now() / 1000;
+                let frameCount = 0;
+                
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    // 更新
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    // 描画
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    
+                    // ビューポート設定
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    frameCount++;
+                    if (frameCount === 1) {
+                        console.log('🎬 最初のフレームレンダリング完了');
+                    }
+                    if (frameCount % 120 === 0) {
+                        console.log(`📹 ${frameCount}フレーム描画済み`);
+                    }
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                console.log('✅ Spineキャラクター動作開始');
+                
+                // キャラクタークリック機能を追加（test-simple-spine.htmlと同じタイミング・方式）
+                canvas.addEventListener('click', function(event) {
+                    console.log('🖱️ ぷらっとくんクリック検出!', {
+                        clickX: event.clientX,
+                        clickY: event.clientY,
+                        canvasRect: canvas.getBoundingClientRect(),
+                        canvasSize: { width: canvas.width, height: canvas.height }
+                    });
+                    
+                    if (skeleton.data.findAnimation('yarare') && skeleton.data.findAnimation('taiki')) {
+                        console.log('🎬 やられアニメーション開始');
+                        // やられ→待機のシーケンス再生
+                        animationState.setAnimation(0, 'yarare', false);
+                        
+                        const clickListener = {
+                            complete: (entry) => {
+                                if (entry.animation.name === 'yarare') {
+                                    console.log('🎯 yarare完了 → taikiに遷移');
+                                    animationState.setAnimation(0, 'taiki', true);
+                                    animationState.removeListener(clickListener);
+                                }
+                            }
+                        };
+                        animationState.addListener(clickListener);
+                    } else {
+                        console.warn('⚠️ yarareまたはtaikiアニメーションが見つかりません');
+                    }
+                });
+                console.log('🖱️ クリック機能有効化完了（成功パターン準拠）');
+                
+            } catch (error) {
+                console.error('Spine初期化エラー:', error);
+            }
+        }
+        
+        // 開始
+        waitForSpine();
     </script>
 </body>
 </html>

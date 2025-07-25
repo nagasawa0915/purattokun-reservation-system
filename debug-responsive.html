@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レスポンシブ・切れ問題デバッグ</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        .debug-panel { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            z-index: 100;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+            border: 3px solid #ff0000;
+            overflow: hidden; /* ここが問題かもしれない */
+        }
+        .background-image { 
+            width: 100%; 
+            height: auto; 
+            display: block; 
+        }
+        
+        /* 位置確認用の点とライン */
+        .position-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .grid-line-v {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.5);
+        }
+        .grid-line-h {
+            position: absolute;
+            height: 2px;
+            width: 100%;
+            background: rgba(0, 255, 0, 0.5);
+        }
+        .position-marker {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid #000;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+        }
+        .marker-target { left: 8%; top: 55%; background: red; }
+        
+        /* Canvas CSS設定 */
+        canvas[data-spine-character] {
+            position: absolute;
+            left: 8%;
+            top: 55%;
+            width: 8%;
+            height: 8%;
+            transform: translate(-50%, -50%);
+            pointer-events: auto;
+            z-index: 10;
+            border: 3px solid lime;
+            background: rgba(0,255,0,0.3);
+        }
+        
+        /* オーバーフロー可視化 */
+        .overflow-test {
+            position: absolute;
+            left: 5%;
+            top: 90%;
+            width: 10%;
+            height: 10%;
+            background: rgba(255, 0, 0, 0.5);
+            border: 2px solid red;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-panel" id="debug-info">
+        <h3>🔍 レスポンシブデバッグ</h3>
+        <div id="info-content">読み込み中...</div>
+        <button onclick="updateDebugInfo()">更新</button>
+        <button onclick="toggleOverflow()">overflow切替</button>
+    </div>
+    
+    <h1>レスポンシブ・切れ問題のデバッグ</h1>
+    
+    <div class="background-container" id="bg-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image" id="bg-image">
+        
+        <!-- 位置確認グリッド -->
+        <div class="position-grid">
+            <div class="grid-line-v" style="left: 8%;"></div>
+            <div class="grid-line-h" style="top: 55%;"></div>
+            <div class="grid-line-h" style="top: 90%;"></div>
+        </div>
+        
+        <!-- 位置確認マーカー -->
+        <div class="position-marker marker-target" title="8%, 55% - 目標位置"></div>
+        
+        <!-- オーバーフロー確認用 -->
+        <div class="overflow-test" title="90%位置 - 切れるかテスト"></div>
+        
+        <!-- Canvas要素 -->
+        <canvas data-spine-character="purattokun" id="test-canvas"></canvas>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <h3>📏 サイズ情報</h3>
+        <div id="size-info"></div>
+    </div>
+
+    <script>
+        function updateDebugInfo() {
+            const canvas = document.getElementById('test-canvas');
+            const container = document.getElementById('bg-container');
+            const bgImage = document.getElementById('bg-image');
+            const infoContent = document.getElementById('info-content');
+            const sizeInfo = document.getElementById('size-info');
+            
+            if (canvas && container && bgImage) {
+                const canvasRect = canvas.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const bgRect = bgImage.getBoundingClientRect();
+                
+                const relativeLeft = ((canvasRect.left - containerRect.left) / containerRect.width * 100).toFixed(1);
+                const relativeTop = ((canvasRect.top - containerRect.top) / containerRect.height * 100).toFixed(1);
+                
+                const computedStyle = window.getComputedStyle(canvas);
+                const containerStyle = window.getComputedStyle(container);
+                
+                // 切れているかチェック
+                const isClippedRight = canvasRect.right > containerRect.right;
+                const isClippedBottom = canvasRect.bottom > containerRect.bottom;
+                const isClippedLeft = canvasRect.left < containerRect.left;
+                const isClippedTop = canvasRect.top < containerRect.top;
+                
+                infoContent.innerHTML = `
+                    <p><strong>Canvas位置:</strong> left: ${relativeLeft}%, top: ${relativeTop}%</p>
+                    <p><strong>Canvas実サイズ:</strong> ${canvasRect.width.toFixed(1)} x ${canvasRect.height.toFixed(1)}</p>
+                    <p><strong>CSS設定:</strong> ${computedStyle.width} x ${computedStyle.height}</p>
+                    <p><strong>切れ状態:</strong></p>
+                    <ul>
+                        <li>右: ${isClippedRight ? '❌切れてる' : '✅OK'}</li>
+                        <li>下: ${isClippedBottom ? '❌切れてる' : '✅OK'}</li>
+                        <li>左: ${isClippedLeft ? '❌切れてる' : '✅OK'}</li>
+                        <li>上: ${isClippedTop ? '❌切れてる' : '✅OK'}</li>
+                    </ul>
+                    <p><strong>Container overflow:</strong> ${containerStyle.overflow}</p>
+                `;
+                
+                sizeInfo.innerHTML = `
+                    <p><strong>背景画像:</strong> ${bgRect.width.toFixed(1)} x ${bgRect.height.toFixed(1)}</p>
+                    <p><strong>コンテナ:</strong> ${containerRect.width.toFixed(1)} x ${containerRect.height.toFixed(1)}</p>
+                    <p><strong>Canvas:</strong> ${canvasRect.width.toFixed(1)} x ${canvasRect.height.toFixed(1)}</p>
+                    <p><strong>背景比率:</strong> ${(canvasRect.width / bgRect.width * 100).toFixed(2)}% x ${(canvasRect.height / bgRect.height * 100).toFixed(2)}%</p>
+                `;
+            }
+        }
+        
+        function toggleOverflow() {
+            const container = document.getElementById('bg-container');
+            const currentOverflow = window.getComputedStyle(container).overflow;
+            container.style.overflow = currentOverflow === 'hidden' ? 'visible' : 'hidden';
+            updateDebugInfo();
+        }
+        
+        // 初期化とリサイズ監視
+        window.addEventListener('load', updateDebugInfo);
+        window.addEventListener('resize', updateDebugInfo);
+        
+        // 定期更新
+        setInterval(updateDebugInfo, 1000);
+    </script>
+</body>
+</html>

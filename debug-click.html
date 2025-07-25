@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>クリック範囲デバッグ</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        .debug-panel { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            z-index: 100;
+        }
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+            border: 2px solid #blue;
+            overflow: visible;
+        }
+        .background-image { 
+            width: 100%; 
+            height: auto; 
+            display: block; 
+        }
+        
+        /* 成功パターンのCSS設定 */
+        #purattokun-canvas {
+            position: absolute;
+            left: 35%;
+            top: 75%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            pointer-events: auto;
+            z-index: 10;
+            border: 3px solid lime;
+            background: rgba(0,255,0,0.2);
+        }
+        
+        /* クリック範囲可視化用オーバーレイ */
+        .click-overlay {
+            position: absolute;
+            left: 35%;
+            top: 75%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            border: 3px dashed red;
+            background: rgba(255, 0, 0, 0.1);
+            pointer-events: none;
+            z-index: 15;
+        }
+        
+        .click-info {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px;
+            font-size: 12px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-panel" id="debug-info">
+        <h3>🖱️ クリック範囲デバッグ</h3>
+        <div id="info-content">
+            <p>緑枠: 実際のCanvas</p>
+            <p>赤枠: クリック範囲（予想）</p>
+            <p>クリック状況: <span id="click-status">未テスト</span></p>
+        </div>
+        <button onclick="testClickArea()">クリック範囲テスト</button>
+    </div>
+    
+    <h1>クリック範囲の確認</h1>
+    
+    <div class="background-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        <canvas id="purattokun-canvas"></canvas>
+        
+        <!-- クリック範囲可視化 -->
+        <div class="click-overlay">
+            <div class="click-info">クリック範囲</div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+
+    <script>
+        let spineInitialized = false;
+        
+        function testClickArea() {
+            const canvas = document.getElementById('purattokun-canvas');
+            const clickStatus = document.getElementById('click-status');
+            
+            if (!canvas) {
+                clickStatus.textContent = '❌ Canvas要素なし';
+                return;
+            }
+            
+            const rect = canvas.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(canvas);
+            
+            console.log('📊 クリック範囲情報:', {
+                canvasRect: {
+                    x: rect.x,
+                    y: rect.y,
+                    width: rect.width,
+                    height: rect.height,
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom
+                },
+                cssStyle: {
+                    position: computedStyle.position,
+                    left: computedStyle.left,
+                    top: computedStyle.top,
+                    width: computedStyle.width,
+                    height: computedStyle.height,
+                    pointerEvents: computedStyle.pointerEvents,
+                    zIndex: computedStyle.zIndex
+                },
+                spineStatus: spineInitialized ? '✅初期化済み' : '❌未初期化'
+            });
+            
+            clickStatus.innerHTML = `
+                位置: ${rect.left.toFixed(0)}, ${rect.top.toFixed(0)}<br>
+                サイズ: ${rect.width.toFixed(0)}×${rect.height.toFixed(0)}<br>
+                pointer-events: ${computedStyle.pointerEvents}<br>
+                z-index: ${computedStyle.zIndex}<br>
+                Spine: ${spineInitialized ? '✅' : '❌'}
+            `;
+        }
+        
+        // シンプルなSpine初期化（クリックテスト用）
+        function waitForSpine() {
+            if (typeof spine !== 'undefined') {
+                console.log('✅ Spine読み込み完了');
+                initSpineCharacter();
+            } else {
+                setTimeout(waitForSpine, 100);
+            }
+        }
+        
+        async function initSpineCharacter() {
+            try {
+                const canvas = document.getElementById('purattokun-canvas');
+                if (!canvas) {
+                    console.error('❌ Canvas要素が見つかりません');
+                    return;
+                }
+                
+                console.log('✅ Canvas要素を取得');
+                
+                // クリックイベント追加
+                canvas.addEventListener('click', function(event) {
+                    console.log('🖱️ Canvas クリック検出!', {
+                        clickX: event.clientX,
+                        clickY: event.clientY,
+                        canvasRect: canvas.getBoundingClientRect()
+                    });
+                    
+                    document.getElementById('click-status').innerHTML += '<br>🎯 クリック検出!';
+                });
+                
+                console.log('🖱️ クリックイベントリスナー追加完了');
+                spineInitialized = true;
+                
+                // 簡単なWebGL初期化（表示テスト用）
+                const gl = canvas.getContext('webgl', { alpha: true });
+                if (gl) {
+                    // Canvasサイズ設定
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                    
+                    // 簡単な背景色設定
+                    gl.clearColor(0, 1, 0, 0.3); // 緑色で確認
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    
+                    console.log('✅ 簡易WebGL初期化完了');
+                }
+                
+            } catch (error) {
+                console.error('初期化エラー:', error);
+            }
+        }
+        
+        // 開始
+        waitForSpine();
+        
+        // ページ読み込み後にテスト実行
+        window.addEventListener('load', () => {
+            setTimeout(testClickArea, 1000);
+        });
+    </script>
+</body>
+</html>

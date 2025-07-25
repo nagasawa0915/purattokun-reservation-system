@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本番CSSルール適用テスト - ぷらっとくん</title>
+    <style>
+        /* リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 背景コンテナ */
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        /* 背景画像 */
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* 雲の共通スタイル */
+        .cloud {
+            position: absolute;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* 各雲の位置 */
+        .cloud1 { left: -5%; top: 10%; width: 8%; animation: moveCloud1 25s linear infinite; }
+        .cloud2 { left: -5%; top: 15%; width: 8%; animation: moveCloud2 30s linear infinite; }
+        .cloud3 { left: -5%; top: 8%; width: 8%; animation: moveCloud3 35s linear infinite; }
+        
+        /* 雲のアニメーション */
+        @keyframes moveCloud1 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
+        
+        /* 
+        ===========================================================
+        本番のCSSルール1: canvas[data-spine-character]
+        役割: data-spine-character属性を持つCanvas要素の配置を制御
+        ===========================================================
+        */
+        canvas[data-spine-character] {
+            position: absolute;
+            left: 18%;            /* 背景画像の左から18%の位置 */
+            top: 49%;             /* 背景画像の上から49%の位置 */
+            width: 16%;           /* 背景画像の幅の16% */
+            height: 16%;          /* 背景画像の高さの16% */
+            transform: translate(-50%, -50%);  /* 中心点を基準に配置 */
+            pointer-events: auto;  /* クリック可能にする */
+            z-index: 10;          /* レイヤー順序（高い値 = 前面） */
+        }
+        
+        /* 
+        ===========================================================
+        本番のCSSルール2: #purattokun-canvas
+        役割: ID指定されたCanvas要素の基本設定
+        注意: 本番では実際には使われていない（IDが設定されていないため）
+        ===========================================================
+        */
+        #purattokun-canvas {
+            position: absolute;
+            pointer-events: none;      /* クリック無効（上記ルールと矛盾） */
+            z-index: 2;               /* レイヤー順序（低い値） */
+            /* 位置は JavaScript で設定 */
+            transform-origin: center center;  /* 変形の基準点を中心に */
+        }
+        
+        /* 
+        ===========================================================
+        比較用: シンプルサンプルのオリジナルルール（コメントアウト）
+        ===========================================================
+        */
+        /*
+        #purattokun-canvas {
+            position: absolute;
+            left: 35%;
+            top: 75%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            pointer-events: auto;
+        }
+        */
+        
+        .info {
+            margin: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .css-rules-info {
+            margin: 20px;
+            padding: 20px;
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            border-radius: 8px;
+        }
+        
+        .css-rules-info h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .css-rules-info ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .css-rules-info li {
+            margin: 5px 0;
+            padding: 5px 10px;
+            background: #fef3cd;
+            border-radius: 4px;
+        }
+        
+        .css-conflict {
+            color: #d63031;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>本番CSSルール適用テスト</h1>
+        <p>シンプルサンプルに本番と同じCSSルールを適用して動作を確認</p>
+        <div class="status" id="status">初期化中...</div>
+    </div>
+    
+    <div class="css-rules-info">
+        <h3>🎨 適用されているCSSルール：</h3>
+        <ul>
+            <li><strong>canvas[data-spine-character]</strong>: 
+                <ul>
+                    <li>位置: left: 18%, top: 49%（背景画像基準）</li>
+                    <li>サイズ: width: 16%, height: 16%（背景画像基準）</li>
+                    <li>transform: translate(-50%, -50%)（中心点配置）</li>
+                    <li>pointer-events: auto（クリック可能）</li>
+                    <li>z-index: 10（前面に配置）</li>
+                </ul>
+            </li>
+            <li><strong>#purattokun-canvas</strong>: 
+                <ul>
+                    <li>position: absolute</li>
+                    <li class="css-conflict">pointer-events: none（クリック無効 - 上記と矛盾！）</li>
+                    <li>z-index: 2（背面寄り）</li>
+                    <li>位置指定なし（JavaScriptで設定想定）</li>
+                </ul>
+            </li>
+        </ul>
+        <p><strong>⚠️ 問題点:</strong> 2つのルールが競合する可能性があります。特にpointer-eventsとz-indexの値が異なります。</p>
+    </div>
+    
+    <!-- 背景コンテナ -->
+    <div class="background-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        <img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
+        <img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
+        <img src="assets/images/kumo3.png" alt="雲3" class="cloud cloud3">
+        <!-- Canvas要素：両方の属性を設定してテスト -->
+        <canvas id="purattokun-canvas" data-spine-character="purattokun"></canvas>
+    </div>
+    
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <!-- 最小限のSpine統合 -->
+    <script>
+        const status = document.getElementById('status');
+        
+        // Canvas要素の情報を表示
+        function showCanvasInfo() {
+            const canvas = document.getElementById('purattokun-canvas');
+            const computed = window.getComputedStyle(canvas);
+            
+            console.log('🎨 Canvas CSS情報:');
+            console.log('  - ID:', canvas.id);
+            console.log('  - data-spine-character:', canvas.getAttribute('data-spine-character'));
+            console.log('  - 計算されたスタイル:');
+            console.log('    - position:', computed.position);
+            console.log('    - left:', computed.left);
+            console.log('    - top:', computed.top);
+            console.log('    - width:', computed.width);
+            console.log('    - height:', computed.height);
+            console.log('    - transform:', computed.transform);
+            console.log('    - pointer-events:', computed.pointerEvents);
+            console.log('    - z-index:', computed.zIndex);
+            
+            // どちらのルールが優先されているか確認
+            const rect = canvas.getBoundingClientRect();
+            const container = document.querySelector('.background-container').getBoundingClientRect();
+            const relativeLeft = ((rect.left - container.left) / container.width * 100).toFixed(1);
+            const relativeTop = ((rect.top - container.top) / container.height * 100).toFixed(1);
+            
+            console.log('📏 実際の相対位置:');
+            console.log('  - 左からの位置:', relativeLeft + '%');
+            console.log('  - 上からの位置:', relativeTop + '%');
+        }
+        
+        // Spine初期化を待つ
+        function waitForSpine() {
+            if (typeof spine !== 'undefined') {
+                status.textContent = '✅ Spine読み込み完了';
+                showCanvasInfo();
+                initSpineCharacter();
+            } else {
+                status.textContent = '⏳ Spine読み込み中...';
+                setTimeout(waitForSpine, 100);
+            }
+        }
+        
+        // Spineキャラクター初期化（シンプルサンプルと同じ）
+        async function initSpineCharacter() {
+            try {
+                const canvas = document.getElementById('purattokun-canvas');
+                const gl = canvas.getContext('webgl', { alpha: true });
+                
+                if (!gl) {
+                    throw new Error('WebGLサポートなし');
+                }
+                
+                // Canvasサイズ設定（レスポンシブ対応）
+                const updateCanvasSize = () => {
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                    console.log('Canvas実サイズ:', canvas.width + 'x' + canvas.height);
+                };
+                updateCanvasSize();
+                
+                window.addEventListener('resize', updateCanvasSize);
+                
+                status.textContent = '📁 Spineファイル読み込み中...';
+                
+                // アセットマネージャー
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了待ち
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100;
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        
+                        if (assetManager.isLoadingComplete()) {
+                            console.log('✅ アセット読み込み完了');
+                            resolve();
+                        } else if (checkCount > maxChecks) {
+                            const errors = assetManager.getErrors();
+                            console.error('❌ 読み込みタイムアウト:', errors);
+                            reject(new Error('アセット読み込みタイムアウト'));
+                        } else {
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    checkAssets();
+                });
+                
+                // Spineセットアップ（以下シンプルサンプルと同じ）
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 0;
+                skeleton.y = 0;
+                skeleton.scaleX = skeleton.scaleY = 0.8;
+                
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーション設定
+                if (skeleton.data.findAnimation('syutugen') && skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'syutugen', false);
+                    const listener = {
+                        complete: (entry) => {
+                            if (entry.animation.name === 'syutugen') {
+                                animationState.setAnimation(0, 'taiki', true);
+                                animationState.removeListener(listener);
+                            }
+                        }
+                    };
+                    animationState.addListener(listener);
+                } else if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                }
+                
+                // レンダリング
+                const shader = spine.Shader.newTwoColoredTextured(gl);
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                
+                let lastTime = Date.now() / 1000;
+                
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                status.textContent = '✅ Spineキャラクター動作中（本番CSSルール適用）';
+                
+            } catch (error) {
+                status.textContent = '❌ エラー: ' + error.message;
+                console.error('Spine初期化エラー:', error);
+            }
+        }
+        
+        // 開始
+        waitForSpine();
+    </script>
+</body>
+</html>

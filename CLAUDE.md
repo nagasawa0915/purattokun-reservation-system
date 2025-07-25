@@ -2,7 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-※重要　深く考えてください。
+※重要　やり取りは日本語でお願いします。
+深く考えてください。
 
 ## 🚨 このファイルの管理方針（Claude向け）
 

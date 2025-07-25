@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプルSpine + 本番CSS - ぷらっとくん</title>
+    <style>
+        /* リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 背景コンテナ */
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        /* 背景画像 */
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* 雲の共通スタイル */
+        .cloud {
+            position: absolute;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* 各雲の位置 */
+        .cloud1 { left: -5%; top: 10%; width: 8%; animation: moveCloud1 25s linear infinite; }
+        .cloud2 { left: -5%; top: 15%; width: 8%; animation: moveCloud2 30s linear infinite; }
+        .cloud3 { left: -5%; top: 8%; width: 8%; animation: moveCloud3 35s linear infinite; }
+        
+        /* 雲のアニメーション */
+        @keyframes moveCloud1 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
+        
+        /* 本番のCSSルールをそのまま適用 */
+        canvas[data-spine-character] {
+            position: absolute;
+            left: 18%;
+            top: 49%;
+            width: 16%;
+            height: 16%;
+            transform: translate(-50%, -50%);
+            pointer-events: auto;
+            z-index: 10;
+        }
+        
+        /* Hero構造（本番と同じ） */
+        .hero {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 120px 20px 40px;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hero-content {
+            position: absolute;
+            z-index: 20;
+            max-width: 280px;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            backdrop-filter: blur(8px);
+            left: 40px;
+            top: 130px;
+        }
+        
+        .hero-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.8rem;
+            line-height: 1.2;
+            font-weight: 600;
+        }
+        
+        .series-text {
+            display: block;
+            font-size: 0.9em;
+            margin-top: 0.2rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        
+        .cta-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .cta-button:hover {
+            background: #ff5252;
+        }
+        
+        .info {
+            margin: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .comparison-info {
+            margin: 20px;
+            padding: 20px;
+            background: #e3f2fd;
+            border: 2px solid #64b5f6;
+            border-radius: 8px;
+        }
+        
+        .comparison-info h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .comparison-info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .comparison-info th,
+        .comparison-info td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #90caf9;
+        }
+        
+        .comparison-info th {
+            background: #bbdefb;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>シンプルSpine + 本番CSS統合テスト</h1>
+        <p>シンプルサンプルの構造に本番のCSSルールを適用</p>
+        <div class="status" id="status">初期化中...</div>
+    </div>
+    
+    <div class="comparison-info">
+        <h3>📊 CSS比較表：</h3>
+        <table>
+            <tr>
+                <th>プロパティ</th>
+                <th>オリジナル（動作する）</th>
+                <th>本番CSS（適用中）</th>
+            </tr>
+            <tr>
+                <td>left</td>
+                <td>35%</td>
+                <td>18%</td>
+            </tr>
+            <tr>
+                <td>top</td>
+                <td>75%</td>
+                <td>49%</td>
+            </tr>
+            <tr>
+                <td>width</td>
+                <td>80%</td>
+                <td>16%</td>
+            </tr>
+            <tr>
+                <td>height</td>
+                <td>80%</td>
+                <td>16%</td>
+            </tr>
+            <tr>
+                <td>transform</td>
+                <td>translate(-50%, -50%)</td>
+                <td>translate(-50%, -50%)</td>
+            </tr>
+            <tr>
+                <td>z-index</td>
+                <td>（指定なし）</td>
+                <td>10</td>
+            </tr>
+        </table>
+    </div>
+    
+    <!-- Hero構造テスト -->
+    <section class="hero">
+        <!-- 背景コンテナ -->
+        <div class="background-container">
+            <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+            <img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
+            <img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
+            <img src="assets/images/kumo3.png" alt="雲3" class="cloud cloud3">
+            <!-- 本番と同じ属性構成 -->
+            <canvas data-spine-character="purattokun"></canvas>
+        </div>
+        
+        <!-- UI要素 -->
+        <header class="hero-content">
+            <h1 class="hero-title">ぷらっとくん<br><span class="series-text">シリーズ</span></h1>
+            <p class="hero-subtitle">あなたのビジネスをサポート</p>
+            <button class="cta-button" type="button">詳しく見る</button>
+        </header>
+    </section>
+    
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <!-- Phase A-1: Spine v2.0統合システムを追加（本番と同じ） -->
+    <script src="assets/spine/spine-coordinate-utils.js"></script>
+    <script src="assets/spine/spine-character-manager.js"></script>
+    <script src="assets/spine/spine-debug-window.js"></script>
+    <script src="assets/spine/spine-animation-controller.js"></script>
+    <script src="assets/spine/spine-integration-v2.js"></script>
+    
+    <!-- Phase B: script.js（メインJavaScript）を追加 -->
+    <script src="assets/js/script.js"></script>
+    
+    <script>
+        // 位置情報をモニタリング
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const canvas = document.querySelector('canvas[data-spine-character]');
+                if (canvas) {
+                    const rect = canvas.getBoundingClientRect();
+                    const container = document.querySelector('.background-container').getBoundingClientRect();
+                    
+                    console.log('🎯 Canvas位置情報（本番CSS適用後）:');
+                    console.log('  - 実際のleft:', ((rect.left - container.left) / container.width * 100).toFixed(1) + '%');
+                    console.log('  - 実際のtop:', ((rect.top - container.top) / container.height * 100).toFixed(1) + '%');
+                    console.log('  - 実際のwidth:', (rect.width / container.width * 100).toFixed(1) + '%');
+                    console.log('  - 実際のheight:', (rect.height / container.height * 100).toFixed(1) + '%');
+                    
+                    const status = document.getElementById('status');
+                    status.textContent = '✅ 本番CSS適用 + Spine統合システム動作中';
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

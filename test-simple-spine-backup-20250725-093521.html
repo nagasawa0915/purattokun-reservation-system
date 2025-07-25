@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプルSpine統合テスト - ぷらっとくん</title>
+    <style>
+        /* リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 背景コンテナ */
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        /* 背景画像 */
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* 雲の共通スタイル */
+        .cloud {
+            position: absolute;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* 各雲の位置 */
+        .cloud1 { left: -5%; top: 10%; width: 8%; animation: moveCloud1 25s linear infinite; }
+        .cloud2 { left: -5%; top: 15%; width: 8%; animation: moveCloud2 30s linear infinite; }
+        .cloud3 { left: -5%; top: 8%; width: 8%; animation: moveCloud3 35s linear infinite; }
+        
+        /* 雲のアニメーション */
+        @keyframes moveCloud1 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
+        
+        /* ぷらっとくんCanvas */
+        #purattokun-canvas {
+            position: absolute;
+            left: 35%;   /* 18% → 35% に変更（右に移動） */
+            top: 75%;    /* 65% → 75% に変更（さらに下に移動） */
+            transform: translate(-50%, -50%);
+            width: 80%;  /* 32% → 80% に変更（大幅拡大） */
+            height: 80%; /* 32% → 80% に変更（大幅拡大） */
+            pointer-events: auto;
+        }
+        
+        .info {
+            margin: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        /* ガタンテスト用サービスセクション */
+        .services {
+            padding: 80px 0;
+            background: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .services h2 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+        
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        
+        .service-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+        }
+        
+        .service-card.animate {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .service-card h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .service-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        /* Hero構造テスト用CSS（現在のサイトと同じ） */
+        .hero {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 120px 20px 40px;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hero-content {
+            position: absolute;
+            z-index: 20;
+            max-width: 280px;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            backdrop-filter: blur(8px);
+            left: 40px;
+            top: 130px;
+        }
+        
+        .hero-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.8rem;
+            line-height: 1.2;
+            font-weight: 600;
+        }
+        
+        .series-text {
+            display: block;
+            font-size: 0.9em;
+            margin-top: 0.2rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        
+        .cta-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .cta-button:hover {
+            background: #ff5252;
+        }
+        
+        /* コンセプトセクション */
+        .concept {
+            padding: 80px 0;
+            background: linear-gradient(45deg, #f8f9fa 0%, #fff5f5 50%, #f8f9fa 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .concept h2 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+        
+        .concept-content {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+        }
+        
+        .concept-text {
+            flex: 1;
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: all 0.8s ease-out;
+        }
+        
+        .concept-text.animate {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .concept-image {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transform: translateX(50px) scale(0.8);
+            transition: all 0.8s ease-out 0.3s;
+        }
+        
+        .concept-image.animate {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+        
+        .concept-title {
+            color: #ff6b6b;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .concept-features {
+            list-style: none;
+            margin-top: 2rem;
+        }
+        
+        .concept-features li {
+            padding: 0.5rem 0;
+            color: #555;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+        
+        .concept-features li:before {
+            content: "🐾";
+            position: absolute;
+            left: 0;
+        }
+        
+        .cat-house-illustration {
+            text-align: center;
+        }
+        
+        .house {
+            font-size: 6rem;
+            margin-bottom: 1rem;
+        }
+        
+        .cats {
+            font-size: 2rem;
+            letter-spacing: 1rem;
+        }
+        
+        /* お問い合わせセクション */
+        .contact {
+            padding: 80px 0;
+            background: #fff;
+        }
+        
+        .contact h2 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+        
+        .contact-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+        
+        .contact-subtitle {
+            color: #ff6b6b;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .contact-info p {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .contact-details {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            font-style: normal;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #555;
+        }
+        
+        .contact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .contact-form input,
+        .contact-form textarea {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .contact-form input:focus,
+        .contact-form textarea:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+        
+        .contact-form button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .contact-form button:hover {
+            background: #ff5252;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>シンプルSpine統合テスト + Hero構造</h1>
+        <p>シンプルサンプルに.hero構造を追加してガタンを再現テスト</p>
+        <div class="status" id="status">初期化中...</div>
+    </div>
+    
+    <!-- Hero構造テスト -->
+    <section class="hero">
+        <!-- 背景コンテナ -->
+        <div class="background-container">
+            <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+            <img src="assets/images/kumo1.png" alt="雲1" class="cloud cloud1">
+            <img src="assets/images/kumo2.png" alt="雲2" class="cloud cloud2">
+            <img src="assets/images/kumo3.png" alt="雲3" class="cloud cloud3">
+            <canvas id="purattokun-canvas"></canvas>
+        </div>
+        
+        <!-- UI要素（現在のサイトと同じ） -->
+        <header class="hero-content">
+            <h1 class="hero-title">ぷらっとくん<br><span class="series-text">シリーズ</span></h1>
+            <p class="hero-subtitle">あなたのビジネスをサポート</p>
+            <button class="cta-button" type="button">詳しく見る</button>
+        </header>
+    </section>
+    
+    <!-- ガタンテスト用サービスセクション -->
+    <section class="services">
+        <div class="container">
+            <h2>ガタンテスト - サービス内容</h2>
+            <div class="service-grid">
+                <div class="service-card">
+                    <div class="service-icon">📅</div>
+                    <h3>サービス1</h3>
+                    <p>これはガタンテスト用のサービスカード1です。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">💰</div>
+                    <h3>サービス2</h3>
+                    <p>これはガタンテスト用のサービスカード2です。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🎓</div>
+                    <h3>サービス3</h3>
+                    <p>これはガタンテスト用のサービスカード3です。</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🐱</div>
+                    <h3>サービス4</h3>
+                    <p>これはガタンテスト用のサービスカード4です。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- ガタンテスト用コンセプトセクション -->
+    <section id="concept" class="concept">
+        <div class="container">
+            <header class="section-header">
+                <h2 class="section-title">私たちのコンセプト</h2>
+            </header>
+            <div class="concept-content">
+                <article class="concept-text">
+                    <h3 class="concept-title">猫ファーストの住まいづくり</h3>
+                    <p>5匹の子猫を保護した経験から、一般的な住宅が<strong>猫にとって必ずしも快適ではない</strong>ことに気づきました。</p>
+                    <p><strong>猫の習性と行動</strong>を深く理解し、人間の生活にも配慮した<strong>住空間設計</strong>を行うことで、<strong>猫と飼い主の両方が幸せに暮らせる環境</strong>を実現します。</p>
+                    <ul class="concept-features">
+                        <li>キャットウォーク・キャットタワーの設置</li>
+                        <li>脱走防止扉の設置</li>
+                        <li>猫専用スペースの確保</li>
+                        <li>安全性を重視した素材選び</li>
+                        <li>お手入れしやすい設計</li>
+                    </ul>
+                </article>
+                <aside class="concept-image">
+                    <div class="cat-house-illustration">
+                        <div class="house">🏠</div>
+                        <div class="cats">🐱🐱🐱</div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </section>
+    
+    <!-- ガタンテスト用お問い合わせセクション -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <header class="section-header">
+                <h2 class="section-title">お問い合わせ</h2>
+            </header>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <h3 class="contact-subtitle">ご相談・お見積りは無料です</h3>
+                    <p>猫との理想の暮らしについて、お気軽にご相談ください。</p>
+                    <address class="contact-details">
+                        <div class="contact-item">
+                            <span class="icon">📞</span>
+                            <span>03-1234-5678</span>
+                        </div>
+                        <div class="contact-item">
+                            <span class="icon">✉️</span>
+                            <span>info@necooya.com</span>
+                        </div>
+                        <div class="contact-item">
+                            <span class="icon">🕒</span>
+                            <span>平日 9:00-18:00</span>
+                        </div>
+                    </address>
+                </div>
+                <form class="contact-form">
+                    <input type="text" placeholder="お名前" required>
+                    <input type="email" placeholder="メールアドレス" required>
+                    <textarea placeholder="お問い合わせ内容" rows="5" required></textarea>
+                    <button type="submit">送信する</button>
+                </form>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <!-- Phase A-1: Spine v2.0統合システムを追加 -->
+    <script src="assets/spine/spine-coordinate-utils.js"></script>
+    <script src="assets/spine/spine-character-manager.js"></script>
+    <script src="assets/spine/spine-debug-window.js"></script>
+    <script src="assets/spine/spine-animation-controller.js"></script>
+    <script src="assets/spine/spine-integration-v2.js"></script>
+    
+    <!-- Phase B: script.js（メインJavaScript）を追加してガタン原因を特定 -->
+    <script src="assets/js/script.js"></script>
+    
+    <!-- 最小限のSpine統合 -->
+    <script>
+        const status = document.getElementById('status');
+        
+        // Spine初期化を待つ
+        function waitForSpine() {
+            if (typeof spine !== 'undefined') {
+                status.textContent = '✅ Spine読み込み完了';
+                initSpineCharacter();
+            } else {
+                status.textContent = '⏳ Spine読み込み中...';
+                setTimeout(waitForSpine, 100);
+            }
+        }
+        
+        // Spineキャラクター初期化
+        async function initSpineCharacter() {
+            try {
+                const canvas = document.getElementById('purattokun-canvas');
+                const gl = canvas.getContext('webgl', { alpha: true });
+                
+                if (!gl) {
+                    throw new Error('WebGLサポートなし');
+                }
+                
+                // Canvasサイズ設定（レスポンシブ対応）
+                const updateCanvasSize = () => {
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                    console.log('Canvas実サイズ:', canvas.width + 'x' + canvas.height);
+                };
+                updateCanvasSize();
+                
+                // ウィンドウリサイズ時にCanvasサイズも更新
+                window.addEventListener('resize', updateCanvasSize);
+                
+                status.textContent = '📁 Spineファイル読み込み中...';
+                
+                // アセットマネージャー（パス修正）
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了待ち（デバッグ付き）
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100; // 10秒でタイムアウト
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        
+                        if (assetManager.isLoadingComplete()) {
+                            console.log('✅ アセット読み込み完了');
+                            resolve();
+                        } else if (checkCount > maxChecks) {
+                            const errors = assetManager.getErrors();
+                            console.error('❌ 読み込みタイムアウト:', errors);
+                            reject(new Error('アセット読み込みタイムアウト: ' + JSON.stringify(errors)));
+                        } else {
+                            if (checkCount % 10 === 0) {
+                                console.log(`⏳ 読み込み中... (${checkCount}/100)`);
+                            }
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    checkAssets();
+                });
+                
+                status.textContent = '🎬 アニメーション開始...';
+                
+                // Atlas取得
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                
+                // SkeletonData読み込み
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                // Skeleton作成
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 0;  // 固定値 0
+                skeleton.y = 0;  // 固定値 0
+                skeleton.scaleX = skeleton.scaleY = 0.8;  // 0.3→0.8に変更（大きく）
+                
+                console.log('📊 Skeleton情報:', {
+                    x: skeleton.x,
+                    y: skeleton.y,
+                    scale: skeleton.scaleX,
+                    animations: skeleton.data.animations.map(a => a.name)
+                });
+                
+                // AnimationState
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーションシーケンス設定（登場→待機）
+                console.log('🎬 利用可能なアニメーション:', skeleton.data.animations.map(a => a.name));
+                
+                if (skeleton.data.findAnimation('syutugen') && skeleton.data.findAnimation('taiki')) {
+                    // syutugen（登場）アニメーションを最初に1回再生
+                    animationState.setAnimation(0, 'syutugen', false);
+                    console.log('✅ アニメーションシーケンス開始: syutugen（登場）→ taiki（待機）');
+                    
+                    // syutugen完了後にtaikiに自動遷移するリスナー設定
+                    const listener = {
+                        complete: (entry) => {
+                            if (entry.animation.name === 'syutugen') {
+                                console.log('🎯 syutugen完了 → taikiに遷移');
+                                animationState.setAnimation(0, 'taiki', true);
+                                animationState.removeListener(listener);
+                            }
+                        }
+                    };
+                    animationState.addListener(listener);
+                    
+                } else if (skeleton.data.findAnimation('taiki')) {
+                    // フォールバック：taikiのみ
+                    animationState.setAnimation(0, 'taiki', true);
+                    console.log('✅ フォールバック: taikiのみ再生');
+                } else if (skeleton.data.animations.length > 0) {
+                    // 最終フォールバック：最初のアニメーション
+                    const animName = skeleton.data.animations[0].name;
+                    animationState.setAnimation(0, animName, true);
+                    console.log('✅ 最終フォールバック:', animName);
+                } else {
+                    console.warn('⚠️ アニメーションが見つかりません');
+                }
+                
+                // レンダラー
+                const shader = spine.Shader.newTwoColoredTextured(gl);
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                
+                // レンダリングループ
+                let lastTime = Date.now() / 1000;
+                let frameCount = 0;
+                
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    // 更新
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    // 描画
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    
+                    // ビューポート設定
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    frameCount++;
+                    if (frameCount === 1) {
+                        console.log('🎬 最初のフレームレンダリング完了');
+                    }
+                    if (frameCount % 60 === 0) {
+                        console.log(`📹 ${frameCount}フレーム描画済み`);
+                    }
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                status.textContent = '✅ Spineキャラクター動作中';
+                
+                // キャラクタークリック機能を追加
+                canvas.addEventListener('click', function() {
+                    console.log('🖱️ ぷらっとくんクリック - やられアニメーション再生');
+                    
+                    if (skeleton.data.findAnimation('yarare') && skeleton.data.findAnimation('taiki')) {
+                        // やられ→待機のシーケンス再生
+                        animationState.setAnimation(0, 'yarare', false);
+                        
+                        const clickListener = {
+                            complete: (entry) => {
+                                if (entry.animation.name === 'yarare') {
+                                    console.log('🎯 クリック: yarare完了 → taikiに遷移');
+                                    animationState.setAnimation(0, 'taiki', true);
+                                    animationState.removeListener(clickListener);
+                                }
+                            }
+                        };
+                        animationState.addListener(clickListener);
+                    }
+                });
+                console.log('🖱️ クリック機能を有効化: キャラクターをクリックでやられアニメーション再生');
+                
+            } catch (error) {
+                status.textContent = '❌ エラー: ' + error.message;
+                console.error('Spine初期化エラー:', error);
+            }
+        }
+        
+        // 開始
+        waitForSpine();
+        
+        // ガタンテスト用IntersectionObserver
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const animationObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const cards = document.querySelectorAll('.service-card');
+                    const index = Array.from(cards).indexOf(entry.target);
+                    
+                    console.log(`🔍 [GATAN TEST] サービスカード${index + 1}が画面に入りました`);
+                    
+                    // 背景画像とCanvasの測定（BEFORE）
+                    const backgroundImage = document.querySelector('.background-image');
+                    const purattokuCanvas = document.querySelector('#purattokun-canvas');
+                    
+                    let beforeBgRect = null;
+                    let beforeCanvasRect = null;
+                    
+                    if (backgroundImage) {
+                        beforeBgRect = backgroundImage.getBoundingClientRect();
+                        console.log(`📏 [BEFORE] 背景画像:`, {
+                            width: beforeBgRect.width,
+                            height: beforeBgRect.height,
+                            left: beforeBgRect.left,
+                            top: beforeBgRect.top
+                        });
+                    }
+                    
+                    if (purattokuCanvas) {
+                        beforeCanvasRect = purattokuCanvas.getBoundingClientRect();
+                        console.log(`📏 [BEFORE] ぷらっとくん:`, {
+                            width: beforeCanvasRect.width,
+                            height: beforeCanvasRect.height,
+                            left: beforeCanvasRect.left,
+                            top: beforeCanvasRect.top
+                        });
+                    }
+                    
+                    setTimeout(() => {
+                        entry.target.classList.add('animate');
+                        console.log(`🎬 [GATAN TEST] サービスカード${index + 1}アニメーション開始`);
+                        
+                        // アニメーション後の測定
+                        setTimeout(() => {
+                            if (backgroundImage && beforeBgRect) {
+                                const afterBgRect = backgroundImage.getBoundingClientRect();
+                                console.log(`📏 [AFTER] 背景画像:`, {
+                                    width: afterBgRect.width,
+                                    height: afterBgRect.height,
+                                    left: afterBgRect.left,
+                                    top: afterBgRect.top,
+                                    changeX: afterBgRect.left - beforeBgRect.left,
+                                    changeY: afterBgRect.top - beforeBgRect.top,
+                                    changeW: afterBgRect.width - beforeBgRect.width,
+                                    changeH: afterBgRect.height - beforeBgRect.height
+                                });
+                            }
+                            
+                            if (purattokuCanvas && beforeCanvasRect) {
+                                const afterCanvasRect = purattokuCanvas.getBoundingClientRect();
+                                console.log(`📏 [AFTER] ぷらっとくん:`, {
+                                    width: afterCanvasRect.width,
+                                    height: afterCanvasRect.height,
+                                    left: afterCanvasRect.left,
+                                    top: afterCanvasRect.top,
+                                    changeX: afterCanvasRect.left - beforeCanvasRect.left,
+                                    changeY: afterCanvasRect.top - beforeCanvasRect.top,
+                                    changeW: afterCanvasRect.width - beforeCanvasRect.width,
+                                    changeH: afterCanvasRect.height - beforeCanvasRect.height
+                                });
+                                
+                                // 相関分析
+                                if (beforeBgRect && backgroundImage) {
+                                    const afterBgRect = backgroundImage.getBoundingClientRect();
+                                    const bgChangeY = afterBgRect.top - beforeBgRect.top;
+                                    const canvasChangeY = afterCanvasRect.top - beforeCanvasRect.top;
+                                    const difference = canvasChangeY - bgChangeY;
+                                    const isOutOfSync = Math.abs(difference) >= 2;
+                                    
+                                    console.log(`📊 [GATAN ANALYSIS] サービスカード${index + 1} - シンプル構造での相関:`, {
+                                        backgroundChangeY: bgChangeY,
+                                        canvasChangeY: canvasChangeY,
+                                        difference: difference,
+                                        syncStatus: isOutOfSync ? '❌ズレ' : '✅同期',
+                                        note: 'シンプルサンプルでのガタンテスト結果'
+                                    });
+                                }
+                            }
+                        }, 100);
+                        
+                    }, index * 150);
+                }
+            });
+        }, observerOptions);
+        
+        // 監視対象要素を追加
+        document.querySelectorAll('.service-card').forEach(card => {
+            animationObserver.observe(card);
+        });
+        
+        // コンセプトセクションの要素も監視対象に追加
+        const conceptText = document.querySelector('.concept-text');
+        const conceptImage = document.querySelector('.concept-image');
+        const conceptSection = document.querySelector('.concept');
+        const contactSection = document.querySelector('.contact');
+        
+        if (conceptText) animationObserver.observe(conceptText);
+        if (conceptImage) animationObserver.observe(conceptImage);
+        if (conceptSection) animationObserver.observe(conceptSection);
+        if (contactSection) animationObserver.observe(contactSection);
+    </script>
+</body>
+</html>

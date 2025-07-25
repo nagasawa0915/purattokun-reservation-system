@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ぷらっとくん位置確認</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        .debug-info { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+            border: 2px solid #red;
+        }
+        .background-image { 
+            width: 100%; 
+            height: auto; 
+            display: block; 
+        }
+        /* 位置確認用の点 */
+        .position-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #000;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+        }
+        .marker-8 { left: 8%; top: 49%; background: red; }
+        .marker-18 { left: 18%; top: 49%; background: blue; }
+        
+        /* CSS設定 */
+        canvas[data-spine-character] {
+            position: absolute;
+            left: 8%;
+            top: 49%;
+            width: 80px;
+            height: 80px;
+            transform: translate(-50%, -50%);
+            pointer-events: auto;
+            z-index: 10;
+            border: 3px solid lime;
+            background: rgba(0,255,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-info">
+        <h2>🔍 ぷらっとくん位置デバッグ</h2>
+        <p><strong>赤い点</strong>: 8%の位置（道路側・目標位置）</p>
+        <p><strong>青い点</strong>: 18%の位置（元の位置）</p>
+        <p><strong>緑の枠</strong>: ぷらっとくんCanvas（実際の位置）</p>
+    </div>
+    
+    <div class="background-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        <!-- 位置確認用マーカー -->
+        <div class="position-marker marker-8" title="8% - 道路側"></div>
+        <div class="position-marker marker-18" title="18% - 元の位置"></div>
+        <!-- Canvas要素 -->
+        <canvas data-spine-character="purattokun"></canvas>
+    </div>
+
+    <div class="debug-info" id="canvas-info">
+        <h3>📊 Canvas情報</h3>
+        <div id="info-content">読み込み中...</div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            const canvas = document.querySelector('canvas[data-spine-character]');
+            const container = document.querySelector('.background-container');
+            const infoContent = document.getElementById('info-content');
+            
+            if (canvas && container) {
+                const canvasRect = canvas.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                
+                const relativeLeft = ((canvasRect.left - containerRect.left) / containerRect.width * 100).toFixed(1);
+                const relativeTop = ((canvasRect.top - containerRect.top) / containerRect.height * 100).toFixed(1);
+                
+                const computedStyle = window.getComputedStyle(canvas);
+                
+                infoContent.innerHTML = `
+                    <p><strong>Canvas CSS left:</strong> ${computedStyle.left}</p>
+                    <p><strong>Canvas CSS top:</strong> ${computedStyle.top}</p>
+                    <p><strong>実際の相対位置:</strong> left: ${relativeLeft}%, top: ${relativeTop}%</p>
+                    <p><strong>Transform:</strong> ${computedStyle.transform}</p>
+                    <p><strong>Width x Height:</strong> ${canvasRect.width} x ${canvasRect.height}</p>
+                `;
+                
+                // 位置が8%に近いかチェック
+                const targetLeft = 8;
+                const actualLeft = parseFloat(relativeLeft);
+                const difference = Math.abs(actualLeft - targetLeft);
+                
+                if (difference < 1) {
+                    infoContent.innerHTML += '<p style="color: green;"><strong>✅ 位置OK: 8%付近に配置済み</strong></p>';
+                } else {
+                    infoContent.innerHTML += `<p style="color: red;"><strong>❌ 位置NG: ${difference.toFixed(1)}%のズレあり</strong></p>`;
+                }
+            } else {
+                infoContent.innerHTML = '<p style="color: red;">❌ Canvas要素が見つかりません</p>';
+            }
+        });
+    </script>
+</body>
+</html>

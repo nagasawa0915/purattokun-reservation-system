@@ -167,7 +167,7 @@ body {
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
-    overflow: hidden;
+    overflow: visible;  /* Spineキャラクターが切れないように変更 */
 }
 
 /* 背景画像（<img>タグで配置） */
@@ -178,14 +178,29 @@ body {
 }
 
 /* Spine Canvas - 背景画像基準配置（シンプルサンプルと完全一致） */
+/* 成功パターンの正確な再現（クリック対応強化） */
+#purattokun-canvas {
+    position: absolute;
+    left: 35%;   /* 成功パターンと同じ */
+    top: 75%;    /* 成功パターンと同じ */
+    transform: translate(-50%, -50%);
+    width: 80%;  /* 成功パターンと同じ - コンテナ基準 */
+    height: 80%; /* 成功パターンと同じ - コンテナ基準 */
+    pointer-events: auto !important;  /* クリック有効化（強制） */
+    cursor: pointer;  /* クリック可能であることを明示 */
+    z-index: 10;
+}
+
+/* フォールバック：data-spine-character属性用（クリック対応強化） */
 canvas[data-spine-character] {
     position: absolute;
-    left: 18%;
-    top: 49%;
-    width: 16%;
-    height: 16%;
+    left: 35%;
+    top: 75%;
     transform: translate(-50%, -50%);
-    pointer-events: auto;
+    width: 80%;
+    height: 80%;
+    pointer-events: auto !important;  /* クリック有効化（強制） */
+    cursor: pointer;  /* クリック可能であることを明示 */
     z-index: 10;
 }
 
@@ -834,12 +849,15 @@ footer {
         font-size: 2rem;
     }
 
-    /* Spine Canvas - モバイル向け微調整（シンプルサンプルと完全一致） */
+    /* Spine Canvas - モバイル版も成功パターンを適用（クリック対応） */
+    #purattokun-canvas,
     canvas[data-spine-character] {
-        left: 18%;   /* シンプルサンプルと同じ */
-        top: 49%;    /* シンプルサンプルと同じ */
-        width: 16%;  /* シンプルサンプルと同じ */
-        height: 16%; /* シンプルサンプルと同じ */
+        left: 35%;   /* 成功パターンと同じ */
+        top: 75%;    /* 成功パターンと同じ */
+        width: 80%;  /* 成功パターンと同じ */
+        height: 80%; /* 成功パターンと同じ */
+        pointer-events: auto !important;  /* モバイルでもクリック有効 */
+        cursor: pointer;  /* タップ可能であることを明示 */
     }
 
     .concept-content {
