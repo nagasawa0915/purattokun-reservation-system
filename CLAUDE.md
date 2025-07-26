@@ -24,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 目的 | ドキュメント |
 |------|-------------|
+| **📋 編集システム仕様書** | [🎯 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) |
 | **技術仕様・実装詳細** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
 | **レイヤー問題診断** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
 | **Spine問題解決** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
@@ -391,6 +392,7 @@ SpineWebGL読み込み失敗時もCSS keyframeアニメーションで同様の�
 
 | 問題の種類 | 参照ドキュメント |
 |-----------|----------------|
+| **🎯 編集システム仕様確認** | [📋 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) |
 | **レイヤー・位置問題** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
 | **Spine表示・エラー** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
 | **Canvasサイズ変更問題** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) |

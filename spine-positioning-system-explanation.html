@@ -155,8 +155,6 @@
             position: absolute;
             width: 80px;
             height: 80px;
-            left: 20px;
-            top: 20px;
             z-index: 10;
             cursor: move;
             border: 2px dashed rgba(255, 107, 107, 0.3);
@@ -644,7 +642,7 @@ URL: http://localhost:8000/index.html?spine-edit=true
                         <div class="canvas-resize-handle sw" data-direction="sw"></div>
                         <div class="canvas-resize-handle se" data-direction="se"></div>
                         
-                        <div class="demo-character" id="demoCharacter">
+                        <div class="demo-character" id="demoCharacter" style="left: 60px; top: 60px; transform: translate(-50%, -50%);">
                             <img src="assets/images/purattokunn.png" alt="ぷらっとくん" style="width: 100%; height: 100%; object-fit: contain;">
                             <!-- キャラクター リサイズハンドル -->
                             <div class="resize-handle nw" data-direction="nw"></div>
@@ -660,6 +658,19 @@ URL: http://localhost:8000/index.html?spine-edit=true
                     <button class="demo-button" onclick="toggleCanvasEditMode()">表示範囲編集</button>
                     <button class="demo-button" onclick="resetPosition()">位置リセット</button>
                     <button class="demo-button" onclick="resetSize()">サイズリセット</button>
+                </div>
+                
+                <!-- 編集確定ボタン（編集中のみ表示） -->
+                <div class="edit-confirm-panel" id="editConfirmPanel" style="display: none;">
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+                        <div style="text-align: center; margin-bottom: 10px;">
+                            <strong>📝 編集中</strong> - 変更を確定しますか？
+                        </div>
+                        <div style="text-align: center;">
+                            <button class="demo-button" onclick="confirmEdit()" style="background: #28a745; margin-right: 10px;">💾 保存</button>
+                            <button class="demo-button" onclick="cancelEdit()" style="background: #6c757d;">❌ キャンセル</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="coordinate-display" id="coordinateDisplay"></div>
             </div>
@@ -822,11 +833,93 @@ URL: http://localhost:8000/index.html?spine-edit=true
         const characterCanvas = document.getElementById('characterCanvas');
         const demoScreen = document.getElementById('canvasDemo');
         const coordinateDisplay = document.getElementById('coordinateDisplay');
+        const editConfirmPanel = document.getElementById('editConfirmPanel');
 
         // 初期設定
         window.addEventListener('load', () => {
+            // localStorageから保存された状態を読み込み
+            try {
+                const saved = localStorage.getItem('spine-positioning-state');
+                if (saved) {
+                    const loadedState = JSON.parse(saved);
+                    console.log('✅ localStorageから状態を読み込みました:', loadedState);
+                    
+                    // 読み込んだ状態を適用
+                    character.style.left = loadedState.character.left;
+                    character.style.top = loadedState.character.top;
+                    character.style.width = loadedState.character.width;
+                    character.style.height = loadedState.character.height;
+                    
+                    characterCanvas.style.left = loadedState.canvas.left;
+                    characterCanvas.style.top = loadedState.canvas.top;
+                    characterCanvas.style.width = loadedState.canvas.width;
+                    characterCanvas.style.height = loadedState.canvas.height;
+                    
+                    // savedStateも更新
+                    savedState = loadedState;
+                    
+                    coordinateDisplay.textContent = '📥 前回保存した位置を復元しました';
+                    setTimeout(() => {
+                        coordinateDisplay.textContent = '';
+                    }, 2000);
+                } else {
+                    // 保存された状態がない場合は初期化
+                    initializeSavedState();
+                }
+            } catch (e) {
+                console.error('❌ localStorage読み込みエラー:', e);
+                // エラー時は初期化
+                initializeSavedState();
+            }
+            
             setupResizeHandlers();
         });
+
+        // 初期状態の保存
+        function initializeSavedState() {
+            console.log('🔧 初期化前の状態:', {
+                charLeft: character.style.left,
+                charTop: character.style.top,
+                canvasWidth: characterCanvas.style.width,
+                canvasHeight: characterCanvas.style.height
+            });
+            
+            // 真の初期状態に強制リセット（Canvas中心にピクセル指定）
+            character.style.left = '60px';
+            character.style.top = '60px';
+            character.style.transform = 'translate(-50%, -50%)';
+            character.style.width = '80px';
+            character.style.height = '80px';
+            
+            characterCanvas.style.left = '25%';
+            characterCanvas.style.top = '65%';
+            characterCanvas.style.width = '120px';
+            characterCanvas.style.height = '120px';
+            
+            console.log('🔧 リセット後の状態:', {
+                charLeft: character.style.left,
+                charTop: character.style.top,
+                canvasWidth: characterCanvas.style.width,
+                canvasHeight: characterCanvas.style.height
+            });
+            
+            // 強制レンダリング確実化
+            character.offsetHeight; // 強制リフロー
+            characterCanvas.offsetHeight;
+            
+            // リセット後の状態を即座に保存（setTimeoutは使わない）
+            savedState.character.left = character.style.left;
+            savedState.character.top = character.style.top;
+            savedState.character.width = character.style.width;
+            savedState.character.height = character.style.height;
+            
+            savedState.canvas.left = characterCanvas.style.left;
+            savedState.canvas.top = characterCanvas.style.top;
+            savedState.canvas.width = characterCanvas.style.width;
+            savedState.canvas.height = characterCanvas.style.height;
+            
+            console.log('✅ 初期状態を強制リセット・保存しました:', savedState);
+        }
 
         // 固定点の名前を取得
         function getFixedPointName(resizeDirection) {
@@ -841,52 +934,145 @@ URL: http://localhost:8000/index.html?spine-edit=true
 
         // キャラクター編集モード切り替え
         function toggleEditMode() {
-            isCharacterEditMode = !isCharacterEditMode;
             const button = event.target;
             
-            // 表示範囲編集モードを無効化
-            if (isCharacterEditMode && isCanvasEditMode) {
-                toggleCanvasEditMode();
+            // 編集中で確定パネルが表示されている場合は状態変更しない
+            if (isCharacterEditMode && editConfirmPanel.style.display === 'block') {
+                // 確定を促すメッセージのみ表示（状態は変更しない）
+            } else {
+                isCharacterEditMode = !isCharacterEditMode;
+            }
+            
+            // 表示範囲編集モードを無効化（排他制御）
+            if (isCanvasEditMode) {
+                isCanvasEditMode = false;
+                const canvasButton = document.querySelector('button[onclick="toggleCanvasEditMode()"]');
+                if (canvasButton) {
+                    canvasButton.textContent = '表示範囲編集';
+                    canvasButton.classList.remove('active');
+                }
+                characterCanvas.classList.remove('canvas-edit-mode');
+                removeCanvasDragEvents();
+                coordinateDisplay.textContent = '🔄 表示範囲編集を自動終了しました';
             }
             
             if (isCharacterEditMode) {
-                button.textContent = 'キャラクター編集終了';
+                // 編集開始時に現在の状態を正確に保存
+                const computedStyle = window.getComputedStyle(character);
+                const currentLeft = character.style.left || computedStyle.left || '60px';
+                const currentTop = character.style.top || computedStyle.top || '60px';
+                const currentWidth = character.style.width || computedStyle.width || '80px';
+                const currentHeight = character.style.height || computedStyle.height || '80px';
+                
+                console.log('🔧 編集開始時の位置保存:', {
+                    現在のstyle値: {
+                        left: character.style.left,
+                        top: character.style.top,
+                        width: character.style.width,
+                        height: character.style.height
+                    },
+                    computed値: {
+                        left: computedStyle.left,
+                        top: computedStyle.top,
+                        width: computedStyle.width,
+                        height: computedStyle.height
+                    },
+                    保存する値: {
+                        left: currentLeft,
+                        top: currentTop,
+                        width: currentWidth,
+                        height: currentHeight
+                    }
+                });
+                
+                savedState.character.left = currentLeft;
+                savedState.character.top = currentTop;
+                savedState.character.width = currentWidth;
+                savedState.character.height = currentHeight;
+                
+                button.textContent = '編集中...保存・キャンセルで確定';
                 button.classList.add('active');
                 character.classList.add('edit-mode');
                 character.style.cursor = 'grab';
                 coordinateDisplay.textContent = '🔧 キャラクター編集モード - ドラッグで移動、角をドラッグでサイズ変更（対角が固定点）';
+                editConfirmPanel.style.display = 'block';
                 setupCharacterDragEvents();
             } else {
+                // 編集中の場合は確定を促す（編集モードは継続）
+                if (editConfirmPanel.style.display === 'block') {
+                    coordinateDisplay.textContent = '⚠️ 保存またはキャンセルを選択してください';
+                    setTimeout(() => {
+                        if (isCharacterEditMode) {
+                            coordinateDisplay.textContent = '🔧 キャラクター編集モード - ドラッグで移動、角をドラッグでサイズ変更（対角が固定点）';
+                        }
+                    }, 3000);
+                    return; // 編集モードを継続
+                }
+                
                 button.textContent = 'キャラクター編集';
                 button.classList.remove('active');
                 character.classList.remove('edit-mode');
                 character.style.cursor = 'default';
                 coordinateDisplay.textContent = '';
+                editConfirmPanel.style.display = 'none';
                 removeCharacterDragEvents();
             }
         }
 
         // 表示範囲編集モード切り替え
         function toggleCanvasEditMode() {
-            isCanvasEditMode = !isCanvasEditMode;
             const button = event.target;
             
-            // キャラクター編集モードを無効化
-            if (isCanvasEditMode && isCharacterEditMode) {
-                toggleEditMode();
+            // 編集中で確定パネルが表示されている場合は状態変更しない
+            if (isCanvasEditMode && editConfirmPanel.style.display === 'block') {
+                // 確定を促すメッセージのみ表示（状態は変更しない）
+            } else {
+                isCanvasEditMode = !isCanvasEditMode;
+            }
+            
+            // キャラクター編集モードを無効化（排他制御）
+            if (isCharacterEditMode) {
+                isCharacterEditMode = false;
+                const characterButton = document.querySelector('button[onclick="toggleEditMode()"]');
+                if (characterButton) {
+                    characterButton.textContent = 'キャラクター編集';
+                    characterButton.classList.remove('active');
+                }
+                character.classList.remove('edit-mode');
+                removeCharacterDragEvents();
+                coordinateDisplay.textContent = '🔄 キャラクター編集を自動終了しました';
             }
             
             if (isCanvasEditMode) {
-                button.textContent = '表示範囲編集終了';
+                // 編集開始時に現在の状態を保存
+                savedState.canvas.left = characterCanvas.style.left || '25%';
+                savedState.canvas.top = characterCanvas.style.top || '65%';
+                savedState.canvas.width = characterCanvas.style.width || '120px';
+                savedState.canvas.height = characterCanvas.style.height || '120px';
+                
+                button.textContent = '編集中...保存・キャンセルで確定';
                 button.classList.add('active');
                 characterCanvas.classList.add('canvas-edit-mode');
                 coordinateDisplay.textContent = '🎨 表示範囲編集モード - キャラクターの見える範囲をリサイズ';
+                editConfirmPanel.style.display = 'block';
                 setupCanvasDragEvents();
             } else {
+                // 編集中の場合は確定を促す（編集モードは継続）
+                if (editConfirmPanel.style.display === 'block') {
+                    coordinateDisplay.textContent = '⚠️ 保存またはキャンセルを選択してください';
+                    setTimeout(() => {
+                        if (isCanvasEditMode) {
+                            coordinateDisplay.textContent = '🎨 表示範囲編集モード - キャラクターの見える範囲をリサイズ';
+                        }
+                    }, 3000);
+                    return; // 編集モードを継続
+                }
+                
                 button.textContent = '表示範囲編集';
                 button.classList.remove('active');
                 characterCanvas.classList.remove('canvas-edit-mode');
                 coordinateDisplay.textContent = '';
+                editConfirmPanel.style.display = 'none';
                 removeCanvasDragEvents();
             }
         }
@@ -915,6 +1101,245 @@ URL: http://localhost:8000/index.html?spine-edit=true
             setTimeout(() => {
                 if (!isCharacterEditMode && !isCanvasEditMode) coordinateDisplay.textContent = '';
             }, 2000);
+        }
+
+        // 編集状態の保存用変数
+        let savedState = {
+            character: {
+                left: '60px',  // Canvas中心（120px / 2）
+                top: '60px',   // Canvas中心（120px / 2）
+                width: '80px',
+                height: '80px'
+            },
+            canvas: {
+                left: '25%',
+                top: '65%',
+                width: '120px',
+                height: '120px'
+            }
+        };
+
+        // 編集確定
+        function confirmEdit() {
+            // キャラクターがCanvas範囲内に収まるように調整
+            ensureCharacterWithinCanvas();
+            
+            // 現在の状態を保存状態に反映
+            savedState.character.left = character.style.left;
+            savedState.character.top = character.style.top;
+            savedState.character.width = character.style.width;
+            savedState.character.height = character.style.height;
+            
+            savedState.canvas.left = characterCanvas.style.left;
+            savedState.canvas.top = characterCanvas.style.top;
+            savedState.canvas.width = characterCanvas.style.width;
+            savedState.canvas.height = characterCanvas.style.height;
+            
+            // localStorageに永続保存
+            try {
+                localStorage.setItem('spine-positioning-state', JSON.stringify(savedState));
+                console.log('✅ 状態をlocalStorageに保存しました:', savedState);
+            } catch (e) {
+                console.error('❌ localStorage保存エラー:', e);
+            }
+            
+            // 編集モード完全終了
+            endEditMode();
+            
+            coordinateDisplay.textContent = '💾 変更を保存しました（永続保存）';
+            setTimeout(() => {
+                coordinateDisplay.textContent = '';
+            }, 2000);
+        }
+
+        // 編集キャンセル
+        function cancelEdit() {
+            console.log('🔄 キャンセル開始 - 復元前の状態:', {
+                現在の位置: {
+                    left: character.style.left,
+                    top: character.style.top,
+                    width: character.style.width,
+                    height: character.style.height
+                },
+                保存されていた位置: savedState.character,
+                復元予定の値: {
+                    left: savedState.character.left,
+                    top: savedState.character.top,
+                    width: savedState.character.width,
+                    height: savedState.character.height
+                }
+            });
+            
+            // 保存された初期状態に完全に戻す
+            character.style.left = savedState.character.left;
+            character.style.top = savedState.character.top;
+            character.style.width = savedState.character.width;
+            character.style.height = savedState.character.height;
+            
+            characterCanvas.style.left = savedState.canvas.left;
+            characterCanvas.style.top = savedState.canvas.top;
+            characterCanvas.style.width = savedState.canvas.width;
+            characterCanvas.style.height = savedState.canvas.height;
+            
+            console.log('🔄 復元実行後の実際の値:', {
+                復元後のstyle: {
+                    left: character.style.left,
+                    top: character.style.top,
+                    width: character.style.width,
+                    height: character.style.height
+                }
+            });
+            
+            // 復元後の詳細な可視性確認
+            const characterLeft = parseFloat(character.style.left) || 0;
+            const characterTop = parseFloat(character.style.top) || 0;
+            const characterWidth = character.offsetWidth;
+            const characterHeight = character.offsetHeight;
+            const canvasWidth = characterCanvas.offsetWidth;
+            const canvasHeight = characterCanvas.offsetHeight;
+            
+            // transform: translate(-50%, -50%)を考慮した実際の位置計算
+            const actualLeft = characterLeft - characterWidth / 2;
+            const actualTop = characterTop - characterHeight / 2;
+            const actualRight = actualLeft + characterWidth;
+            const actualBottom = actualTop + characterHeight;
+            
+            // Canvas範囲内にあるかどうかの正確な判定
+            const isWithinCanvas = actualLeft >= 0 && actualTop >= 0 && 
+                                   actualRight <= canvasWidth && actualBottom <= canvasHeight;
+            const hasValidSize = characterWidth > 0 && characterHeight > 0;
+            
+            console.log('✅ キャンセル完了 - 詳細状態確認:', {
+                復元された位置: savedState.character,
+                キャラクター基本情報: {
+                    設定位置: { left: characterLeft, top: characterTop },
+                    サイズ: { width: characterWidth, height: characterHeight },
+                    有効サイズ: hasValidSize
+                },
+                Canvas情報: {
+                    サイズ: { width: canvasWidth, height: canvasHeight }
+                },
+                位置計算詳細: {
+                    transform考慮後: { left: actualLeft, top: actualTop, right: actualRight, bottom: actualBottom },
+                    Canvas範囲内: isWithinCanvas
+                }
+            });
+            
+            // 緊急時：キャラクターが範囲外にある場合は安全位置に移動
+            if (!hasValidSize || !isWithinCanvas) {
+                console.log('⚠️ キャラクターが範囲外です - 緊急修正');
+                character.style.left = '40px';  // 中心位置を考慮した安全な位置
+                character.style.top = '40px';
+                character.style.display = 'block';
+                character.style.visibility = 'visible';
+            }
+            
+            // 編集モード完全終了
+            endEditMode();
+            
+            // ページリロードに変更
+            console.log('🔄 キャンセル - ページをリロードして前回保存した状態に戻します');
+            coordinateDisplay.textContent = '🔄 前回保存した状態に戻しています...';
+            
+            // 少し待ってからリロード（メッセージを見せるため）
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        }
+
+        // 編集モード完全終了（共通処理）
+        function endEditMode() {
+            // 確定パネル非表示
+            editConfirmPanel.style.display = 'none';
+            
+            // キャラクター編集終了
+            if (isCharacterEditMode) {
+                isCharacterEditMode = false;
+                const characterButton = document.querySelector('button[onclick="toggleEditMode()"]');
+                if (characterButton) {
+                    characterButton.textContent = 'キャラクター編集';
+                    characterButton.classList.remove('active');
+                }
+                character.classList.remove('edit-mode');
+                character.style.cursor = 'default';
+                removeCharacterDragEvents();
+            }
+            
+            // Canvas編集終了
+            if (isCanvasEditMode) {
+                isCanvasEditMode = false;
+                const canvasButton = document.querySelector('button[onclick="toggleCanvasEditMode()"]');
+                if (canvasButton) {
+                    canvasButton.textContent = '表示範囲編集';
+                    canvasButton.classList.remove('active');
+                }
+                characterCanvas.classList.remove('canvas-edit-mode');
+                removeCanvasDragEvents();
+            }
+        }
+
+        // Canvasリサイズ後のキャラクター位置調整
+        function adjustCharacterPositionAfterCanvasResize() {
+            if (!startElementPos.charAbsoluteX || !startElementPos.charAbsoluteY) return;
+            
+            // 現在のCanvas位置を取得
+            const canvasRect = characterCanvas.getBoundingClientRect();
+            const demoRect = demoScreen.getBoundingClientRect();
+            
+            // Canvas左上の背景画像基準位置
+            const canvasLeft = canvasRect.left - demoRect.left;
+            const canvasTop = canvasRect.top - demoRect.top;
+            
+            // キャラクターの背景画像基準絶対位置からCanvas内の中心点位置を計算
+            const targetCharCenterX = startElementPos.charAbsoluteX - canvasLeft;
+            const targetCharCenterY = startElementPos.charAbsoluteY - canvasTop;
+            
+            // Canvas境界内に制限（中心点基準）
+            const charWidth = character.offsetWidth;
+            const charHeight = character.offsetHeight;
+            const minX = charWidth / 2;
+            const maxX = canvasRect.width - charWidth / 2;
+            const minY = charHeight / 2;
+            const maxY = canvasRect.height - charHeight / 2;
+            
+            const newCharCenterX = Math.max(minX, Math.min(maxX, targetCharCenterX));
+            const newCharCenterY = Math.max(minY, Math.min(maxY, targetCharCenterY));
+            
+            // キャラクター位置を更新（中心点基準）
+            character.style.left = newCharCenterX + 'px';
+            character.style.top = newCharCenterY + 'px';
+        }
+
+        // キャラクターがCanvas範囲内に収まるように調整
+        function ensureCharacterWithinCanvas() {
+            // キャラクターの現在中心点位置を取得
+            const charCenterX = parseFloat(character.style.left) || 60;
+            const charCenterY = parseFloat(character.style.top) || 60;
+            const charWidth = character.offsetWidth;
+            const charHeight = character.offsetHeight;
+            
+            // Canvasサイズを取得
+            const canvasWidth = characterCanvas.offsetWidth;
+            const canvasHeight = characterCanvas.offsetHeight;
+            
+            // Canvas範囲内に制限（中心点基準）
+            const minX = charWidth / 2;
+            const maxX = canvasWidth - charWidth / 2;
+            const minY = charHeight / 2;
+            const maxY = canvasHeight - charHeight / 2;
+            
+            let newCenterX = Math.max(minX, Math.min(maxX, charCenterX));
+            let newCenterY = Math.max(minY, Math.min(maxY, charCenterY));
+            
+            // キャラクターがCanvas範囲外にある場合は範囲内に移動
+            if (charCenterX < minX || charCenterX > maxX || 
+                charCenterY < minY || charCenterY > maxY) {
+                
+                character.style.left = newCenterX + 'px';
+                character.style.top = newCenterY + 'px';
+                
+                console.log(`キャラクター位置をCanvas範囲内に調整: ${newCenterX}px, ${newCenterY}px (中心点基準)`);
+            }
         }
 
         // リサイズハンドラーの設定
@@ -953,17 +1378,30 @@ URL: http://localhost:8000/index.html?spine-edit=true
             if (type === 'character') {
                 const rect = character.getBoundingClientRect();
                 startElementPos = {
-                    // Canvas内での絶対位置として記録
-                    x: parseFloat(character.style.left) || 20,
-                    y: parseFloat(character.style.top) || 20,
+                    // 中心点基準の位置を記録（transform対応）
+                    centerX: parseFloat(character.style.left) || 60,
+                    centerY: parseFloat(character.style.top) || 60,
                     width: rect.width,
                     height: rect.height
                 };
             } else if (type === 'canvas') {
                 const rect = characterCanvas.getBoundingClientRect();
+                const demoRect = demoScreen.getBoundingClientRect();
+                
+                // キャラクターの背景画像に対する絶対位置を記録
+                const charRect = character.getBoundingClientRect();
+                const charAbsoluteX = charRect.left + charRect.width/2 - demoRect.left;
+                const charAbsoluteY = charRect.top + charRect.height/2 - demoRect.top;
+                
                 startElementPos = {
                     width: rect.width,
-                    height: rect.height
+                    height: rect.height,
+                    // キャラクターの背景基準絶対位置を保存
+                    charAbsoluteX: charAbsoluteX,
+                    charAbsoluteY: charAbsoluteY,
+                    // Canvas内でのキャラクター相対位置も保存
+                    charRelativeX: parseFloat(character.style.left) || 60,
+                    charRelativeY: parseFloat(character.style.top) || 60
                 };
             }
             
@@ -997,11 +1435,22 @@ URL: http://localhost:8000/index.html?spine-edit=true
             
             startMousePos = { x: e.clientX, y: e.clientY };
             
-            // Canvas内での絶対位置で管理
+            // 現在の実際の位置を取得（transformを考慮）
+            const rect = character.getBoundingClientRect();
+            const canvasRect = characterCanvas.getBoundingClientRect();
+            
+            // Canvas内での相対位置を計算
+            const currentX = rect.left + rect.width/2 - canvasRect.left;
+            const currentY = rect.top + rect.height/2 - canvasRect.top;
+            
             startElementPos = {
-                x: parseFloat(character.style.left) || 20,
-                y: parseFloat(character.style.top) || 20
+                x: currentX,
+                y: currentY
             };
+            
+            // パーセント指定をピクセルに変換して保存
+            character.style.left = currentX + 'px';
+            character.style.top = currentY + 'px';
             
             e.preventDefault();
         }
@@ -1072,40 +1521,48 @@ URL: http://localhost:8000/index.html?spine-edit=true
                 character.style.width = newWidth + 'px';
                 character.style.height = newHeight + 'px';
                 
-                // 固定点を維持するための位置調整（絶対位置対応）
+                // 対角固定点を維持するための中心点位置調整
                 const widthDiff = newWidth - startElementPos.width;
                 const heightDiff = newHeight - startElementPos.height;
                 
-                let newX = startElementPos.x;
-                let newY = startElementPos.y;
+                let newCenterX = startElementPos.centerX;
+                let newCenterY = startElementPos.centerY;
                 
-                // 各方向における位置の調整（固定点維持）
+                // 各方向における中心点の調整（対角固定点維持）
                 switch (resizeDirection) {
-                    case 'se': // 右下ハンドル: 左上固定 → 位置変更なし
-                        // 位置調整不要
+                    case 'se': // 右下ハンドル: 左上固定 → 中心点は右下に移動
+                        newCenterX = startElementPos.centerX + widthDiff / 2;
+                        newCenterY = startElementPos.centerY + heightDiff / 2;
                         break;
                         
-                    case 'sw': // 左下ハンドル: 右上固定 → 左に移動
-                        newX = startElementPos.x - widthDiff;
+                    case 'sw': // 左下ハンドル: 右上固定 → 中心点は左下に移動
+                        newCenterX = startElementPos.centerX - widthDiff / 2;
+                        newCenterY = startElementPos.centerY + heightDiff / 2;
                         break;
                         
-                    case 'ne': // 右上ハンドル: 左下固定 → 上に移動
-                        newY = startElementPos.y - heightDiff;
+                    case 'ne': // 右上ハンドル: 左下固定 → 中心点は右上に移動
+                        newCenterX = startElementPos.centerX + widthDiff / 2;
+                        newCenterY = startElementPos.centerY - heightDiff / 2;
                         break;
                         
-                    case 'nw': // 左上ハンドル: 右下固定 → 左上に移動
-                        newX = startElementPos.x - widthDiff;
-                        newY = startElementPos.y - heightDiff;
+                    case 'nw': // 左上ハンドル: 右下固定 → 中心点は左上に移動
+                        newCenterX = startElementPos.centerX - widthDiff / 2;
+                        newCenterY = startElementPos.centerY - heightDiff / 2;
                         break;
                 }
                 
-                // Canvas内での境界制限
+                // Canvas内での境界制限（中心点基準）
                 const canvasRect = characterCanvas.getBoundingClientRect();
-                newX = Math.max(0, Math.min(canvasRect.width - newWidth, newX));
-                newY = Math.max(0, Math.min(canvasRect.height - newHeight, newY));
+                const minCenterX = newWidth / 2;
+                const maxCenterX = canvasRect.width - newWidth / 2;
+                const minCenterY = newHeight / 2;
+                const maxCenterY = canvasRect.height - newHeight / 2;
                 
-                character.style.left = newX + 'px';
-                character.style.top = newY + 'px';
+                newCenterX = Math.max(minCenterX, Math.min(maxCenterX, newCenterX));
+                newCenterY = Math.max(minCenterY, Math.min(maxCenterY, newCenterY));
+                
+                character.style.left = newCenterX + 'px';
+                character.style.top = newCenterY + 'px';
                 
                 const scale = (newWidth / 80).toFixed(2);
                 const fixedPoint = getFixedPointName(resizeDirection);
@@ -1137,6 +1594,9 @@ URL: http://localhost:8000/index.html?spine-edit=true
                 characterCanvas.style.width = newWidth + 'px';
                 characterCanvas.style.height = newHeight + 'px';
                 
+                // キャラクターの背景画像基準の絶対位置を保持
+                adjustCharacterPositionAfterCanvasResize();
+                
                 coordinateDisplay.textContent = `🎨 表示範囲サイズ: ${newWidth.toFixed(0)}×${newHeight.toFixed(0)}px (キャラクター表示領域)`;
             }
         }
@@ -1149,18 +1609,24 @@ URL: http://localhost:8000/index.html?spine-edit=true
             let newX = startElementPos.x + deltaX;
             let newY = startElementPos.y + deltaY;
             
-            // Canvas内での境界制限
+            // Canvas内での境界制限（中心点基準）
             const canvasRect = characterCanvas.getBoundingClientRect();
             const charWidth = character.offsetWidth;
             const charHeight = character.offsetHeight;
             
-            newX = Math.max(0, Math.min(canvasRect.width - charWidth, newX));
-            newY = Math.max(0, Math.min(canvasRect.height - charHeight, newY));
+            // transformを考慮した境界計算
+            const minX = charWidth / 2;
+            const maxX = canvasRect.width - charWidth / 2;
+            const minY = charHeight / 2;
+            const maxY = canvasRect.height - charHeight / 2;
+            
+            newX = Math.max(minX, Math.min(maxX, newX));
+            newY = Math.max(minY, Math.min(maxY, newY));
             
             character.style.left = newX + 'px';
             character.style.top = newY + 'px';
             
-            coordinateDisplay.textContent = `📍 キャラクター位置: ${newX.toFixed(0)}px, ${newY.toFixed(0)}px (Canvas内)`;
+            coordinateDisplay.textContent = `📍 キャラクター位置: ${newX.toFixed(0)}px, ${newY.toFixed(0)}px (Canvas内・中心点)`;
         }
 
         // Canvas移動処理
