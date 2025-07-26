@@ -530,13 +530,26 @@
                 <img src="assets/images/kumo3.png" alt="優雅に流れる雲" class="cloud cloud6" loading="lazy">
                 
                 <!-- ぷらっとくんCanvas -->
-                <canvas id="purattokun-canvas"></canvas>
+                <canvas id="purattokun-canvas" 
+                        width="120" 
+                        height="120" 
+                        style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 5; display: block;">
+                </canvas>
                 
                 <!-- フォールバック画像（Spine読み込み失敗時用） -->
                 <img src="assets/images/purattokunn.png" 
                      alt="ぷらっとくん画像" 
                      id="purattokun-fallback"
-                     style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 10; display: none; object-fit: contain;">
+                     style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 10; display: block; object-fit: contain;">
+                     
+                <!-- ぷらっとくん設定 -->
+                <div id="purattokun-config" style="display: none;"
+                     data-x="18"            
+                     data-y="49"            
+                     data-scale="0.55"      
+                     data-fade-delay="1500" 
+                     data-fade-duration="2000">
+                </div>
             </div>
             
             <!-- UI要素 -->
@@ -672,12 +685,21 @@
     <!-- シンプルなSpine初期化 -->
     <script>
         // Spine初期化を待つ（改良版）
+        let spineWaitCount = 0;
+        const maxSpineWaitCount = 50; // 10秒で諦める
+        
         function waitForSpine() {
+            spineWaitCount++;
+            
             if (typeof spine !== 'undefined' && spine.AssetManager) {
                 console.log('✅ Spine読み込み完了');
                 initSpineCharacter();
+            } else if (spineWaitCount > maxSpineWaitCount) {
+                console.error('❌ Spine読み込みタイムアウト');
+                console.log('📸 フォールバック画像に切り替えます');
+                // フォールバック画像は既に表示中なので何もしない
             } else {
-                console.log('⏳ Spine読み込み中... (spine:', typeof spine, ')');
+                console.log('⏳ Spine読み込み中... (spine:', typeof spine, ') 試行:', spineWaitCount);
                 setTimeout(waitForSpine, 200);
             }
         }
@@ -686,8 +708,17 @@
         async function initSpineCharacter() {
             try {
                 console.log('🎯 Spine初期化開始');
+                
+                // 事前診断
+                console.log('🔍 事前診断:');
+                console.log('  - spine定義:', typeof spine);
+                console.log('  - AssetManager存在:', !!spine?.AssetManager);
+                console.log('  - Shader存在:', !!spine?.Shader);
+                console.log('  - SceneRenderer存在:', !!spine?.SceneRenderer);
+                
                 const canvas = document.getElementById('purattokun-canvas');
                 console.log('📊 Canvas要素:', canvas);
+                console.log('📊 Canvas親要素:', canvas?.parentElement?.className);
                 
                 const gl = canvas.getContext('webgl', { alpha: true });
                 console.log('📊 WebGL Context:', gl);
@@ -696,17 +727,12 @@
                     throw new Error('WebGLサポートなし');
                 }
                 
-                // Canvasサイズ設定（レスポンシブ対応）
-                const updateCanvasSize = () => {
-                    const rect = canvas.getBoundingClientRect();
-                    canvas.width = rect.width;
-                    canvas.height = rect.height;
-                    console.log('Canvas実サイズ:', canvas.width + 'x' + canvas.height);
-                };
-                updateCanvasSize();
+                // Canvasサイズ設定（解決策1: 基本設定による確実な表示）
+                canvas.width = 200;
+                canvas.height = 200;
+                console.log('Canvas固定サイズ設定:', canvas.width + 'x' + canvas.height);
                 
-                // ウィンドウリサイズ時にCanvasサイズも更新
-                window.addEventListener('resize', updateCanvasSize);
+                // リサイズ処理は解決策1では無効化
                 
                 console.log('📁 Spineファイル読み込み中...');
                 
@@ -748,6 +774,13 @@
                 
                 console.log('🎬 アニメーション開始...');
                 
+                // Spine初期化成功時はフォールバック画像を非表示
+                const fallback = document.getElementById('purattokun-fallback');
+                if (fallback) {
+                    fallback.style.display = 'none';
+                    console.log('📸 フォールバック画像を非表示にしました');
+                }
+                
                 // Atlas取得
                 const atlas = assetManager.get('purattokun.atlas');
                 const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
@@ -756,11 +789,11 @@
                 const skeletonJson = new spine.SkeletonJson(atlasLoader);
                 const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
                 
-                // Skeleton作成
+                // Skeleton作成（解決策1: 基本設定）
                 const skeleton = new spine.Skeleton(skeletonData);
-                skeleton.x = canvas.width / 2;    // Canvas中央
-                skeleton.y = canvas.height / 2;
-                skeleton.scaleX = skeleton.scaleY = 0.25;  // 適切なサイズ
+                skeleton.x = 0;  // 左下角
+                skeleton.y = 0;  // 左下角
+                skeleton.scaleX = skeleton.scaleY = 0.5;  // 適度なサイズ
                 
                 // AnimationState
                 const animationStateData = new spine.AnimationStateData(skeleton.data);
@@ -838,12 +871,22 @@
                 console.error('❌ Spine初期化エラー:', error);
                 console.log('🔧 ブラウザキャッシュクリア（Ctrl+Shift+R）を試してください');
                 
+                // 詳細な診断情報
+                console.log('🔍 詳細診断:');
+                console.log('  - spine定義:', typeof spine);
+                console.log('  - AssetManager:', typeof spine?.AssetManager);
+                console.log('  - WebGL対応:', !!canvas.getContext('webgl'));
+                console.log('  - Canvas要素:', !!canvas);
+                console.log('  - エラー内容:', error.message);
+                
                 // フォールバック画像を表示
                 const fallback = document.getElementById('purattokun-fallback');
                 if (fallback) {
                     fallback.style.display = 'block';
-                    canvas.style.display = 'none';
+                    if (canvas) canvas.style.display = 'none';
                     console.log('📸 フォールバック画像を表示しました');
+                } else {
+                    console.error('❌ フォールバック画像要素が見つかりません');
                 }
             }
         }

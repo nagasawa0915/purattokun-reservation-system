@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. **構造を変更しない** - 既存の構造を維持して追記のみ
 3. **新しい情報の追加先**:
    - 技術的詳細 → docs/DEVELOPMENT_GUIDE.md
-   - 問題解決 → docs/SPINE_TROUBLESHOOTING.md または docs/LAYER_DEBUGGING.md
+   - **問題解決 → [📋 docs/_TROUBLESHOOTING.md](./docs/_TROUBLESHOOTING.md) から適切なファイルを検索**
    - 設計思想 → docs/ARCHITECTURE_NOTES.md
 4. **このファイルには参照リンクのみ追加**
 
@@ -260,37 +260,29 @@ if (typeof endEditMode === 'function') endEditMode();
 
 ## 🚨 よくある問題とクイック解決
 
-### 1. ぷらっとくんが表示されない
-**→ [Spineトラブルシューティング](./docs/SPINE_TROUBLESHOOTING.md) を参照**
+**問題が発生した場合 → [📋 トラブルシューティング総合ガイド](./docs/_TROUBLESHOOTING.md)**
 
-クイック対処法：
-```bash
-# ブラウザキャッシュクリア
-Ctrl+Shift+R (Windows/Linux)
-Cmd+Shift+R (Mac)
+### 🤖 問題解決時の自動記録
 
-# サーバー確認
-python server.py  # カスタムサーバー使用
-```
+問題を解決する際は、以下を**必ず順番通り**実行：
 
-**詳細診断が必要な場合は上記ドキュメントの「クイック診断チェックリスト」を実行してください**
+1. `docs/_TROUBLESHOOTING.md`から関連ファイルを特定
+2. 該当ファイルを開く
+3. **🔒マーク確認**: `<!-- 🔒 確定済み解決策 - 変更禁止 -->`があるか確認
+4. **「⚡ 有効な解決策・回避策」セクションを探す**
+4. 【重要】セクションが存在しない場合:
+   - まず「現在調査中」として⚡セクションを作成
+   - その後で問題解決を開始
+   - 解決後に⚡セクションを更新
+5. セクションが存在する場合:
+   - **解決策1から順番に実行**
+   - 解決策1（診断ツール）で現状確認
+   - 診断結果をユーザーに確認
+   - 診断に基づいて解決策2または3を実行
+6. **推測や独自修正は禁止**
+7. 解決後にCase形式で記録
 
-### 2. 白い枠と同じ動きをする
-**→ [レイヤー診断ガイド](./docs/LAYER_DEBUGGING.md) を参照**
-
-上記ドキュメントの「緊急診断ツール」をブラウザコンソール（F12）で実行してください。
-
-### 3. ウィンドウリサイズで位置がずれる
-**→ [レイヤー診断ガイド](./docs/LAYER_DEBUGGING.md) の「診断ツール」を実行**
-**→ [背景同期の成功事例](./docs/DEVELOPMENT_GUIDE.md#背景画像とキャラクターの完全同期2024年7月実装) も参照**
-
-### 4. Canvasのサイズが変更できない
-**→ [Canvasサイズ変更トラブルシューティング](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) を参照**
-
-上記ドキュメントの診断ツールをブラウザコンソール（F12）で実行してください。
-
-### 5. Spine関連エラー
-**→ [Spineトラブルシューティング](./docs/SPINE_TROUBLESHOOTING.md) を参照**
+**重要**: ドキュメントの手順を飛ばして独自判断することは禁止
 
 ### 6. 編集モードが起動しない
 **→ [本番編集システム](#🎯-本番編集システム2025年1月26日統合完了) の「デバッグコマンド」を参照**
@@ -449,11 +441,17 @@ SpineWebGL読み込み失敗時もCSS keyframeアニメーションで同様の�
 
 | 具体的な問題 | 参照ドキュメント | セクション |
 |-------------|----------------|-----------|
-| **🚨 ぷらっとくんが表示されない** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) | クイック診断チェックリスト |
+| **🚨 ぷらっとくんが表示されない** | [👁️ docs/CHARACTER_DISPLAY_TROUBLESHOOTING.md](./docs/CHARACTER_DISPLAY_TROUBLESHOOTING.md) | 緊急診断 → 問題パターン別解決 |
 | **🔄 白い枠と同じ動きをする** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) | 緊急診断ツール |
 | **📐 ウィンドウリサイズで位置ズレ** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) | 診断ツール |
 | **🎯 Canvasサイズ変更できない** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) | 全セクション |
 | **⚙️ Spine関連エラー全般** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) | 症状に応じたセクション |
+
+### 📋 ドキュメント参照整合性確保
+
+**重要**: 参照先変更時は必ず `docs/README.md` の対応表と整合性を確認してください。
+- [📁 docs/README.md 問題別対応表](./docs/README.md#📁-問題別対応表) が**マスタ参照表**です
+- CLAUDE.mdの参照はこれと必ず一致させる必要があります
 | **🎮 編集モードが起動しない** | [この文書](#🎯-本番編集システム2025年1月26日統合完了) | デバッグコマンド |
 | **💾 編集システム保存・復元問題** | [📋 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) | 永続化システム |
 | **👻 編集でキャラクター消失** | [📋 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) | 重要な修正履歴 |
