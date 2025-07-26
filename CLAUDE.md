@@ -261,6 +261,9 @@ if (typeof endEditMode === 'function') endEditMode();
 ## 🚨 よくある問題とクイック解決
 
 ### 1. ぷらっとくんが表示されない
+**→ [Spineトラブルシューティング](./docs/SPINE_TROUBLESHOOTING.md) を参照**
+
+クイック対処法：
 ```bash
 # ブラウザキャッシュクリア
 Ctrl+Shift+R (Windows/Linux)
@@ -270,39 +273,12 @@ Cmd+Shift+R (Mac)
 python server.py  # カスタムサーバー使用
 ```
 
+**詳細診断が必要な場合は上記ドキュメントの「クイック診断チェックリスト」を実行してください**
+
 ### 2. 白い枠と同じ動きをする
 **→ [レイヤー診断ガイド](./docs/LAYER_DEBUGGING.md) を参照**
 
-ブラウザコンソール（F12）で診断実行：
-```javascript
-// 緊急診断ツール
-function emergencyDiagnosis() {
-    const canvas = document.querySelector('canvas[data-spine-character]');
-    if (!canvas) {
-        console.log('❌ Canvas要素が見つかりません！');
-        return;
-    }
-    
-    // 親要素チェック
-    console.log('親要素:', canvas.parentElement?.tagName);
-    
-    // 強制修正
-    if (canvas.parentElement !== document.body) {
-        document.body.appendChild(canvas);
-        console.log('🔧 Canvas を body に移動');
-    }
-    
-    canvas.style.position = 'absolute';
-    canvas.style.left = '18vw';
-    canvas.style.top = '49vh';
-    canvas.style.transform = 'translate(-50%, -50%)';
-    canvas.style.zIndex = '10';
-    
-    console.log('🎯 緊急修正完了');
-}
-
-emergencyDiagnosis();
-```
+上記ドキュメントの「緊急診断ツール」をブラウザコンソール（F12）で実行してください。
 
 ### 3. ウィンドウリサイズで位置がずれる
 **→ [レイヤー診断ガイド](./docs/LAYER_DEBUGGING.md) の「診断ツール」を実行**
@@ -311,17 +287,32 @@ emergencyDiagnosis();
 ### 4. Canvasのサイズが変更できない
 **→ [Canvasサイズ変更トラブルシューティング](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) を参照**
 
-ブラウザコンソール（F12）で緊急診断：
-```javascript
-// 表示中の要素を特定
-const canvas = document.querySelector('canvas[id*="purattokun"]');
-const fallback = document.querySelector('img[src*="purattokunn"]');
-console.log('Canvas表示:', canvas?.style.display !== 'none');
-console.log('フォールバック表示:', fallback?.style.display !== 'none');
-```
+上記ドキュメントの診断ツールをブラウザコンソール（F12）で実行してください。
 
 ### 5. Spine関連エラー
 **→ [Spineトラブルシューティング](./docs/SPINE_TROUBLESHOOTING.md) を参照**
+
+### 6. 編集モードが起動しない
+**→ [本番編集システム](#🎯-本番編集システム2025年1月26日統合完了) の「デバッグコマンド」を参照**
+
+クイック確認：
+```bash
+# URLパラメータ確認
+http://localhost:8000/index.html?edit=true
+
+# F12コンソールでファイル読み込み確認
+typeof startCharacterEdit === 'function'
+```
+
+### 7. 編集システムの保存・復元ができない
+**→ [編集システム仕様書](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) を参照**
+
+localStorage関連の問題は上記ドキュメントの「永続化システム」セクションを確認してください。
+
+### 8. 編集モードでキャラクターが消える
+**→ [編集システム仕様書](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) の「重要な修正履歴」を参照**
+
+座標系統一に関する既知の問題と解決策が記載されています。
 
 ---
 
@@ -454,17 +445,32 @@ SpineWebGL読み込み失敗時もCSS keyframeアニメーションで同様の�
 
 ## 🔗 問題発生時の参照先
 
-| 問題の種類 | 参照ドキュメント |
-|-----------|----------------|
-| **🎯 編集システム仕様確認** | [📋 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) |
-| **📊 実装進捗・計画確認** | [📈 docs/POSITIONING_SYSTEM_PROGRESS.md](./docs/POSITIONING_SYSTEM_PROGRESS.md) |
-| **レイヤー・位置問題** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
-| **Spine表示・エラー** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
-| **Canvasサイズ変更問題** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) |
-| **新機能・技術仕様** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
-| **設計・リファクタリング** | [🏛️ docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) |
-| **開発時のチェックリスト** | [📋 docs/DEVELOPMENT_CHECKLIST.md](./docs/DEVELOPMENT_CHECKLIST.md) |
-| **失敗事例・再発防止** | [🚨 docs/FAILURE_ANALYSIS_CANVAS_SIZE.md](./docs/FAILURE_ANALYSIS_CANVAS_SIZE.md) |
+### 📋 問題別対応表
+
+| 具体的な問題 | 参照ドキュメント | セクション |
+|-------------|----------------|-----------|
+| **🚨 ぷらっとくんが表示されない** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) | クイック診断チェックリスト |
+| **🔄 白い枠と同じ動きをする** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) | 緊急診断ツール |
+| **📐 ウィンドウリサイズで位置ズレ** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) | 診断ツール |
+| **🎯 Canvasサイズ変更できない** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) | 全セクション |
+| **⚙️ Spine関連エラー全般** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) | 症状に応じたセクション |
+| **🎮 編集モードが起動しない** | [この文書](#🎯-本番編集システム2025年1月26日統合完了) | デバッグコマンド |
+| **💾 編集システム保存・復元問題** | [📋 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) | 永続化システム |
+| **👻 編集でキャラクター消失** | [📋 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) | 重要な修正履歴 |
+
+### 📚 技術分野別参照表
+
+| 技術分野 | 参照ドキュメント |
+|---------|----------------|
+| **🎯 編集システム仕様・設計** | [📋 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) |
+| **📊 実装進捗・計画管理** | [📈 docs/POSITIONING_SYSTEM_PROGRESS.md](./docs/POSITIONING_SYSTEM_PROGRESS.md) |
+| **🔧 レイヤー・位置関連問題** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
+| **⚙️ Spine WebGL関連問題** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
+| **🎯 Canvas操作関連問題** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) |
+| **📖 新機能・技術実装詳細** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
+| **🏛️ 設計思想・アーキテクチャ** | [🏛️ docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) |
+| **📋 開発時品質チェック** | [📋 docs/DEVELOPMENT_CHECKLIST.md](./docs/DEVELOPMENT_CHECKLIST.md) |
+| **🚨 失敗事例・予防策** | [🚨 docs/FAILURE_ANALYSIS_CANVAS_SIZE.md](./docs/FAILURE_ANALYSIS_CANVAS_SIZE.md) |
 
 ---
 

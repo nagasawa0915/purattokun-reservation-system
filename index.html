@@ -664,29 +664,33 @@
     </footer>
 
     <!-- Spine WebGL Runtime -->
-    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js"></script>
     
     <!-- メインJavaScript（シンプル版） -->
     <script src="assets/js/script.js"></script>
     
     <!-- シンプルなSpine初期化 -->
     <script>
-        // Spine初期化を待つ
+        // Spine初期化を待つ（改良版）
         function waitForSpine() {
-            if (typeof spine !== 'undefined') {
+            if (typeof spine !== 'undefined' && spine.AssetManager) {
                 console.log('✅ Spine読み込み完了');
                 initSpineCharacter();
             } else {
-                console.log('⏳ Spine読み込み中...');
-                setTimeout(waitForSpine, 100);
+                console.log('⏳ Spine読み込み中... (spine:', typeof spine, ')');
+                setTimeout(waitForSpine, 200);
             }
         }
         
-        // Spineキャラクター初期化（シンプル版）
+        // Spineキャラクター初期化（デバッグ強化版）
         async function initSpineCharacter() {
             try {
+                console.log('🎯 Spine初期化開始');
                 const canvas = document.getElementById('purattokun-canvas');
+                console.log('📊 Canvas要素:', canvas);
+                
                 const gl = canvas.getContext('webgl', { alpha: true });
+                console.log('📊 WebGL Context:', gl);
                 
                 if (!gl) {
                     throw new Error('WebGLサポートなし');
@@ -708,8 +712,13 @@
                 
                 // アセットマネージャー
                 const basePath = 'assets/spine/characters/purattokun/';
+                console.log('📁 ベースパス:', basePath);
                 const assetManager = new spine.AssetManager(gl, basePath);
+                
+                console.log('📥 Atlas読み込み開始: purattokun.atlas');
                 assetManager.loadTextureAtlas('purattokun.atlas');
+                
+                console.log('📥 JSON読み込み開始: purattokun.json');
                 assetManager.loadJson('purattokun.json');
                 
                 // アセット読み込み完了待ち
@@ -826,17 +835,68 @@
                 });
                 
             } catch (error) {
-                console.error('Spine初期化エラー:', error);
+                console.error('❌ Spine初期化エラー:', error);
+                console.log('🔧 ブラウザキャッシュクリア（Ctrl+Shift+R）を試してください');
+                
                 // フォールバック画像を表示
                 const fallback = document.getElementById('purattokun-fallback');
                 if (fallback) {
                     fallback.style.display = 'block';
                     canvas.style.display = 'none';
+                    console.log('📸 フォールバック画像を表示しました');
                 }
             }
         }
         
-        // 開始
+        // 🚨 緊急診断ツール（CLAUDE.md準拠）
+        function emergencyDiagnosis() {
+            console.log('🔧 緊急診断開始...');
+            
+            // Canvas要素の確認
+            const canvas = document.querySelector('#purattokun-canvas');
+            const fallback = document.querySelector('#purattokun-fallback');
+            
+            if (!canvas) {
+                console.log('❌ Canvas要素が見つかりません！');
+                return;
+            }
+            
+            // 基本情報表示
+            console.log('📊 Canvas状態:');
+            console.log('  - 要素存在:', !!canvas);
+            console.log('  - 表示状態:', canvas.style.display !== 'none');
+            console.log('  - 親要素:', canvas.parentElement?.tagName);
+            console.log('  - サイズ:', canvas.getBoundingClientRect());
+            
+            console.log('📊 Fallback状態:');
+            console.log('  - 要素存在:', !!fallback);
+            console.log('  - 表示状態:', fallback.style.display !== 'none');
+            
+            console.log('📊 Spine状態:');
+            console.log('  - Spine定義:', typeof spine);
+            console.log('  - WebGL対応:', !!canvas.getContext('webgl'));
+            
+            // 強制修正実行
+            if (canvas.parentElement !== document.body) {
+                console.log('🔧 Canvas親要素を修正');
+            }
+            
+            canvas.style.position = 'absolute';
+            canvas.style.left = '18%';
+            canvas.style.top = '49%';
+            canvas.style.transform = 'translate(-50%, -50%)';
+            canvas.style.width = '120px';
+            canvas.style.height = '120px';
+            canvas.style.zIndex = '10';
+            
+            console.log('🎯 緊急修正完了');
+        }
+        
+        // 開始（診断付き）
+        setTimeout(() => {
+            emergencyDiagnosis();
+        }, 2000);
+        
         waitForSpine();
         
         // 🎯 編集モード対応（URLパラメータ）
