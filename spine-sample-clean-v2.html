@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine サンプル（システム未統合）</title>
+    <style>
+        /* index.htmlから最小限の抽出 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #fafafa;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #ff6b6b;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        /* index.htmlのヒーローセクションをそのまま */
+        .hero {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 40px 20px;
+            overflow: hidden;
+        }
+        
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 100vw;
+            overflow: hidden;
+        }
+        
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: cover;
+        }
+        
+        /* index.htmlのぷらっとくんCSS - 完全コピー */
+        #purattokun-canvas {
+            position: absolute;
+            left: 18%;
+            top: 49%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            z-index: 10;
+        }
+        
+        #purattokun-fallback {
+            position: absolute;
+            left: 18%;
+            top: 49%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            z-index: 10;
+            display: none;
+            object-fit: contain;
+        }
+        
+        @media (max-width: 768px) {
+            #purattokun-canvas {
+                left: 50%;
+                top: 65%;
+                width: 80px;
+                height: 80px;
+            }
+            
+            #purattokun-fallback {
+                left: 50% !important;
+                top: 65% !important;
+                width: 80px !important;
+                height: 80px !important;
+            }
+        }
+        
+        .info {
+            background: white;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 Spine サンプル（システム未統合）</h1>
+        <p>index.htmlから背景とSpineキャラクターのみ抽出</p>
+    </div>
+
+    <!-- index.htmlのヒーローセクションをそのままコピー -->
+    <section class="hero">
+        <div class="background-container">
+            <img src="assets/images/クラウドパートナーTOP.png" alt="クラウドパートナー背景" class="background-image">
+            
+            <!-- index.htmlと全く同じSpine要素 -->
+            <canvas id="purattokun-canvas"></canvas>
+            
+            <img src="assets/images/purattokunn.png" 
+                 alt="ぷらっとくん画像" 
+                 id="purattokun-fallback"
+                 style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 10; display: none; object-fit: contain;">
+        </div>
+    </section>
+    
+    <div class="info">
+        <h2>📊 現在の状態</h2>
+        <p>❌ Positioning System 未統合 - ドラッグ&ドロップ不可</p>
+        <p>✅ 基本的なSpine表示機能のみ</p>
+    </div>
+
+    <!-- index.htmlと全く同じSpine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        // index.htmlのSpine初期化コードをそのままコピー
+        
+        // ぷらっとくん設定読み込み
+        function loadPurattokuConfing() {
+            const configElement = document.getElementById('purattokun-config');
+            if (configElement) {
+                return {
+                    x: parseFloat(configElement.dataset.x) || 18,
+                    y: parseFloat(configElement.dataset.y) || 49,
+                    scale: parseFloat(configElement.dataset.scale) || 0.25,
+                    fadeDelay: parseInt(configElement.dataset.fadeDelay) || 1500,
+                    fadeDuration: parseInt(configElement.dataset.fadeDuration) || 2000
+                };
+            }
+            
+            return {
+                x: 18,
+                y: 49,
+                scale: 0.25,
+                fadeDelay: 1500,
+                fadeDuration: 2000
+            };
+        }
+        
+        // Spineキャラクター初期化（シンプル版）
+        async function initSpineCharacter() {
+            try {
+                const canvas = document.getElementById('purattokun-canvas');
+                const gl = canvas.getContext('webgl', { alpha: true });
+                
+                if (!gl) {
+                    throw new Error('WebGLサポートなし');
+                }
+                
+                // Canvas サイズ更新
+                const updateCanvasSize = () => {
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                };
+                
+                updateCanvasSize();
+                window.addEventListener('resize', updateCanvasSize);
+                
+                console.log('📁 Spineファイル読み込み中...');
+                
+                // アセットマネージャー
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了待ち
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100;
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        if (assetManager.isLoadingComplete()) {
+                            resolve();
+                        } else if (checkCount >= maxChecks) {
+                            reject(new Error('アセット読み込みタイムアウト'));
+                        } else {
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    
+                    checkAssets();
+                });
+                
+                console.log('🎬 アニメーション開始...');
+                
+                // Atlas取得
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                
+                // SkeletonData読み込み
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                // Skeleton作成
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = canvas.width / 2;
+                skeleton.y = canvas.height / 2;
+                skeleton.scaleX = skeleton.scaleY = 0.8;
+                
+                // AnimationState作成
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーション設定
+                if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                    console.log('🎭 taikiアニメーション設定完了');
+                }
+                
+                // レンダラー作成
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                let lastTime = Date.now() / 1000;
+                
+                // レンダリングループ
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                console.log('✅ Spine初期化成功');
+                
+            } catch (error) {
+                console.error('Spine初期化エラー:', error);
+                // フォールバック画像を表示
+                const fallback = document.getElementById('purattokun-fallback');
+                if (fallback) {
+                    fallback.style.display = 'block';
+                    canvas.style.display = 'none';
+                }
+            }
+        }
+        
+        // 初期化実行
+        window.addEventListener('load', () => {
+            console.log('📄 ページ読み込み完了');
+            setTimeout(initSpineCharacter, 1000);
+        });
+    </script>
+</body>
+</html>

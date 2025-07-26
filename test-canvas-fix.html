@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas問題修正テスト</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        .test-container {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+        .canvas-container {
+            position: relative;
+            width: 400px;
+            height: 300px;
+            margin: 20px auto;
+            border: 2px solid blue;
+            background: #f0f0f0;
+        }
+        .test-canvas {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid red;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #007cba;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f4fd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Canvas問題修正テスト</h1>
+    
+    <div class="test-container">
+        <h2>テスト1: Canvas作成と基本描画</h2>
+        <div class="canvas-container">
+            <canvas id="test1" class="test-canvas" width="100" height="100"></canvas>
+        </div>
+        <button onclick="test1Draw()">Canvas 2D描画テスト</button>
+        <button onclick="test1WebGL()">WebGL描画テスト</button>
+        <div class="result" id="result1">結果がここに表示されます</div>
+    </div>
+    
+    <div class="test-container">
+        <h2>テスト2: CSS サイズ明示</h2>
+        <div class="canvas-container">
+            <canvas id="test2" class="test-canvas" width="100" height="100" style="width: 100px; height: 100px;"></canvas>
+        </div>
+        <button onclick="test2Draw()">描画テスト</button>
+        <div class="result" id="result2">結果がここに表示されます</div>
+    </div>
+    
+    <div class="test-container">
+        <h2>テスト3: 動的サイズ設定</h2>
+        <div class="canvas-container">
+            <canvas id="test3" class="test-canvas"></canvas>
+        </div>
+        <button onclick="test3Setup()">動的セットアップ</button>
+        <button onclick="test3Draw()">描画テスト</button>
+        <div class="result" id="result3">結果がここに表示されます</div>
+    </div>
+    
+    <div class="test-container">
+        <h2>テスト4: Spine統合テスト</h2>
+        <div class="canvas-container">
+            <canvas id="test4" class="test-canvas"></canvas>
+        </div>
+        <button onclick="test4Setup()">Spineセットアップ</button>
+        <button onclick="test4Fallback()">フォールバック表示</button>
+        <div class="result" id="result4">結果がここに表示されます</div>
+        
+        <!-- フォールバック画像 -->
+        <img src="assets/images/purattokunn.png" 
+             id="fallback4" 
+             style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; display: none; border: 2px solid orange;">
+    </div>
+
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        function updateResult(id, message) {
+            document.getElementById(id).innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+        }
+        
+        // テスト1: 基本Canvas描画
+        function test1Draw() {
+            const canvas = document.getElementById('test1');
+            const ctx = canvas.getContext('2d');
+            
+            console.log('Test1 Canvas info:', {
+                width: canvas.width,
+                height: canvas.height,
+                clientWidth: canvas.clientWidth,
+                clientHeight: canvas.clientHeight
+            });
+            
+            // 背景をクリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 背景色
+            ctx.fillStyle = 'yellow';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 赤い円
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(50, 50, 30, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // テキスト
+            ctx.fillStyle = 'black';
+            ctx.font = '12px Arial';
+            ctx.fillText('TEST1', 35, 55);
+            
+            updateResult('result1', '✅ Canvas 2D描画完了（黄色背景+赤い円が見えますか？）');
+        }
+        
+        function test1WebGL() {
+            const canvas = document.getElementById('test1');
+            const gl = canvas.getContext('webgl', { alpha: false });
+            
+            if (!gl) {
+                updateResult('result1', '❌ WebGL未対応');
+                return;
+            }
+            
+            // 緑色でクリア
+            gl.clearColor(0.0, 1.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            
+            updateResult('result1', '✅ WebGL描画完了（緑色が見えますか？）');
+        }
+        
+        // テスト2: CSS サイズ明示
+        function test2Draw() {
+            const canvas = document.getElementById('test2');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial';
+            ctx.fillText('TEST2', 30, 55);
+            
+            updateResult('result2', '✅ CSS明示描画完了（青色背景が見えますか？）');
+        }
+        
+        // テスト3: 動的サイズ設定
+        function test3Setup() {
+            const canvas = document.getElementById('test3');
+            
+            // 動的にサイズを設定
+            canvas.width = 120;
+            canvas.height = 120;
+            canvas.style.width = '120px';
+            canvas.style.height = '120px';
+            
+            updateResult('result3', '✅ 動的サイズ設定完了 (120x120)');
+        }
+        
+        function test3Draw() {
+            const canvas = document.getElementById('test3');
+            const ctx = canvas.getContext('2d');
+            
+            // グラデーション背景
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, 'purple');
+            gradient.addColorStop(1, 'pink');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.fillText('TEST3', 40, 65);
+            
+            updateResult('result3', '✅ 動的Canvas描画完了（紫→ピンクグラデーションが見えますか？）');
+        }
+        
+        // テスト4: Spine統合
+        async function test4Setup() {
+            try {
+                const canvas = document.getElementById('test4');
+                
+                // サイズ設定
+                canvas.width = 100;
+                canvas.height = 100;
+                canvas.style.width = '100px';
+                canvas.style.height = '100px';
+                
+                const gl = canvas.getContext('webgl', { alpha: true });
+                if (!gl) {
+                    throw new Error('WebGL未対応');
+                }
+                
+                updateResult('result4', '🔄 Spine読み込み中...');
+                
+                // アセットマネージャー
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み待ち
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 50;
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        if (assetManager.isLoadingComplete()) {
+                            resolve();
+                        } else if (checkCount > maxChecks) {
+                            reject(new Error('タイムアウト'));
+                        } else {
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    checkAssets();
+                });
+                
+                // Spine設定
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = canvas.width / 2;
+                skeleton.y = canvas.height / 2;
+                skeleton.scaleX = skeleton.scaleY = 2.0;  // 大きなスケール
+                
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーション設定
+                if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                }
+                
+                // レンダラー
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                let lastTime = Date.now() / 1000;
+                
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                updateResult('result4', '✅ Spine初期化成功（ぷらっとくんが見えますか？）');
+                
+            } catch (error) {
+                updateResult('result4', '❌ Spine初期化失敗: ' + error.message);
+            }
+        }
+        
+        function test4Fallback() {
+            const canvas = document.getElementById('test4');
+            const fallback = document.getElementById('fallback4');
+            
+            canvas.style.display = 'none';
+            fallback.style.display = 'block';
+            
+            updateResult('result4', '✅ フォールバック画像表示中');
+        }
+        
+        // ページ読み込み時の自動テスト
+        window.addEventListener('load', () => {
+            console.log('Canvas修正テストページ読み込み完了');
+        });
+    </script>
+</body>
+</html>

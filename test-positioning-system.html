@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Positioning System v2 - テスト</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .test-hero {
+            position: relative;
+            height: 600px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+        
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #test-canvas {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            cursor: grab;
+        }
+        
+        #test-canvas:active {
+            cursor: grabbing;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .control-group button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .control-group button:hover {
+            background: #ff5252;
+        }
+        
+        .control-group button.active {
+            background: #4caf50;
+        }
+        
+        .info-panel {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        
+        .info-panel h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        
+        .info-panel pre {
+            background: white;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status.ok { background: #c8e6c9; color: #2e7d32; }
+        .status.warning { background: #fff3e0; color: #f57c00; }
+        .status.error { background: #ffcdd2; color: #c62828; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-hero">
+            <img src="assets/images/クラウドパートナーTOP.png" 
+                 alt="テスト背景画像" 
+                 class="background-image">
+            
+            <!-- テスト用Canvas -->
+            <canvas id="test-canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <h2>🧪 Spine Positioning System v2 テスト</h2>
+            
+            <div class="control-group">
+                <label>🔧 システム制御</label>
+                <button onclick="testInitializeSystem()">システム初期化</button>
+                <button onclick="testTogglePositioning()">ポジショニングモード切替</button>
+                <button onclick="testShowStatus()">システム状態表示</button>
+            </div>
+            
+            <div class="control-group">
+                <label>👤 キャラクター操作</label>
+                <button onclick="testRegisterCharacter()">キャラクター登録</button>
+                <button onclick="testMoveCharacter()">位置設定テスト</button>
+                <button onclick="testExportSettings()">設定エクスポート</button>
+            </div>
+            
+            <div class="control-group">
+                <label>🔍 デバッグ機能</label>
+                <button onclick="testCoordinateConversion()">座標変換テスト</button>
+                <button onclick="testResponsiveResize()">レスポンシブテスト</button>
+                <button onclick="testShowDebugInfo()">デバッグ情報表示</button>
+            </div>
+            
+            <div class="info-panel">
+                <h4>📊 システム状態</h4>
+                <div id="system-status">
+                    <span class="status warning">未初期化</span>
+                </div>
+                
+                <h4>📝 テスト結果</h4>
+                <pre id="test-results">テストを実行してください...</pre>
+                
+                <h4>💡 使用方法</h4>
+                <ul>
+                    <li><strong>システム初期化</strong>: まずこのボタンを押してシステムを初期化</li>
+                    <li><strong>キャラクター登録</strong>: テスト用キャラクターを登録</li>
+                    <li><strong>ポジショニングモード切替</strong>: ドラッグによる配置機能を有効/無効</li>
+                    <li><strong>ドラッグテスト</strong>: ポジショニングモード有効時に白枠をドラッグ</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden config for testing -->
+    <div id="test-config" style="display: none;"
+         data-x="50"
+         data-y="50"
+         data-scale="1.0"
+         data-fade-delay="500"
+         data-fade-duration="1000">
+    </div>
+
+    <!-- Dependencies -->
+    <script src="assets/spine/spine-responsive-coordinate-system.js"></script>
+    <script src="assets/spine/spine-drag-positioning-v2.js"></script>
+    <script src="assets/spine/spine-positioning-system.js"></script>
+    
+    <script>
+        let testSystem = null;
+        
+        // ログ表示用
+        function log(message, data = null) {
+            const results = document.getElementById('test-results');
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = `[${timestamp}] ${message}${data ? '\n' + JSON.stringify(data, null, 2) : ''}`;
+            results.textContent = logLine + '\n\n' + results.textContent;
+            console.log(message, data);
+        }
+        
+        function updateStatus(status, message) {
+            const statusElement = document.getElementById('system-status');
+            const className = status === 'ok' ? 'ok' : status === 'error' ? 'error' : 'warning';
+            statusElement.innerHTML = `<span class="status ${className}">${message}</span>`;
+        }
+        
+        // テスト関数群
+        async function testInitializeSystem() {
+            try {
+                log('🚀 システム初期化開始...');
+                
+                testSystem = new SpinePositioningSystem({
+                    debugMode: true,
+                    enableDrag: true,
+                    enableResize: true,
+                    autoInitialize: false
+                });
+                
+                await testSystem.initialize();
+                
+                log('✅ システム初期化成功');
+                updateStatus('ok', 'システム初期化済み');
+                
+            } catch (error) {
+                log('❌ システム初期化失敗', error);
+                updateStatus('error', '初期化失敗');
+            }
+        }
+        
+        function testRegisterCharacter() {
+            if (!testSystem || !testSystem.isInitialized) {
+                log('⚠️ システムが初期化されていません');
+                return;
+            }
+            
+            const canvas = document.getElementById('test-canvas');
+            
+            const success = testSystem.registerCharacter('test-character', {
+                canvas: canvas,
+                htmlConfig: 'test-config',
+                initialPosition: { x: 50, y: 50 }
+            });
+            
+            if (success) {
+                log('✅ テストキャラクター登録成功');
+                updateStatus('ok', 'キャラクター登録済み');
+            } else {
+                log('❌ キャラクター登録失敗');
+            }
+        }
+        
+        function testTogglePositioning() {
+            if (!testSystem) {
+                log('⚠️ システムが初期化されていません');
+                return;
+            }
+            
+            const isActive = testSystem.togglePositioningMode();
+            log(`🔧 ポジショニングモード: ${isActive ? '有効' : '無効'}`);
+            
+            if (isActive) {
+                log('💡 白枠をドラッグして位置を変更できます');
+            }
+        }
+        
+        function testMoveCharacter() {
+            if (!testSystem || !testSystem.coordinateSystem) {
+                log('⚠️ システムが初期化されていません');
+                return;
+            }
+            
+            const randomX = Math.random() * 100;
+            const randomY = Math.random() * 100;
+            
+            const success = testSystem.coordinateSystem.updateCharacterPosition(
+                'test-character',
+                randomX,
+                randomY,
+                1.0
+            );
+            
+            if (success) {
+                log(`🎯 キャラクター位置更新: (${randomX.toFixed(1)}%, ${randomY.toFixed(1)}%)`);
+            } else {
+                log('❌ 位置更新失敗');
+            }
+        }
+        
+        function testExportSettings() {
+            if (!testSystem) {
+                log('⚠️ システムが初期化されていません');
+                return;
+            }
+            
+            const settings = testSystem.exportSettings();
+            log('📄 設定エクスポート完了', settings);
+        }
+        
+        function testCoordinateConversion() {
+            if (!testSystem || !testSystem.coordinateSystem) {
+                log('⚠️ システムが初期化されていません');
+                return;
+            }
+            
+            const testX = 25, testY = 75;
+            const pixelPos = testSystem.coordinateSystem.viewportToPixel(testX, testY);
+            const viewportPos = testSystem.coordinateSystem.pixelToViewport(pixelPos.x, pixelPos.y);
+            
+            log(`🔄 座標変換テスト:
+入力: (${testX}%, ${testY}%)
+→ ピクセル: (${pixelPos.x.toFixed(1)}px, ${pixelPos.y.toFixed(1)}px)
+→ ビューポート: (${viewportPos.x.toFixed(1)}%, ${viewportPos.y.toFixed(1)}%)`);
+        }
+        
+        function testResponsiveResize() {
+            if (!testSystem || !testSystem.coordinateSystem) {
+                log('⚠️ システムが初期化されていません');
+                return;
+            }
+            
+            log('🔄 レスポンシブテスト開始（3秒後にウィンドウサイズを変更してください）');
+            
+            setTimeout(() => {
+                testSystem.coordinateSystem.handleResize();
+                log('✅ レスポンシブテスト: リサイズ処理実行');
+            }, 3000);
+        }
+        
+        function testShowStatus() {
+            if (!testSystem) {
+                log('⚠️ システムが初期化されていません');
+                return;
+            }
+            
+            const debugInfo = testSystem.debugInfo();
+            log('🔍 システム状態', debugInfo);
+        }
+        
+        function testShowDebugInfo() {
+            log('🔍 デバッグ情報収集中...');
+            
+            const info = {
+                windowSize: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                },
+                testCanvas: {
+                    exists: !!document.getElementById('test-canvas'),
+                    rect: document.getElementById('test-canvas')?.getBoundingClientRect()
+                },
+                globalVars: {
+                    spineCoordinateSystem: !!window.spineCoordinateSystem,
+                    spineDragSystem: !!window.spineDragSystem,
+                    spinePositioningSystem: !!window.spinePositioningSystem,
+                    positioningMode: window.spinePositioningModeActive || false
+                }
+            };
+            
+            log('🔍 デバッグ情報', info);
+        }
+        
+        // 初期状態表示
+        window.addEventListener('load', () => {
+            log('🏁 テストページ読み込み完了');
+            log('📌 まず「システム初期化」ボタンを押してください');
+        });
+    </script>
+</body>
+</html>

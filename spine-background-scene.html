@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>背景画像シーン</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+
+        .scene-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .debug-frame {
+            position: absolute;
+            pointer-events: none;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .viewport-frame {
+            border: 2px dashed blue;
+            width: 400px;
+            height: 250px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="scene-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        <canvas id="spine-canvas" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 2px solid red;"></canvas>
+        <div class="debug-frame viewport-frame"></div>
+    </div>
+
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    <script>
+        async function init() {
+            while (typeof spine === 'undefined') {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            const canvas = document.getElementById('spine-canvas');
+            const gl = canvas.getContext('webgl', { alpha: true });
+            
+            canvas.width = 400;
+            canvas.height = 200;
+
+            const assetManager = new spine.AssetManager(gl, 'assets/spine/characters/purattokun/');
+            assetManager.loadTextureAtlas('purattokun.atlas');
+            assetManager.loadJson('purattokun.json');
+
+            while (!assetManager.isLoadingComplete()) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            const atlas = assetManager.get('purattokun.atlas');
+            const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+            const skeletonJson = new spine.SkeletonJson(atlasLoader);
+            const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+
+            const skeleton = new spine.Skeleton(skeletonData);
+            skeleton.x = 0;
+            skeleton.y = 0;
+            skeleton.scaleX = skeleton.scaleY = 0.5;
+
+            const animationStateData = new spine.AnimationStateData(skeleton.data);
+            const animationState = new spine.AnimationState(animationStateData);
+            animationState.setAnimation(0, 'taiki', true);
+
+            const renderer = new spine.SceneRenderer(canvas, gl);
+
+            function render() {
+                // ビューポートサイズを取得して一度だけ出力
+                if (!window.viewportChecked) {
+                    const viewport = gl.getParameter(gl.VIEWPORT);
+                    console.log('実際のビューポート:', viewport); // [x, y, width, height]
+                    window.viewportChecked = true;
+                }
+
+                animationState.update(1/60);
+                animationState.apply(skeleton);
+                skeleton.updateWorldTransform();
+
+                gl.clearColor(0, 0, 0, 0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+
+                renderer.begin();
+                renderer.drawSkeleton(skeleton, true);
+                renderer.end();
+
+                requestAnimationFrame(render);
+            }
+            render();
+        }
+        init();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Positioning System 説明書</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            background: white;
+            padding: 40px 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #ff6b6b;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.2rem;
+        }
+
+        .section {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .section-content {
+            padding: 30px;
+        }
+
+        .diagram-container {
+            background: #f8f9fa;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .current-system, .new-system {
+            display: inline-block;
+            width: 45%;
+            margin: 10px;
+            vertical-align: top;
+        }
+
+        .system-box {
+            background: white;
+            border: 3px solid;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .current-system .system-box {
+            border-color: #ff6b6b;
+        }
+
+        .new-system .system-box {
+            border-color: #4caf50;
+        }
+
+        .system-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .current-system .system-title {
+            background: #ffe5e5;
+            color: #d32f2f;
+        }
+
+        .new-system .system-title {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .step {
+            background: #f0f0f0;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .step-number {
+            background: #ff6b6b;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            background: #fffacd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #f0e68c;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            font-size: 0.9rem;
+            z-index: 1000;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+
+        .visual-demo {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #fafafa;
+        }
+
+        .demo-screen {
+            width: 100%;
+            max-width: 1000px;
+            height: 600px;
+            border-radius: 10px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            background-image: url('assets/images/クラウドパートナーTOP.png');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #e8f4fd;
+        }
+        
+        
+
+        
+        /* 既存システム実演では本番環境のCSS設定をそのまま使用 */
+        /* .background-container .cloud のCSS設定が自動適用される */
+        
+        /* ✅ テンプレート通りのズレない構造CSS */
+        
+        /* 1. 親コンテナ：シンプルな基準作り */
+        .background-container {
+            position: relative;          /* 子要素の基準点 */
+            width: 100%;                /* レスポンシブ幅 */
+            max-width: 1200px;          /* 最大幅制限 */
+            margin: 0 auto;             /* 中央配置 */
+            overflow: hidden;           /* はみ出し制御 */
+            /* ❌ height指定なし = 自然なサイズに従う */
+        }
+        
+        /* 2. 背景画像：自然なサイズの基準 */
+        .background-image {
+            width: 100%;                /* 親の幅いっぱい */
+            height: auto;               /* 自然な高さ */
+            display: block;             /* inline要素の隙間除去 */
+        }
+        
+        /* 3. 配置要素：背景基準の相対配置 */
+        .positioned-element {
+            position: absolute;         /* 親基準の絶対配置 */
+            left: 50%;                  /* 背景画像の中央 */
+            top: 50%;                   /* 背景画像の中央 */
+            transform: translate(-50%, -50%); /* 中央揃え */
+            width: 80px;                /* 固定サイズで見えやすく */
+            height: 80px;               /* 固定サイズで見えやすく */
+            pointer-events: auto;       /* クリック可能 */
+            z-index: 10;                /* 重なり順序 */
+        }
+        
+        /* 4. アニメーション要素：背景基準の動き */
+        .animated-element {
+            position: absolute;         /* 親基準 */
+            opacity: 0.7;               /* 透明度 */
+            pointer-events: none;       /* クリック無効 */
+            z-index: 5;                 /* 重なり順序 */
+        }
+        
+        /* 雲のアニメーション（テンプレート準拠） */
+        .cloud1 { 
+            left: -5%; 
+            top: 10%; 
+            width: 8%; 
+            animation: moveCloud1 25s linear infinite; 
+        }
+        .cloud2 { 
+            left: -5%; 
+            top: 15%; 
+            width: 8%; 
+            animation: moveCloud2 30s linear infinite; 
+        }
+        .cloud3 { 
+            left: -5%; 
+            top: 8%; 
+            width: 8%; 
+            animation: moveCloud3 35s linear infinite; 
+        }
+        
+        @keyframes moveCloud1 {
+            from { left: -10%; }        /* 背景基準開始 */
+            to { left: 110%; }          /* 背景基準終了 */
+        }
+        @keyframes moveCloud2 {
+            from { left: -10%; }
+            to { left: 110%; }
+        }
+        @keyframes moveCloud3 {
+            from { left: -10%; }
+            to { left: 110%; }
+        }
+        
+        /* ドラッグ機能用の追加スタイル */
+        .draggable-character {
+            cursor: move;               /* ドラッグ可能カーソル */
+            border: 2px dashed rgba(255, 107, 107, 0.3); /* ドラッグ境界表示 */
+        }
+        
+        .draggable-character:hover {
+            border-color: rgba(255, 107, 107, 0.6); /* ホバー時強調 */
+        }
+        
+        .draggable-character.dragging {
+            border-color: #ff6b6b;     /* ドラッグ中強調 */
+            box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3); /* 浮上効果 */
+        }
+        
+        
+
+        .demo-controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .demo-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        .demo-button:hover {
+            background: #ff5252;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .comparison-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+
+        .comparison-table .current {
+            background: #ffe5e5;
+        }
+
+        .comparison-table .new {
+            background: #e8f5e8;
+        }
+
+        .phase-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .phase {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .phase::after {
+            content: '→';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2rem;
+            color: #ccc;
+        }
+
+        .phase:last-child::after {
+            display: none;
+        }
+
+        .phase-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .phase-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .phase-desc {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8a80 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .highlight-box h3 {
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+
+        @media (max-width: 768px) {
+            .current-system, .new-system {
+                width: 100%;
+                display: block;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .phase-timeline {
+                flex-direction: column;
+            }
+
+            .phase::after {
+                content: '↓';
+                right: auto;
+                bottom: -15px;
+                top: auto;
+            }
+
+            .demo-screen {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <h1>🎯 Spine Positioning System</h1>
+            <p class="subtitle">ドラッグ&ドロップでキャラクター配置ができる次世代システム</p>
+        </div>
+
+        <!-- システム概要 -->
+        <div class="section">
+            <div class="section-header">
+                📋 システム概要
+            </div>
+            <div class="section-content">
+                <p><strong>Spine Positioning System</strong>とは、Webページ上の
+                <span class="tooltip" data-tooltip="ゲームやアニメーションで使われる2Dキャラクター">Spineキャラクター</span>
+                （ぷらっとくんなど）を、
+                <span class="tooltip" data-tooltip="マウスでクリックして引っ張って移動させること">ドラッグ&ドロップ</span>
+                で簡単に配置できるようにするシステムです。</p>
+                
+                <div class="highlight-box">
+                    <h3>🎯 主な目的</h3>
+                    <p>複雑なコード編集なしに、視覚的にキャラクターの位置を調整できるようにすること</p>
+                </div>
+
+                <h3>🔧 現在の問題点</h3>
+                <ul style="margin: 15px 0; padding-left: 20px;">
+                    <li>キャラクターの位置調整にはHTMLコードの直接編集が必要</li>
+                    <li>数値を変更してブラウザで確認する試行錯誤が必要</li>
+                    <li>ウィンドウサイズが変わると位置がずれることがある</li>
+                    <li>新しいページにキャラクターを配置するのに時間がかかる</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 現在 vs 新システムの比較 -->
+        <div class="section">
+            <div class="section-header">
+                🔄 現在のシステム vs 新システム
+            </div>
+            <div class="section-content">
+                <div class="diagram-container">
+                    <div class="current-system">
+                        <div class="system-box">
+                            <div class="system-title">📝 現在のシステム</div>
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                HTMLファイルを開く
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <span class="tooltip" data-tooltip="data-x=&quot;18&quot; data-y=&quot;49&quot;のような数値">座標数値</span>を手動で変更
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                ブラウザでリロードして確認
+                            </div>
+                            <div class="step">
+                                <span class="step-number">4</span>
+                                気に入らなければ①に戻る
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="new-system">
+                        <div class="system-box">
+                            <div class="system-title">✨ 新システム</div>
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <span class="tooltip" data-tooltip="配置モードを有効にするボタンを押す">ポジショニングモード</span>を有効化
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                キャラクターをドラッグして移動
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                自動的にコードが生成される
+                            </div>
+                            <div class="step">
+                                <span class="step-number">4</span>
+                                完了！
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>項目</th>
+                            <th class="current">現在のシステム</th>
+                            <th class="new">新システム</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>操作方法</strong></td>
+                            <td class="current">HTMLコードの直接編集</td>
+                            <td class="new">ドラッグ&ドロップ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>必要な知識</strong></td>
+                            <td class="current">HTML、CSS、座標の概念</td>
+                            <td class="new">マウス操作のみ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>調整時間</strong></td>
+                            <td class="current">5-10分（試行錯誤含む）</td>
+                            <td class="new">30秒</td>
+                        </tr>
+                        <tr>
+                            <td><strong>結果確認</strong></td>
+                            <td class="current">ブラウザリロード必要</td>
+                            <td class="new">リアルタイム表示</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 視覚的デモ -->
+        <div class="section">
+            <div class="section-header">
+                🎮 視覚的デモ
+            </div>
+            <div class="section-content">
+                <p>以下は新システムでの実際の操作デモです。<strong>テンプレート準拠のズレない構造</strong>で本物のぷらっとくんと背景画像を使用しています。</p>
+                
+                <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
+                    <h4 style="color: #155724; margin-bottom: 8px;">✅ 視覚的デモもテンプレート準拠</h4>
+                    <ul style="color: #155724; margin: 0; padding-left: 20px;">
+                        <li><strong>ズレない構造</strong>: background-container → 直接子要素</li>
+                        <li><strong>背景基準配置</strong>: 全要素が背景画像を基準に配置</li>
+                        <li><strong>ドラッグ機能付き</strong>: ぷらっとくんをドラッグして位置テスト可能</li>
+                        <li><strong>雲アニメーション</strong>: 背景基準の%アニメーション</li>
+                    </ul>
+                </div>
+                
+                <div class="visual-demo">
+                    <!-- ✅ テンプレート通りのズレない構造（視覚的デモ用） -->
+                    <div class="background-container" id="demoScreen">
+                        <!-- 背景画像（サイズの基準） -->
+                        <img src="assets/images/クラウドパートナーTOP.png" 
+                             alt="デモ背景画像" 
+                             class="background-image">
+                        
+                        <!-- アニメーション要素（背景基準） -->
+                        <img src="assets/images/kumo1.png" alt="雲1" class="animated-element cloud1">
+                        <img src="assets/images/kumo2.png" alt="雲2" class="animated-element cloud2">
+                        <img src="assets/images/kumo3.png" alt="雲3" class="animated-element cloud3">
+                        
+                        <!-- 配置要素（背景基準・ドラッグ可能） -->
+                        <canvas id="demo-purattokun-canvas" class="positioned-element draggable-character" style="display: none;"></canvas>
+                        
+                        <!-- フォールバック用静的画像（WebGL未対応時に確実に表示） -->
+                        <img src="assets/images/purattokunn.png" 
+                             alt="ぷらっとくん" 
+                             id="demo-fallback-image"
+                             class="positioned-element draggable-character"
+                             style="object-fit: contain; display: block; border: 2px dashed rgba(255, 107, 107, 0.3);"
+                             onload="console.log('✅ フォールバック画像読み込み成功')"
+                             onerror="console.error('❌ フォールバック画像読み込み失敗'); this.style.border='3px solid red'; this.alt='画像読み込みエラー'">
+                    </div>
+                    <div class="demo-controls">
+                        <button class="demo-button" onclick="enablePositioning()">ポジショニングモード有効</button>
+                        <button class="demo-button" onclick="resetPosition()">位置リセット</button>
+                        <button class="demo-button" onclick="forceFallback()">フォールバック表示</button>
+                        <button class="demo-button" onclick="showCoordinates()">座標表示</button>
+                        <button class="demo-button" onclick="playAnimation()">アニメーション再生</button>
+                    </div>
+                    <div id="coordinateDisplay" style="text-align: center; margin-top: 10px; font-weight: bold;"></div>
+                    <div id="spineStatus" style="text-align: center; margin-top: 5px; color: #666; font-size: 0.9rem;"></div>
+                </div>
+
+                <p style="text-align: center; color: #666; font-style: italic;">
+                    ↑ 上記のぷらっとくんをドラッグして移動してみてください（Spine Positioning System テスト版）
+                </p>
+            </div>
+        </div>
+        
+        <!-- 既存システム実演 -->
+        <div class="section">
+            <div class="section-header">
+                🏠 既存システム実演（本番環境と同じ）
+            </div>
+            <div class="section-content">
+                <p>以下は現在のindex.htmlと<strong>全く同じシステム</strong>です。開発が進んだらこちらでもポジショニング機能をテストできます。</p>
+                
+                <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
+                    <h4 style="color: #155724; margin-bottom: 8px;">✅ テンプレート準拠の修正</h4>
+                    <ul style="color: #155724; margin: 0; padding-left: 20px;">
+                        <li><strong>ズレない構造</strong>: CRITICAL_STRUCTURE_DIFFERENCE_ANALYSIS.mdのテンプレート適用</li>
+                        <li><strong>シンプル2層構造</strong>: background-container → 直接子要素（余分なネスト削除）</li>
+                        <li><strong>自然サイズフロー</strong>: 固定高さ削除、background-imageの自然サイズに従う</li>
+                        <li><strong>統一座標系</strong>: 全要素が同じ基準点（background-container）を使用</li>
+                    </ul>
+                </div>
+                
+                <div class="visual-demo">
+                    <!-- ✅ テンプレート通りのズレない構造 -->
+                    <div class="background-container">
+                        <!-- 背景画像（サイズの基準） -->
+                        <img src="assets/images/クラウドパートナーTOP.png" 
+                             alt="クラウドパートナー背景画像" 
+                             class="background-image">
+                        
+                        <!-- アニメーション要素（背景基準） -->
+                        <img src="assets/images/kumo1.png" alt="雲1" class="animated-element cloud1">
+                        <img src="assets/images/kumo2.png" alt="雲2" class="animated-element cloud2">
+                        <img src="assets/images/kumo3.png" alt="雲3" class="animated-element cloud3">
+                        
+                        <!-- 配置要素（背景基準） -->
+                        <canvas id="original-purattokun-canvas" class="positioned-element"></canvas>
+                    </div>
+                    
+                    <!-- 本番環境と同じ設定要素（重要！） -->
+                    <div id="original-purattokun-config" style="display: none;"
+                         data-x="35"
+                         data-y="75" 
+                         data-scale="0.9"
+                         data-fade-delay="1500"
+                         data-fade-duration="2000">
+                    </div>
+                    <div class="demo-controls">
+                        <button class="demo-button" onclick="initOriginalSystem()">既存システム開始</button>
+                        <button class="demo-button" onclick="showOriginalInfo()">システム情報表示</button>
+                        <button class="demo-button" onclick="testOriginalAnimation()">アニメーション確認</button>
+                    </div>
+                    <div id="originalSystemStatus" style="text-align: center; margin-top: 10px; font-weight: bold;"></div>
+                </div>
+
+                <div style="text-align: center; margin-top: 15px;">
+                    <p style="color: #666; font-style: italic; margin-bottom: 5px;">
+                        ↑ 上記は本番環境のindex.htmlと全く同じシステムです
+                    </p>
+                    <p style="color: #28a745; font-weight: bold; font-size: 0.9rem;">
+                        ✅ 雲のスケール問題修正済み • ✅ ぷらっとくん表示修正済み
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要機能 -->
+        <div class="section">
+            <div class="section-header">
+                ⭐ 主要機能
+            </div>
+            <div class="section-content">
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🖱️</div>
+                        <div class="feature-title">ドラッグ&ドロップ配置</div>
+                        <p>マウスでキャラクターを直感的に移動できます</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📐</div>
+                        <div class="feature-title">リアルタイム座標表示</div>
+                        <p>移動中の座標がリアルタイムで表示されます</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔄</div>
+                        <div class="feature-title">レスポンシブ対応</div>
+                        <p>ウィンドウサイズが変わっても位置関係を維持</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💾</div>
+                        <div class="feature-title">自動コード生成</div>
+                        <p>最終位置のHTMLコードが自動生成されます</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <div class="feature-title">境界制限</div>
+                        <p>画面外に出ないよう自動的に位置調整</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔧</div>
+                        <div class="feature-title">既存システム互換</div>
+                        <p>現在のぷらっとくんに影響を与えません</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- システム構造 -->
+        <div class="section">
+            <div class="section-header">
+                🏗️ システム構造
+            </div>
+            <div class="section-content">
+                <p>新システムは以下の3つの層で構成されます：</p>
+                
+                <div style="margin: 30px 0;">
+                    <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 10px;">
+                        <h4>🎨 UI層（ユーザーインターフェース層）</h4>
+                        <p>・ドラッグ&ドロップの操作画面<br>
+                        ・座標表示パネル<br>
+                        ・モード切り替えボタン</p>
+                    </div>
+                    
+                    <div style="background: #f3e5f5; padding: 20px; border-radius: 10px; margin-bottom: 10px;">
+                        <h4>⚙️ 制御層（コントロール層）</h4>
+                        <p>・
+                        <span class="tooltip" data-tooltip="マウスの動きを検知してキャラクターを移動させる処理">ドラッグイベント処理</span><br>
+                        ・
+                        <span class="tooltip" data-tooltip="画面上の%とピクセルを変換する計算">座標変換処理</span><br>
+                        ・設定保存処理</p>
+                    </div>
+                    
+                    <div style="background: #e8f5e8; padding: 20px; border-radius: 10px;">
+                        <h4>🎯 描画層（レンダリング層）</h4>
+                        <p>・既存のSpineキャラクター表示<br>
+                        ・背景画像との位置関係<br>
+                        ・アニメーション処理</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h3>🛡️ 安全性の保証</h3>
+                    <p>新システムは既存の描画層の<strong>上</strong>に追加されるため、現在のぷらっとくんの動作には一切影響しません</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 既存ページでの動作 -->
+        <div class="section">
+            <div class="section-header">
+                🌐 既存ページでの動作方法
+            </div>
+            <div class="section-content">
+                <h3>📱 index.html での使用手順</h3>
+                <ol style="font-size: 1.1rem; line-height: 2;">
+                    <li><strong>ページを開く：</strong> 通常通りindex.htmlをブラウザで開きます</li>
+                    <li><strong>ポジショニングモード有効化：</strong> ブラウザのコンソール（F12）で <code>togglePositioning()</code> を実行</li>
+                    <li><strong>視覚的な変化：</strong> ぷらっとくんの周りに薄い枠が表示されます</li>
+                    <li><strong>ドラッグ操作：</strong> ぷらっとくんをマウスでドラッグして好きな位置に移動</li>
+                    <li><strong>座標確認：</strong> 移動中、画面右上に現在の座標が表示されます</li>
+                    <li><strong>設定保存：</strong> ドラッグを離すと、自動的にHTMLコードが生成されコンソールに表示</li>
+                </ol>
+
+                <div style="background: #f0f8ff; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #4caf50;">
+                    <h4>💡 生成されるコードの例</h4>
+                    <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 0.9rem;">
+&lt;div id="purattokun-config" style="display: none;"
+     data-x="25.5"     &lt;!-- 画面幅の25.5%の位置 --&gt;
+     data-y="67.3"     &lt;!-- 画面高さの67.3%の位置 --&gt;
+     data-scale="0.9"
+     data-fade-delay="1500"
+     data-fade-duration="2000"&gt;
+&lt;/div&gt;</pre>
+                    <p style="margin-top: 10px; color: #666;">このコードをHTMLファイルにコピー&ペーストするだけで位置が固定されます</p>
+                </div>
+
+                <h3>🔄 通常モードとの切り替え</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <td><strong>通常モード</strong></td>
+                        <td>ぷらっとくんが通常通り表示・アニメーション</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ポジショニングモード</strong></td>
+                        <td>ぷらっとくんがドラッグ可能、座標表示有効</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 実装段階 -->
+        <div class="section">
+            <div class="section-header">
+                📅 実装段階（フェーズ計画）
+            </div>
+            <div class="section-content">
+                <div class="phase-timeline">
+                    <div class="phase">
+                        <div class="phase-circle">1</div>
+                        <div class="phase-title">Phase 1</div>
+                        <div class="phase-desc">基盤システム<br>（ドラッグ機能）</div>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-circle">2</div>
+                        <div class="phase-title">Phase 2</div>
+                        <div class="phase-desc">視覚的UI<br>（枠表示・ガイド）</div>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-circle">3</div>
+                        <div class="phase-title">Phase 3</div>
+                        <div class="phase-desc">高度機能<br>（複数キャラ対応）</div>
+                    </div>
+                </div>
+
+                <h3>📋 各フェーズの詳細</h3>
+                <div style="margin: 20px 0;">
+                    <div style="border-left: 4px solid #4caf50; padding-left: 20px; margin-bottom: 20px;">
+                        <h4>Phase 1: 基盤システム（最初に実装）</h4>
+                        <ul>
+                            <li>既存ぷらっとくんへの影響ゼロ</li>
+                            <li>基本的なドラッグ&ドロップ機能</li>
+                            <li>座標の自動計算・保存</li>
+                            <li>HTMLコードの自動生成</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="border-left: 4px solid #ff9800; padding-left: 20px; margin-bottom: 20px;">
+                        <h4>Phase 2: 視覚的UI（Phase 1完了後）</h4>
+                        <ul>
+                            <li>ドラッグ可能時の視覚的表示</li>
+                            <li>リアルタイム座標表示</li>
+                            <li>境界線の表示</li>
+                            <li>操作ガイドの表示</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="border-left: 4px solid #9c27b0; padding-left: 20px;">
+                        <h4>Phase 3: 高度機能（Phase 2完了後）</h4>
+                        <ul>
+                            <li>複数キャラクターの同時管理</li>
+                            <li>設定ファイルからの一括読み込み</li>
+                            <li>プリセット位置の保存・呼び出し</li>
+                            <li>グリッドスナップ機能</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- メリット・効果 -->
+        <div class="section">
+            <div class="section-header">
+                📈 期待される効果・メリット
+            </div>
+            <div class="section-content">
+                <div class="feature-grid">
+                    <div style="background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%); color: white; padding: 25px; border-radius: 15px;">
+                        <h4>⏱️ 作業時間短縮</h4>
+                        <p><strong>現在：</strong> 5-10分<br>
+                        <strong>新システム：</strong> 30秒<br>
+                        <strong>短縮効果：</strong> 90%以上</p>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%); color: white; padding: 25px; border-radius: 15px;">
+                        <h4>🎯 精度向上</h4>
+                        <p>視覚的な配置により、理想的な位置への配置が簡単に</p>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%); color: white; padding: 25px; border-radius: 15px;">
+                        <h4>👥 アクセシビリティ</h4>
+                        <p>HTMLの知識がなくても誰でも位置調整が可能</p>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%); color: white; padding: 25px; border-radius: 15px;">
+                        <h4>🔄 再利用性</h4>
+                        <p>新しいページでも同じシステムをすぐに活用</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- よくある質問 -->
+        <div class="section">
+            <div class="section-header">
+                ❓ よくある質問
+            </div>
+            <div class="section-content">
+                <div style="margin: 20px 0;">
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                        <h4 style="color: #d32f2f; margin-bottom: 10px;">Q: 既存のぷらっとくんに影響はありませんか？</h4>
+                        <p><strong>A:</strong> 一切ありません。新システムは既存システムの「上に追加される」形で実装されるため、現在の動作や表示に影響を与えません。</p>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                        <h4 style="color: #d32f2f; margin-bottom: 10px;">Q: 操作が難しくありませんか？</h4>
+                        <p><strong>A:</strong> マウスでのドラッグ&ドロップのみです。スマートフォンの画面でアプリアイコンを移動するのと同じような操作感です。</p>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                        <h4 style="color: #d32f2f; margin-bottom: 10px;">Q: ウィンドウサイズを変えても大丈夫ですか？</h4>
+                        <p><strong>A:</strong> はい。新システムは<span class="tooltip" data-tooltip="画面サイズが変わっても適切に表示される仕組み">レスポンシブ対応</span>で設計されており、どの画面サイズでも正しく動作します。</p>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                        <h4 style="color: #d32f2f; margin-bottom: 10px;">Q: 将来的に機能は拡張されますか？</h4>
+                        <p><strong>A:</strong> はい。Phase 1で基本機能を実装した後、Phase 2で視覚的UI、Phase 3で高度機能を段階的に追加予定です。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- まとめ -->
+        <div class="section">
+            <div class="section-header">
+                📝 まとめ
+            </div>
+            <div class="section-content">
+                <div class="highlight-box">
+                    <h3>🎯 Spine Positioning System の価値</h3>
+                    <p>このシステムにより、<strong>誰でも簡単に</strong>、<strong>短時間で</strong>、<strong>正確に</strong>キャラクターの位置を調整できるようになります。</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0;">
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">⚡</div>
+                        <h4>高速化</h4>
+                        <p>作業時間を90%以上短縮</p>
+                    </div>
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🎨</div>
+                        <h4>直感的</h4>
+                        <p>マウス操作だけで完結</p>
+                    </div>
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🛡️</div>
+                        <h4>安全</h4>
+                        <p>既存システムに影響なし</p>
+                    </div>
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🔮</div>
+                        <h4>拡張可能</h4>
+                        <p>段階的な機能追加</p>
+                    </div>
+                </div>
+
+                <p style="text-align: center; font-size: 1.2rem; margin-top: 30px;">
+                    <strong>次のステップ：</strong> Phase 1（基盤システム）の実装へ進む
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        // グローバル変数
+        let isDragging = false;
+        let isPositioningEnabled = false;
+        let spineLoaded = false;
+        let animationState = null;
+        let skeleton = null;
+        
+        // DOM要素は後で取得
+        let character = null;
+        let screen = null;
+        let coordinateDisplay = null;
+        let spineStatus = null;
+
+        // ページロード時に即座に静的画像で表示
+        window.addEventListener('load', () => {
+            // DOM要素を取得
+            character = document.getElementById('demo-purattokun-canvas');
+            screen = document.getElementById('demoScreen');
+            coordinateDisplay = document.getElementById('coordinateDisplay');
+            spineStatus = document.getElementById('spineStatus');
+            
+            if (!spineStatus) {
+                console.error('spineStatus要素が見つかりません');
+                return;
+            }
+            
+            spineStatus.innerHTML = '🔄 ぷらっとくん読み込み中...';
+            
+            // 視覚的デモのSpineキャラクターを初期化
+            initDemoSpineCharacter().then(() => {
+                spineStatus.innerHTML = '✅ Spine WebGL版で表示中';
+            }).catch((error) => {
+                console.error('視覚的デモSpine初期化失敗:', error);
+                spineStatus.innerHTML = '⚠️ Spine未対応 - 静的画像で表示';
+                // フォールバックは既にinitDemoSpineCharacter内で処理済み
+            });
+            
+            // 既存システム実演用の初期化も実行
+            setTimeout(() => {
+                initSpineDemo().then(() => {
+                    console.log('既存システム実演のSpineも初期化完了');
+                }).catch((error) => {
+                    console.log('既存システム実演のSpine初期化失敗（フォールバック使用）:', error);
+                });
+            }, 1000);
+        });
+        
+        // Spineキャラクターの初期化（視覚的デモ用）
+        async function initDemoSpineCharacter() {
+            const canvas = document.getElementById('demo-purattokun-canvas');
+            const fallbackImage = document.getElementById('demo-fallback-image');
+            
+            // 🚨 WebGL対応チェック（最優先）
+            const testCanvas = document.createElement('canvas');
+            const gl = testCanvas.getContext('webgl');
+            if (!gl) {
+                console.warn('⚠️ WebGL未対応 - フォールバック画像を使用');
+                if (canvas && fallbackImage) {
+                    canvas.style.display = 'none';
+                    fallbackImage.style.display = 'block';
+                    console.log('✅ フォールバック画像表示完了');
+                }
+                return Promise.resolve(); // エラーではなく正常終了
+            }
+            
+            try {
+                await waitForSpine();
+                
+                if (!canvas) {
+                    throw new Error('Canvas要素が見つかりません');
+                }
+                
+                // フォールバック画像を非表示
+                if (fallbackImage) {
+                    fallbackImage.style.display = 'none';
+                }
+                
+                // WebGLコンテキスト取得
+                const gl = canvas.getContext('webgl', { alpha: true });
+                if (!gl) {
+                    throw new Error('WebGLがサポートされていません');
+                }
+                
+                // Canvasサイズ設定
+                const updateCanvasSize = () => {
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                };
+                updateCanvasSize();
+                window.addEventListener('resize', updateCanvasSize);
+                
+                // アセットマネージャー
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了待ち
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100;
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        
+                        if (assetManager.isLoadingComplete()) {
+                            resolve();
+                        } else if (checkCount > maxChecks) {
+                            reject(new Error('アセット読み込みタイムアウト'));
+                        } else {
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    checkAssets();
+                });
+                
+                // Atlas取得
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                
+                // SkeletonData読み込み
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                // Skeleton作成
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = canvas.width / 2;
+                skeleton.y = canvas.height / 2;
+                skeleton.scaleX = skeleton.scaleY = 0.25;
+                
+                // AnimationState
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーション設定（登場→待機）
+                if (skeleton.data.findAnimation('syutugen') && skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'syutugen', false);
+                    
+                    const listener = {
+                        complete: (entry) => {
+                            if (entry.animation.name === 'syutugen') {
+                                animationState.setAnimation(0, 'taiki', true);
+                                animationState.removeListener(listener);
+                            }
+                        }
+                    };
+                    animationState.addListener(listener);
+                } else if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                }
+                
+                // レンダラー
+                const shader = spine.Shader.newTwoColoredTextured(gl);
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                
+                // レンダリングループ
+                let lastTime = Date.now() / 1000;
+                
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                console.log('✅ 視覚的デモのSpineキャラクター動作中');
+                
+                // クリック機能（やられ→待機）
+                canvas.addEventListener('click', function(e) {
+                    // ドラッグ中はクリックイベントを無視
+                    if (isDragging) return;
+                    
+                    if (skeleton.data.findAnimation('yarare') && skeleton.data.findAnimation('taiki')) {
+                        animationState.setAnimation(0, 'yarare', false);
+                        
+                        const clickListener = {
+                            complete: (entry) => {
+                                if (entry.animation.name === 'yarare') {
+                                    animationState.setAnimation(0, 'taiki', true);
+                                    animationState.removeListener(clickListener);
+                                }
+                            }
+                        };
+                        animationState.addListener(clickListener);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('視覚的デモSpine初期化エラー:', error);
+                // フォールバック画像を表示
+                const fallbackImage = document.getElementById('demo-fallback-image');
+                const canvas = document.getElementById('demo-purattokun-canvas');
+                if (fallbackImage && canvas) {
+                    canvas.style.display = 'none';
+                    fallbackImage.style.display = 'block';
+                    console.log('✅ フォールバック画像に切り替えました');
+                }
+            }
+        }
+        
+        // 静的画像でぷらっとくんを表示（確実な方法）
+        function createFallbackCharacter() {
+            const canvas = document.getElementById('demo-purattokun-canvas');
+            
+            // 静的画像を使用（最も確実な方法）
+            const img = document.createElement('img');
+            img.src = 'assets/images/purattokunn.png'; // 既存の静的画像
+            img.alt = 'ぷらっとくん';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain';
+            
+            // フォールバック画像をCanvasの親要素に追加
+            if (canvas.parentElement) {
+                canvas.style.display = 'none';
+                canvas.parentElement.appendChild(img);
+                
+                // 画像にも同じクラスを適用
+                img.className = canvas.className;
+                img.id = 'demo-fallback-character';
+                
+                // ドラッグイベントを画像に設定
+                setupDragEvents(img);
+            }
+            spineStatus.innerHTML = '✅ ぷらっとくん表示完了（静的画像版）';
+        }
+
+        // Spine WebGL デモ初期化
+        async function initSpineDemo() {
+            try {
+                // Spine WebGL が読み込まれるまで待機
+                await waitForSpine();
+                
+                const canvas = document.getElementById('demo-purattokun-canvas');
+                if (!canvas) {
+                    throw new Error('Canvas要素が見つかりません');
+                }
+                
+                // WebGLコンテキスト取得
+                const gl = canvas.getContext('webgl', { alpha: true });
+                if (!gl) {
+                    throw new Error('WebGLがサポートされていません');
+                }
+                
+                // Canvasサイズ設定
+                canvas.width = 80;
+                canvas.height = 80;
+                
+                spineStatus.innerHTML = '📁 Spineファイル読み込み中...';
+                
+                // アセット読み込み（パス修正）
+                const basePath = './assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                
+                console.log('🔄 Spineアセット読み込み開始:', basePath);
+                
+                // ファイル存在確認
+                try {
+                    assetManager.loadTextureAtlas('purattokun.atlas');
+                    assetManager.loadJson('purattokun.json');
+                    console.log('✅ アセット読み込み要求送信完了');
+                } catch (loadError) {
+                    console.error('❌ アセット読み込み要求エラー:', loadError);
+                    throw loadError;
+                }
+                
+                // アセット読み込み完了まで待機
+                await waitForAssets(assetManager);
+                
+                spineStatus.innerHTML = '🎬 ぷらっとくん準備中...';
+                
+                // Spine setup
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 40; // Canvas中央
+                skeleton.y = 40; // Canvas中央
+                skeleton.scaleX = skeleton.scaleY = 0.5; // 適切なサイズ
+                
+                // アニメーション設定
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                animationState = new spine.AnimationState(animationStateData);
+                
+                // 待機アニメーション開始
+                if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                } else if (skeleton.data.animations.length > 0) {
+                    animationState.setAnimation(0, skeleton.data.animations[0].name, true);
+                }
+                
+                // レンダラー設定
+                const shader = spine.Shader.newTwoColoredTextured(gl);
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                
+                // レンダリングループ開始
+                let lastTime = Date.now() / 1000;
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    // アニメーション更新
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    // 描画
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                render();
+                
+                spineLoaded = true;
+                spineStatus.innerHTML = '✅ ぷらっとくん準備完了！';
+                
+                // ドラッグイベント設定
+                setupDragEvents();
+                
+                console.log('✅ Spine デモ初期化完了');
+                
+            } catch (error) {
+                console.error('❌ Spine デモ初期化エラー:', error);
+                spineStatus.innerHTML = '❌ 読み込みエラー - シンプルモードで表示';
+                createFallbackCharacter();
+                throw error; // エラーを再投げして上位で処理
+            }
+        }
+        
+        // Spine WebGL 読み込み待機
+        function waitForSpine() {
+            return new Promise((resolve, reject) => {
+                let checkCount = 0;
+                const maxChecks = 50;
+                
+                const checkSpine = () => {
+                    checkCount++;
+                    if (typeof spine !== 'undefined') {
+                        resolve();
+                    } else if (checkCount > maxChecks) {
+                        reject(new Error('Spine WebGL読み込みタイムアウト'));
+                    } else {
+                        setTimeout(checkSpine, 100);
+                    }
+                };
+                checkSpine();
+            });
+        }
+        
+        // アセット読み込み完了待機
+        function waitForAssets(assetManager) {
+            return new Promise((resolve, reject) => {
+                let checkCount = 0;
+                const maxChecks = 50; // 5秒でタイムアウト
+                
+                const checkAssets = () => {
+                    checkCount++;
+                    console.log(`📊 アセット読み込み確認 ${checkCount}/${maxChecks}`);
+                    
+                    if (assetManager.isLoadingComplete()) {
+                        console.log('✅ アセット読み込み完了');
+                        resolve();
+                    } else if (checkCount > maxChecks) {
+                        const errors = assetManager.getErrors();
+                        console.error('❌ アセット読み込みタイムアウト:', errors);
+                        console.error('❌ 読み込み状況:', {
+                            isLoading: assetManager.isLoading(),
+                            isLoadingComplete: assetManager.isLoadingComplete(),
+                            errors: errors
+                        });
+                        reject(new Error('アセット読み込みタイムアウト: ' + JSON.stringify(errors)));
+                    } else {
+                        // 進行状況表示
+                        if (checkCount % 5 === 0) {
+                            spineStatus.innerHTML = `📁 Spineファイル読み込み中... (${checkCount}/50)`;
+                        }
+                        setTimeout(checkAssets, 100);
+                    }
+                };
+                checkAssets();
+            });
+        }
+        
+        // ドラッグイベント設定
+        function setupDragEvents(targetElement) {
+            const element = targetElement || character;
+            if (!element) return;
+            
+            element.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', endDrag);
+        }
+
+        let currentDraggedElement = null;
+        
+        function startDrag(e) {
+            if (!isPositioningEnabled) return;
+            isDragging = true;
+            currentDraggedElement = e.target;
+            currentDraggedElement.style.cursor = 'grabbing';
+            currentDraggedElement.classList.add('positioning-mode');
+        }
+
+        function drag(e) {
+            if (!isDragging || !isPositioningEnabled) return;
+            
+            const rect = screen.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 境界制限（キャラクターサイズを考慮）
+            const charSize = 80;
+            const minX = charSize / 2;
+            const maxX = rect.width - charSize / 2;
+            const minY = charSize / 2;
+            const maxY = rect.height - charSize / 2;
+            
+            const constrainedX = Math.max(minX, Math.min(maxX, x));
+            const constrainedY = Math.max(minY, Math.min(maxY, y));
+            
+            // ピクセル位置を%に変換
+            const percentX = (constrainedX / rect.width) * 100;
+            const percentY = (constrainedY / rect.height) * 100;
+            
+            character.style.left = percentX + '%';
+            character.style.top = percentY + '%';
+            
+            // 座標表示
+            coordinateDisplay.innerHTML = `位置: ${percentX.toFixed(1)}%, ${percentY.toFixed(1)}%`;
+        }
+
+        function endDrag() {
+            if (isDragging) {
+                isDragging = false;
+                character.style.cursor = 'grab';
+                
+                if (isPositioningEnabled) {
+                    setTimeout(() => {
+                        const rect = screen.getBoundingClientRect();
+                        const charRect = character.getBoundingClientRect();
+                        const centerX = ((charRect.left + charRect.width/2 - rect.left) / rect.width * 100).toFixed(1);
+                        const centerY = ((charRect.top + charRect.height/2 - rect.top) / rect.height * 100).toFixed(1);
+                        
+                        const generatedCode = `
+&lt;div id="purattokun-config" style="display: none;"
+     data-x="${centerX}"
+     data-y="${centerY}"
+     data-scale="0.9"
+     data-fade-delay="1500"
+     data-fade-duration="2000"&gt;
+&lt;/div&gt;`;
+                        
+                        alert('📋 HTMLコードが生成されました！\n\n' + generatedCode.replace(/&lt;/g, '<').replace(/&gt;/g, '>'));
+                    }, 100);
+                }
+            }
+        }
+
+        function enablePositioning() {
+            isPositioningEnabled = !isPositioningEnabled;
+            const button = event.target;
+            
+            if (isPositioningEnabled) {
+                button.textContent = 'ポジショニングモード無効';
+                button.style.background = '#4caf50';
+                character.style.cursor = 'grab';
+                character.classList.add('positioning-mode');
+                coordinateDisplay.innerHTML = '🔧 ポジショニングモード有効 - ドラッグして移動できます';
+            } else {
+                button.textContent = 'ポジショニングモード有効';
+                button.style.background = '#ff6b6b';
+                character.style.cursor = 'default';
+                character.classList.remove('positioning-mode');
+                coordinateDisplay.innerHTML = '';
+            }
+        }
+
+        function resetPosition() {
+            character.style.left = '35%';
+            character.style.top = '75%';
+            coordinateDisplay.innerHTML = '位置をリセットしました (35%, 75%)';
+        }
+        
+        // フォールバック画像の強制表示
+        function forceFallback() {
+            const canvas = document.getElementById('demo-purattokun-canvas');
+            const fallback = document.getElementById('demo-fallback-image');
+            
+            if (canvas && fallback) {
+                canvas.style.display = 'none';
+                fallback.style.display = 'block';
+                fallback.style.border = '3px solid blue';
+                coordinateDisplay.innerHTML = '✅ フォールバック画像表示中（青枠）';
+                console.log('🔄 フォールバック画像に強制切り替え');
+            } else {
+                coordinateDisplay.innerHTML = '❌ 要素が見つかりません';
+                console.error('Canvas または フォールバック画像が見つかりません');
+            }
+        }
+
+        function showCoordinates() {
+            const rect = screen.getBoundingClientRect();
+            const charRect = character.getBoundingClientRect();
+            const centerX = ((charRect.left + charRect.width/2 - rect.left) / rect.width * 100).toFixed(1);
+            const centerY = ((charRect.top + charRect.height/2 - rect.top) / rect.height * 100).toFixed(1);
+            coordinateDisplay.innerHTML = `現在位置: ${centerX}%, ${centerY}%`;
+        }
+        
+        // === 既存システム用の関数 ===
+        let originalSpineLoaded = false;
+        let originalAnimationState = null;
+        let originalSkeleton = null;
+        
+        function initOriginalSystem() {
+            const status = document.getElementById('originalSystemStatus');
+            status.innerHTML = '🔄 既存システム初期化中...';
+            
+            // 本番環境と同じく、Spine WebGLを優先して初期化
+            initOriginalSpineCharacter().then(() => {
+                status.innerHTML = '✅ 既存システム初期化完了！';
+            }).catch((error) => {
+                console.log('💡 Spine読み込み失敗 - 静的画像版でフォールバック:', error);
+                createOriginalFallbackCharacter();
+                status.innerHTML = '✅ フォールバックモードで初期化完了';
+            });
+        }
+        
+        function createOriginalFallbackCharacter() {
+            const canvas = document.getElementById('original-purattokun-canvas');
+            const status = document.getElementById('originalSystemStatus');
+            
+            if (!canvas) {
+                status.innerHTML = '❌ Canvas要素が見つかりません';
+                return;
+            }
+            
+            // 設定値を読み取り（本番環境と同じ方式）
+            const config = document.getElementById('original-purattokun-config');
+            const dataX = config ? config.getAttribute('data-x') || '35' : '35';
+            const dataY = config ? config.getAttribute('data-y') || '75' : '75';
+            const dataScale = config ? config.getAttribute('data-scale') || '0.9' : '0.9';
+            
+            console.log('📊 設定値読み取り:', { x: dataX, y: dataY, scale: dataScale });
+            
+            // 既存の画像コンテナを削除（重複防止）
+            const existingContainer = canvas.parentElement?.querySelector('.fallback-purattokun');
+            if (existingContainer) {
+                existingContainer.remove();
+            }
+            
+            // 静的画像でぷらっとくんを表示
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'fallback-purattokun';
+            imgContainer.style.position = 'absolute';
+            imgContainer.style.left = dataX + '%';
+            imgContainer.style.top = dataY + '%';
+            imgContainer.style.transform = 'translate(-50%, -50%) scale(' + dataScale + ')';
+            imgContainer.style.width = '80%';
+            imgContainer.style.height = '80%';
+            imgContainer.style.zIndex = '10';
+            imgContainer.style.cursor = 'pointer';
+            // デバッグ用境界線を削除（本番環境と同じ見た目に）
+            
+            const img = document.createElement('img');
+            img.src = 'assets/images/purattokunn.png';
+            img.alt = 'ぷらっとくん';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain';
+            
+            imgContainer.appendChild(img);
+            
+            // Canvasを非表示にして画像を表示
+            canvas.style.display = 'none';
+            
+            // 親要素に追加
+            if (canvas.parentElement) {
+                canvas.parentElement.appendChild(imgContainer);
+                
+                // クリックイベント追加
+                imgContainer.addEventListener('click', () => {
+                    status.innerHTML = '🐱 ぷらっとくんクリック！';
+                    // 簡単なアニメーション効果
+                    imgContainer.style.transform = `translate(-50%, -50%) scale(${parseFloat(dataScale) * 1.1})`;
+                    setTimeout(() => {
+                        imgContainer.style.transform = `translate(-50%, -50%) scale(${dataScale})`;
+                        status.innerHTML = '✅ ぷらっとくん表示中（静的画像版）';
+                    }, 300);
+                });
+                
+                status.innerHTML = `✅ ぷらっとくん表示完了（静的画像版・80%サイズ）位置: (${dataX}%, ${dataY}%)`;
+                console.log('✅ ぷらっとくん配置完了:', imgContainer.getBoundingClientRect());
+            } else {
+                status.innerHTML = '❌ 親要素が見つかりません';
+            }
+        }
+        
+        async function initOriginalSpineCharacter() {
+            try {
+                // Spine WebGL が読み込まれるまで待機
+                await waitForSpine();
+                
+                const canvas = document.getElementById('original-purattokun-canvas');
+                if (!canvas) {
+                    throw new Error('既存システム用Canvas要素が見つかりません');
+                }
+                
+                const gl = canvas.getContext('webgl', { alpha: true });
+                if (!gl) {
+                    throw new Error('WebGLがサポートされていません');
+                }
+                
+                // Canvasサイズ設定（index.htmlと同じ - 固定解像度）
+                const updateCanvasSize = () => {
+                    const rect = canvas.getBoundingClientRect();
+                    // CSS相対サイズ（16%）に合わせた内部解像度設定
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                    
+                    console.log('📐 Canvas解像度更新（本番環境と同じ方式）:', {
+                        cssSize: rect.width.toFixed(1) + '×' + rect.height.toFixed(1),
+                        internalSize: canvas.width + '×' + canvas.height,
+                        position: 'CSS制御 (35%, 75%)',
+                        clickArea: '✅ 相対サイズで安定'
+                    });
+                };
+                updateCanvasSize();
+                
+                // ウィンドウリサイズ時にCanvasサイズも更新（内部解像度のみ、位置は変更しない）
+                window.addEventListener('resize', updateCanvasSize);
+                
+                // アセット読み込み（index.htmlと同じパス）
+                const basePath = './assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了まで待機
+                await waitForAssets(assetManager);
+                
+                // Spine setup（index.htmlと同じ）
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                originalSkeleton = new spine.Skeleton(skeletonData);
+                originalSkeleton.x = 0;
+                originalSkeleton.y = 0;
+                originalSkeleton.scaleX = originalSkeleton.scaleY = 0.8;
+                
+                // アニメーション設定（index.htmlと同じ）
+                const animationStateData = new spine.AnimationStateData(originalSkeleton.data);
+                originalAnimationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーションシーケンス設定（登場→待機）
+                if (originalSkeleton.data.findAnimation('syutugen') && originalSkeleton.data.findAnimation('taiki')) {
+                    originalAnimationState.setAnimation(0, 'syutugen', false);
+                    
+                    const listener = {
+                        complete: (entry) => {
+                            if (entry.animation.name === 'syutugen') {
+                                originalAnimationState.setAnimation(0, 'taiki', true);
+                                originalAnimationState.removeListener(listener);
+                            }
+                        }
+                    };
+                    originalAnimationState.addListener(listener);
+                } else if (originalSkeleton.data.findAnimation('taiki')) {
+                    originalAnimationState.setAnimation(0, 'taiki', true);
+                }
+                
+                // レンダラー（index.htmlと同じ）
+                const shader = spine.Shader.newTwoColoredTextured(gl);
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                
+                // レンダリングループ
+                let lastTime = Date.now() / 1000;
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    originalAnimationState.update(delta);
+                    originalAnimationState.apply(originalSkeleton);
+                    originalSkeleton.updateWorldTransform();
+                    
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(originalSkeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                render();
+                
+                // クリック機能（index.htmlと完全同一）
+                canvas.addEventListener('click', function(event) {
+                    console.log('🖱️ ぷらっとくんクリック検出!', {
+                        clickX: event.clientX,
+                        clickY: event.clientY,
+                        canvasRect: canvas.getBoundingClientRect(),
+                        canvasSize: { width: canvas.width, height: canvas.height }
+                    });
+                    
+                    if (originalSkeleton.data.findAnimation('yarare') && originalSkeleton.data.findAnimation('taiki')) {
+                        console.log('🎬 やられアニメーション開始');
+                        // やられ→待機のシーケンス再生
+                        originalAnimationState.setAnimation(0, 'yarare', false);
+                        
+                        const clickListener = {
+                            complete: (entry) => {
+                                if (entry.animation.name === 'yarare') {
+                                    console.log('🎯 yarare完了 → taikiに遷移');
+                                    originalAnimationState.setAnimation(0, 'taiki', true);
+                                    originalAnimationState.removeListener(clickListener);
+                                }
+                            }
+                        };
+                        originalAnimationState.addListener(clickListener);
+                    } else {
+                        console.warn('⚠️ yarareまたはtaikiアニメーションが見つかりません');
+                    }
+                });
+                
+                originalSpineLoaded = true;
+                
+            } catch (error) {
+                console.error('既存システム Spine初期化エラー:', error);
+                throw error;
+            }
+        }
+        
+        function showOriginalInfo() {
+            const status = document.getElementById('originalSystemStatus');
+            if (!originalSpineLoaded) {
+                status.innerHTML = '⚠️ まず「既存システム開始」ボタンを押してください';
+                return;
+            }
+            
+            status.innerHTML = `
+                📊 既存システム情報:<br>
+                位置: (35%, 75%) - index.htmlと同じ<br>
+                サイズ: 16% - CSS相対サイズ<br>
+                アニメーション: ${originalSkeleton ? originalSkeleton.data.animations.map(a => a.name).join(', ') : 'なし'}
+            `;
+        }
+        
+        function testOriginalAnimation() {
+            const status = document.getElementById('originalSystemStatus');
+            if (!originalSpineLoaded || !originalAnimationState) {
+                status.innerHTML = '⚠️ まず「既存システム開始」ボタンを押してください';
+                return;
+            }
+            
+            status.innerHTML = '🎬 やられアニメーション実行中...';
+            
+            if (originalSkeleton.data.findAnimation('yarare') && originalSkeleton.data.findAnimation('taiki')) {
+                originalAnimationState.setAnimation(0, 'yarare', false);
+                
+                const testListener = {
+                    complete: (entry) => {
+                        if (entry.animation.name === 'yarare') {
+                            originalAnimationState.setAnimation(0, 'taiki', true);
+                            status.innerHTML = '✅ アニメーションテスト完了 - 待機に復帰';
+                            originalAnimationState.removeListener(testListener);
+                        }
+                    }
+                };
+                originalAnimationState.addListener(testListener);
+            } else {
+                status.innerHTML = '❌ yarare/taikiアニメーションが見つかりません';
+            }
+        }
+        
+        function playAnimation() {
+            if (!spineLoaded || !animationState || !skeleton) {
+                // シンプルモード用のアニメーション効果
+                coordinateDisplay.innerHTML = '🎬 シンプルモード: 簡易アニメーション';
+                
+                // Canvas要素を少し揺らす効果
+                const canvas = document.getElementById('demo-purattokun-canvas');
+                canvas.style.transition = 'transform 0.3s';
+                canvas.style.transform = 'scale(1.1) rotate(5deg)';
+                
+                setTimeout(() => {
+                    canvas.style.transform = 'scale(1) rotate(0deg)';
+                    coordinateDisplay.innerHTML = '✅ 簡易アニメーション完了';
+                    setTimeout(() => {
+                        coordinateDisplay.innerHTML = '';
+                    }, 2000);
+                }, 300);
+                return;
+            }
+            
+            // やられアニメーション → 待機アニメーション
+            if (skeleton.data.findAnimation('yarare') && skeleton.data.findAnimation('taiki')) {
+                animationState.setAnimation(0, 'yarare', false);
+                coordinateDisplay.innerHTML = '🎬 やられアニメーション再生中...';
+                
+                const listener = {
+                    complete: (entry) => {
+                        if (entry.animation.name === 'yarare') {
+                            animationState.setAnimation(0, 'taiki', true);
+                            coordinateDisplay.innerHTML = '✅ 待機アニメーションに復帰';
+                            animationState.removeListener(listener);
+                        }
+                    }
+                };
+                animationState.addListener(listener);
+            } else {
+                coordinateDisplay.innerHTML = 'アニメーション: yarare/taiki が見つかりません';
+            }
+        }
+    </script>
+</body>
+</html>

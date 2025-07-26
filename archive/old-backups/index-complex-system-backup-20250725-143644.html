@@ -25,477 +25,12 @@
     <meta property="twitter:description" content="LINEで簡単に使える予約販売システム「ぷらっとくん」。給与管理、教育機関向けPTAシステム、猫ファーストの住環境アドバイスまで。">
     <meta property="twitter:image" content="https://necooya.com/assets/images/クラウドパートナーTOP.png">
     
-    <!-- Favicon -->
+    <!-- External CSS and Optimization -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="assets/images/クラウドパートナーTOP.png" as="image">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='90' font-size='90'>🐱</text></svg>" type="image/svg+xml">
-    
-    <style>
-        /* リセット */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        html, body {
-            overflow-x: hidden;
-        }
-        
-        body {
-            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #fafafa;
-        }
-        
-        /* ナビゲーション */
-        .navbar {
-            background: #fff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-        }
-        
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 2rem;
-        }
-        
-        .site-title {
-            color: #ff6b6b;
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-        
-        .nav-menu {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-        
-        .nav-menu a {
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-        
-        .nav-menu a:hover {
-            color: #ff6b6b;
-        }
-        
-        /* ヒーローセクション */
-        .hero {
-            position: relative;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: 120px 20px 40px;
-            overflow: hidden;
-        }
-        
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
-            z-index: 0;
-        }
-        
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* 背景コンテナ */
-        .background-container {
-            position: relative;
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            overflow: visible;
-        }
-        
-        /* 背景画像 */
-        .background-image {
-            width: 100%;
-            height: auto;     /* ✅ 自然な高さ */
-            display: block;
-        }
-        
-        /* 雲の共通スタイル */
-        .cloud {
-            position: absolute;
-            opacity: 0.7;
-            pointer-events: none;
-            z-index: 5;
-        }
-        
-        /* 各雲の位置とアニメーション */
-        .cloud1 { left: -5%; top: 10%; width: 100px; animation: moveCloud1 25s linear infinite; }
-        .cloud2 { left: -5%; top: 15%; width: 100px; animation: moveCloud2 30s linear infinite; }
-        .cloud3 { left: -5%; top: 8%; width: 100px; animation: moveCloud3 35s linear infinite; }
-        .cloud4 { left: -5%; top: 20%; width: 100px; animation: moveCloud1 28s linear infinite; animation-delay: -5s; }
-        .cloud5 { left: -5%; top: 12%; width: 100px; animation: moveCloud2 32s linear infinite; animation-delay: -8s; }
-        .cloud6 { left: -5%; top: 18%; width: 100px; animation: moveCloud3 26s linear infinite; animation-delay: -12s; }
-        
-        /* 雲のアニメーション */
-        @keyframes moveCloud1 { from { left: -10%; } to { left: 110%; } }
-        @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
-        @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
-        
-        /* ぷらっとくんCanvas - シンプル設定（調整容易） */
-        #purattokun-canvas {
-            position: absolute;
-            left: 18%;   /* ✅ 推奨位置 */
-            top: 49%;    /* ✅ 地面レベル */
-            transform: translate(-50%, -50%);
-            width: 120px;   /* ✅ 固定サイズ */
-            height: 120px;
-            pointer-events: auto;
-            cursor: pointer;
-            z-index: 10;
-        }
-        
-        /* ヒーローコンテンツ */
-        .hero-content {
-            position: absolute;
-            z-index: 20;
-            max-width: 280px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(8px);
-            left: 40px;
-            top: 130px;
-        }
-        
-        .hero-title {
-            font-size: 2rem;
-            color: #333;
-            margin-bottom: 0.8rem;
-            line-height: 1.2;
-            font-weight: 600;
-        }
-        
-        .series-text {
-            display: block;
-            font-size: 0.9em;
-            margin-top: 0.2rem;
-        }
-        
-        .hero-subtitle {
-            font-size: 1rem;
-            color: #666;
-            margin-bottom: 1.5rem;
-        }
-        
-        .cta-button {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.1rem;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-        
-        .cta-button:hover {
-            background: #ff5252;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
-        }
-        
-        /* コンテナ */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-        
-        /* セクション共通 */
-        .section-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-        
-        .section-title {
-            font-size: 2.2rem;
-            color: #333;
-            position: relative;
-            z-index: 10;
-        }
-        
-        /* サービスセクション */
-        .services {
-            padding: 80px 0;
-            background: #fff;
-        }
-        
-        .service-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-        }
-        
-        .service-card {
-            background: #fff;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .service-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        
-        .service-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        
-        .service-title {
-            color: #333;
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
-        }
-        
-        .service-description {
-            color: #666;
-            line-height: 1.6;
-        }
-        
-        .service-link {
-            color: #ff6b6b;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        
-        .service-link:hover {
-            text-decoration: underline;
-        }
-        
-        /* コンセプトセクション */
-        .concept {
-            padding: 80px 0;
-            background: linear-gradient(45deg, #f8f9fa 0%, #fff5f5 50%, #f8f9fa 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease-in-out infinite;
-        }
-        
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        .concept-content {
-            display: flex;
-            align-items: center;
-            gap: 3rem;
-        }
-        
-        .concept-text {
-            flex: 1;
-        }
-        
-        .concept-title {
-            color: #ff6b6b;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .concept-text p {
-            color: #666;
-            margin-bottom: 1.5rem;
-            line-height: 1.7;
-        }
-        
-        .concept-features {
-            list-style: none;
-            margin-top: 2rem;
-        }
-        
-        .concept-features li {
-            padding: 0.5rem 0;
-            color: #555;
-            position: relative;
-            padding-left: 1.5rem;
-        }
-        
-        .concept-features li:before {
-            content: "🐾";
-            position: absolute;
-            left: 0;
-        }
-        
-        .concept-image {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .cat-house-illustration {
-            text-align: center;
-        }
-        
-        .house {
-            font-size: 6rem;
-            margin-bottom: 1rem;
-        }
-        
-        .cats {
-            font-size: 2rem;
-            letter-spacing: 1rem;
-        }
-        
-        /* お問い合わせセクション */
-        .contact {
-            padding: 80px 0;
-            background: #fff;
-        }
-        
-        .contact-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3rem;
-            align-items: start;
-        }
-        
-        .contact-subtitle {
-            color: #ff6b6b;
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
-        }
-        
-        .contact-info p {
-            color: #666;
-            margin-bottom: 2rem;
-        }
-        
-        .contact-details {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            font-style: normal;
-        }
-        
-        .contact-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: #555;
-        }
-        
-        .contact-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .contact-form input,
-        .contact-form select,
-        .contact-form textarea {
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-        
-        .contact-form input:focus,
-        .contact-form select:focus,
-        .contact-form textarea:focus {
-            outline: none;
-            border-color: #ff6b6b;
-        }
-        
-        .contact-form button {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 15px;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        
-        .contact-form button:hover {
-            background: #ff5252;
-        }
-        
-        /* フッター */
-        footer {
-            background: #333;
-            color: #fff;
-            text-align: center;
-            padding: 2rem 0;
-        }
-        
-        /* レスポンシブデザイン */
-        @media (max-width: 768px) {
-            .nav-menu {
-                display: none;
-            }
-            
-            .hero {
-                flex-direction: column;
-                text-align: center;
-                padding: 100px 20px 60px;
-            }
-            
-            .hero-content {
-                position: relative;
-                left: auto;
-                top: auto;
-                margin-bottom: 2rem;
-            }
-            
-            .concept-content {
-                flex-direction: column;
-            }
-            
-            .contact-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .service-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            /* モバイル版キャラクター位置（調整容易） */
-            #purattokun-canvas {
-                left: 50%;   /* モバイル中央 */
-                top: 65%;    /* モバイル調整 */
-                width: 80px;    /* ✅ 固定サイズ */
-                height: 80px;
-            }
-            
-            #purattokun-fallback {
-                left: 50% !important;
-                top: 65% !important;
-                width: 80px !important;
-                height: 80px !important;
-            }
-        }
-    </style>
 </head>
 <body>
     <header role="banner">
@@ -516,12 +51,14 @@
 
     <main role="main">
         <section id="home" class="hero">
-            <!-- 背景コンテナ -->
+            <!-- シンプルな背景コンテナ（成功パターン適用） -->
             <div class="background-container">
-                <!-- 背景画像 -->
-                <img src="assets/images/クラウドパートナーTOP.png" alt="クラウドパートナー背景画像" class="background-image">
+                <!-- 背景画像（<img>タグで配置） -->
+                <img src="assets/images/クラウドパートナーTOP.png" 
+                     alt="クラウドパートナー背景画像" 
+                     class="background-image">
                 
-                <!-- 雲（6個） -->
+                <!-- 雲（背景画像基準で配置） - 6個に増加 -->
                 <img src="assets/images/kumo1.png" alt="ふわふわ浮かぶ白い雲" class="cloud cloud1" loading="lazy">
                 <img src="assets/images/kumo2.png" alt="ゆったり流れる雲" class="cloud cloud2" loading="lazy">
                 <img src="assets/images/kumo3.png" alt="青空に漂う雲" class="cloud cloud3" loading="lazy">
@@ -529,21 +66,15 @@
                 <img src="assets/images/kumo2.png" alt="空を舞う雲" class="cloud cloud5" loading="lazy">
                 <img src="assets/images/kumo3.png" alt="優雅に流れる雲" class="cloud cloud6" loading="lazy">
                 
-                <!-- ぷらっとくんCanvas -->
+                <!-- ぷらっとくんCanvas（背景画像基準で配置・成功パターン適用） -->
                 <canvas id="purattokun-canvas"></canvas>
-                
-                <!-- フォールバック画像（Spine読み込み失敗時用） -->
-                <img src="assets/images/purattokunn.png" 
-                     alt="ぷらっとくん画像" 
-                     id="purattokun-fallback"
-                     style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 10; display: none; object-fit: contain;">
             </div>
             
-            <!-- UI要素 -->
+            <!-- UI要素（背景から独立） -->
             <header class="hero-content">
                 <h1 class="hero-title">ぷらっとくん<br><span class="series-text">シリーズ</span></h1>
                 <p class="hero-subtitle">あなたのビジネスをサポート</p>
-                <a href="#services" class="cta-button" aria-label="サービス詳細を見る">詳しく見る</a>
+                <button class="cta-button" type="button" aria-label="サービス詳細を見る">詳しく見る</button>
             </header>
         </section>
 
@@ -663,13 +194,45 @@
         </div>
     </footer>
 
-    <!-- Spine WebGL Runtime -->
+    <!-- ぷらっとくん設定 - シンプル化 -->
+    <!-- 位置・サイズ設定はCSSで管理（assets/css/styles.css） -->
+    <div id="purattokun-config" style="display: none;">
+    </div>
+
+    <!-- Spine WebGL Runtime from CDN - 4.1.* for compatibility with 4.1.24 data -->
     <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
     
-    <!-- メインJavaScript（シンプル版） -->
+    <!-- Spine統合システム（シンプル版） -->
+    <!-- 複雑な統合システムは一時的に無効化 - 必要最小限のみ読み込み -->
+    <!--
+    <script src="assets/spine/spine-coordinate-utils.js"></script>
+    <script src="assets/spine/spine-character-manager.js"></script>
+    <script src="assets/spine/spine-debug-window.js"></script>
+    <script src="assets/spine/spine-animation-controller.js"></script>
+    <script src="assets/spine/spine-integration-v2.js"></script>
+    <script src="assets/spine/positioning/canvas-positioning-system.js"></script>
+    <script src="assets/spine/spine-responsive-coordinate-system.js"></script>
+    <script src="assets/spine/spine-drag-positioning-v2.js"></script>
+    <script src="assets/spine/spine-positioning-system.js"></script>
+    -->
+    
+    <!-- メインJavaScript -->
     <script src="assets/js/script.js"></script>
     
-    <!-- シンプルなSpine初期化 -->
+    <!-- 構造化データ（SEO最適化） -->
+    <script>
+        fetch('./structured-data.json')
+            .then(response => response.json())
+            .then(data => {
+                const script = document.createElement('script');
+                script.type = 'application/ld+json';
+                script.textContent = JSON.stringify(data);
+                document.head.appendChild(script);
+            })
+            .catch(err => console.log('構造化データの読み込みをスキップ:', err));
+    </script>
+    
+    <!-- シンプルなSpine初期化（test-simple-spine.htmlベース） -->
     <script>
         // Spine初期化を待つ
         function waitForSpine() {
@@ -749,15 +312,15 @@
                 
                 // Skeleton作成
                 const skeleton = new spine.Skeleton(skeletonData);
-                skeleton.x = canvas.width / 2;    // Canvas中央
-                skeleton.y = canvas.height / 2;
-                skeleton.scaleX = skeleton.scaleY = 0.25;  // 適切なサイズ
+                skeleton.x = 0;
+                skeleton.y = 0;
+                skeleton.scaleX = skeleton.scaleY = 0.8;  // 大きなサイズ
                 
                 // AnimationState
                 const animationStateData = new spine.AnimationStateData(skeleton.data);
                 const animationState = new spine.AnimationState(animationStateData);
                 
-                // アニメーション設定（登場→待機）
+                // アニメーション設定
                 if (skeleton.data.findAnimation('syutugen') && skeleton.data.findAnimation('taiki')) {
                     animationState.setAnimation(0, 'syutugen', false);
                     
@@ -806,9 +369,9 @@
                 render();
                 console.log('✅ Spineキャラクター動作中');
                 
-                // クリック機能（やられ→待機）
+                // クリック機能
                 canvas.addEventListener('click', function() {
-                    console.log('🖱️ ぷらっとくんクリック - やられアニメーション再生');
+                    console.log('🖱️ ぷらっとくんクリック');
                     
                     if (skeleton.data.findAnimation('yarare') && skeleton.data.findAnimation('taiki')) {
                         animationState.setAnimation(0, 'yarare', false);
@@ -827,30 +390,11 @@
                 
             } catch (error) {
                 console.error('Spine初期化エラー:', error);
-                // フォールバック画像を表示
-                const fallback = document.getElementById('purattokun-fallback');
-                if (fallback) {
-                    fallback.style.display = 'block';
-                    canvas.style.display = 'none';
-                }
             }
         }
         
         // 開始
         waitForSpine();
-    </script>
-    
-    <!-- 構造化データ（SEO最適化） -->
-    <script>
-        fetch('./structured-data.json')
-            .then(response => response.json())
-            .then(data => {
-                const script = document.createElement('script');
-                script.type = 'application/ld+json';
-                script.textContent = JSON.stringify(data);
-                document.head.appendChild(script);
-            })
-            .catch(err => console.log('構造化データの読み込みをスキップ:', err));
     </script>
 </body>
 </html>

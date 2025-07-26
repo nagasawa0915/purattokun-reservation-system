@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Positioning System統合サンプル</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            overflow: hidden;
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+        }
+
+        .scene-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Spine Positioning System統合版 */
+        #purattokun-canvas {
+            position: absolute;
+            cursor: pointer;
+            /* 位置はPositioning Systemで制御 */
+        }
+
+        #purattokun-fallback {
+            position: absolute;
+            object-fit: contain;
+            cursor: pointer;
+            display: block;
+            /* 位置はPositioning Systemで制御 */
+        }
+
+        /* Positioning System UI */
+        .positioning-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            min-width: 250px;
+        }
+
+        .positioning-controls h3 {
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .control-group input[type="number"] {
+            width: 60px;
+            padding: 3px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .preset-btn, .action-btn {
+            padding: 8px 12px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .preset-btn:hover, .action-btn:hover {
+            background: #ff5252;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 280px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .info-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* ドラッグ可能インジケーター */
+        .draggable-character {
+            border: 2px dashed rgba(255, 107, 107, 0.5);
+            transition: border-color 0.3s ease;
+        }
+
+        .draggable-character:hover {
+            border-color: rgba(255, 107, 107, 0.8);
+        }
+
+        .dragging {
+            border-color: #ff6b6b !important;
+            z-index: 100 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="scene-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        
+        <canvas id="purattokun-canvas" class="draggable-character" style="display: none;"></canvas>
+        
+        <img src="assets/images/purattokunn.png" 
+             alt="ぷらっとくん" 
+             id="purattokun-fallback"
+             class="draggable-character">
+    </div>
+
+    <!-- Positioning System Controls -->
+    <button class="toggle-btn" onclick="toggleControls()">コントロール表示/非表示</button>
+    
+    <div class="positioning-controls" id="positioningControls">
+        <h3>🎮 Spine Positioning System</h3>
+        
+        <div class="control-group">
+            <label>水平位置 (left)</label>
+            <div class="control-row">
+                <input type="range" id="posX" min="0" max="100" value="50" 
+                       oninput="updatePosition()" onchange="updatePosition()">
+                <input type="number" id="posXNum" min="0" max="100" value="50" 
+                       onchange="syncSlider('posX', this.value); updatePosition()">%
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>垂直位置 (top)</label>
+            <div class="control-row">
+                <input type="range" id="posY" min="0" max="100" value="50" 
+                       oninput="updatePosition()" onchange="updatePosition()">
+                <input type="number" id="posYNum" min="0" max="100" value="50" 
+                       onchange="syncSlider('posY', this.value); updatePosition()">%
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>サイズ</label>
+            <div class="control-row">
+                <input type="range" id="scale" min="0.1" max="2.0" step="0.1" value="1.0" 
+                       oninput="updatePosition()" onchange="updatePosition()">
+                <input type="number" id="scaleNum" min="0.1" max="2.0" step="0.1" value="1.0" 
+                       onchange="syncSlider('scale', this.value); updatePosition()">倍
+            </div>
+        </div>
+
+        <div class="preset-buttons">
+            <button class="preset-btn" onclick="applyPreset('center')">中央</button>
+            <button class="preset-btn" onclick="applyPreset('road')">道路側</button>
+            <button class="preset-btn" onclick="applyPreset('shop')">お店前</button>
+            <button class="preset-btn" onclick="applyPreset('current')">現在地保存</button>
+        </div>
+
+        <div class="control-group" style="margin-top: 15px;">
+            <button class="action-btn" onclick="resetPosition()" style="width: 100%;">リセット</button>
+        </div>
+
+        <div class="info-display" id="infoDisplay">
+            位置: 50%, 50% | サイズ: 1.0倍
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        let skeleton, animationState, renderer, gl;
+        let isSpineLoaded = false;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        // Positioning System State
+        let currentPosition = {
+            x: 50,  // パーセント
+            y: 50,  // パーセント  
+            scale: 1.0
+        };
+
+        // プリセット位置
+        const presets = {
+            center: { x: 50, y: 50, scale: 1.0 },
+            road: { x: 25, y: 65, scale: 0.8 },
+            shop: { x: 18, y: 49, scale: 0.55 },  // CLAUDE.mdの推奨値
+            current: { x: 50, y: 50, scale: 1.0 }  // 現在地として保存
+        };
+
+        async function initSpine() {
+            try {
+                // Spine WebGL待機
+                while (typeof spine === 'undefined') {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                const canvas = document.getElementById('purattokun-canvas');
+                const fallback = document.getElementById('purattokun-fallback');
+
+                gl = canvas.getContext('webgl', { alpha: true });
+                if (!gl) throw new Error('WebGL未対応');
+
+                // アセット読み込み
+                const assetManager = new spine.AssetManager(gl, 'assets/spine/characters/purattokun/');
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+
+                // 読み込み完了待ち
+                while (!assetManager.isLoadingComplete()) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                // Spine設定
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+
+                skeleton = new spine.Skeleton(skeletonData);
+                skeleton.scaleX = skeleton.scaleY = 1.0;
+
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                animationState = new spine.AnimationState(animationStateData);
+
+                // 待機アニメーション開始
+                if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                }
+
+                renderer = new spine.SceneRenderer(canvas, gl);
+
+                // 初期位置設定（お店前プリセット）
+                applyPreset('shop');
+
+                // レンダリング開始
+                render();
+
+                // Canvas表示、フォールバック非表示
+                canvas.style.display = 'block';
+                fallback.style.display = 'none';
+                isSpineLoaded = true;
+
+                // クリックイベント
+                canvas.addEventListener('click', onCharacterClick);
+                setupDragAndDrop(canvas);
+
+                console.log('✅ Spine Positioning System統合完了');
+
+            } catch (error) {
+                console.error('Spine初期化失敗:', error);
+                // フォールバック画像でドラッグ機能を有効化
+                setupDragAndDrop(document.getElementById('purattokun-fallback'));
+            }
+        }
+
+        function render() {
+            if (!skeleton || !animationState || !renderer) return;
+
+            const canvas = document.getElementById('purattokun-canvas');
+            const rect = canvas.getBoundingClientRect();
+
+            // Canvasサイズを要素サイズに合わせる
+            if (canvas.width !== rect.width || canvas.height !== rect.height) {
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                
+                // Skeletonを中央に配置
+                skeleton.x = canvas.width / 2;
+                skeleton.y = canvas.height / 2;
+            }
+
+            const delta = 1/60; // 60fps固定
+
+            animationState.update(delta);
+            animationState.apply(skeleton);
+            skeleton.updateWorldTransform();
+
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            renderer.begin();
+            renderer.drawSkeleton(skeleton, true);
+            renderer.end();
+
+            requestAnimationFrame(render);
+        }
+
+        function onCharacterClick() {
+            if (!isSpineLoaded || !animationState) return;
+
+            // やられアニメーション再生
+            if (skeleton.data.findAnimation('yarare')) {
+                animationState.setAnimation(0, 'yarare', false);
+                // やられ終了後、待機に戻る
+                animationState.addAnimation(0, 'taiki', true, 0);
+            }
+        }
+
+        // Positioning System Functions
+        function updatePosition() {
+            const posX = document.getElementById('posX').value;
+            const posY = document.getElementById('posY').value;
+            const scale = document.getElementById('scale').value;
+
+            // 数値入力との同期
+            document.getElementById('posXNum').value = posX;
+            document.getElementById('posYNum').value = posY;
+            document.getElementById('scaleNum').value = scale;
+
+            // 位置を適用
+            applyPosition(posX, posY, scale);
+            
+            // 情報表示を更新
+            updateInfoDisplay(posX, posY, scale);
+        }
+
+        function applyPosition(x, y, scale) {
+            currentPosition = { x: parseFloat(x), y: parseFloat(y), scale: parseFloat(scale) };
+            
+            const canvas = document.getElementById('purattokun-canvas');
+            const fallback = document.getElementById('purattokun-fallback');
+            
+            const size = 200 * scale; // ベースサイズ200px
+
+            // Canvas
+            canvas.style.left = x + '%';
+            canvas.style.top = y + '%';
+            canvas.style.transform = 'translate(-50%, -50%)';
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
+
+            // フォールバック画像
+            fallback.style.left = x + '%';
+            fallback.style.top = y + '%';
+            fallback.style.transform = 'translate(-50%, -50%)';
+            fallback.style.width = size + 'px';
+            fallback.style.height = size + 'px';
+        }
+
+        function applyPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+
+            // スライダーを更新
+            document.getElementById('posX').value = preset.x;
+            document.getElementById('posY').value = preset.y;
+            document.getElementById('scale').value = preset.scale;
+
+            // 位置を適用
+            applyPosition(preset.x, preset.y, preset.scale);
+            updateInfoDisplay(preset.x, preset.y, preset.scale);
+
+            console.log(`プリセット適用: ${presetName}`, preset);
+        }
+
+        function syncSlider(sliderId, value) {
+            document.getElementById(sliderId).value = value;
+        }
+
+        function resetPosition() {
+            applyPreset('center');
+        }
+
+        function updateInfoDisplay(x, y, scale) {
+            const info = document.getElementById('infoDisplay');
+            info.innerHTML = `位置: ${x}%, ${y}% | サイズ: ${scale}倍`;
+        }
+
+        function toggleControls() {
+            const controls = document.getElementById('positioningControls');
+            controls.style.display = controls.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Drag and Drop機能
+        function setupDragAndDrop(element) {
+            element.addEventListener('mousedown', startDrag);
+            element.addEventListener('touchstart', startDrag);
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            isDragging = true;
+            
+            const element = e.target;
+            element.classList.add('dragging');
+            
+            const rect = element.getBoundingClientRect();
+            const containerRect = document.querySelector('.scene-container').getBoundingClientRect();
+            
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+            
+            dragOffset.x = clientX - (rect.left + rect.width / 2);
+            dragOffset.y = clientY - (rect.top + rect.height / 2);
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchmove', drag);
+            document.addEventListener('touchend', stopDrag);
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+
+            const containerRect = document.querySelector('.scene-container').getBoundingClientRect();
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+
+            const newX = ((clientX - dragOffset.x - containerRect.left) / containerRect.width) * 100;
+            const newY = ((clientY - dragOffset.y - containerRect.top) / containerRect.height) * 100;
+
+            // 範囲制限
+            const clampedX = Math.max(0, Math.min(100, newX));
+            const clampedY = Math.max(0, Math.min(100, newY));
+
+            // スライダーを更新
+            document.getElementById('posX').value = clampedX;
+            document.getElementById('posY').value = clampedY;
+            document.getElementById('posXNum').value = Math.round(clampedX);
+            document.getElementById('posYNum').value = Math.round(clampedY);
+
+            // 位置を適用
+            applyPosition(clampedX, clampedY, currentPosition.scale);
+            updateInfoDisplay(clampedX, clampedY, currentPosition.scale);
+        }
+
+        function stopDrag() {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            const draggingElement = document.querySelector('.dragging');
+            if (draggingElement) {
+                draggingElement.classList.remove('dragging');
+            }
+
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchmove', drag);
+            document.removeEventListener('touchend', stopDrag);
+
+            // 現在地をプリセットとして保存
+            presets.current = {
+                x: currentPosition.x,
+                y: currentPosition.y,
+                scale: currentPosition.scale
+            };
+        }
+
+        // フォールバック画像のクリックイベント
+        document.getElementById('purattokun-fallback').addEventListener('click', () => {
+            if (!isSpineLoaded) {
+                // Spine未読み込み時は画像を少し揺らす
+                const fallback = document.getElementById('purattokun-fallback');
+                fallback.style.transform = 'translate(-50%, -50%) scale(1.1)';
+                setTimeout(() => {
+                    fallback.style.transform = `translate(-50%, -50%) scale(${currentPosition.scale})`;
+                }, 200);
+            }
+        });
+
+        // 初期化
+        window.addEventListener('load', () => {
+            // 初期位置設定
+            applyPreset('shop');
+            
+            // フォールバック画像のドラッグ機能を設定
+            setupDragAndDrop(document.getElementById('purattokun-fallback'));
+            
+            // Spine初期化
+            setTimeout(initSpine, 500);
+        });
+    </script>
+</body>
+</html>

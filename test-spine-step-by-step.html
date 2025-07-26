@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine段階的検証実験</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        
+        .experiment-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .step {
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .step-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        /* Step 1: 基本構造 */
+        .step1-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        .step1-bg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .step1-character {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border: 2px solid blue;
+        }
+        
+        /* Step 2: CSS追加 */
+        .step2-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        .step2-bg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .step2-character {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            z-index: 10;
+            pointer-events: auto;
+            cursor: move;
+            border: 2px dashed rgba(255, 107, 107, 0.3);
+        }
+        
+        /* Step 3: Canvas + Spine */
+        .step3-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        .step3-bg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .step3-canvas {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            z-index: 10;
+            border: 2px solid green;
+        }
+        
+        .step3-fallback {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            z-index: 10;
+            display: none;
+            border: 2px solid red;
+        }
+        
+        /* デバッグ用 */
+        .debug-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f4fd;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .control-buttons {
+            margin: 15px 0;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #007cba;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            background: #005a8a;
+        }
+    </style>
+</head>
+<body>
+    <div class="experiment-container">
+        <h1>🧪 Spine表示問題 段階的検証実験</h1>
+        <p>各ステップで要素を追加し、どの時点でぷらっとくんが見えなくなるかを確認します。</p>
+        
+        <!-- Step 1: 最小限 -->
+        <div class="step">
+            <div class="step-title">📍 Step 1: 最小限（背景 + 静的画像）</div>
+            <div class="step1-container">
+                <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="step1-bg">
+                <img src="assets/images/purattokunn.png" alt="ぷらっとくん" class="step1-character">
+            </div>
+            <div class="debug-info" id="step1-info">Step 1 診断結果がここに表示されます</div>
+        </div>
+        
+        <!-- Step 2: CSSクラス追加 -->
+        <div class="step">
+            <div class="step-title">📍 Step 2: CSSクラス追加（draggable-character相当）</div>
+            <div class="step2-container">
+                <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="step2-bg">
+                <img src="assets/images/purattokunn.png" alt="ぷらっとくん" class="step2-character">
+            </div>
+            <div class="debug-info" id="step2-info">Step 2 診断結果がここに表示されます</div>
+        </div>
+        
+        <!-- Step 3: Canvas + Spine システム -->
+        <div class="step">
+            <div class="step-title">📍 Step 3: Canvas + Spine システム</div>
+            <div class="step3-container">
+                <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="step3-bg">
+                <canvas id="step3-canvas" class="step3-canvas"></canvas>
+                <img src="assets/images/purattokunn.png" alt="フォールバック" 
+                     id="step3-fallback" class="step3-fallback">
+            </div>
+            <div class="control-buttons">
+                <button class="btn" onclick="initSpineStep3()">Spine初期化</button>
+                <button class="btn" onclick="showFallbackStep3()">フォールバック表示</button>
+                <button class="btn" onclick="showCanvasStep3()">Canvas表示</button>
+                <button class="btn" onclick="debugCanvas()">Canvas詳細診断</button>
+                <button class="btn" onclick="testCanvasDraw()">Canvas描画テスト</button>
+            </div>
+            <div class="debug-info" id="step3-info">Step 3 診断結果がここに表示されます</div>
+        </div>
+        
+        <!-- Step 4: 完全な視覚的デモ構造 -->
+        <div class="step">
+            <div class="step-title">📍 Step 4: 完全な視覚的デモ構造再現</div>
+            <div id="step4-container">
+                <!-- ここに視覚的デモの完全な構造を段階的に追加 -->
+            </div>
+            <div class="control-buttons">
+                <button class="btn" onclick="addVisualDemoStructure()">視覚的デモ構造を追加</button>
+                <button class="btn" onclick="addPositioningMode()">ポジショニングモード追加</button>
+            </div>
+            <div class="debug-info" id="step4-info">Step 4 診断結果がここに表示されます</div>
+        </div>
+        
+        <!-- 診断ツール -->
+        <div class="step">
+            <div class="step-title">🔧 診断ツール</div>
+            <div class="control-buttons">
+                <button class="btn" onclick="runDiagnostics()">全ステップ診断実行</button>
+                <button class="btn" onclick="clearResults()">結果クリア</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        // Spine初期化
+        async function initSpineStep3() {
+            try {
+                console.log('🎬 Step 3 Spine初期化開始...');
+                
+                const canvas = document.getElementById('step3-canvas');
+                const fallback = document.getElementById('step3-fallback');
+                
+                if (!canvas) {
+                    throw new Error('Canvas要素が見つかりません');
+                }
+                
+                // フォールバック非表示、Canvas表示
+                fallback.style.display = 'none';
+                canvas.style.display = 'block';
+                
+                // WebGLコンテキスト
+                const gl = canvas.getContext('webgl', { alpha: true });
+                if (!gl) {
+                    throw new Error('WebGLがサポートされていません');
+                }
+                
+                // Canvasサイズ設定
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                
+                // アセットマネージャー
+                const basePath = 'assets/spine/characters/purattokun/';
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み待ち
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100;
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        if (assetManager.isLoadingComplete()) {
+                            resolve();
+                        } else if (checkCount > maxChecks) {
+                            reject(new Error('アセット読み込みタイムアウト'));
+                        } else {
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    checkAssets();
+                });
+                
+                // Spine設定
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = canvas.width / 2;
+                skeleton.y = canvas.height / 2;
+                skeleton.scaleX = skeleton.scaleY = 1.0;  // 🔧 スケールを大きく変更
+                
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーション設定
+                if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                } else if (skeleton.data.animations.length > 0) {
+                    animationState.setAnimation(0, skeleton.data.animations[0].name, true);
+                }
+                
+                // レンダラー
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                let lastTime = Date.now() / 1000;
+                
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                updateStepInfo('step3-info', '✅ Spine初期化成功');
+                
+            } catch (error) {
+                console.error('Spine初期化エラー:', error);
+                updateStepInfo('step3-info', '❌ Spine初期化失敗: ' + error.message);
+                showFallbackStep3();
+            }
+        }
+        
+        function showFallbackStep3() {
+            const canvas = document.getElementById('step3-canvas');
+            const fallback = document.getElementById('step3-fallback');
+            
+            canvas.style.display = 'none';
+            fallback.style.display = 'block';
+            updateStepInfo('step3-info', '✅ フォールバック画像表示中');
+        }
+        
+        function showCanvasStep3() {
+            const canvas = document.getElementById('step3-canvas');
+            const fallback = document.getElementById('step3-fallback');
+            
+            fallback.style.display = 'none';
+            canvas.style.display = 'block';
+            updateStepInfo('step3-info', '✅ Canvas表示中');
+        }
+        
+        function addVisualDemoStructure() {
+            const container = document.getElementById('step4-container');
+            container.innerHTML = `
+                <div class="visual-demo" style="position: relative; max-width: 800px; margin: 0 auto; overflow: hidden;">
+                    <div class="background-container" style="position: relative; width: 100%; overflow: hidden;">
+                        <img src="assets/images/クラウドパートナーTOP.png" alt="デモ背景画像" class="background-image" style="width: 100%; height: auto; display: block;">
+                        
+                        <img src="assets/images/kumo1.png" alt="雲1" class="animated-element cloud1" style="position: absolute; opacity: 0.7; pointer-events: none; z-index: 5; left: -5%; top: 10%; width: 8%;">
+                        <img src="assets/images/kumo2.png" alt="雲2" class="animated-element cloud2" style="position: absolute; opacity: 0.7; pointer-events: none; z-index: 5; left: -5%; top: 15%; width: 8%;">
+                        
+                        <canvas id="step4-canvas" class="positioned-element draggable-character" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; z-index: 10; border: 2px solid green;"></canvas>
+                        
+                        <img src="assets/images/purattokunn.png" alt="ぷらっとくん" id="step4-fallback" class="positioned-element draggable-character" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; z-index: 10; object-fit: contain; display: none; border: 2px solid red;">
+                    </div>
+                </div>
+            `;
+            updateStepInfo('step4-info', '✅ 視覚的デモ構造を追加しました');
+        }
+        
+        function addPositioningMode() {
+            // ポジショニングモードのCSS・JavaScript追加
+            updateStepInfo('step4-info', '✅ ポジショニングモード機能を追加しました（実装予定）');
+        }
+        
+        function runDiagnostics() {
+            // Step 1 診断
+            const step1Char = document.querySelector('.step1-character');
+            if (step1Char) {
+                const rect1 = step1Char.getBoundingClientRect();
+                updateStepInfo('step1-info', `✅ 表示: ${rect1.width}x${rect1.height} at (${Math.round(rect1.left)}, ${Math.round(rect1.top)})`);
+            }
+            
+            // Step 2 診断
+            const step2Char = document.querySelector('.step2-character');
+            if (step2Char) {
+                const rect2 = step2Char.getBoundingClientRect();
+                updateStepInfo('step2-info', `✅ 表示: ${rect2.width}x${rect2.height} at (${Math.round(rect2.left)}, ${Math.round(rect2.top)})`);
+            }
+            
+            // Step 3 診断
+            const step3Canvas = document.getElementById('step3-canvas');
+            const step3Fallback = document.getElementById('step3-fallback');
+            if (step3Canvas || step3Fallback) {
+                const visibleElement = step3Canvas.style.display !== 'none' ? step3Canvas : step3Fallback;
+                const rect3 = visibleElement.getBoundingClientRect();
+                updateStepInfo('step3-info', `✅ 表示中: ${visibleElement.tagName} ${rect3.width}x${rect3.height} at (${Math.round(rect3.left)}, ${Math.round(rect3.top)})`);
+            }
+        }
+        
+        function updateStepInfo(elementId, message) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            }
+        }
+        
+        function debugCanvas() {
+            const canvas = document.getElementById('step3-canvas');
+            if (!canvas) {
+                updateStepInfo('step3-info', '❌ Canvas要素が見つかりません');
+                return;
+            }
+            
+            const rect = canvas.getBoundingClientRect();
+            const gl = canvas.getContext('webgl');
+            
+            updateStepInfo('step3-info', `
+                📊 Canvas詳細診断:<br>
+                • 内部サイズ: ${canvas.width} x ${canvas.height}<br>
+                • 表示サイズ: ${rect.width} x ${rect.height}<br>
+                • WebGL: ${gl ? '✅対応' : '❌未対応'}<br>
+                • 位置: (${Math.round(rect.left)}, ${Math.round(rect.top)})<br>
+                • 表示状態: ${canvas.style.display || 'block'}
+            `);
+        }
+        
+        function testCanvasDraw() {
+            const canvas = document.getElementById('step3-canvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                // Canvas 2D描画テスト
+                ctx.fillStyle = 'red';
+                ctx.fillRect(10, 10, 60, 60);
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Arial';
+                ctx.fillText('TEST', 25, 45);
+                updateStepInfo('step3-info', '✅ Canvas 2D描画テスト完了（赤い四角が見えますか？）');
+            } else {
+                updateStepInfo('step3-info', '❌ Canvas 2D描画に失敗');
+            }
+        }
+        
+        function clearResults() {
+            ['step1-info', 'step2-info', 'step3-info', 'step4-info'].forEach(id => {
+                updateStepInfo(id, '診断結果がここに表示されます');
+            });
+        }
+        
+        // ページ読み込み時に初期診断
+        window.addEventListener('load', () => {
+            setTimeout(runDiagnostics, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spineテストシーン</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+
+        .scene-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #purattokun-canvas {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            cursor: pointer;
+        }
+
+        #purattokun-fallback {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            cursor: pointer;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="scene-container">
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        
+        <canvas id="purattokun-canvas" style="display: none;"></canvas>
+        
+        <img src="assets/images/purattokunn.png" 
+             alt="ぷらっとくん" 
+             id="purattokun-fallback">
+    </div>
+
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        let skeleton, animationState, renderer, gl;
+        let isSpineLoaded = false;
+
+        async function initSpine() {
+            try {
+                // Spine WebGL待機
+                while (typeof spine === 'undefined') {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                const canvas = document.getElementById('purattokun-canvas');
+                const fallback = document.getElementById('purattokun-fallback');
+
+                gl = canvas.getContext('webgl', { alpha: true });
+                if (!gl) throw new Error('WebGL未対応');
+
+                canvas.width = 400;
+                canvas.height = 200;
+
+                // アセット読み込み
+                const assetManager = new spine.AssetManager(gl, 'assets/spine/characters/purattokun/');
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                assetManager.loadJson('purattokun.json');
+
+                // 読み込み完了待ち
+                while (!assetManager.isLoadingComplete()) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                // Spine設定
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+
+                skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 0;
+                skeleton.y = 0;
+                skeleton.scaleX = skeleton.scaleY = 0.5;
+
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                animationState = new spine.AnimationState(animationStateData);
+
+                // 待機アニメーション開始
+                if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                }
+
+                renderer = new spine.SceneRenderer(canvas, gl);
+
+                // レンダリング開始
+                render();
+
+                // Canvas表示、フォールバック非表示
+                canvas.style.display = 'block';
+                fallback.style.display = 'none';
+                isSpineLoaded = true;
+
+                // クリックイベント
+                canvas.addEventListener('click', onCharacterClick);
+
+            } catch (error) {
+                console.error('Spine初期化失敗:', error);
+            }
+        }
+
+        function render() {
+            if (!skeleton || !animationState || !renderer) return;
+
+            const delta = 1/60; // 60fps固定
+
+            animationState.update(delta);
+            animationState.apply(skeleton);
+            skeleton.updateWorldTransform();
+
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            renderer.begin();
+            renderer.drawSkeleton(skeleton, true);
+            renderer.end();
+
+            requestAnimationFrame(render);
+        }
+
+        function onCharacterClick() {
+            if (!isSpineLoaded || !animationState) return;
+
+            // やられアニメーション再生
+            if (skeleton.data.findAnimation('yarare')) {
+                animationState.setAnimation(0, 'yarare', false);
+                // やられ終了後、待機に戻る
+                animationState.addAnimation(0, 'taiki', true, 0);
+            }
+        }
+
+        // フォールバック画像のクリックイベント
+        document.getElementById('purattokun-fallback').addEventListener('click', () => {
+            if (!isSpineLoaded) {
+                // Spine未読み込み時は画像を少し揺らす
+                const fallback = document.getElementById('purattokun-fallback');
+                fallback.style.transform = 'translate(-50%, -50%) scale(1.1)';
+                setTimeout(() => {
+                    fallback.style.transform = 'translate(-50%, -50%) scale(1.0)';
+                }, 200);
+            }
+        });
+
+        // 初期化
+        window.addEventListener('load', () => {
+            setTimeout(initSpine, 500);
+        });
+    </script>
+</body>
+</html>
