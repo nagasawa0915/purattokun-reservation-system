@@ -1,0 +1,209 @@
+/* Spine配置システム編集モード用CSS */
+
+/* キャラクター表示範囲（Canvas） */
+.character-canvas {
+    position: absolute;
+    left: 25%;
+    top: 65%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
+    border: 2px solid #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+    overflow: hidden;
+    z-index: 8;
+    cursor: move;
+}
+
+.character-canvas.dragging {
+    cursor: grabbing;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.demo-character {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    z-index: 10;
+    cursor: move;
+    border: 2px dashed rgba(255, 107, 107, 0.3);
+    border-radius: 50%;
+    transition: border-color 0.3s;
+}
+
+.demo-character:hover {
+    border-color: rgba(255, 107, 107, 0.8);
+}
+
+.demo-character.dragging {
+    border-color: #ff6b6b;
+    box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3);
+}
+
+/* リサイズハンドル */
+.resize-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #ff6b6b;
+    border: 2px solid white;
+    border-radius: 50%;
+    display: none;
+    z-index: 15;
+}
+
+.demo-character.edit-mode .resize-handle {
+    display: block;
+}
+
+.resize-handle.se {
+    bottom: -6px;
+    right: -6px;
+    cursor: se-resize;
+}
+
+.resize-handle.sw {
+    bottom: -6px;
+    left: -6px;
+    cursor: sw-resize;
+}
+
+.resize-handle.ne {
+    top: -6px;
+    right: -6px;
+    cursor: ne-resize;
+}
+
+.resize-handle.nw {
+    top: -6px;
+    left: -6px;
+    cursor: nw-resize;
+}
+
+/* 表示範囲（Canvas）枠のスタイル */
+.character-canvas.canvas-edit-mode {
+    border: 3px solid #ff9800;
+    background: rgba(255, 152, 0, 0.2);
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.4);
+}
+
+.character-canvas.canvas-edit-mode::before {
+    content: 'キャラクター表示範囲';
+    position: absolute;
+    top: -25px;
+    left: 0;
+    background: #ff9800;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 15;
+}
+
+/* 表示範囲リサイズハンドル */
+.canvas-resize-handle {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    background: #4caf50;
+    border: 2px solid white;
+    border-radius: 3px;
+    display: none;
+    z-index: 20;
+}
+
+.character-canvas.canvas-edit-mode .canvas-resize-handle {
+    display: block;
+}
+
+.canvas-resize-handle.se {
+    bottom: -8px;
+    right: -8px;
+    cursor: se-resize;
+}
+
+.canvas-resize-handle.sw {
+    bottom: -8px;
+    left: -8px;
+    cursor: sw-resize;
+}
+
+.canvas-resize-handle.ne {
+    top: -8px;
+    right: -8px;
+    cursor: ne-resize;
+}
+
+.canvas-resize-handle.nw {
+    top: -8px;
+    left: -8px;
+    cursor: nw-resize;
+}
+
+/* 編集モードのボタンスタイル */
+.demo-button {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    margin: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s;
+}
+
+.demo-button:hover {
+    background: #ff5252;
+}
+
+.demo-button.active {
+    background: #4caf50;
+}
+
+/* 座標表示 */
+.coordinate-display {
+    text-align: center;
+    margin: 10px 0;
+    font-weight: bold;
+    color: #666;
+    min-height: 20px;
+}
+
+/* 確定パネル */
+.confirm-panel {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1002;
+    display: none;
+}
+
+.confirm-panel.show {
+    display: block;
+}
+
+.confirm-panel button {
+    margin: 0 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.confirm-panel .save-btn {
+    background: #4caf50;
+    color: white;
+}
+
+.confirm-panel .cancel-btn {
+    background: #f44336;
+    color: white;
+}

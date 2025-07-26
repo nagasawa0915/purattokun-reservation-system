@@ -25,6 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 目的 | ドキュメント |
 |------|-------------|
 | **📋 編集システム仕様書** | [🎯 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) |
+| **📊 実装進捗管理** | [📈 docs/POSITIONING_SYSTEM_PROGRESS.md](./docs/POSITIONING_SYSTEM_PROGRESS.md) |
 | **技術仕様・実装詳細** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
 | **レイヤー問題診断** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
 | **Spine問題解決** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
@@ -37,30 +38,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 「ぷらっとくんの予約システム」はレスポンシブWebサイトです。ネコヤ（猫と人が幸せに暮らす住まいづくり）をコンセプトとした、スクロール連動アニメーションが豊富な静的サイトです。
 
-## ファイル構造（主要部分）
+## コアアーキテクチャ
 
+### メインファイル
+- **index.html** - 本番サイト（SEO最適化、Spine WebGL統合、**編集モード統合済み**）
+- **spine-positioning-system-explanation.html** - 編集システムデモ（localStorage永続化対応）
+- **server.py** - Spine対応カスタムHTTPサーバー（.atlas配信、CORS対応）
+
+### 編集システムファイル（本番統合用）
+- **spine-positioning-system-explanation.css** - 編集UI専用スタイル（3.8KB）
+- **spine-positioning-system-explanation.js** - 編集機能統合版（12.1KB）
+
+### Spine WebGLシステム（assets/spine/）
 ```
-/
-├── index.html              - メインサイト（SEO最適化済み、Spine WebGL統合済み）
-├── server.py              - Spine対応カスタムHTTPサーバー（.atlas配信対応）
-├── docs/                  - 📁 技術ドキュメント集
-│   ├── README.md           - ドキュメントナビゲーション
-│   ├── DEVELOPMENT_GUIDE.md - 技術仕様・実装詳細
-│   ├── LAYER_DEBUGGING.md  - レイヤー問題診断
-│   ├── SPINE_TROUBLESHOOTING.md - Spine問題解決
-│   └── ARCHITECTURE_NOTES.md - 設計思想・アーキテクチャ
-├── assets/
-│   ├── css/styles.css      - スタイルシート
-│   ├── js/script.js        - JavaScript統合版
-│   ├── images/             - 画像ファイル
-│   └── spine/              - Spine WebGL関連
-│       ├── positioning/     - 📁 Canvas配置システム（モジュール化）
-│       │   ├── canvas-positioning-system.js - 配置システム本体
-│       │   └── placement-config.json        - 配置設定JSON
-│       ├── spine-character-manager.js       - キャラクター管理（統合済み）
-│       └── spine-integration-v2.js          - Spine統合システム
-└── demos/                 - テスト用ページ
+spine/
+├── characters/purattokun/   - Spine WebGLアセット（.atlas, .json, .png）
+├── spine-integration-v2.js  - メイン統合システム
+├── spine-character-manager.js - キャラクター管理
+└── positioning/            - Canvas配置システム（JSON設定）
 ```
+
+### 編集システム仕様（**本番統合完了**）
+- **起動方法**: URLパラメータ `?edit=true` で編集モード有効化
+- **動的読み込み**: 編集時のみCSS/JSファイルを読み込み（パフォーマンス最適化）
+- **座標系**: 中心点基準（transform: translate(-50%, -50%)）
+- **永続化**: localStorage + ページリロードキャンセル
+- **リサイズ**: 対角固定点システム（SE/SW/NE/NW）
+- **排他制御**: キャラクター・Canvas編集の同時実行防止
 
 ---
 
@@ -82,6 +86,27 @@ python -m http.server 8000
 
 # 4. NPX Serve（Node.js環境）
 npx serve . -p 8000
+```
+
+### 編集システム開発・デバッグ
+```bash
+# 本番サイトの編集モードを起動（推奨）
+python server.py
+# → http://localhost:8000/index.html?edit=true
+
+# 編集システムデモページを起動（開発・テスト用）
+python server.py
+# → http://localhost:8000/spine-positioning-system-explanation.html
+
+# localStorage状態確認（ブラウザF12コンソール）
+localStorage.getItem('spine-positioning-state')
+
+# localStorage状態クリア（開発時）
+localStorage.removeItem('spine-positioning-state')
+
+# 編集モードアクセス例
+# 通常表示: http://localhost:8000/index.html
+# 編集モード: http://localhost:8000/index.html?edit=true
 ```
 
 ### Git/GitHub管理
@@ -191,6 +216,45 @@ testBackgroundAlignment();       // 背景画像との位置関係確認
 ### フォールバック機能
 - 新システム読み込み失敗時は自動的に従来方式で動作
 - 既存機能の完全保持を保証
+
+---
+
+## 🎯 本番編集システム（2025年1月26日統合完了）
+
+### 編集モード起動方法
+```bash
+# 本番サイトで編集モード起動
+http://localhost:8000/index.html?edit=true
+
+# 通常モードに戻る
+http://localhost:8000/index.html
+```
+
+### 編集UI操作
+1. **編集モード起動**: URLに `?edit=true` を追加
+2. **右上パネル表示**: 編集・Canvas・終了ボタンが表示
+3. **キャラクター編集**: ドラッグ移動、リサイズハンドル操作
+4. **Canvas編集**: 表示範囲の移動・リサイズ
+5. **保存/キャンセル**: 確定パネルで設定永続化またはロールバック
+
+### 技術仕様
+- **動的読み込み**: 編集時のみ `spine-positioning-system-explanation.css/js` を読み込み
+- **パフォーマンス**: 通常表示に影響なし（0オーバーヘッド）
+- **永続化**: localStorage + ページリロード方式
+- **互換性**: 既存システムとの完全共存
+
+### デバッグコマンド（ブラウザF12コンソール）
+```javascript
+// 編集システム読み込み状態確認
+typeof startCharacterEdit === 'function'
+typeof startCanvasEdit === 'function'
+
+// 保存状態確認
+localStorage.getItem('spine-positioning-state')
+
+// 編集モード強制終了
+if (typeof endEditMode === 'function') endEditMode();
+```
 
 ---
 
@@ -393,6 +457,7 @@ SpineWebGL読み込み失敗時もCSS keyframeアニメーションで同様の�
 | 問題の種類 | 参照ドキュメント |
 |-----------|----------------|
 | **🎯 編集システム仕様確認** | [📋 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) |
+| **📊 実装進捗・計画確認** | [📈 docs/POSITIONING_SYSTEM_PROGRESS.md](./docs/POSITIONING_SYSTEM_PROGRESS.md) |
 | **レイヤー・位置問題** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
 | **Spine表示・エラー** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |
 | **Canvasサイズ変更問題** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) |
