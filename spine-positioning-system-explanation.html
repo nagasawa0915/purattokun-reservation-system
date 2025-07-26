@@ -131,13 +131,32 @@
             background-color: #e8f4fd;
         }
 
+        /* キャラクター表示範囲（Canvas） */
+        .character-canvas {
+            position: absolute;
+            left: 25%;
+            top: 65%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            border: 2px solid #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+            overflow: hidden;
+            z-index: 8;
+            cursor: move;
+        }
+
+        .character-canvas.dragging {
+            cursor: grabbing;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+
         .demo-character {
             position: absolute;
             width: 80px;
             height: 80px;
-            left: 35%;
-            top: 75%;
-            transform: translate(-50%, -50%);
+            left: 20px;
+            top: 20px;
             z-index: 10;
             cursor: move;
             border: 2px dashed rgba(255, 107, 107, 0.3);
@@ -194,26 +213,28 @@
             cursor: nw-resize;
         }
 
-        /* Canvas枠のスタイル */
-        .demo-screen.canvas-edit-mode {
-            border: 3px solid #4caf50;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        /* 表示範囲（Canvas）枠のスタイル */
+        .character-canvas.canvas-edit-mode {
+            border: 3px solid #ff9800;
+            background: rgba(255, 152, 0, 0.2);
+            box-shadow: 0 0 15px rgba(255, 152, 0, 0.4);
         }
 
-        .demo-screen.canvas-edit-mode::before {
-            content: 'Canvas領域';
+        .character-canvas.canvas-edit-mode::before {
+            content: 'キャラクター表示範囲';
             position: absolute;
             top: -25px;
             left: 0;
-            background: #4caf50;
+            background: #ff9800;
             color: white;
             padding: 2px 8px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: bold;
+            z-index: 15;
         }
 
-        /* Canvas リサイズハンドル */
+        /* 表示範囲リサイズハンドル */
         .canvas-resize-handle {
             position: absolute;
             width: 15px;
@@ -225,7 +246,7 @@
             z-index: 20;
         }
 
-        .demo-screen.canvas-edit-mode .canvas-resize-handle {
+        .character-canvas.canvas-edit-mode .canvas-resize-handle {
             display: block;
         }
 
@@ -595,11 +616,12 @@ URL: http://localhost:8000/index.html?spine-edit=true
                         <li><strong>地面固定</strong>：左上ハンドル = 右下（地面）固定で便利</li>
                     </ul>
                     
-                    <h4>🎨 Canvas編集モード</h4>
+                    <h4>🎨 表示範囲（Canvas）編集モード</h4>
                     <ul style="padding-left: 20px;">
-                        <li><strong>Canvasサイズ</strong>：コーナーハンドルでリサイズ</li>
-                        <li><strong>表示領域制御</strong>：キャラクターの表示範囲を調整</li>
-                        <li><strong>境界設定</strong>：最小300×200pxで制限</li>
+                        <li><strong>キャラクター表示範囲</strong>：見える領域のサイズを調整</li>
+                        <li><strong>クリッピング制御</strong>：範囲外は非表示に</li>
+                        <li><strong>内部解像度連動</strong>：Spine WebGLの描画品質も調整</li>
+                        <li><strong>最小サイズ</strong>：40×40px以上で制限</li>
                     </ul>
                 </div>
 
@@ -614,25 +636,28 @@ URL: http://localhost:8000/index.html?spine-edit=true
                 </div>
 
                 <div class="demo-screen" id="canvasDemo">
-                    <!-- Canvas リサイズハンドル -->
-                    <div class="canvas-resize-handle nw" data-direction="nw"></div>
-                    <div class="canvas-resize-handle ne" data-direction="ne"></div>
-                    <div class="canvas-resize-handle sw" data-direction="sw"></div>
-                    <div class="canvas-resize-handle se" data-direction="se"></div>
-                    
-                    <div class="demo-character" id="demoCharacter">
-                        <img src="assets/images/purattokunn.png" alt="ぷらっとくん" style="width: 100%; height: 100%; object-fit: contain;">
-                        <!-- キャラクター リサイズハンドル -->
-                        <div class="resize-handle nw" data-direction="nw"></div>
-                        <div class="resize-handle ne" data-direction="ne"></div>
-                        <div class="resize-handle sw" data-direction="sw"></div>
-                        <div class="resize-handle se" data-direction="se"></div>
+                    <!-- キャラクター表示範囲（Canvas） -->
+                    <div class="character-canvas" id="characterCanvas">
+                        <!-- 表示範囲リサイズハンドル -->
+                        <div class="canvas-resize-handle nw" data-direction="nw"></div>
+                        <div class="canvas-resize-handle ne" data-direction="ne"></div>
+                        <div class="canvas-resize-handle sw" data-direction="sw"></div>
+                        <div class="canvas-resize-handle se" data-direction="se"></div>
+                        
+                        <div class="demo-character" id="demoCharacter">
+                            <img src="assets/images/purattokunn.png" alt="ぷらっとくん" style="width: 100%; height: 100%; object-fit: contain;">
+                            <!-- キャラクター リサイズハンドル -->
+                            <div class="resize-handle nw" data-direction="nw"></div>
+                            <div class="resize-handle ne" data-direction="ne"></div>
+                            <div class="resize-handle sw" data-direction="sw"></div>
+                            <div class="resize-handle se" data-direction="se"></div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="demo-controls">
                     <button class="demo-button" onclick="toggleEditMode()">キャラクター編集</button>
-                    <button class="demo-button" onclick="toggleCanvasEditMode()">Canvas編集</button>
+                    <button class="demo-button" onclick="toggleCanvasEditMode()">表示範囲編集</button>
                     <button class="demo-button" onclick="resetPosition()">位置リセット</button>
                     <button class="demo-button" onclick="resetSize()">サイズリセット</button>
                 </div>
@@ -794,6 +819,7 @@ URL: http://localhost:8000/index.html?spine-edit=true
 
         // DOM要素
         const character = document.getElementById('demoCharacter');
+        const characterCanvas = document.getElementById('characterCanvas');
         const demoScreen = document.getElementById('canvasDemo');
         const coordinateDisplay = document.getElementById('coordinateDisplay');
 
@@ -818,7 +844,7 @@ URL: http://localhost:8000/index.html?spine-edit=true
             isCharacterEditMode = !isCharacterEditMode;
             const button = event.target;
             
-            // Canvas編集モードを無効化
+            // 表示範囲編集モードを無効化
             if (isCharacterEditMode && isCanvasEditMode) {
                 toggleCanvasEditMode();
             }
@@ -840,7 +866,7 @@ URL: http://localhost:8000/index.html?spine-edit=true
             }
         }
 
-        // Canvas編集モード切り替え
+        // 表示範囲編集モード切り替え
         function toggleCanvasEditMode() {
             isCanvasEditMode = !isCanvasEditMode;
             const button = event.target;
@@ -851,15 +877,15 @@ URL: http://localhost:8000/index.html?spine-edit=true
             }
             
             if (isCanvasEditMode) {
-                button.textContent = 'Canvas編集終了';
+                button.textContent = '表示範囲編集終了';
                 button.classList.add('active');
-                demoScreen.classList.add('canvas-edit-mode');
-                coordinateDisplay.textContent = '🎨 Canvas編集モード - Canvas全体をドラッグで移動、角をドラッグでサイズ変更';
+                characterCanvas.classList.add('canvas-edit-mode');
+                coordinateDisplay.textContent = '🎨 表示範囲編集モード - キャラクターの見える範囲をリサイズ';
                 setupCanvasDragEvents();
             } else {
-                button.textContent = 'Canvas編集';
+                button.textContent = '表示範囲編集';
                 button.classList.remove('active');
-                demoScreen.classList.remove('canvas-edit-mode');
+                characterCanvas.classList.remove('canvas-edit-mode');
                 coordinateDisplay.textContent = '';
                 removeCanvasDragEvents();
             }
@@ -867,9 +893,11 @@ URL: http://localhost:8000/index.html?spine-edit=true
 
         // 位置リセット
         function resetPosition() {
-            character.style.left = '35%';
-            character.style.top = '75%';
-            coordinateDisplay.textContent = '🔄 位置をリセットしました (35%, 75%)';
+            character.style.left = '20px';
+            character.style.top = '20px';
+            characterCanvas.style.left = '25%';
+            characterCanvas.style.top = '65%';
+            coordinateDisplay.textContent = '🔄 位置をリセットしました (キャラクター: 20px,20px / Canvas: 25%,65%)';
             
             setTimeout(() => {
                 if (!isCharacterEditMode && !isCanvasEditMode) coordinateDisplay.textContent = '';
@@ -880,9 +908,9 @@ URL: http://localhost:8000/index.html?spine-edit=true
         function resetSize() {
             character.style.width = '80px';
             character.style.height = '80px';
-            demoScreen.style.width = '800px';
-            demoScreen.style.height = '400px';
-            coordinateDisplay.textContent = '📏 サイズをリセットしました';
+            characterCanvas.style.width = '120px';
+            characterCanvas.style.height = '120px';
+            coordinateDisplay.textContent = '📏 サイズをリセットしました (キャラクター: 80×80px / Canvas: 120×120px)';
             
             setTimeout(() => {
                 if (!isCharacterEditMode && !isCanvasEditMode) coordinateDisplay.textContent = '';
@@ -900,8 +928,8 @@ URL: http://localhost:8000/index.html?spine-edit=true
                 });
             });
 
-            // Canvasリサイズハンドル
-            const canvasHandles = demoScreen.querySelectorAll('.canvas-resize-handle');
+            // 表示範囲リサイズハンドル
+            const canvasHandles = characterCanvas.querySelectorAll('.canvas-resize-handle');
             canvasHandles.forEach(handle => {
                 handle.addEventListener('mousedown', (e) => {
                     if (!isCanvasEditMode) return;
@@ -925,14 +953,14 @@ URL: http://localhost:8000/index.html?spine-edit=true
             if (type === 'character') {
                 const rect = character.getBoundingClientRect();
                 startElementPos = {
-                    // 中心位置として記録（transform: translate(-50%, -50%)のため）
-                    centerX: parseFloat(character.style.left) || 35,
-                    centerY: parseFloat(character.style.top) || 75,
+                    // Canvas内での絶対位置として記録
+                    x: parseFloat(character.style.left) || 20,
+                    y: parseFloat(character.style.top) || 20,
                     width: rect.width,
                     height: rect.height
                 };
             } else if (type === 'canvas') {
-                const rect = demoScreen.getBoundingClientRect();
+                const rect = characterCanvas.getBoundingClientRect();
                 startElementPos = {
                     width: rect.width,
                     height: rect.height
@@ -952,13 +980,13 @@ URL: http://localhost:8000/index.html?spine-edit=true
             character.removeEventListener('mousedown', startCharacterDrag);
         }
 
-        // Canvas ドラッグイベント設定
+        // 表示範囲ドラッグイベント設定
         function setupCanvasDragEvents() {
-            demoScreen.addEventListener('mousedown', startCanvasDrag);
+            characterCanvas.addEventListener('mousedown', startCanvasDrag);
         }
 
         function removeCanvasDragEvents() {
-            demoScreen.removeEventListener('mousedown', startCanvasDrag);
+            characterCanvas.removeEventListener('mousedown', startCanvasDrag);
         }
 
         function startCharacterDrag(e) {
@@ -968,11 +996,11 @@ URL: http://localhost:8000/index.html?spine-edit=true
             character.classList.add('dragging');
             
             startMousePos = { x: e.clientX, y: e.clientY };
-            const rect = demoScreen.getBoundingClientRect();
-            const charRect = character.getBoundingClientRect();
+            
+            // Canvas内での絶対位置で管理
             startElementPos = {
-                centerX: ((charRect.left + charRect.width/2 - rect.left) / rect.width) * 100,
-                centerY: ((charRect.top + charRect.height/2 - rect.top) / rect.height) * 100
+                x: parseFloat(character.style.left) || 20,
+                y: parseFloat(character.style.top) || 20
             };
             
             e.preventDefault();
@@ -980,8 +1008,21 @@ URL: http://localhost:8000/index.html?spine-edit=true
 
         function startCanvasDrag(e) {
             if (!isCanvasEditMode || e.target.classList.contains('canvas-resize-handle')) return;
-            // Canvas自体のドラッグは位置変更ではなく、内容の配置調整として扱う
-            coordinateDisplay.textContent = '🎨 Canvas内容の調整（将来実装予定）';
+            
+            isDragging = true;
+            characterCanvas.classList.add('dragging');
+            
+            startMousePos = { x: e.clientX, y: e.clientY };
+            const rect = demoScreen.getBoundingClientRect();
+            const canvasRect = characterCanvas.getBoundingClientRect();
+            
+            // Canvasの中心位置を記録
+            startElementPos = {
+                centerX: ((canvasRect.left + canvasRect.width/2 - rect.left) / rect.width) * 100,
+                centerY: ((canvasRect.top + canvasRect.height/2 - rect.top) / rect.height) * 100
+            };
+            
+            e.preventDefault();
         }
 
         // マウス移動処理
@@ -990,6 +1031,8 @@ URL: http://localhost:8000/index.html?spine-edit=true
                 handleResize(e);
             } else if (isDragging && isCharacterEditMode) {
                 handleCharacterDrag(e);
+            } else if (isDragging && isCanvasEditMode) {
+                handleCanvasDrag(e);
             }
         }
 
@@ -1029,43 +1072,40 @@ URL: http://localhost:8000/index.html?spine-edit=true
                 character.style.width = newWidth + 'px';
                 character.style.height = newHeight + 'px';
                 
-                // 固定点を維持するための中心位置調整（transform: translate(-50%, -50%)対応）
-                const rect = demoScreen.getBoundingClientRect();
+                // 固定点を維持するための位置調整（絶対位置対応）
                 const widthDiff = newWidth - startElementPos.width;
                 const heightDiff = newHeight - startElementPos.height;
                 
-                let newCenterX = startElementPos.centerX;
-                let newCenterY = startElementPos.centerY;
+                let newX = startElementPos.x;
+                let newY = startElementPos.y;
                 
-                // 各方向における中心位置の調整
+                // 各方向における位置の調整（固定点維持）
                 switch (resizeDirection) {
-                    case 'se': // 右下ハンドル: 左上固定 → 中心が右下に移動
-                        newCenterX = startElementPos.centerX + (widthDiff / rect.width) * 50; // 幅差の50%分移動
-                        newCenterY = startElementPos.centerY + (heightDiff / rect.height) * 50; // 高さ差の50%分移動
+                    case 'se': // 右下ハンドル: 左上固定 → 位置変更なし
+                        // 位置調整不要
                         break;
                         
-                    case 'sw': // 左下ハンドル: 右上固定 → 中心が左下に移動
-                        newCenterX = startElementPos.centerX - (widthDiff / rect.width) * 50; // 幅差の50%分左に移動
-                        newCenterY = startElementPos.centerY + (heightDiff / rect.height) * 50; // 高さ差の50%分下に移動
+                    case 'sw': // 左下ハンドル: 右上固定 → 左に移動
+                        newX = startElementPos.x - widthDiff;
                         break;
                         
-                    case 'ne': // 右上ハンドル: 左下固定 → 中心が右上に移動
-                        newCenterX = startElementPos.centerX + (widthDiff / rect.width) * 50; // 幅差の50%分右に移動
-                        newCenterY = startElementPos.centerY - (heightDiff / rect.height) * 50; // 高さ差の50%分上に移動
+                    case 'ne': // 右上ハンドル: 左下固定 → 上に移動
+                        newY = startElementPos.y - heightDiff;
                         break;
                         
-                    case 'nw': // 左上ハンドル: 右下固定 → 中心が左上に移動
-                        newCenterX = startElementPos.centerX - (widthDiff / rect.width) * 50; // 幅差の50%分左に移動
-                        newCenterY = startElementPos.centerY - (heightDiff / rect.height) * 50; // 高さ差の50%分上に移動
+                    case 'nw': // 左上ハンドル: 右下固定 → 左上に移動
+                        newX = startElementPos.x - widthDiff;
+                        newY = startElementPos.y - heightDiff;
                         break;
                 }
                 
-                // 境界制限
-                newCenterX = Math.max(5, Math.min(95, newCenterX));
-                newCenterY = Math.max(5, Math.min(95, newCenterY));
+                // Canvas内での境界制限
+                const canvasRect = characterCanvas.getBoundingClientRect();
+                newX = Math.max(0, Math.min(canvasRect.width - newWidth, newX));
+                newY = Math.max(0, Math.min(canvasRect.height - newHeight, newY));
                 
-                character.style.left = newCenterX + '%';
-                character.style.top = newCenterY + '%';
+                character.style.left = newX + 'px';
+                character.style.top = newY + 'px';
                 
                 const scale = (newWidth / 80).toFixed(2);
                 const fixedPoint = getFixedPointName(resizeDirection);
@@ -1077,32 +1117,54 @@ URL: http://localhost:8000/index.html?spine-edit=true
 
                 switch (resizeDirection) {
                     case 'se':
-                        newWidth = Math.max(300, startElementPos.width + deltaX);
-                        newHeight = Math.max(200, startElementPos.height + deltaY);
+                        newWidth = Math.max(60, startElementPos.width + deltaX);
+                        newHeight = Math.max(60, startElementPos.height + deltaY);
                         break;
                     case 'sw':
-                        newWidth = Math.max(300, startElementPos.width - deltaX);
-                        newHeight = Math.max(200, startElementPos.height + deltaY);
+                        newWidth = Math.max(60, startElementPos.width - deltaX);
+                        newHeight = Math.max(60, startElementPos.height + deltaY);
                         break;
                     case 'ne':
-                        newWidth = Math.max(300, startElementPos.width + deltaX);
-                        newHeight = Math.max(200, startElementPos.height - deltaY);
+                        newWidth = Math.max(60, startElementPos.width + deltaX);
+                        newHeight = Math.max(60, startElementPos.height - deltaY);
                         break;
                     case 'nw':
-                        newWidth = Math.max(300, startElementPos.width - deltaX);
-                        newHeight = Math.max(200, startElementPos.height - deltaY);
+                        newWidth = Math.max(60, startElementPos.width - deltaX);
+                        newHeight = Math.max(60, startElementPos.height - deltaY);
                         break;
                 }
 
-                demoScreen.style.width = newWidth + 'px';
-                demoScreen.style.height = newHeight + 'px';
+                characterCanvas.style.width = newWidth + 'px';
+                characterCanvas.style.height = newHeight + 'px';
                 
-                coordinateDisplay.textContent = `🎨 Canvasサイズ: ${newWidth.toFixed(0)}×${newHeight.toFixed(0)}px`;
+                coordinateDisplay.textContent = `🎨 表示範囲サイズ: ${newWidth.toFixed(0)}×${newHeight.toFixed(0)}px (キャラクター表示領域)`;
             }
         }
 
         // キャラクタードラッグ処理
         function handleCharacterDrag(e) {
+            const deltaX = e.clientX - startMousePos.x;
+            const deltaY = e.clientY - startMousePos.y;
+            
+            let newX = startElementPos.x + deltaX;
+            let newY = startElementPos.y + deltaY;
+            
+            // Canvas内での境界制限
+            const canvasRect = characterCanvas.getBoundingClientRect();
+            const charWidth = character.offsetWidth;
+            const charHeight = character.offsetHeight;
+            
+            newX = Math.max(0, Math.min(canvasRect.width - charWidth, newX));
+            newY = Math.max(0, Math.min(canvasRect.height - charHeight, newY));
+            
+            character.style.left = newX + 'px';
+            character.style.top = newY + 'px';
+            
+            coordinateDisplay.textContent = `📍 キャラクター位置: ${newX.toFixed(0)}px, ${newY.toFixed(0)}px (Canvas内)`;
+        }
+
+        // Canvas移動処理
+        function handleCanvasDrag(e) {
             const deltaX = e.clientX - startMousePos.x;
             const deltaY = e.clientY - startMousePos.y;
             
@@ -1113,14 +1175,14 @@ URL: http://localhost:8000/index.html?spine-edit=true
             let newX = startElementPos.centerX + deltaPercentX;
             let newY = startElementPos.centerY + deltaPercentY;
             
-            // 境界制限
-            newX = Math.max(5, Math.min(95, newX));
-            newY = Math.max(5, Math.min(95, newY));
+            // 境界制限（Canvasが背景から出ないように）
+            newX = Math.max(10, Math.min(90, newX));
+            newY = Math.max(10, Math.min(90, newY));
             
-            character.style.left = newX + '%';
-            character.style.top = newY + '%';
+            characterCanvas.style.left = newX + '%';
+            characterCanvas.style.top = newY + '%';
             
-            coordinateDisplay.textContent = `📍 位置: ${newX.toFixed(1)}%, ${newY.toFixed(1)}%`;
+            coordinateDisplay.textContent = `📱 Canvas位置: ${newX.toFixed(1)}%, ${newY.toFixed(1)}%`;
         }
 
         // マウスアップ処理
@@ -1129,6 +1191,7 @@ URL: http://localhost:8000/index.html?spine-edit=true
                 isDragging = false;
                 character.style.cursor = 'grab';
                 character.classList.remove('dragging');
+                characterCanvas.classList.remove('dragging');
                 
                 if (isCharacterEditMode) {
                     setTimeout(() => {
