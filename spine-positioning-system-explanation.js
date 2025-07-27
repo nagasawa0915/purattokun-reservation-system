@@ -18,6 +18,7 @@ let savedState = {
 
 // DOM要素（index.html用に適応）
 let character = null;
+let originalCanvasElement = null; // 元のcanvas要素への参照
 let characterCanvas = null;
 let demoScreen = null;
 let coordinateDisplay = null;
@@ -32,6 +33,7 @@ function startCharacterEdit() {
     }
     
     isCharacterEditMode = true;
+    character.classList.add('demo-character'); // CSSセレクタのために追加
     character.classList.add('edit-mode');
     
     const btn = document.getElementById('edit-character-btn');
@@ -104,6 +106,18 @@ function createCharacterCanvas() {
         characterCanvas.className = 'character-canvas';
         characterCanvas.id = 'character-canvas-edit';
         
+        // ぷらっとくんの実際の位置とサイズを取得
+        const charRect = character.getBoundingClientRect();
+        const parentRect = character.parentElement.getBoundingClientRect();
+        
+        // 編集用Canvasをキャラクターの位置に配置
+        characterCanvas.style.position = 'absolute';
+        characterCanvas.style.left = (charRect.left - parentRect.left) + 'px';
+        characterCanvas.style.top = (charRect.top - parentRect.top) + 'px';
+        characterCanvas.style.width = charRect.width + 'px';
+        characterCanvas.style.height = charRect.height + 'px';
+        characterCanvas.style.transform = 'none'; // transformはキャラクター側で管理
+        
         // ぷらっとくんの親要素に追加
         const parent = character.parentElement;
         if (parent) {
@@ -112,12 +126,102 @@ function createCharacterCanvas() {
             document.body.appendChild(characterCanvas);
         }
         
+        // キャラクターを編集Canvasの中に移動
+        characterCanvas.appendChild(character);
+        
+        // キャラクターの位置を編集Canvas内での相対位置に調整
+        character.style.position = 'absolute';
+        character.style.left = '50%';
+        character.style.top = '50%';
+        character.style.transform = 'translate(-50%, -50%)';
+        
+        // キャラクター用のリサイズハンドルを追加
+        console.log('🔧 キャラクター要素のタイプ:', character.tagName);
+        console.log('🔧 キャラクター要素:', character);
+        
+        // canvas要素の場合は、ラッパーを作成する必要がある
+        if (character.tagName === 'CANVAS') {
+            console.log('⚠️ canvas要素は子要素を持てないため、ラッパーを作成します');
+            
+            // 元のcanvas要素を保存
+            originalCanvasElement = character;
+            
+            // キャラクターラッパーを作成
+            const characterWrapper = document.createElement('div');
+            characterWrapper.className = 'character-wrapper demo-character';
+            characterWrapper.style.position = 'relative';
+            
+            // 実際のキャラクターサイズを取得
+            // getBoundingClientRect()で実際の表示サイズを取得（CSS transformやscaleが適用された後のサイズ）
+            const actualRect = character.getBoundingClientRect();
+            const actualWidth = actualRect.width;
+            const actualHeight = actualRect.height;
+            
+            // デバッグ情報
+            console.log('📏 キャラクターサイズ:', {
+                cssWidth: character.style.width,
+                cssHeight: character.style.height,
+                actualWidth: actualWidth,
+                actualHeight: actualHeight
+            });
+            
+            // 実際の表示サイズに合わせてラッパーを作成
+            characterWrapper.style.width = actualWidth + 'px';
+            characterWrapper.style.height = actualHeight + 'px';
+            
+            // canvas要素の位置をラッパーに移動
+            characterWrapper.style.left = '50%';
+            characterWrapper.style.top = '50%';
+            characterWrapper.style.transform = 'translate(-50%, -50%)';
+            
+            // canvas要素の位置スタイルをリセット
+            character.style.position = 'absolute';
+            character.style.left = '0';
+            character.style.top = '0';
+            character.style.transform = 'none';
+            character.style.width = '100%';
+            character.style.height = '100%';
+            
+            // ラッパーにリサイズハンドルを追加
+            ['se', 'sw', 'ne', 'nw'].forEach(direction => {
+                const handle = document.createElement('div');
+                handle.className = `resize-handle ${direction}`;
+                handle.setAttribute('data-direction', direction);
+                characterWrapper.appendChild(handle);
+            });
+            
+            // canvas要素をラッパーで包む
+            characterCanvas.appendChild(characterWrapper);
+            characterWrapper.appendChild(character);
+            
+            // characterをラッパーに更新
+            character = characterWrapper;
+            console.log('✅ キャラクターラッパーを作成しました');
+        } else {
+            // canvas以外の要素の場合は直接追加
+            ['se', 'sw', 'ne', 'nw'].forEach(direction => {
+                const handle = document.createElement('div');
+                handle.className = `resize-handle ${direction}`;
+                handle.setAttribute('data-direction', direction);
+                character.appendChild(handle);
+            });
+        }
+        
         // Canvas用のリサイズハンドルを追加
         ['se', 'sw', 'ne', 'nw'].forEach(direction => {
             const handle = document.createElement('div');
             handle.className = `canvas-resize-handle ${direction}`;
+            handle.setAttribute('data-direction', direction);
             characterCanvas.appendChild(handle);
         });
+        
+        // 初期状態を保存
+        savedState.canvas.left = characterCanvas.style.left;
+        savedState.canvas.top = characterCanvas.style.top;
+        savedState.canvas.width = characterCanvas.style.width;
+        savedState.canvas.height = characterCanvas.style.height;
+        savedState.character.left = character.style.left;
+        savedState.character.top = character.style.top;
     }
     
     // demoScreenは背景要素
@@ -215,6 +319,12 @@ function handleMouseMove(e) {
         } else if (isCanvasEditMode) {
             moveCanvas(deltaX, deltaY);
         }
+    } else if (isResizing) {
+        if (resizeType === 'character') {
+            resizeCharacter(deltaX, deltaY);
+        } else if (resizeType === 'canvas') {
+            resizeCanvas(deltaX, deltaY);
+        }
     }
     
     updateCoordinateDisplay();
@@ -258,15 +368,99 @@ function moveCanvas(deltaX, deltaY) {
     characterCanvas.style.top = newY + 'px';
 }
 
+// キャラクターリサイズ
+function resizeCharacter(deltaX, deltaY) {
+    const minSize = 20; // 最小サイズ
+    const maxSize = 200; // 最大サイズ
+    
+    let widthDiff = 0;
+    let heightDiff = 0;
+    
+    // 方向に応じたサイズ変更
+    switch (resizeDirection) {
+        case 'se': // 右下
+            widthDiff = deltaX;
+            heightDiff = deltaY;
+            break;
+        case 'sw': // 左下
+            widthDiff = -deltaX;
+            heightDiff = deltaY;
+            break;
+        case 'ne': // 右上
+            widthDiff = deltaX;
+            heightDiff = -deltaY;
+            break;
+        case 'nw': // 左上
+            widthDiff = -deltaX;
+            heightDiff = -deltaY;
+            break;
+    }
+    
+    const newWidth = Math.max(minSize, Math.min(maxSize, startElementPos.width + widthDiff));
+    const newHeight = Math.max(minSize, Math.min(maxSize, startElementPos.height + heightDiff));
+    
+    character.style.width = newWidth + 'px';
+    character.style.height = newHeight + 'px';
+}
+
+// Canvasリサイズ
+function resizeCanvas(deltaX, deltaY) {
+    const minSize = 60; // 最小サイズ
+    const maxSize = 300; // 最大サイズ
+    
+    let widthDiff = 0;
+    let heightDiff = 0;
+    let leftDiff = 0;
+    let topDiff = 0;
+    
+    // 方向に応じたサイズ・位置変更
+    switch (resizeDirection) {
+        case 'se': // 右下
+            widthDiff = deltaX;
+            heightDiff = deltaY;
+            break;
+        case 'sw': // 左下
+            widthDiff = -deltaX;
+            heightDiff = deltaY;
+            leftDiff = deltaX;
+            break;
+        case 'ne': // 右上
+            widthDiff = deltaX;
+            heightDiff = -deltaY;
+            topDiff = deltaY;
+            break;
+        case 'nw': // 左上
+            widthDiff = -deltaX;
+            heightDiff = -deltaY;
+            leftDiff = deltaX;
+            topDiff = deltaY;
+            break;
+    }
+    
+    const newWidth = Math.max(minSize, Math.min(maxSize, startElementPos.width + widthDiff));
+    const newHeight = Math.max(minSize, Math.min(maxSize, startElementPos.height + heightDiff));
+    const newLeft = startElementPos.left + leftDiff;
+    const newTop = startElementPos.top + topDiff;
+    
+    characterCanvas.style.width = newWidth + 'px';
+    characterCanvas.style.height = newHeight + 'px';
+    characterCanvas.style.left = newLeft + 'px';
+    characterCanvas.style.top = newTop + 'px';
+}
+
 // マウスアップ処理
 function handleMouseUp() {
     if (isDragging) {
         isDragging = false;
-        character.classList.remove('dragging');
-        characterCanvas.classList.remove('dragging');
+        if (character) character.classList.remove('dragging');
+        if (characterCanvas) characterCanvas.classList.remove('dragging');
     }
     if (isResizing) {
         isResizing = false;
+        resizeType = '';
+        resizeDirection = '';
+        if (character) character.classList.remove('resizing');
+        if (characterCanvas) characterCanvas.classList.remove('resizing');
     }
 }
 
@@ -325,6 +519,96 @@ function cancelEdit() {
 
 // 編集モード終了
 function endEditMode() {
+    // キャラクターを元の位置に戻す
+    if (characterCanvas && character) {
+        const originalParent = document.querySelector('.hero-content') || document.body;
+        
+        // ラッパーを解除する必要がある場合
+        if (originalCanvasElement && character.classList.contains('character-wrapper')) {
+            console.log('🔄 キャラクターラッパーを解除します');
+            
+            // 元のcanvas要素を取り出す
+            const canvasElement = originalCanvasElement;
+            
+            // ラッパーの位置情報を取得
+            const wrapperRect = character.getBoundingClientRect();
+            const canvasRect = characterCanvas.getBoundingClientRect();
+            const parentRect = originalParent.getBoundingClientRect();
+            
+            // canvas要素を元の親要素に戻す
+            originalParent.appendChild(canvasElement);
+            
+            // 元の位置スタイルを復元
+            if (savedState && savedState.canvas) {
+                const canvasLeft = parseFloat(savedState.canvas.left);
+                const canvasTop = parseFloat(savedState.canvas.top);
+                const canvasWidth = parseFloat(savedState.canvas.width);
+                const canvasHeight = parseFloat(savedState.canvas.height);
+                
+                // ラッパーの編集Canvas内での相対位置
+                const wrapperInCanvasX = wrapperRect.left + wrapperRect.width/2 - canvasRect.left;
+                const wrapperInCanvasY = wrapperRect.top + wrapperRect.height/2 - canvasRect.top;
+                
+                // 親要素に対する絶対位置を計算
+                const newLeft = canvasLeft + wrapperInCanvasX;
+                const newTop = canvasTop + wrapperInCanvasY;
+                
+                // 元のパーセント位置に変換
+                const parentWidth = parentRect.width;
+                const parentHeight = parentRect.height;
+                canvasElement.style.left = (newLeft / parentWidth * 100) + '%';
+                canvasElement.style.top = (newTop / parentHeight * 100) + '%';
+                canvasElement.style.width = wrapperRect.width + 'px';
+                canvasElement.style.height = wrapperRect.height + 'px';
+            }
+            
+            canvasElement.style.position = 'absolute';
+            canvasElement.style.transform = 'translate(-50%, -50%)';
+            
+            // ラッパーを削除
+            if (character.parentElement) {
+                character.parentElement.removeChild(character);
+            }
+            
+            // characterを元のcanvas要素に戻す
+            character = canvasElement;
+            originalCanvasElement = null;
+        } else {
+            // ラッパーでない場合の通常処理
+            const charRect = character.getBoundingClientRect();
+            const canvasRect = characterCanvas.getBoundingClientRect();
+            const parentRect = originalParent.getBoundingClientRect();
+            
+            originalParent.appendChild(character);
+            
+            if (savedState && savedState.canvas) {
+                const canvasLeft = parseFloat(savedState.canvas.left);
+                const canvasTop = parseFloat(savedState.canvas.top);
+                const canvasWidth = parseFloat(savedState.canvas.width);
+                const canvasHeight = parseFloat(savedState.canvas.height);
+                
+                const charInCanvasX = parseFloat(character.style.left.replace('%', '')) / 100 * canvasWidth;
+                const charInCanvasY = parseFloat(character.style.top.replace('%', '')) / 100 * canvasHeight;
+                
+                const newLeft = canvasLeft + charInCanvasX;
+                const newTop = canvasTop + charInCanvasY;
+                
+                const parentWidth = parentRect.width;
+                const parentHeight = parentRect.height;
+                character.style.left = (newLeft / parentWidth * 100) + '%';
+                character.style.top = (newTop / parentHeight * 100) + '%';
+            }
+            
+            character.style.transform = 'translate(-50%, -50%)';
+        }
+        
+        // 編集Canvasを削除
+        if (characterCanvas.parentElement) {
+            characterCanvas.parentElement.removeChild(characterCanvas);
+        }
+        characterCanvas = null;
+    }
+    
     endCharacterEditMode();
     endCanvasEditMode();
     hideConfirmPanel();
@@ -332,7 +616,10 @@ function endEditMode() {
 
 function endCharacterEditMode() {
     isCharacterEditMode = false;
-    character.classList.remove('edit-mode');
+    if (character) {
+        character.classList.remove('edit-mode');
+        character.classList.remove('demo-character');
+    }
     
     const btn = document.getElementById('edit-character-btn');
     if (btn) {
@@ -343,7 +630,9 @@ function endCharacterEditMode() {
 
 function endCanvasEditMode() {
     isCanvasEditMode = false;
-    characterCanvas.classList.remove('canvas-edit-mode');
+    if (characterCanvas) {
+        characterCanvas.classList.remove('canvas-edit-mode');
+    }
     
     const btn = document.getElementById('edit-canvas-btn');
     if (btn) {
@@ -367,10 +656,73 @@ function updateCoordinateDisplay() {
     }
 }
 
-// リサイズハンドラー設定（簡略版）
+// リサイズハンドラー設定
 function setupResizeHandlers() {
-    // 実装は必要に応じて追加
+    // キャラクターのリサイズハンドル（編集Canvas作成後に設定）
+    const setupCharacterHandles = () => {
+        if (character) {
+            const characterHandles = character.querySelectorAll('.resize-handle');
+            characterHandles.forEach(handle => {
+                handle.addEventListener('mousedown', (e) => {
+                    if (!isCharacterEditMode) return;
+                    startResize(e, 'character', handle.dataset.direction);
+                });
+            });
+        }
+    };
+    
+    // Canvasのリサイズハンドル（編集Canvas作成後に設定）
+    const setupCanvasHandles = () => {
+        if (characterCanvas) {
+            const canvasHandles = characterCanvas.querySelectorAll('.canvas-resize-handle');
+            canvasHandles.forEach(handle => {
+                handle.addEventListener('mousedown', (e) => {
+                    if (!isCanvasEditMode) return;
+                    startResize(e, 'canvas', handle.dataset.direction);
+                });
+            });
+        }
+    };
+    
+    // 編集Canvas作成後に呼び出し
+    setupCharacterHandles();
+    setupCanvasHandles();
+    
     console.log('🔧 リサイズハンドラー設定完了');
+}
+
+// リサイズ開始
+function startResize(e, target, direction) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    isResizing = true;
+    resizeType = target;
+    resizeDirection = direction;
+    
+    startMousePos = { x: e.clientX, y: e.clientY };
+    
+    if (target === 'character') {
+        const rect = character.getBoundingClientRect();
+        startElementPos = {
+            width: rect.width,
+            height: rect.height,
+            centerX: parseFloat(character.style.left.replace('%', '')) || 50,
+            centerY: parseFloat(character.style.top.replace('%', '')) || 50
+        };
+        character.classList.add('resizing');
+    } else if (target === 'canvas') {
+        const rect = characterCanvas.getBoundingClientRect();
+        startElementPos = {
+            width: rect.width,
+            height: rect.height,
+            left: parseFloat(characterCanvas.style.left) || 0,
+            top: parseFloat(characterCanvas.style.top) || 0
+        };
+        characterCanvas.classList.add('resizing');
+    }
+    
+    updateCoordinateDisplay();
 }
 
 // 初期化時にローカルストレージから復元

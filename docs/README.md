@@ -37,18 +37,31 @@
 
 | 問題 | 参照ドキュメント | セクション |
 |------|----------------|-----------|
-| **🚨 ぷらっとくんが見えない** | [🎯 キャラクター表示診断](./CHARACTER_DISPLAY_TROUBLESHOOTING.md) | 緊急診断 → 問題パターン別解決 |
-| **🚨 ウィンドウリサイズでズレる** | [📐 構造分析ガイド](./CRITICAL_STRUCTURE_DIFFERENCE_ANALYSIS.md) | テンプレート → 構造的差異分析 |
-| **白い枠と同じ動きをする** | [レイヤー診断](./LAYER_DEBUGGING.md) | パターン1: 白い枠と同じ動き |
+| **🚨 ぷらっとくんが見えない** | [🎯 キャラクター表示問題](./troubleshooting/キャラクター表示問題.md) | 緊急診断 → 問題パターン別解決 |
+| **🚨 編集モードで位置ずれ** | [📐 編集モード位置ずれ問題](./troubleshooting/編集モード位置ずれ問題.md) | 編集Canvas作成時の位置計算修正 |
+| **リサイズハンドル問題** | [🎯 Spine配置システム編集UI問題](./troubleshooting/Spine配置システム編集UI問題.md) | Canvas要素の子要素制限対応 |
 | **新機能を追加したい** | [開発詳細ガイド](./DEVELOPMENT_GUIDE.md) | アーキテクチャの特徴 |
 | **コードをリファクタリングしたい** | [アーキテクチャノート](./ARCHITECTURE_NOTES.md) | リファクタリング設計ガイド |
 
 ### 🚀 緊急時の対応手順
 
 1. **[CLAUDE.md](../CLAUDE.md)** で基本的な対処を確認
-2. **[レイヤー診断](./LAYER_DEBUGGING.md)** の緊急時対処法を実行
-3. **[Spine診断](./SPINE_TROUBLESHOOTING.md)** でSpine特有の問題をチェック
+2. **[トラブルシューティング総合ガイド](./_TROUBLESHOOTING.md)** で症状から問題を特定
+3. 該当する **troubleshooting/**.md ファイルで詳細な解決策を確認
 4. それでも解決しない場合は各ファイルの詳細セクションを参照
+
+---
+
+## 📦 アーカイブ
+
+過去の資料や参考文献は `archive/` フォルダに整理されています：
+
+- **FAILURE_ANALYSIS_CANVAS_SIZE.md** - Canvasサイズ問題の失敗事例分析
+- **CLAUDECODE_AUTOMATION_ALGORITHM.md** - 自動化システムの詳細仕様
+- **LAYER_DEBUGGING.md** - レイヤー問題の詳細診断手法
+- **SPINE_TROUBLESHOOTING.md** - Spine問題の詳細解決策
+- **CANVAS_SIZE_TROUBLESHOOTING.md** - Canvasサイズ問題の詳細ガイド
+- **CHARACTER_DISPLAY_TROUBLESHOOTING.md** - キャラクター表示問題の詳細版
 
 ---
 

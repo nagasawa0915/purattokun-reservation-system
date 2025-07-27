@@ -52,8 +52,27 @@
     z-index: 15;
 }
 
-.demo-character.edit-mode .resize-handle {
+.demo-character.edit-mode .resize-handle,
+.character-wrapper.edit-mode .resize-handle {
     display: block;
+}
+
+/* キャラクターラッパー（canvas要素用） */
+.character-wrapper {
+    position: absolute;
+    cursor: move;
+    border: 2px dashed rgba(255, 107, 107, 0.3);
+    border-radius: 8px;
+    transition: border-color 0.3s;
+}
+
+.character-wrapper:hover {
+    border-color: rgba(255, 107, 107, 0.8);
+}
+
+.character-wrapper.dragging {
+    border-color: #ff6b6b;
+    box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3);
 }
 
 .resize-handle.se {

@@ -32,6 +32,18 @@
 - **タグ**: `#サイズ` `#Canvas` `#CSS`
 - **別名**: キャンバスサイズ、canvas size、サイズ変更不可
 
+#### 編集モード位置ずれ問題
+- **ファイル**: [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
+- **症状**: 編集モードでキャラクターがいない場所に枠が出る
+- **タグ**: `#位置` `#レイヤー` `#編集システム` `#Canvas`
+- **別名**: 編集モードで枠がずれる、キャラクター編集で違う場所に枠が出る、edit mode position mismatch
+
+#### Spine配置システム編集UI問題
+- **ファイル**: [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
+- **症状**: リサイズハンドルが表示されない、ハンドルがキャラクターから離れる
+- **タグ**: `#編集システム` `#リサイズハンドル` `#Canvas要素` `#UI`
+- **別名**: リサイズハンドル表示されない、編集UIが機能しない、ハンドルが遠い、resize handle not working
+
 ### ⚙️ Spine関連の問題
 
 #### Spineライブラリ読込問題
@@ -60,6 +72,7 @@
 #### #Canvas  
 - [キャラクター表示問題.md](./troubleshooting/キャラクター表示問題.md)
 - [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
+- [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
 
 #### #CSS
 - [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
@@ -68,6 +81,19 @@
 #### #レスポンシブ
 - [ウィンドウリサイズ問題.md](./troubleshooting/ウィンドウリサイズ問題.md)
 
+#### #編集システム
+- [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
+- [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
+
+#### #リサイズハンドル
+- [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
+
+#### #UI
+- [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
+
+#### #レイヤー
+- [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
+
 ### 症状別
 
 #### #表示
@@ -75,6 +101,7 @@
 
 #### #位置
 - [ウィンドウリサイズ問題.md](./troubleshooting/ウィンドウリサイズ問題.md)
+- [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
 
 #### #サイズ
 - [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
@@ -105,6 +132,7 @@
 
 ### 「ずれる」「位置がおかしい」「合わない」  
 → [ウィンドウリサイズ問題.md](./troubleshooting/ウィンドウリサイズ問題.md)
+→ [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
 
 ### 「サイズ」「大きさ」「変更できない」
 → [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
@@ -114,6 +142,12 @@
 
 ### 「動かない」「アニメーション」「静止」
 → [Spineアニメーション再生問題.md](./troubleshooting/Spineアニメーション再生問題.md)
+
+### 「編集モード」「枠がずれる」「違う場所」
+→ [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
+
+### 「リサイズハンドル」「ハンドル表示されない」「ハンドルが遠い」
+→ [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
 
 ---
 
