@@ -476,6 +476,278 @@ http://localhost:8000/index.html?edit=true
                 </div>
             </div>
         </div>
+
+        <!-- プラグイン方式による拡張 -->
+        <div class="section">
+            <div class="section-header">🔌 プラグイン方式による非侵襲的拡張</div>
+            <div class="section-content">
+                <h3>🎯 プラグイン方式とは</h3>
+                <p><strong>プラグイン方式</strong>は、既存のHTMLファイルに手を加えることなく、外部JavaScriptファイルで機能を拡張する実装方法です。</p>
+                
+                <div class="highlight-box">
+                    <h4>🚀 最大の利点：既存システムを完全保護</h4>
+                    <p>稼働中のシステムを一切変更せずに、新機能を安全に追加できます</p>
+                </div>
+
+                <h3>📊 実装方式の比較</h3>
+                <div class="comparison-grid">
+                    <div class="system-card active">
+                        <h4>🔌 プラグイン方式</h4>
+                        <p><strong>安全性</strong>: ⭐⭐⭐⭐⭐</p>
+                        <p><strong>実装速度</strong>: ⭐⭐⭐⭐☆</p>
+                        <p><strong>ロールバック</strong>: ⭐⭐⭐⭐⭐</p>
+                        <ul style="margin: 10px 0; padding-left: 20px; font-size: 0.9em;">
+                            <li>既存ファイル変更: なし</li>
+                            <li>追加ファイル: 1つのみ</li>
+                            <li>復元方法: ファイル削除のみ</li>
+                            <li>影響範囲: 限定的</li>
+                        </ul>
+                    </div>
+                    <div class="system-card">
+                        <h4>🔧 直接実装方式</h4>
+                        <p><strong>安全性</strong>: ⭐⭐⭐☆☆</p>
+                        <p><strong>実装速度</strong>: ⭐⭐⭐⭐⭐</p>
+                        <p><strong>ロールバック</strong>: ⭐⭐☆☆☆</p>
+                        <ul style="margin: 10px 0; padding-left: 20px; font-size: 0.9em;">
+                            <li>既存ファイル変更: 複数</li>
+                            <li>統合の複雑性: 高</li>
+                            <li>復元方法: Git revert必要</li>
+                            <li>影響範囲: 広範囲</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>⚙️ プラグイン方式の技術仕様</h3>
+                
+                <h4>📁 ファイル構成</h4>
+                <div class="code-box">
+# 追加ファイル（1つのみ）
+assets/spine/spine-positioning-enhancement.js (新規作成)
+
+# HTML変更（1行のみ）
+&lt;script src="assets/spine/spine-positioning-enhancement.js" defer&gt;&lt;/script&gt;
+
+# 既存ファイル
+index.html (1行追加のみ)
+assets/css/styles.css (変更なし)
+assets/js/script.js (変更なし)
+全Spineファイル (変更なし)
+                </div>
+
+                <h4>🔄 動作原理</h4>
+                <div class="code-box success">
+# プラグインの実行フロー
+1. ページ読み込み完了を検出
+2. 既存Canvas要素の自動検出
+3. 既存設定（data属性）の読み取り
+4. 新しい配置ロジックの注入
+5. 既存機能との共存
+
+# JavaScript実装例
+(function() {
+    'use strict';
+    
+    window.addEventListener('load', function() {
+        enhanceSpinePositioning();
+    });
+    
+    function enhanceSpinePositioning() {
+        // 既存システムを検出・拡張
+        const canvas = document.getElementById('purattokun-canvas');
+        if (!canvas) return;
+        
+        // 既存設定を読み取り
+        const config = document.getElementById('purattokun-config');
+        
+        // 新機能を注入（既存コード変更なし）
+        injectEnhancedPositioning(canvas, config);
+    }
+})();
+                </div>
+
+                <h3>🎯 実装可能な拡張機能</h3>
+                <div class="comparison-grid">
+                    <div class="system-card">
+                        <h4>📐 配置システム強化</h4>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>完全レスポンシブ対応</li>
+                            <li>背景画像との精密同期</li>
+                            <li>キャラクター潰れ防止</li>
+                            <li>動的リサイズ対応</li>
+                        </ul>
+                    </div>
+                    <div class="system-card">
+                        <h4>🎮 インタラクション強化</h4>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>精密クリック判定</li>
+                            <li>ホバーエフェクト</li>
+                            <li>複数リアクション対応</li>
+                            <li>カスタムアニメーション</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>✅ プラグイン方式のメリット</h3>
+                <div class="code-box success">
+🛡️ 安全性・リスク管理
+✅ 既存システムを完全保護
+✅ ロールバックが瞬時に可能
+✅ 段階的導入・テストが安全
+✅ 影響範囲が明確で限定的
+
+🔧 開発・保守性
+✅ 独立したモジュール設計
+✅ テスト・デバッグが容易
+✅ 並行開発が可能
+✅ 責任分離が明確
+
+⚡ 運用・管理面
+✅ 本番環境への影響ゼロ
+✅ A/Bテストが簡単
+✅ 緊急無効化が瞬時
+✅ 実験的実装に最適
+                </div>
+
+                <h3>⚠️ プラグイン方式の制約</h3>
+                <div class="code-box">
+🔍 技術的制約
+⚠️ 既存システム読み込み後の実行（わずかな遅延）
+⚠️ 既存APIへの依存性
+⚠️ 2つのシステムの統合複雑性
+⚠️ デバッグ時の複雑性
+
+📋 実装上の制限
+⚠️ 既存システムの深部変更不可
+⚠️ 完全な制御権の制限
+⚠️ 設計制約の存在
+⚠️ パフォーマンスの微小オーバーヘッド
+
+🔄 長期的考慮事項
+⚠️ 将来的な統合の必要性
+⚠️ メンテナンス箇所の分散
+⚠️ 学習コストの増加
+⚠️ 技術債務の可能性
+                </div>
+
+                <h3>🚀 実装開始ガイド</h3>
+                
+                <h4>🎯 推奨実装パス</h4>
+                <div class="code-box">
+Phase 1: プラグイン方式実装 (30分)
+├── プラグインファイル作成
+├── HTML に1行追加
+├── 基本動作確認
+└── 効果測定
+
+Phase 2: 改善・最適化 (必要に応じて)
+├── 問題点の洗い出し
+├── 機能の調整・拡張
+├── パフォーマンス最適化
+└── ユーザビリティ改善
+
+Phase 3: 本格統合検討 (将来的選択肢)
+├── 長期運用での評価
+├── 直接実装への移行判断
+├── システム統合・リファクタリング
+└── 最終的な最適化
+                </div>
+
+                <h4>⏱️ 実装時間の目安</h4>
+                <div class="comparison-grid">
+                    <div class="system-card active">
+                        <h4>🚀 プラグイン方式</h4>
+                        <p><strong>プラグインファイル作成</strong>: 20分</p>
+                        <p><strong>HTML修正</strong>: 2分</p>
+                        <p><strong>動作確認</strong>: 8分</p>
+                        <p style="color: #28a745; font-weight: bold;">合計: 約30分</p>
+                    </div>
+                    <div class="system-card">
+                        <h4>🔧 直接実装方式</h4>
+                        <p><strong>既存ファイル分析</strong>: 30分</p>
+                        <p><strong>統合実装</strong>: 60分</p>
+                        <p><strong>回帰テスト</strong>: 30分</p>
+                        <p style="color: #dc3545; font-weight: bold;">合計: 約2時間</p>
+                    </div>
+                </div>
+
+                <h3>🎯 使用推奨シナリオ</h3>
+                
+                <div class="comparison-grid">
+                    <div class="system-card active">
+                        <h4>✅ プラグイン方式を選ぶべき場合</h4>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>稼働中システムの安全性を最優先</li>
+                            <li>実験的な機能追加・改善</li>
+                            <li>短期間での効果確認が必要</li>
+                            <li>失敗リスクを最小化したい</li>
+                            <li>A/Bテストを実施したい</li>
+                            <li>開発リソースが限定的</li>
+                        </ul>
+                    </div>
+                    <div class="system-card">
+                        <h4>🔧 直接実装を選ぶべき場合</h4>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>システム全体の根本的改善</li>
+                            <li>長期運用を前提とした実装</li>
+                            <li>最高パフォーマンスが必要</li>
+                            <li>システム統一性を重視</li>
+                            <li>大幅な機能拡張を予定</li>
+                            <li>開発チームが十分に大きい</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>🎯 現在のプロジェクトでの推奨</h4>
+                    <p><strong>結論：プラグイン方式を強く推奨</strong></p>
+                    <p>稼働中のSpineシステムが既に存在し、編集システムも統合済みという現状を考慮すると、</p>
+                    <p><strong>安全性を最優先</strong>としたプラグイン方式による段階的改善が最適です。</p>
+                </div>
+
+                <h3>📋 実装チェックリスト</h3>
+                <div class="code-box">
+実装前の確認事項
+□ 既存システムの動作確認
+□ バックアップの作成
+□ 実装計画の文書化
+□ 成功基準の定義
+
+実装中の確認事項
+□ プラグインファイルの作成
+□ HTMLへの1行追加
+□ 基本動作の確認
+□ エラーログの確認
+
+実装後の確認事項
+□ 全機能の動作確認
+□ 既存機能の回帰テスト
+□ パフォーマンステスト
+□ ドキュメントの更新
+                </div>
+
+                <h3>🔗 関連リソース</h3>
+                <div class="comparison-grid">
+                    <div class="system-card">
+                        <h4>📚 技術ドキュメント</h4>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li><a href="docs/SPINE_SETUP_GUIDE.md">Spine初期セットアップガイド</a></li>
+                            <li><a href="docs/IMPLEMENTATION_CHECKLIST.md">実装チェックリスト</a></li>
+                            <li><a href="docs/_TROUBLESHOOTING.md">トラブルシューティング</a></li>
+                            <li><a href="CLAUDE.md">開発ガイド</a></li>
+                        </ul>
+                    </div>
+                    <div class="system-card">
+                        <h4>🎮 実装サンプル</h4>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li><a href="index.html">本番サイト（通常表示）</a></li>
+                            <li><a href="index.html?edit=true">本番サイト（編集モード）</a></li>
+                            <li><a href="spine-sample-simple.html">シンプルサンプル</a></li>
+                            <li><a href="coordinate-comparison.html">座標系比較デモ</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
