@@ -153,17 +153,16 @@
         @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
         @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
         
-        /* ぷらっとくんCanvas - シンプル設定（調整容易） */
+        /* 🎯 ぷらっとくんCanvas - 基本スタイルのみ（座標統一管理） */
         #purattokun-canvas {
             position: absolute;
-            left: 18%;   /* ✅ 推奨位置 */
-            top: 49%;    /* ✅ 地面レベル */
-            transform: translate(-50%, -50%);
-            width: 120px;   /* ✅ 固定サイズ */
+            /* 📍 left/topは#purattokun-configのdata属性から動的設定 */
+            transform: translate(-50%, -50%); /* 中心点基準配置 */
+            width: 120px;   /* 表示サイズ（固定） */
             height: 120px;
             pointer-events: auto;
             cursor: pointer;
-            z-index: 10;
+            z-index: 10;    /* レイヤー順序 */
         }
         
         /* ヒーローコンテンツ */
@@ -529,26 +528,24 @@
                 <img src="assets/images/kumo2.png" alt="空を舞う雲" class="cloud cloud5" loading="lazy">
                 <img src="assets/images/kumo3.png" alt="優雅に流れる雲" class="cloud cloud6" loading="lazy">
                 
-                <!-- ぷらっとくんCanvas -->
-                <canvas id="purattokun-canvas" 
-                        width="300" 
-                        height="200" 
-                        style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 300px; height: 200px; z-index: 5; display: block;">
+                <!-- ぷらっとくんCanvas - 座標・サイズはdata属性とCSSから設定 -->
+                <canvas id="purattokun-canvas">
                 </canvas>
                 
-                <!-- フォールバック画像（Spine読み込み失敗時用） -->
+                <!-- フォールバック画像（Spine読み込み失敗時用） - 座標はdata属性から動的設定 -->
                 <img src="assets/images/purattokunn.png" 
                      alt="ぷらっとくん画像" 
                      id="purattokun-fallback"
-                     style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 10; display: block; object-fit: contain;">
+                     style="position: absolute; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 10; display: block; object-fit: contain;">
                      
-                <!-- ぷらっとくん設定 -->
+                <!-- 🎯 ぷらっとくん座標設定（統一管理） -->
+                <!-- 📍 座標変更はここのdata属性のみ編集してください -->
                 <div id="purattokun-config" style="display: none;"
-                     data-x="18"            
-                     data-y="49"            
-                     data-scale="0.55"      
-                     data-fade-delay="1500" 
-                     data-fade-duration="2000">
+                     data-x="18"            <!-- 横位置：18% (お店付近推奨値) -->
+                     data-y="49"            <!-- 縦位置：49% (地面レベル推奨値) -->
+                     data-scale="0.55"      <!-- サイズ：0.55倍 (推奨値) -->
+                     data-fade-delay="1500" <!-- 出現遅延：1500ms -->
+                     data-fade-duration="2000"> <!-- フェード時間：2000ms -->
                 </div>
             </div>
             
@@ -727,10 +724,11 @@
                     throw new Error('WebGLサポートなし');
                 }
                 
-                // Canvasサイズ設定（解決策1: 基本設定による確実な表示）
-                canvas.width = 200;
+                // Canvasサイズ設定（内部解像度）
+                canvas.width = 200;   // 内部解像度 - Spine描画品質
                 canvas.height = 200;
-                console.log('Canvas固定サイズ設定:', canvas.width + 'x' + canvas.height);
+                console.log('Canvas内部解像度設定:', canvas.width + 'x' + canvas.height);
+                console.log('Canvas表示サイズ(CSS):', getComputedStyle(canvas).width, getComputedStyle(canvas).height);
                 
                 // リサイズ処理は解決策1では無効化
                 
@@ -919,23 +917,68 @@
             console.log('  - Spine定義:', typeof spine);
             console.log('  - WebGL対応:', !!canvas.getContext('webgl'));
             
-            // 強制修正実行
-            if (canvas.parentElement !== document.body) {
-                console.log('🔧 Canvas親要素を修正');
+            // data属性から座標を読み取って設定
+            const config = document.getElementById('purattokun-config');
+            if (config) {
+                const x = config.getAttribute('data-x') || '18';
+                const y = config.getAttribute('data-y') || '49';
+                
+                console.log('🔧 data属性から座標設定:', x + '%', y + '%');
+                
+                canvas.style.position = 'absolute';
+                canvas.style.left = x + '%';
+                canvas.style.top = y + '%';
+                canvas.style.transform = 'translate(-50%, -50%)';
+                canvas.style.width = '120px';
+                canvas.style.height = '120px';
+                canvas.style.zIndex = '10';
+                
+                // フォールバック画像も同期
+                const fallback = document.getElementById('purattokun-fallback');
+                if (fallback) {
+                    fallback.style.left = x + '%';
+                    fallback.style.top = y + '%';
+                    console.log('🔧 フォールバック画像座標も同期設定');
+                }
+            } else {
+                console.error('❌ purattokun-config要素が見つかりません');
             }
-            
-            canvas.style.position = 'absolute';
-            canvas.style.left = '18%';
-            canvas.style.top = '49%';
-            canvas.style.transform = 'translate(-50%, -50%)';
-            canvas.style.width = '120px';
-            canvas.style.height = '120px';
-            canvas.style.zIndex = '10';
             
             console.log('🎯 緊急修正完了');
         }
         
-        // 開始（診断付き）
+        // 🎯 ページ読み込み時の初期座標設定（data属性から統一管理）
+        function setInitialPositionFromData() {
+            const canvas = document.getElementById('purattokun-canvas');
+            const fallback = document.getElementById('purattokun-fallback');
+            const config = document.getElementById('purattokun-config');
+            
+            if (config && (canvas || fallback)) {
+                // 📍 #purattokun-configのdata属性から座標を読み取り
+                const x = config.getAttribute('data-x') || '18'; // デフォルト：18%
+                const y = config.getAttribute('data-y') || '49'; // デフォルト：49%
+                
+                console.log('🎯 初期座標設定 (data属性統一管理):', x + '%', y + '%');
+                
+                // Canvas要素に座標適用
+                if (canvas) {
+                    canvas.style.left = x + '%';
+                    canvas.style.top = y + '%';
+                }
+                
+                // フォールバック画像にも同じ座標適用
+                if (fallback) {
+                    fallback.style.left = x + '%';
+                    fallback.style.top = y + '%';
+                }
+                
+                console.log('✅ 座標統一設定完了 - Canvas & Fallback同期済み');
+            }
+        }
+        
+        // 開始処理
+        setInitialPositionFromData(); // 座標設定を最優先実行
+        
         setTimeout(() => {
             emergencyDiagnosis();
         }, 2000);

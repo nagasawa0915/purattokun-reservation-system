@@ -64,6 +64,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Canvasサイズ変更問題** | [🎯 docs/CANVAS_SIZE_TROUBLESHOOTING.md](./docs/CANVAS_SIZE_TROUBLESHOOTING.md) |
 | **設計思想・アーキテクチャ** | [🏛️ docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) |
 | **🤖 ClaudeCode自動化アルゴリズム** | [🤖 docs/CLAUDECODE_AUTOMATION_ALGORITHM.md](./docs/CLAUDECODE_AUTOMATION_ALGORITHM.md) |
+| **🤖 サブエージェント利用ガイド** | [🤖 docs/SUBAGENT_GUIDE.md](./docs/SUBAGENT_GUIDE.md) |
 
 ---
 

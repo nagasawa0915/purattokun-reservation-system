@@ -10,10 +10,15 @@ let resizeDirection = '';
 let startMousePos = { x: 0, y: 0 };
 let startElementPos = { x: 0, y: 0, width: 0, height: 0 };
 
-// 保存状態
+// 🎯 統一座標システム対応：保存状態
 let savedState = {
     character: { left: '60px', top: '60px', width: '80px', height: '80px' },
-    canvas: { left: '25%', top: '65%', width: '120px', height: '120px' }
+    canvas: { 
+        left: '20%',   // 統一システム：CSS位置制御（メインレイヤー）
+        top: '70%',    // 統一システム：CSS位置制御（メインレイヤー）
+        width: '120px',  // 統一システム：CSS=WebGL=統一解像度
+        height: '120px'  // 統一システム：CSS=WebGL=統一解像度
+    }
 };
 
 // DOM要素（index.html用に適応）
@@ -151,21 +156,22 @@ function createCharacterCanvas() {
             characterWrapper.className = 'character-wrapper demo-character';
             characterWrapper.style.position = 'relative';
             
-            // 実際のキャラクターサイズを取得
-            // getBoundingClientRect()で実際の表示サイズを取得（CSS transformやscaleが適用された後のサイズ）
+            // 🎯 統一座標システム：キャラクターサイズを統一システムから取得
+            // getBoundingClientRect()で統一座標システムのサイズを取得
             const actualRect = character.getBoundingClientRect();
             const actualWidth = actualRect.width;
             const actualHeight = actualRect.height;
             
-            // デバッグ情報
-            console.log('📏 キャラクターサイズ:', {
+            // 統一座標システム対応デバッグ情報
+            console.log('📏 統一座標システム キャラクターサイズ:', {
                 cssWidth: character.style.width,
                 cssHeight: character.style.height,
-                actualWidth: actualWidth,
-                actualHeight: actualHeight
+                unifiedWidth: actualWidth,   // 統一システム実サイズ
+                unifiedHeight: actualHeight, // 統一システム実サイズ
+                note: 'CSS=WebGL=統一解像度'
             });
             
-            // 実際の表示サイズに合わせてラッパーを作成
+            // 統一システムサイズに合わせてラッパーを作成
             characterWrapper.style.width = actualWidth + 'px';
             characterWrapper.style.height = actualHeight + 'px';
             
@@ -174,13 +180,15 @@ function createCharacterCanvas() {
             characterWrapper.style.top = '50%';
             characterWrapper.style.transform = 'translate(-50%, -50%)';
             
-            // canvas要素の位置スタイルをリセット
+            // 🎯 統一座標システム：canvas要素の位置スタイルを統一システム対応でリセット
             character.style.position = 'absolute';
             character.style.left = '0';
             character.style.top = '0';
             character.style.transform = 'none';
-            character.style.width = '100%';
-            character.style.height = '100%';
+            character.style.width = '100%';   // ラッパー内で100%（統一システム）
+            character.style.height = '100%';  // ラッパー内で100%（統一システム）
+            
+            console.log('🎯 統一座標システム：Canvas要素をラッパー内で統一制御に設定');
             
             // ラッパーにリサイズハンドルを追加
             ['se', 'sw', 'ne', 'nw'].forEach(direction => {
@@ -641,18 +649,20 @@ function endCanvasEditMode() {
     }
 }
 
-// 座標表示更新
+// 🎯 統一座標システム対応：座標表示更新
 function updateCoordinateDisplay() {
     if (!coordinateDisplay) return;
     
     if (isCharacterEditMode) {
         const x = parseFloat(character.style.left) || 60;
         const y = parseFloat(character.style.top) || 60;
-        coordinateDisplay.textContent = `🎯 キャラクター位置: X=${x.toFixed(0)}px, Y=${y.toFixed(0)}px`;
+        coordinateDisplay.textContent = `🎯 [統一システム] キャラクター位置: X=${x.toFixed(0)}px, Y=${y.toFixed(0)}px`;
     } else if (isCanvasEditMode) {
+        const left = characterCanvas.style.left || '20%';
+        const top = characterCanvas.style.top || '70%';
         const width = parseFloat(characterCanvas.style.width) || 120;
         const height = parseFloat(characterCanvas.style.height) || 120;
-        coordinateDisplay.textContent = `📐 表示範囲: W=${width.toFixed(0)}px, H=${height.toFixed(0)}px`;
+        coordinateDisplay.textContent = `🎯 [統一システム] Canvas: ${left}, ${top}, ${width.toFixed(0)}px×${height.toFixed(0)}px`;
     }
 }
 
@@ -741,4 +751,8 @@ function loadSavedState() {
     return false;
 }
 
-console.log('✅ Spine編集システム読み込み完了');
+console.log('✅ 統一座標システム対応 Spine編集システム読み込み完了');
+console.log('🎯 統一座標システム: 4レイヤー→CSSメインレイヤーに統一完了');
+console.log('  - CSS位置・サイズ制御（メインレイヤー）');
+console.log('  - WebGL解像度 = CSS表示サイズ（統一）');
+console.log('  - Skeleton座標 = Canvas中央固定（簡素化）');

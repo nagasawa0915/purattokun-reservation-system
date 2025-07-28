@@ -223,14 +223,19 @@ class SpineCharacterManager {
             }
         }
         
-        // CSS制御による位置設定
+        // 🎯 統一座標システム: CSS位置・サイズ制御（メインレイヤー）
         canvas.style.position = 'absolute';
-        canvas.style.left = '20%';
-        canvas.style.top = '70%';
+        canvas.style.left = '20%';   // メインレイヤー: 位置X
+        canvas.style.top = '70%';    // メインレイヤー: 位置Y
+        canvas.style.width = defaultDisplaySize + 'px';  // メインレイヤー: サイズW
+        canvas.style.height = defaultDisplaySize + 'px'; // メインレイヤー: サイズH
         canvas.style.transform = 'translate(-50%, -50%)';
         canvas.style.zIndex = '10';
         
-        console.log('📍 従来CSS設定適用: left: 20%, top: 70%');
+        console.log('📍 統一座標システム: CSS制御レイヤー適用完了');
+        console.log('  - Position:', canvas.style.left, canvas.style.top);
+        console.log('  - Size:', canvas.style.width, canvas.style.height);
+        console.log('  - 🎯 制御レイヤー数: 4→1 に統一完了');
         return true;
     }
 
@@ -258,10 +263,17 @@ class SpineCharacterManager {
         log(LogLevel.INFO, 'animation', `Upgrading ${name} to Spine WebGL...`);
 
         try {
-            // Canvas要素作成
+            // 🎯 統一座標システム: Canvas内部解像度をCSS表示サイズと統一
             const canvas = document.createElement('canvas');
-            canvas.width = 400;  // 適切なサイズに調整
-            canvas.height = 400;
+            
+            // デフォルトCSS表示サイズ（編集システムと統一）
+            const defaultDisplaySize = 120;
+            canvas.width = defaultDisplaySize;   // CSS表示サイズと統一
+            canvas.height = defaultDisplaySize;  // WebGL解像度 = CSS表示サイズ
+            
+            console.log('🎯 統一座標システム: Canvas内部解像度をCSS表示サイズに統一');
+            console.log('  - Canvas内部解像度:', canvas.width, 'x', canvas.height);
+            console.log('  - CSS表示サイズ: 統一済み（同じ値）');
             // CSS基準配置用のdata属性を追加
             canvas.setAttribute('data-spine-character', name);
             // CSS制御モード：JavaScript側はstyleを一切設定しない
@@ -279,20 +291,17 @@ class SpineCharacterManager {
 
             log(LogLevel.DEBUG, 'animation', 'WebGL context created successfully');
 
-            // Spine WebGL初期化 (4.1.*正しいAPI)
-            console.log('🔧 DEBUG: Creating Spine WebGL components...');
+            // 🎯 統一座標システム: WebGL初期化（統一解像度対応）
+            console.log('🔧 DEBUG: Creating Spine WebGL components with unified coordinate system...');
             
-            // Matrix4は直接spineから取得（Y軸反転対応）
+            // Matrix4を統一解像度で初期化
             const mvp = new spine.Matrix4();
             mvp.ortho2d(0, 0, canvas.width, canvas.height);
-            console.log('✅ DEBUG: Matrix4 created');
-            console.log('📐 DEBUG: Projection matrix setup:');
-            console.log('  - Canvas size:', canvas.width, 'x', canvas.height);
+            console.log('✅ DEBUG: Matrix4 created with unified resolution');
+            console.log('📐 DEBUG: Unified projection matrix setup:');
+            console.log('  - Unified Canvas size:', canvas.width, 'x', canvas.height);
             console.log('  - Ortho2D bounds: (0,0) to (', canvas.width, ',', canvas.height, ')');
-            console.log('  - Matrix values:', mvp.values);
-            
-            // 追加：もしY軸が問題なら、異なる座標も試してみる準備
-            console.log('🧪 DEBUG: Testing different coordinate systems...');
+            console.log('  - WebGL解像度 = CSS表示サイズ = 統一済み');
             
             const context = new spine.ManagedWebGLRenderingContext(gl);
             console.log('✅ DEBUG: ManagedWebGLRenderingContext created');
@@ -376,18 +385,20 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // レスポンシブ座標システムによる位置設定
-            // 座標変換ユーティリティを使用して適切な位置を計算
-            console.log('📍 レスポンシブ座標システムによる位置設定を適用...');
+            // 🎯 統一座標システム: Skeleton座標を固定値（Canvas中央）に統一
+            console.log('📍 統一座標システム: Skeleton座標を固定値に設定...');
             
-            // 一時的に最適化された位置を設定（後でレスポンシブシステムが上書き）
-            skeleton.x = 100;   // お店の上に配置
-            skeleton.y = -120;  // 適切な高さ
-            skeleton.scaleX = skeleton.scaleY = 0.8; // 適切なサイズ
-            console.log('📍 一時的な位置設定:');
-            console.log('  - Skeleton x:', skeleton.x);
-            console.log('  - Skeleton y:', skeleton.y); 
-            console.log('  - Scale:', skeleton.scaleX);
+            // Skeletonは常にCanvas中央に固定（統一座標システム）
+            skeleton.x = canvas.width / 2;    // Canvas中央X（統一）
+            skeleton.y = canvas.height / 2;   // Canvas中央Y（統一）
+            skeleton.scaleX = skeleton.scaleY = 1.0; // スケールは1.0固定（CSS側で制御）
+            
+            console.log('📍 統一座標システム適用完了:');
+            console.log('  - Skeleton x:', skeleton.x, '（Canvas中央X）');
+            console.log('  - Skeleton y:', skeleton.y, '（Canvas中央Y）'); 
+            console.log('  - Scale:', skeleton.scaleX, '（固定値・CSS側制御）');
+            console.log('  - 🎯 位置制御: CSS left/top のみ');
+            console.log('  - 🎯 サイズ制御: CSS width/height のみ');
             
             // Skeletonの初期状態を設定
             skeleton.setToSetupPose();
@@ -503,16 +514,19 @@ class SpineCharacterManager {
                 });
             };
             
-            console.log('🛠️ 調整機能が利用可能になりました:');
-            console.log('【新配置システム】');
-            console.log('  adjustCanvasPosition("hero-purattokun", "25%", "65%") - 新システムで位置調整');
+            console.log('🛠️ 🎯 [統一座標システム] 調整機能が利用可能：');
+            console.log('【🎯 統一座標システム（推奨）】');
+            console.log('  adjustCanvasUnified(left%, top%, width, height) - CSS制御(メインレイヤー)');
+            console.log('  getPurattokunsettings() - 統一システム設定確認');
+            console.log('【新配置システム（互換）】');
+            console.log('  adjustCanvasPosition("hero-purattokun", "25%", "65%") - JSON配置システム');
             console.log('  getCanvasPlacement("hero-purattokun") - 配置情報確認');
-            console.log('  getAllCanvasPlacements() - 全配置情報確認');
-            console.log('【従来システム（互換性）】');
-            console.log('  adjustPurattokun(x, y, scale) - Spine内の位置とサイズを調整');
-            console.log('  adjustCanvas(xPercent, yPercent) - Canvas位置を直接調整');
-            console.log('  testBackgroundAlignment() - 背景画像との位置関係を確認');
-            console.log('  getPurattokunsettings() - 現在の設定を確認');
+            console.log('【旧システム（非推奨）】');
+            console.log('  adjustPurattokun() - Skeleton座標(固定値のため変更不可)');
+            console.log('  adjustCanvas() - 旧API(内部でadjustCanvasUnified呼出)');
+            console.log('  testBackgroundAlignment() - 背景画像との位置関係');
+            console.log('');
+            console.log('🎯 統一座標システム最適化完了: 4レイヤー→CSSメインレイヤーに統一');
             
             log(LogLevel.INFO, 'animation', `${name} successfully upgraded to Spine WebGL`);
             return character;
