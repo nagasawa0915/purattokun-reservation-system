@@ -1,270 +1,389 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>シンプルSpineサンプル</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>シンプルSpineシーン</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            background: #f0f0f0;
-        }
+      body {
+        background: #f0f0f0;
+        font-family: Arial, sans-serif;
+      }
 
-        .background-container {
-            position: relative;
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            overflow: hidden;
-        }
+      .scene-container {
+        position: relative;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;  /* リサイズ問題修正: 50px auto → 0 auto */
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
 
-        .background-image {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
+      .background-image {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
 
-        /* Canvas要素（赤い枠で範囲表示） */
-        #demo-purattokun-canvas {
-            position: absolute;
-            left: 35%;
-            top: 75%;
-            transform: translate(-50%, -50%);
-            width: 200px;
-            height: 200px;
-            border: 3px solid red;
-            background: rgba(255, 255, 0, 0.3);
-        }
+      /* Spineキャラクター用Canvas */
+      #purattokun-canvas {
+        position: absolute;
+        left: 35%;  /* 背景画像同期（親要素基準） */
+        top: 75%;   /* 背景画像同期（親要素基準） */
+        transform: translate(-50%, -50%);
+        width: 25%;  /* 背景画像と同じ比例拡縮 */
+        aspect-ratio: 3/2; /* Canvas比率統一（300:200 = 3:2）潰れ防止 */
+        z-index: 10;
+        display: none;
+        cursor: pointer; /* クリック可能であることを示す */
+        border: 2px dashed rgba(255, 0, 0, 0.3); /* デバッグ用境界線 */
+        background: rgba(255, 255, 0, 0.05); /* デバッグ用背景 */
+      }
 
-        /* フォールバック画像（緑の枠で範囲表示） */
-        #demo-fallback-image {
-            position: absolute;
-            left: 35%;
-            top: 75%;
-            transform: translate(-50%, -50%);
-            width: 200px;
-            height: 200px;
-            object-fit: contain;
-            display: block;
-            border: 3px solid green;
-            background: rgba(0, 255, 0, 0.2);
-        }
+      /* クリック判定範囲の視覚化 */
+      .click-area-visualizer {
+        position: absolute;
+        border: 3px solid rgba(0, 255, 0, 0.8); /* 緑色の判定範囲 */
+        background: rgba(0, 255, 0, 0.1); /* 薄い緑の背景 */
+        pointer-events: none; /* クリックイベントを通す */
+        display: none; /* 初期は非表示 */
+        box-sizing: border-box;
+      }
+
+      /* 判定範囲表示の切り替えボタン */
+      .debug-controls {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 1000;
+      }
+
+      .debug-btn {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        margin: 4px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .debug-btn:hover {
+        background: #45a049;
+      }
+
+      .debug-btn.active {
+        background: #ff6b6b;
+      }
+
+      /* フォールバック画像 */
+      #purattokun-fallback {
+        position: absolute;
+        left: 35%;  /* Canvas位置と同期（背景画像基準） */
+        top: 75%;   /* Canvas位置と同期（背景画像基準） */
+        transform: translate(-50%, -50%);
+        width: 10%;  /* 背景画像と同じ比例拡縮 */
+        aspect-ratio: 1/1; /* 正方形維持（潰れ防止） */
+        object-fit: contain;
+        z-index: 10;
+        display: block;
+      }
     </style>
-</head>
-<body>
-    <!-- 背景画像 + Spineキャラクターのみ -->
-    <div class="background-container">
-        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
-        
-        <!-- Canvas（Spine用、最初は非表示） -->
-        <canvas id="demo-purattokun-canvas" style="display: none;"></canvas>
-        
-        <!-- フォールバック画像（最初は表示） -->
-        <img src="assets/images/purattokunn.png" 
-             alt="ぷらっとくん" 
-             id="demo-fallback-image">
+  </head>
+  <body>
+    <!-- デバッグ用コントロールパネル -->
+    <div class="debug-controls">
+      <div>🎯 クリック判定デバッグ</div>
+      <button id="toggle-click-area" class="debug-btn">判定範囲表示</button>
+      <button id="toggle-canvas-border" class="debug-btn">Canvas境界表示</button>
     </div>
 
-    <!-- シンプルなテストボタン -->
-    <div style="text-align: center; margin: 20px;">
-        <button onclick="testCanvas2D()" style="padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 5px;">Canvas 2D描画テスト</button>
-        <button onclick="showCanvasInfo()" style="padding: 10px 20px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 5px;">Canvas情報表示</button>
-        <button onclick="forceCanvasResize()" style="padding: 10px 20px; margin: 5px; background: #dc3545; color: white; border: none; border-radius: 5px;">強制リサイズ</button>
+    <div class="scene-container">
+      <!-- 背景画像 -->
+      <img
+        src="assets/images/クラウドパートナーTOP.png"
+        alt="背景"
+        class="background-image"
+      />
+
+      <!-- Spineキャラクター（Canvas） -->
+      <canvas id="purattokun-canvas" width="300" height="200"></canvas>
+      
+      <!-- クリック判定範囲の視覚化 -->
+      <div id="click-area-visualizer" class="click-area-visualizer"></div>
+
+      <!-- フォールバック画像 -->
+      <img
+        src="assets/images/purattokunn.png"
+        alt="ぷらっとくん"
+        id="purattokun-fallback"
+      />
     </div>
-    <div id="info" style="text-align: center; margin: 10px; font-weight: bold;"></div>
 
     <!-- Spine WebGL Runtime -->
     <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
 
     <script>
-        // 既存システム実演のSpine初期化コードをそのまま使用
-        async function waitForSpine() {
-            return new Promise((resolve, reject) => {
-                let checkCount = 0;
-                const maxChecks = 100;
-                
-                const checkSpine = () => {
-                    checkCount++;
-                    if (typeof spine !== 'undefined') {
-                        resolve();
-                    } else if (checkCount >= maxChecks) {
-                        reject(new Error('Spine WebGL 読み込みタイムアウト'));
-                    } else {
-                        setTimeout(checkSpine, 100);
-                    }
-                };
-                
-                checkSpine();
-            });
-        }
+      // Spine WebGLの読み込み待ち
+      async function waitForSpine() {
+        return new Promise((resolve, reject) => {
+          let checkCount = 0;
+          const maxChecks = 50;
 
-        async function waitForAssets(assetManager) {
-            return new Promise((resolve, reject) => {
-                let checkCount = 0;
-                const maxChecks = 100;
-                
-                const checkAssets = () => {
-                    checkCount++;
-                    if (assetManager.isLoadingComplete()) {
-                        resolve();
-                    } else if (checkCount >= maxChecks) {
-                        reject(new Error('アセット読み込みタイムアウト'));
-                    } else {
-                        setTimeout(checkAssets, 100);
-                    }
-                };
-                
-                checkAssets();
-            });
-        }
-
-        async function initSpine() {
-            try {
-                await waitForSpine();
-                
-                const canvas = document.getElementById('demo-purattokun-canvas');
-                const fallback = document.getElementById('demo-fallback-image');
-                
-                // 先にCanvasサイズを設定
-                canvas.width = 200;
-                canvas.height = 200;
-                console.log('Canvas内部サイズ設定:', canvas.width, 'x', canvas.height);
-                
-                const gl = canvas.getContext('webgl', { alpha: true });
-                if (!gl) {
-                    throw new Error('WebGL未対応');
-                }
-                
-                const basePath = './assets/spine/characters/purattokun/';
-                const assetManager = new spine.AssetManager(gl, basePath);
-                
-                assetManager.loadTextureAtlas('purattokun.atlas');
-                assetManager.loadJson('purattokun.json');
-                
-                await waitForAssets(assetManager);
-                
-                const atlas = assetManager.get('purattokun.atlas');
-                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
-                const skeletonJson = new spine.SkeletonJson(atlasLoader);
-                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
-                
-                const skeleton = new spine.Skeleton(skeletonData);
-                skeleton.x = 100;  // Canvas中央（200/2）
-                skeleton.y = 100;  // Canvas中央（200/2）
-                skeleton.scaleX = skeleton.scaleY = 1.0;  // 大きなスケール
-                
-                const animationStateData = new spine.AnimationStateData(skeleton.data);
-                const animationState = new spine.AnimationState(animationStateData);
-                
-                if (skeleton.data.findAnimation('taiki')) {
-                    animationState.setAnimation(0, 'taiki', true);
-                }
-                
-                const renderer = new spine.SceneRenderer(canvas, gl);
-                
-                let lastTime = Date.now() / 1000;
-                function render() {
-                    const now = Date.now() / 1000;
-                    const delta = now - lastTime;
-                    lastTime = now;
-                    
-                    animationState.update(delta);
-                    animationState.apply(skeleton);
-                    skeleton.updateWorldTransform();
-                    
-                    gl.clearColor(0, 0, 0, 0);
-                    gl.clear(gl.COLOR_BUFFER_BIT);
-                    gl.viewport(0, 0, canvas.width, canvas.height);
-                    
-                    renderer.begin();
-                    renderer.drawSkeleton(skeleton, true);
-                    renderer.end();
-                    
-                    requestAnimationFrame(render);
-                }
-                render();
-                
-                // 成功時：Canvas表示、フォールバック非表示
-                canvas.style.display = 'block';
-                fallback.style.display = 'none';
-                
-            } catch (error) {
-                console.error('Spine初期化エラー:', error);
-                // 失敗時：フォールバック表示のまま
-            }
-        }
-
-        // Canvas 2D描画テスト（専用Canvas作成）
-        function testCanvas2D() {
-            // 新しいCanvasを作成してテスト
-            const testCanvas = document.createElement('canvas');
-            testCanvas.width = 200;
-            testCanvas.height = 200;
-            testCanvas.style.position = 'absolute';
-            testCanvas.style.left = '60%';
-            testCanvas.style.top = '75%';
-            testCanvas.style.transform = 'translate(-50%, -50%)';
-            testCanvas.style.border = '3px solid blue';
-            testCanvas.style.background = 'rgba(0, 0, 255, 0.2)';
-            testCanvas.style.zIndex = '20';
-            
-            document.querySelector('.background-container').appendChild(testCanvas);
-            
-            const ctx = testCanvas.getContext('2d');
-            if (ctx) {
-                ctx.fillStyle = 'red';
-                ctx.fillRect(50, 50, 100, 100);
-                ctx.fillStyle = 'white';
-                ctx.font = '20px Arial';
-                ctx.fillText('TEST', 80, 110);
-                document.getElementById('info').innerHTML = '✅ Canvas 2D描画成功（青い枠）';
+          const checkSpine = () => {
+            checkCount++;
+            if (typeof spine !== "undefined") {
+              console.log("✅ Spine WebGL読み込み完了");
+              resolve();
+            } else if (checkCount >= maxChecks) {
+              reject(new Error("Spine WebGL読み込みタイムアウト"));
             } else {
-                document.getElementById('info').innerHTML = '❌ Canvas 2D描画失敗';
+              setTimeout(checkSpine, 100);
             }
-        }
+          };
 
-        function showCanvasInfo() {
-            const canvas = document.getElementById('demo-purattokun-canvas');
+          checkSpine();
+        });
+      }
+
+      // アセット読み込み待ち
+      async function waitForAssets(assetManager) {
+        return new Promise((resolve, reject) => {
+          let checkCount = 0;
+          const maxChecks = 50;
+
+          const checkAssets = () => {
+            checkCount++;
+            if (assetManager.isLoadingComplete()) {
+              console.log("✅ アセット読み込み完了");
+              resolve();
+            } else if (checkCount >= maxChecks) {
+              reject(new Error("アセット読み込みタイムアウト"));
+            } else {
+              setTimeout(checkAssets, 100);
+            }
+          };
+
+          checkAssets();
+        });
+      }
+
+      // Spineキャラクター初期化
+      async function initSpineCharacter() {
+        try {
+          await waitForSpine();
+
+          const canvas = document.getElementById("purattokun-canvas");
+          const fallback = document.getElementById("purattokun-fallback");
+
+          const gl = canvas.getContext("webgl", { alpha: true });
+          if (!gl) {
+            throw new Error("WebGL未対応");
+          }
+
+          // アセットマネージャー
+          const basePath = "./assets/spine/characters/purattokun/";
+          const assetManager = new spine.AssetManager(gl, basePath);
+
+          assetManager.loadTextureAtlas("purattokun.atlas");
+          assetManager.loadJson("purattokun.json");
+
+          await waitForAssets(assetManager);
+
+          // Spineスケルトン構築
+          const atlas = assetManager.get("purattokun.atlas");
+          const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+          const skeletonJson = new spine.SkeletonJson(atlasLoader);
+          const skeletonData = skeletonJson.readSkeletonData(
+            assetManager.get("purattokun.json")
+          );
+
+          const skeleton = new spine.Skeleton(skeletonData);
+          skeleton.x = 0; // Canvas中央（正しい原点位置）
+          skeleton.y = -100; // Canvas中央（正しい原点位置）
+          skeleton.scaleX = skeleton.scaleY = 0.55; // CLAUDE.mdの推奨値
+
+          // アニメーション
+          const animationStateData = new spine.AnimationStateData(
+            skeleton.data
+          );
+          const animationState = new spine.AnimationState(animationStateData);
+
+          // 登場→待機のシーケンス開始
+          if (
+            skeleton.data.findAnimation("syutugen") &&
+            skeleton.data.findAnimation("taiki")
+          ) {
+            console.log("🎬 syutugen（登場）アニメーション開始");
+            animationState.setAnimation(0, "syutugen", false); // 1回のみ再生
+            animationState.addAnimation(0, "taiki", true, 0); // 完了後に待機ループ
+          } else if (skeleton.data.findAnimation("taiki")) {
+            console.log("🎬 taiki（待機）アニメーション開始（syutugenなし）");
+            animationState.setAnimation(0, "taiki", true);
+          }
+
+          // レンダラー
+          const renderer = new spine.SceneRenderer(canvas, gl);
+
+          // 描画ループ
+          let lastTime = Date.now() / 1000;
+          function render() {
+            const now = Date.now() / 1000;
+            const delta = now - lastTime;
+            lastTime = now;
+
+            animationState.update(delta);
+            animationState.apply(skeleton);
+            skeleton.updateWorldTransform();
+
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            renderer.begin();
+            renderer.drawSkeleton(skeleton, true);
+            renderer.end();
+
+            requestAnimationFrame(render);
+          }
+          render();
+
+          // クリックイベント追加（キャラクター画像位置判定）
+          canvas.addEventListener("click", (event) => {
+            // Canvas内の相対座標を取得
+            const rect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+            
+            // Canvas内座標を0-1の範囲に正規化
+            const normalizedX = clickX / rect.width;
+            const normalizedY = clickY / rect.height;
+            
+            // キャラクター画像の範囲を定義（Canvas中央付近）
+            // skeleton.x=0, skeleton.y=-100 の位置を考慮
+            const charCenterX = 0.5; // Canvas中央（50%）
+            const charCenterY = 0.6; // Canvas中央より少し下（60%）
+            const charWidth = 0.4;   // キャラクター幅（40%）
+            const charHeight = 0.5;  // キャラクター高さ（50%）
+            
+            // キャラクター画像範囲内かチェック
+            const withinX = Math.abs(normalizedX - charCenterX) < charWidth / 2;
+            const withinY = Math.abs(normalizedY - charCenterY) < charHeight / 2;
+            
+            if (withinX && withinY) {
+              // キャラクター画像内をクリックした場合のみリアクション
+              if (skeleton.data.findAnimation("yarare")) {
+                console.log("🎯 yarare（やられ）アニメーション開始");
+                animationState.setAnimation(0, "yarare", false); // 1回のみ再生
+                animationState.addAnimation(0, "taiki", true, 0); // 完了後に待機復帰
+              } else {
+                console.log("⚠️ yarareアニメーションが見つかりません");
+              }
+            } else {
+              console.log("🔍 キャラクター画像外をクリック（リアクションなし）");
+            }
+          });
+
+          // 🎯 クリック判定範囲の視覚化機能
+          const visualizer = document.getElementById("click-area-visualizer");
+          
+          function updateClickAreaVisualizer() {
             const rect = canvas.getBoundingClientRect();
             
-            document.getElementById('info').innerHTML = `
-                Canvas情報:<br>
-                内部: ${canvas.width}x${canvas.height}<br>
-                表示: ${rect.width}x${rect.height}<br>
-                位置: (${Math.round(rect.left)}, ${Math.round(rect.top)})<br>
-                状態: ${canvas.style.display || 'block'}
-            `;
-        }
-        
-        // 強制的にCanvasサイズを変更する関数
-        function forceCanvasResize() {
-            const canvas = document.getElementById('demo-purattokun-canvas');
+            // キャラクター画像の範囲設定（上記の判定と同じ値）
+            const charCenterX = 0.5;  // Canvas中央（50%）
+            const charCenterY = 0.6;  // Canvas中央より少し下（60%）
+            const charWidth = 0.4;    // キャラクター幅（40%）
+            const charHeight = 0.5;   // キャラクター高さ（50%）
             
-            // 属性を直接設定
-            canvas.setAttribute('width', '200');
-            canvas.setAttribute('height', '200');
+            // 判定範囲の実際のピクセル座標を計算
+            const areaWidth = rect.width * charWidth;
+            const areaHeight = rect.height * charHeight;
+            const areaLeft = rect.left + (rect.width * charCenterX) - (areaWidth / 2);
+            const areaTop = rect.top + (rect.height * charCenterY) - (areaHeight / 2);
             
-            // プロパティも設定
-            canvas.width = 200;
-            canvas.height = 200;
-            
-            // CSSサイズも設定
-            canvas.style.width = '200px';
-            canvas.style.height = '200px';
-            
-            console.log('強制リサイズ後:', canvas.width, 'x', canvas.height);
-            document.getElementById('info').innerHTML = `強制リサイズ実行: ${canvas.width}x${canvas.height}`;
-        }
+            // 視覚化要素の位置とサイズを更新
+            visualizer.style.position = "fixed";
+            visualizer.style.left = areaLeft + "px";
+            visualizer.style.top = areaTop + "px";
+            visualizer.style.width = areaWidth + "px";
+            visualizer.style.height = areaHeight + "px";
+          }
+          
+          // 初期位置設定とリサイズ対応
+          updateClickAreaVisualizer();
+          window.addEventListener("resize", updateClickAreaVisualizer);
 
-        // 初期化
-        window.addEventListener('load', () => {
-            setTimeout(initSpine, 1000);
+          // 成功時：Canvas表示、フォールバック非表示
+          canvas.style.display = "block";
+          fallback.style.display = "none";
+
+          console.log("✅ Spineキャラクター初期化完了");
+
+          // 利用可能なアニメーション一覧をログ出力
+          console.log("📋 利用可能なアニメーション:");
+          for (let i = 0; i < skeleton.data.animations.length; i++) {
+            console.log(`  - ${skeleton.data.animations[i].name}`);
+          }
+        } catch (error) {
+          console.error("❌ Spineキャラクター初期化失敗:", error);
+          // フォールバック画像のまま表示
+        }
+      }
+
+      // 初期化実行
+      window.addEventListener("load", () => {
+        setTimeout(initSpineCharacter, 500);
+      });
+
+      // 🎮 デバッグ用コントロール機能
+      document.addEventListener("DOMContentLoaded", () => {
+        const toggleClickAreaBtn = document.getElementById("toggle-click-area");
+        const toggleCanvasBorderBtn = document.getElementById("toggle-canvas-border");
+        const visualizer = document.getElementById("click-area-visualizer");
+        const canvas = document.getElementById("purattokun-canvas");
+
+        let clickAreaVisible = false;
+        let canvasBorderVisible = true; // 初期状態では表示
+
+        // クリック判定範囲の表示/非表示切り替え
+        toggleClickAreaBtn.addEventListener("click", () => {
+          clickAreaVisible = !clickAreaVisible;
+          visualizer.style.display = clickAreaVisible ? "block" : "none";
+          toggleClickAreaBtn.textContent = clickAreaVisible ? "判定範囲非表示" : "判定範囲表示";
+          toggleClickAreaBtn.classList.toggle("active", clickAreaVisible);
         });
+
+        // Canvas境界線の表示/非表示切り替え
+        toggleCanvasBorderBtn.addEventListener("click", () => {
+          canvasBorderVisible = !canvasBorderVisible;
+          canvas.style.border = canvasBorderVisible 
+            ? "2px dashed rgba(255, 0, 0, 0.3)" 
+            : "none";
+          canvas.style.background = canvasBorderVisible 
+            ? "rgba(255, 255, 0, 0.05)" 
+            : "transparent";
+          toggleCanvasBorderBtn.textContent = canvasBorderVisible ? "Canvas境界非表示" : "Canvas境界表示";
+          toggleCanvasBorderBtn.classList.toggle("active", canvasBorderVisible);
+        });
+
+        // 初期状態設定
+        toggleCanvasBorderBtn.classList.add("active");
+      });
     </script>
-</body>
+  </body>
 </html>

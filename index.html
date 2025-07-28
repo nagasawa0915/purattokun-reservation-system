@@ -531,9 +531,9 @@
                 
                 <!-- ぷらっとくんCanvas -->
                 <canvas id="purattokun-canvas" 
-                        width="120" 
-                        height="120" 
-                        style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 5; display: block;">
+                        width="300" 
+                        height="200" 
+                        style="position: absolute; left: 18%; top: 49%; transform: translate(-50%, -50%); width: 300px; height: 200px; z-index: 5; display: block;">
                 </canvas>
                 
                 <!-- フォールバック画像（Spine読み込み失敗時用） -->
@@ -789,11 +789,11 @@
                 const skeletonJson = new spine.SkeletonJson(atlasLoader);
                 const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
                 
-                // Skeleton作成（解決策1: 基本設定）
+                // Skeleton作成（解決策7: 地面原点設計対応）
                 const skeleton = new spine.Skeleton(skeletonData);
-                skeleton.x = 0;  // 左下角
-                skeleton.y = 0;  // 左下角
-                skeleton.scaleX = skeleton.scaleY = 0.5;  // 適度なサイズ
+                skeleton.x = 100; // 左から100px（吹き出し用余白確保）
+                skeleton.y = -100; // 地面から100px上（適切な高さ）
+                skeleton.scaleX = skeleton.scaleY = 0.55; // CLAUDE.mdの推奨値
                 
                 // AnimationState
                 const animationStateData = new spine.AnimationStateData(skeleton.data);
