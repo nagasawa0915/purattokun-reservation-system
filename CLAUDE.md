@@ -27,6 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **📋 編集システム仕様書** | [🎯 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) |
 | **📊 実装進捗管理** | [📈 docs/POSITIONING_SYSTEM_PROGRESS.md](./docs/POSITIONING_SYSTEM_PROGRESS.md) |
 | **🎯 Spine初期セットアップガイド** | [🚀 docs/SPINE_SETUP_GUIDE.md](./docs/SPINE_SETUP_GUIDE.md) |
+| **📋 実装チェックリスト** | [✅ docs/IMPLEMENTATION_CHECKLIST.md](./docs/IMPLEMENTATION_CHECKLIST.md) |
 | **技術仕様・実装詳細** | [📖 docs/DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md) |
 | **レイヤー問題診断** | [🔧 docs/LAYER_DEBUGGING.md](./docs/LAYER_DEBUGGING.md) |
 | **Spine問題解決** | [⚙️ docs/SPINE_TROUBLESHOOTING.md](./docs/SPINE_TROUBLESHOOTING.md) |

@@ -42,53 +42,10 @@
         width: 25%;  /* 背景画像と同じ比例拡縮 */
         aspect-ratio: 3/2; /* Canvas比率統一（300:200 = 3:2）潰れ防止 */
         z-index: 10;
-        display: none;
+        display: block; /* 常に表示（Spine失敗時も枠を表示） */
         cursor: pointer; /* クリック可能であることを示す */
-        border: 2px dashed rgba(255, 0, 0, 0.3); /* デバッグ用境界線 */
-        background: rgba(255, 255, 0, 0.05); /* デバッグ用背景 */
       }
 
-      /* クリック判定範囲の視覚化 */
-      .click-area-visualizer {
-        position: absolute;
-        border: 3px solid rgba(0, 255, 0, 0.8); /* 緑色の判定範囲 */
-        background: rgba(0, 255, 0, 0.1); /* 薄い緑の背景 */
-        pointer-events: none; /* クリックイベントを通す */
-        display: none; /* 初期は非表示 */
-        box-sizing: border-box;
-      }
-
-      /* 判定範囲表示の切り替えボタン */
-      .debug-controls {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 1000;
-      }
-
-      .debug-btn {
-        background: #4CAF50;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        margin: 4px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-      }
-
-      .debug-btn:hover {
-        background: #45a049;
-      }
-
-      .debug-btn.active {
-        background: #ff6b6b;
-      }
 
       /* フォールバック画像 */
       #purattokun-fallback {
@@ -105,12 +62,6 @@
     </style>
   </head>
   <body>
-    <!-- デバッグ用コントロールパネル -->
-    <div class="debug-controls">
-      <div>🎯 クリック判定デバッグ</div>
-      <button id="toggle-click-area" class="debug-btn">判定範囲表示</button>
-      <button id="toggle-canvas-border" class="debug-btn">Canvas境界表示</button>
-    </div>
 
     <div class="scene-container">
       <!-- 背景画像 -->
@@ -123,8 +74,6 @@
       <!-- Spineキャラクター（Canvas） -->
       <canvas id="purattokun-canvas" width="300" height="200"></canvas>
       
-      <!-- クリック判定範囲の視覚化 -->
-      <div id="click-area-visualizer" class="click-area-visualizer"></div>
 
       <!-- フォールバック画像 -->
       <img
@@ -132,6 +81,15 @@
         alt="ぷらっとくん"
         id="purattokun-fallback"
       />
+
+      <!-- HTML設定制御システム -->
+      <div id="purattokun-config" style="display: none;"
+           data-x="35"            <!-- 横位置：35%（背景画像基準） -->
+           data-y="75"            <!-- 縦位置：75%（背景画像基準） -->
+           data-scale="0.55"      <!-- サイズ：0.55倍 -->
+           data-fade-delay="1500" <!-- 出現遅延（ms） -->
+           data-fade-duration="2000"> <!-- フェード時間（ms） -->
+      </div>
     </div>
 
     <!-- Spine WebGL Runtime -->
@@ -213,9 +171,30 @@
           );
 
           const skeleton = new spine.Skeleton(skeletonData);
+          
+          // 🎯 HTML設定制御システム：設定値の読み取り（設定があれば適用）
+          const config = document.getElementById("purattokun-config");
+          let configScale = 0.55; // デフォルト値
+          
+          if (config) {
+            // HTML設定が存在する場合のみ適用
+            const dataScale = config.getAttribute("data-scale");
+            if (dataScale) {
+              configScale = parseFloat(dataScale);
+            }
+            
+            // 位置設定も読み取り（CSS設定は維持、必要時のみ上書き）
+            const dataX = config.getAttribute("data-x");
+            const dataY = config.getAttribute("data-y");
+            if (dataX) canvas.style.left = dataX + "%";
+            if (dataY) canvas.style.top = dataY + "%";
+            if (dataX) fallback.style.left = dataX + "%";
+            if (dataY) fallback.style.top = dataY + "%";
+          }
+
           skeleton.x = 0; // Canvas中央（正しい原点位置）
           skeleton.y = -100; // Canvas中央（正しい原点位置）
-          skeleton.scaleX = skeleton.scaleY = 0.55; // CLAUDE.mdの推奨値
+          skeleton.scaleX = skeleton.scaleY = configScale; // HTML設定またはデフォルト値
 
           // アニメーション
           const animationStateData = new spine.AnimationStateData(
@@ -298,39 +277,10 @@
             }
           });
 
-          // 🎯 クリック判定範囲の視覚化機能
-          const visualizer = document.getElementById("click-area-visualizer");
-          
-          function updateClickAreaVisualizer() {
-            const rect = canvas.getBoundingClientRect();
-            
-            // キャラクター画像の範囲設定（上記の判定と同じ値）
-            const charCenterX = 0.5;  // Canvas中央（50%）
-            const charCenterY = 0.6;  // Canvas中央より少し下（60%）
-            const charWidth = 0.4;    // キャラクター幅（40%）
-            const charHeight = 0.5;   // キャラクター高さ（50%）
-            
-            // 判定範囲の実際のピクセル座標を計算
-            const areaWidth = rect.width * charWidth;
-            const areaHeight = rect.height * charHeight;
-            const areaLeft = rect.left + (rect.width * charCenterX) - (areaWidth / 2);
-            const areaTop = rect.top + (rect.height * charCenterY) - (areaHeight / 2);
-            
-            // 視覚化要素の位置とサイズを更新
-            visualizer.style.position = "fixed";
-            visualizer.style.left = areaLeft + "px";
-            visualizer.style.top = areaTop + "px";
-            visualizer.style.width = areaWidth + "px";
-            visualizer.style.height = areaHeight + "px";
-          }
-          
-          // 初期位置設定とリサイズ対応
-          updateClickAreaVisualizer();
-          window.addEventListener("resize", updateClickAreaVisualizer);
 
           // 成功時：Canvas表示、フォールバック非表示
-          canvas.style.display = "block";
-          fallback.style.display = "none";
+          canvas.style.opacity = "1";
+          fallback.style.opacity = "0";
 
           console.log("✅ Spineキャラクター初期化完了");
 
@@ -341,7 +291,9 @@
           }
         } catch (error) {
           console.error("❌ Spineキャラクター初期化失敗:", error);
-          // フォールバック画像のまま表示
+          // エラー時：Canvas非表示、フォールバック表示
+          canvas.style.opacity = "0";
+          fallback.style.opacity = "1";
         }
       }
 
@@ -350,39 +302,33 @@
         setTimeout(initSpineCharacter, 500);
       });
 
-      // 🎮 デバッグ用コントロール機能
-      document.addEventListener("DOMContentLoaded", () => {
-        const toggleClickAreaBtn = document.getElementById("toggle-click-area");
-        const toggleCanvasBorderBtn = document.getElementById("toggle-canvas-border");
-        const visualizer = document.getElementById("click-area-visualizer");
+      // 🎯 HTML設定制御システム：設定値変更時の動的更新（シンプル版）
+      function updateCharacterFromConfig() {
+        const config = document.getElementById("purattokun-config");
         const canvas = document.getElementById("purattokun-canvas");
+        const fallback = document.getElementById("purattokun-fallback");
+        
+        if (config && canvas && fallback) {
+          // data属性が設定されている場合のみ適用（CSS設定を上書きしない）
+          const dataX = config.getAttribute("data-x");
+          const dataY = config.getAttribute("data-y");
+          
+          if (dataX) {
+            canvas.style.left = dataX + "%";
+            fallback.style.left = dataX + "%";
+          }
+          if (dataY) {
+            canvas.style.top = dataY + "%";
+            fallback.style.top = dataY + "%";
+          }
+          
+          console.log(`📍 HTML設定適用: ${dataX || 'CSS値'}%, ${dataY || 'CSS値'}%`);
+        }
+      }
 
-        let clickAreaVisible = false;
-        let canvasBorderVisible = true; // 初期状態では表示
-
-        // クリック判定範囲の表示/非表示切り替え
-        toggleClickAreaBtn.addEventListener("click", () => {
-          clickAreaVisible = !clickAreaVisible;
-          visualizer.style.display = clickAreaVisible ? "block" : "none";
-          toggleClickAreaBtn.textContent = clickAreaVisible ? "判定範囲非表示" : "判定範囲表示";
-          toggleClickAreaBtn.classList.toggle("active", clickAreaVisible);
-        });
-
-        // Canvas境界線の表示/非表示切り替え
-        toggleCanvasBorderBtn.addEventListener("click", () => {
-          canvasBorderVisible = !canvasBorderVisible;
-          canvas.style.border = canvasBorderVisible 
-            ? "2px dashed rgba(255, 0, 0, 0.3)" 
-            : "none";
-          canvas.style.background = canvasBorderVisible 
-            ? "rgba(255, 255, 0, 0.05)" 
-            : "transparent";
-          toggleCanvasBorderBtn.textContent = canvasBorderVisible ? "Canvas境界非表示" : "Canvas境界表示";
-          toggleCanvasBorderBtn.classList.toggle("active", canvasBorderVisible);
-        });
-
-        // 初期状態設定
-        toggleCanvasBorderBtn.classList.add("active");
+      // 初期化時にHTML設定を適用（設定追加方式）
+      document.addEventListener("DOMContentLoaded", () => {
+        updateCharacterFromConfig();
       });
     </script>
   </body>
