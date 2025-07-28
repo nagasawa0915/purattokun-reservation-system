@@ -330,6 +330,103 @@
       document.addEventListener("DOMContentLoaded", () => {
         updateCharacterFromConfig();
       });
+
+      // ========== 🎯 編集システム統合（spine-sample-simple.html用） ==========
+
+      // 編集システム動的読み込み
+      function loadEditingSystem() {
+        console.log('🔄 編集システム読み込み開始...');
+        
+        // 編集システムのCSS読み込み
+        const editCSS = document.createElement('link');
+        editCSS.rel = 'stylesheet';
+        editCSS.href = 'spine-positioning-system-explanation.css';
+        document.head.appendChild(editCSS);
+        
+        // 編集システムのJS読み込み
+        const editJS = document.createElement('script');
+        editJS.src = 'spine-positioning-system-explanation.js';
+        editJS.onload = function() {
+          console.log('✅ 編集システム読み込み完了');
+          initEditingMode();
+        };
+        editJS.onerror = function() {
+          console.error('❌ 編集システム読み込み失敗');
+          alert('編集システムの読み込みに失敗しました。spine-positioning-system-explanation.html から必要なファイルを確認してください。');
+        };
+        document.head.appendChild(editJS);
+      }
+
+      // 編集モード初期化
+      function initEditingMode() {
+        console.log('🎯 編集モード初期化開始');
+        
+        // 編集パネルを作成
+        const editPanel = document.createElement('div');
+        editPanel.id = 'edit-control-panel';
+        editPanel.innerHTML = `
+          <div style="position: fixed; top: 20px; right: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001; font-family: sans-serif;">
+            <h3 style="margin: 0 0 15px 0; color: #ff6b6b;">🎯 シンプル編集モード</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <button id="edit-character-btn" style="padding: 10px 15px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer;">キャラクター編集</button>
+              <button id="edit-canvas-btn" style="padding: 10px 15px; background: #4ECDC4; color: white; border: none; border-radius: 5px; cursor: pointer;">表示範囲編集</button>
+              <button id="exit-edit-btn" style="padding: 10px 15px; background: #95A5A6; color: white; border: none; border-radius: 5px; cursor: pointer;">編集終了</button>
+            </div>
+            <div id="coordinate-display" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 12px; color: #666;">
+              編集モード待機中...
+            </div>
+          </div>
+        `;
+        document.body.appendChild(editPanel);
+        
+        // 編集イベント設定
+        setupEditingEvents();
+      }
+
+      // 編集イベント設定
+      function setupEditingEvents() {
+        console.log('⚙️ 編集イベント設定中...');
+        
+        document.getElementById('edit-character-btn').addEventListener('click', () => {
+          console.log('🎯 キャラクター編集モード開始');
+          // spine-positioning-system-explanation.js の関数を呼び出し
+          if (typeof startCharacterEdit === 'function') {
+            startCharacterEdit();
+          } else {
+            console.error('❌ キャラクター編集機能が見つかりません');
+            alert('キャラクター編集機能が読み込まれていません。編集システムファイルを確認してください。');
+          }
+        });
+        
+        document.getElementById('edit-canvas-btn').addEventListener('click', () => {
+          console.log('🎯 Canvas編集モード開始');
+          // spine-positioning-system-explanation.js の関数を呼び出し
+          if (typeof startCanvasEdit === 'function') {
+            startCanvasEdit();
+          } else {
+            console.error('❌ Canvas編集機能が見つかりません');
+            alert('Canvas編集機能が読み込まれていません。編集システムファイルを確認してください。');
+          }
+        });
+        
+        document.getElementById('exit-edit-btn').addEventListener('click', () => {
+          if (confirm('編集モードを終了しますか？')) {
+            window.location.href = window.location.pathname; // ?edit=true を削除
+          }
+        });
+      }
+
+      // 🎯 編集モード対応（URLパラメータ）
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('edit') === 'true') {
+        console.log('🎯 編集モードが有効化されました');
+        // DOMContentLoaded後に編集システムを読み込み
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', loadEditingSystem);
+        } else {
+          loadEditingSystem();
+        }
+      }
     </script>
   </body>
 </html>
