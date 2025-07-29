@@ -190,6 +190,87 @@
     min-height: 20px;
 }
 
+/* ========== 🆕 新ハンドルシステム用CSS ========== */
+
+/* 新ハンドル（○/●システム） */
+.new-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 20;
+}
+
+/* 角ハンドル（対角拡縮） */
+.new-handle.corner {
+    border-color: #4caf50;
+}
+
+.new-handle.corner.active {
+    background: #4caf50;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.8);
+}
+
+/* 辺ハンドル（片方向拡縮） */
+.new-handle.edge {
+    border-color: #2196f3;
+}
+
+.new-handle.edge.active {
+    background: #2196f3;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.8);
+}
+
+/* 中央ハンドル（中心拡縮） */
+.new-handle.center {
+    border-color: #ff9800;
+}
+
+.new-handle.center.active {
+    background: #ff9800;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.8);
+}
+
+/* 新ハンドル位置 */
+.new-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+.new-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+.new-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+.new-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+
+.new-handle.n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.new-handle.s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.new-handle.w { left: -6px; top: 50%; transform: translateY(-50%); cursor: w-resize; }
+.new-handle.e { right: -6px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
+
+.new-handle.c { top: 50%; left: 50%; transform: translate(-50%, -50%); cursor: move; }
+
+/* 新ハンドルシステム有効時のスタイル */
+.new-handle-system {
+    border: 2px solid #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.new-handle-system.global-resize-mode {
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+}
+
+/* 拡縮モード中の視覚フィードバック */
+.resize-feedback {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
 /* 確定パネル */
 .confirm-panel {
     position: fixed;

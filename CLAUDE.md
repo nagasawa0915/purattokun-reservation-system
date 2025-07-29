@@ -65,6 +65,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **設計思想・アーキテクチャ** | [🏛️ docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md) |
 | **🤖 ClaudeCode自動化アルゴリズム** | [🤖 docs/CLAUDECODE_AUTOMATION_ALGORITHM.md](./docs/CLAUDECODE_AUTOMATION_ALGORITHM.md) |
 | **🤖 サブエージェント利用ガイド** | [🤖 docs/SUBAGENT_GUIDE.md](./docs/SUBAGENT_GUIDE.md) |
+| **🎯 Spine座標制御理想構成** | [🎯 docs/SPINE_BEST_PRACTICES.md](./docs/SPINE_BEST_PRACTICES.md) |
 
 ---
 

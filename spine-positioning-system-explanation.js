@@ -10,6 +10,12 @@ let resizeDirection = '';
 let startMousePos = { x: 0, y: 0 };
 let startElementPos = { x: 0, y: 0, width: 0, height: 0 };
 
+// 🆕 新ハンドルシステム用変数
+let isNewHandleSystemEnabled = false;
+let activeHandle = null;
+let isGlobalResizeMode = false;
+let resizeFeedback = null;
+
 // 🎯 統一座標システム対応：保存状態
 let savedState = {
     character: { left: '60px', top: '60px', width: '80px', height: '80px' },
@@ -41,6 +47,9 @@ function startCharacterEdit() {
     character.classList.add('demo-character'); // CSSセレクタのために追加
     character.classList.add('edit-mode');
     
+    // 🆕 新ハンドルシステムを有効化
+    enableNewHandleSystem();
+    
     const btn = document.getElementById('edit-character-btn');
     if (btn) {
         btn.textContent = 'キャラクター編集中...';
@@ -49,7 +58,7 @@ function startCharacterEdit() {
     
     showConfirmPanel();
     updateCoordinateDisplay();
-    console.log('🎯 キャラクター編集モード開始');
+    console.log('🎯 キャラクター編集モード開始（新ハンドルシステム）');
 }
 
 function startCanvasEdit() {
@@ -624,6 +633,10 @@ function endEditMode() {
 
 function endCharacterEditMode() {
     isCharacterEditMode = false;
+    
+    // 🆕 新ハンドルシステムを無効化
+    disableNewHandleSystem();
+    
     if (character) {
         character.classList.remove('edit-mode');
         character.classList.remove('demo-character');
@@ -751,8 +764,371 @@ function loadSavedState() {
     return false;
 }
 
+// ========== 🆕 新ハンドルシステム ========== //
+
+// 新ハンドルシステム有効化
+function enableNewHandleSystem() {
+    if (!character) return;
+    
+    isNewHandleSystemEnabled = true;
+    character.classList.add('new-handle-system');
+    
+    // 既存のリサイズハンドルを非表示
+    const oldHandles = character.querySelectorAll('.resize-handle');
+    oldHandles.forEach(handle => handle.style.display = 'none');
+    
+    // 新ハンドルを作成
+    createNewHandles();
+    
+    // グローバルイベントリスナーを設定
+    setupGlobalEventListeners();
+    
+    console.log('✅ 新ハンドルシステム有効化完了');
+}
+
+// 新ハンドル作成
+function createNewHandles() {
+    if (!character) return;
+    
+    // 既存の新ハンドルを削除
+    const existingHandles = character.querySelectorAll('.new-handle');
+    existingHandles.forEach(handle => handle.remove());
+    
+    // ハンドル定義
+    const handles = [
+        // 角ハンドル（対角拡縮）
+        { pos: 'nw', type: 'corner', title: '対角拡縮（左上）' },
+        { pos: 'ne', type: 'corner', title: '対角拡縮（右上）' },
+        { pos: 'sw', type: 'corner', title: '対角拡縮（左下）' },
+        { pos: 'se', type: 'corner', title: '対角拡縮（右下）' },
+        
+        // 辺ハンドル（片方向拡縮）
+        { pos: 'n', type: 'edge', title: '上辺拡縮' },
+        { pos: 's', type: 'edge', title: '下辺拡縮' },
+        { pos: 'w', type: 'edge', title: '左辺拡縮' },
+        { pos: 'e', type: 'edge', title: '右辺拡縮' },
+        
+        // 中央ハンドル（中心拡縮）
+        { pos: 'c', type: 'center', title: '中心基準拡縮' }
+    ];
+    
+    // ハンドル要素を作成
+    handles.forEach(handle => {
+        const element = document.createElement('div');
+        element.className = `new-handle ${handle.type} ${handle.pos}`;
+        element.title = handle.title;
+        element.dataset.position = handle.pos;
+        element.dataset.type = handle.type;
+        
+        // クリックイベント
+        element.addEventListener('click', (e) => {
+            e.stopPropagation();
+            activateHandle(element);
+        });
+        
+        character.appendChild(element);
+    });
+}
+
+// ハンドルアクティブ化
+function activateHandle(handleElement) {
+    // 既存のアクティブハンドルを非アクティブ化
+    if (activeHandle) {
+        activeHandle.classList.remove('active');
+    }
+    
+    // 新しいハンドルをアクティブ化
+    activeHandle = handleElement;
+    activeHandle.classList.add('active');
+    
+    // グローバルリサイズモードを有効化
+    isGlobalResizeMode = true;
+    character.classList.add('global-resize-mode');
+    
+    // フィードバック表示
+    showResizeFeedback(handleElement);
+    
+    console.log(`🎯 ハンドルアクティブ化: ${handleElement.dataset.position} (${handleElement.dataset.type})`);
+}
+
+// ハンドル非アクティブ化
+function deactivateHandle() {
+    if (activeHandle) {
+        activeHandle.classList.remove('active');
+        activeHandle = null;
+    }
+    
+    isGlobalResizeMode = false;
+    character.classList.remove('global-resize-mode');
+    
+    hideResizeFeedback();
+    
+    console.log('🔄 ハンドル非アクティブ化');
+}
+
+// リサイズフィードバック表示
+function showResizeFeedback(handleElement) {
+    const type = handleElement.dataset.type;
+    const position = handleElement.dataset.position;
+    
+    let feedbackText = '';
+    switch (type) {
+        case 'corner':
+            feedbackText = `🟢 対角拡縮 (${position.toUpperCase()})`;
+            break;
+        case 'edge':
+            feedbackText = `🔵 片方向拡縮 (${position.toUpperCase()})`;
+            break;
+        case 'center':
+            feedbackText = `🟠 中心拡縮`;
+            break;
+    }
+    
+    feedbackText += ' - 画面をドラッグして拡縮';
+    
+    if (!resizeFeedback) {
+        resizeFeedback = document.createElement('div');
+        resizeFeedback.className = 'resize-feedback';
+        document.body.appendChild(resizeFeedback);
+    }
+    
+    resizeFeedback.textContent = feedbackText;
+    resizeFeedback.style.display = 'block';
+    
+    // マウス位置に追従
+    document.addEventListener('mousemove', updateFeedbackPosition);
+}
+
+// リサイズフィードバック非表示
+function hideResizeFeedback() {
+    if (resizeFeedback) {
+        resizeFeedback.style.display = 'none';
+        document.removeEventListener('mousemove', updateFeedbackPosition);
+    }
+}
+
+// フィードバック位置更新
+function updateFeedbackPosition(e) {
+    if (resizeFeedback && resizeFeedback.style.display !== 'none') {
+        resizeFeedback.style.left = (e.clientX + 10) + 'px';
+        resizeFeedback.style.top = (e.clientY - 30) + 'px';
+    }
+}
+
+// グローバルイベントリスナー設定
+function setupGlobalEventListeners() {
+    document.addEventListener('mousedown', handleGlobalMouseDown);
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('click', handleGlobalClick);
+}
+
+// グローバルマウスダウン
+function handleGlobalMouseDown(e) {
+    if (!isNewHandleSystemEnabled || !isGlobalResizeMode) return;
+    
+    // ハンドルクリックは除外
+    if (e.target.classList.contains('new-handle')) return;
+    
+    // キャラクター以外をクリックした場合は移動モード
+    if (!character.contains(e.target)) {
+        startCharacterMove(e);
+        return;
+    }
+    
+    // アクティブハンドルがある場合はリサイズ開始
+    if (activeHandle) {
+        startGlobalResize(e);
+    }
+}
+
+// グローバルリサイズ開始
+function startGlobalResize(e) {
+    if (!activeHandle) return;
+    
+    isDragging = true;
+    isResizing = true;
+    startMousePos = { x: e.clientX, y: e.clientY };
+    
+    // キャラクターの現在状態を記録
+    const rect = character.getBoundingClientRect();
+    startElementPos = {
+        centerX: parseFloat(character.style.left) || 60,
+        centerY: parseFloat(character.style.top) || 60,
+        width: rect.width,
+        height: rect.height
+    };
+    
+    console.log('🎯 グローバルリサイズ開始');
+}
+
+// キャラクター移動開始
+function startCharacterMove(e) {
+    isDragging = true;
+    startMousePos = { x: e.clientX, y: e.clientY };
+    
+    // 現在位置を取得
+    const rect = character.getBoundingClientRect();
+    const canvasRect = characterCanvas.getBoundingClientRect();
+    
+    const currentX = rect.left + rect.width/2 - canvasRect.left;
+    const currentY = rect.top + rect.height/2 - canvasRect.top;
+    
+    character.style.left = currentX + 'px';
+    character.style.top = currentY + 'px';
+    
+    console.log('🎯 キャラクター移動開始');
+}
+
+// グローバルマウス移動
+function handleGlobalMouseMove(e) {
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - startMousePos.x;
+    const deltaY = e.clientY - startMousePos.y;
+    
+    if (isResizing && activeHandle) {
+        performGlobalResize(deltaX, deltaY);
+    } else {
+        moveCharacter(deltaX, deltaY);
+    }
+}
+
+// グローバルリサイズ実行
+function performGlobalResize(deltaX, deltaY) {
+    if (!activeHandle) return;
+    
+    const position = activeHandle.dataset.position;
+    const type = activeHandle.dataset.type;
+    
+    let newWidth = startElementPos.width;
+    let newHeight = startElementPos.height;
+    let newCenterX = startElementPos.centerX;
+    let newCenterY = startElementPos.centerY;
+    
+    // リサイズロジック
+    switch (type) {
+        case 'center':
+            // 中心基準（位置変更なし）
+            const scale = 1 + (deltaX + deltaY) / 200;
+            newWidth = Math.max(20, startElementPos.width * scale);
+            newHeight = Math.max(20, startElementPos.height * scale);
+            break;
+            
+        case 'corner':
+            // 対角拡縮（縦横比維持）
+            const cornerScale = 1 + (deltaX + deltaY) / 200;
+            newWidth = Math.max(20, startElementPos.width * cornerScale);
+            newHeight = Math.max(20, startElementPos.height * cornerScale);
+            
+            // 対角固定点調整
+            switch (position) {
+                case 'se':
+                    newCenterX = startElementPos.centerX + (newWidth - startElementPos.width) / 2;
+                    newCenterY = startElementPos.centerY + (newHeight - startElementPos.height) / 2;
+                    break;
+                case 'sw':
+                    newCenterX = startElementPos.centerX - (newWidth - startElementPos.width) / 2;
+                    newCenterY = startElementPos.centerY + (newHeight - startElementPos.height) / 2;
+                    break;
+                case 'ne':
+                    newCenterX = startElementPos.centerX + (newWidth - startElementPos.width) / 2;
+                    newCenterY = startElementPos.centerY - (newHeight - startElementPos.height) / 2;
+                    break;
+                case 'nw':
+                    newCenterX = startElementPos.centerX - (newWidth - startElementPos.width) / 2;
+                    newCenterY = startElementPos.centerY - (newHeight - startElementPos.height) / 2;
+                    break;
+            }
+            break;
+            
+        case 'edge':
+            // 片方向拡縮
+            switch (position) {
+                case 'n':
+                    newHeight = Math.max(20, startElementPos.height - deltaY);
+                    newCenterY = startElementPos.centerY + deltaY / 2;
+                    break;
+                case 's':
+                    newHeight = Math.max(20, startElementPos.height + deltaY);
+                    newCenterY = startElementPos.centerY + deltaY / 2;
+                    break;
+                case 'w':
+                    newWidth = Math.max(20, startElementPos.width - deltaX);
+                    newCenterX = startElementPos.centerX + deltaX / 2;
+                    break;
+                case 'e':
+                    newWidth = Math.max(20, startElementPos.width + deltaX);
+                    newCenterX = startElementPos.centerX + deltaX / 2;
+                    break;
+            }
+            break;
+    }
+    
+    // サイズと位置を適用
+    character.style.width = newWidth + 'px';
+    character.style.height = newHeight + 'px';
+    character.style.left = newCenterX + 'px';
+    character.style.top = newCenterY + 'px';
+    
+    updateCoordinateDisplay();
+}
+
+// グローバルマウスアップ
+function handleGlobalMouseUp() {
+    if (isDragging) {
+        isDragging = false;
+        isResizing = false;
+        console.log('🔄 グローバル操作終了');
+    }
+}
+
+// グローバルクリック（ハンドル非アクティブ化用）
+function handleGlobalClick(e) {
+    if (!isNewHandleSystemEnabled) return;
+    
+    // ハンドルまたはキャラクター内のクリックは無視
+    if (e.target.classList.contains('new-handle') || character.contains(e.target)) {
+        return;
+    }
+    
+    // 空白クリックでハンドル非アクティブ化
+    deactivateHandle();
+}
+
+// 新ハンドルシステム無効化
+function disableNewHandleSystem() {
+    if (!isNewHandleSystemEnabled) return;
+    
+    isNewHandleSystemEnabled = false;
+    deactivateHandle();
+    
+    if (character) {
+        character.classList.remove('new-handle-system', 'global-resize-mode');
+        
+        // 新ハンドルを削除
+        const newHandles = character.querySelectorAll('.new-handle');
+        newHandles.forEach(handle => handle.remove());
+        
+        // 既存ハンドルを復活
+        const oldHandles = character.querySelectorAll('.resize-handle');
+        oldHandles.forEach(handle => handle.style.display = 'block');
+    }
+    
+    // グローバルイベントリスナーを削除
+    document.removeEventListener('mousedown', handleGlobalMouseDown);
+    document.removeEventListener('mousemove', handleGlobalMouseMove);
+    document.removeEventListener('mouseup', handleGlobalMouseUp);
+    document.removeEventListener('click', handleGlobalClick);
+    
+    hideResizeFeedback();
+    
+    console.log('🔄 新ハンドルシステム無効化完了');
+}
+
 console.log('✅ 統一座標システム対応 Spine編集システム読み込み完了');
 console.log('🎯 統一座標システム: 4レイヤー→CSSメインレイヤーに統一完了');
 console.log('  - CSS位置・サイズ制御（メインレイヤー）');
 console.log('  - WebGL解像度 = CSS表示サイズ（統一）');
 console.log('  - Skeleton座標 = Canvas中央固定（簡素化）');
+console.log('🆕 新ハンドルシステム: ○→●アクティブ化方式対応');

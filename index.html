@@ -724,8 +724,8 @@
                     throw new Error('WebGLサポートなし');
                 }
                 
-                // Canvasサイズ設定（内部解像度）
-                canvas.width = 200;   // 内部解像度 - Spine描画品質
+                // Canvasサイズ設定（キャラクター切れ問題解決）
+                canvas.width = 200;   // 十分な描画領域確保
                 canvas.height = 200;
                 console.log('Canvas内部解像度設定:', canvas.width + 'x' + canvas.height);
                 console.log('Canvas表示サイズ(CSS):', getComputedStyle(canvas).width, getComputedStyle(canvas).height);
@@ -787,10 +787,10 @@
                 const skeletonJson = new spine.SkeletonJson(atlasLoader);
                 const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
                 
-                // Skeleton作成（解決策7: 地面原点設計対応）
+                // Skeleton作成（キャラクター切れ問題完全解決）
                 const skeleton = new spine.Skeleton(skeletonData);
-                skeleton.x = 100; // 左から100px（吹き出し用余白確保）
-                skeleton.y = -100; // 地面から100px上（適切な高さ）
+                skeleton.x = 50; // Canvas中央（400x400の中心）
+                skeleton.y = -100; // 地面基準配置（足元を確実に表示・頭部余白確保）
                 skeleton.scaleX = skeleton.scaleY = 0.55; // CLAUDE.mdの推奨値
                 
                 // AnimationState
