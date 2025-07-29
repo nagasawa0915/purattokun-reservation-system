@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>確認パネル位置問題デバッグツール</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+            background: #f0f0f0;
+        }
+        
+        .debug-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 400px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 10000;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .debug-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .debug-section {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 5px;
+        }
+        
+        .debug-label {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .debug-value {
+            font-family: monospace;
+            background: #fff;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        
+        .debug-button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .btn-analyze { background: #2196f3; }
+        .btn-fix { background: #4caf50; }
+        .btn-reset { background: #ff9800; }
+        .btn-test { background: #9c27b0; }
+        
+        .status-ok { color: #4caf50; }
+        .status-warning { color: #ff9800; }
+        .status-error { color: #f44336; }
+        
+        .test-panel {
+            position: fixed;
+            width: 200px;
+            height: 150px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .test-panel-header {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: -20px -20px 10px -20px;
+            border-radius: 8px 8px 0 0;
+            cursor: move;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 確認パネル位置問題デバッグツール</h1>
+    <p>このツールで確認パネルの位置問題を徹底調査します。</p>
+    
+    <!-- テスト用確認パネル -->
+    <div id="test-confirm-panel" class="test-panel" style="display: none;">
+        <div class="test-panel-header">テスト確認パネル</div>
+        <p>編集を確定しますか？</p>
+        <button style="margin: 5px;">保存</button>
+        <button style="margin: 5px;">キャンセル</button>
+    </div>
+    
+    <!-- デバッグパネル -->
+    <div class="debug-panel">
+        <div class="debug-title">🛠️ デバッグコントロール</div>
+        
+        <div class="debug-section">
+            <button class="debug-button btn-analyze" onclick="analyzePanel()">🔍 パネル分析実行</button>
+            <button class="debug-button btn-test" onclick="createTestPanel()">📦 テストパネル作成</button>
+            <button class="debug-button btn-fix" onclick="applyFix()">🔧 修正適用</button>
+            <button class="debug-button btn-reset" onclick="resetAll()">🔄 リセット</button>
+        </div>
+        
+        <div id="debug-output"></div>
+    </div>
+    
+    <script>
+        let debugOutput = document.getElementById('debug-output');
+        let testPanel = null;
+        
+        function log(title, data, status = 'normal') {
+            const section = document.createElement('div');
+            section.className = 'debug-section';
+            
+            const label = document.createElement('div');
+            label.className = 'debug-label';
+            label.innerHTML = title;
+            
+            const value = document.createElement('div');
+            value.className = 'debug-value';
+            
+            if (typeof data === 'object') {
+                value.innerHTML = JSON.stringify(data, null, 2);
+            } else {
+                value.innerHTML = data;
+            }
+            
+            if (status === 'ok') {
+                label.classList.add('status-ok');
+            } else if (status === 'warning') {
+                label.classList.add('status-warning');
+            } else if (status === 'error') {
+                label.classList.add('status-error');
+            }
+            
+            section.appendChild(label);
+            section.appendChild(value);
+            debugOutput.appendChild(section);
+        }
+        
+        function clearLog() {
+            debugOutput.innerHTML = '';
+        }
+        
+        function analyzePanel() {
+            clearLog();
+            
+            // 実際の確認パネルを探す
+            const panel = document.getElementById('edit-confirm-panel') || 
+                         document.querySelector('.confirm-panel') ||
+                         document.getElementById('test-confirm-panel');
+            
+            if (!panel) {
+                log('🚨 パネル検出', 'パネルが見つかりません', 'error');
+                return;
+            }
+            
+            log('✅ パネル検出', `ID: ${panel.id}, Class: ${panel.className}`, 'ok');
+            
+            // スタイル情報を詳細に取得
+            const computedStyle = window.getComputedStyle(panel);
+            const rect = panel.getBoundingClientRect();
+            
+            // インラインスタイル
+            log('📝 インラインスタイル', {
+                position: panel.style.position || '(未設定)',
+                top: panel.style.top || '(未設定)',
+                bottom: panel.style.bottom || '(未設定)',
+                left: panel.style.left || '(未設定)',
+                right: panel.style.right || '(未設定)',
+                transform: panel.style.transform || '(未設定)'
+            });
+            
+            // 計算されたスタイル
+            log('🎨 計算済みスタイル', {
+                position: computedStyle.position,
+                top: computedStyle.top,
+                bottom: computedStyle.bottom,
+                left: computedStyle.left,
+                right: computedStyle.right,
+                transform: computedStyle.transform
+            });
+            
+            // 実際の位置
+            log('📍 実際の位置 (getBoundingClientRect)', {
+                top: rect.top,
+                bottom: rect.bottom,
+                left: rect.left,
+                right: rect.right,
+                width: rect.width,
+                height: rect.height
+            });
+            
+            // 問題診断
+            const problems = [];
+            
+            if (computedStyle.bottom !== 'auto' && computedStyle.bottom !== '') {
+                problems.push(`bottom値が設定されています: ${computedStyle.bottom}`);
+            }
+            
+            if (rect.bottom > window.innerHeight - 100) {
+                problems.push(`パネルが画面下部に寄っています (bottom: ${rect.bottom}, 画面高さ: ${window.innerHeight})`);
+            }
+            
+            if (computedStyle.position !== 'fixed' && computedStyle.position !== 'absolute') {
+                problems.push(`position値が適切でない可能性: ${computedStyle.position}`);
+            }
+            
+            if (problems.length > 0) {
+                log('⚠️ 検出された問題', problems.join('\n'), 'warning');
+            } else {
+                log('✅ 問題なし', 'パネルの位置設定は正常です', 'ok');
+            }
+            
+            // CSSルールをチェック
+            checkCSSRules(panel);
+        }
+        
+        function checkCSSRules(element) {
+            const sheets = document.styleSheets;
+            const matchingRules = [];
+            
+            try {
+                for (let sheet of sheets) {
+                    try {
+                        const rules = sheet.cssRules || sheet.rules;
+                        for (let rule of rules) {
+                            if (rule.selectorText && element.matches(rule.selectorText)) {
+                                matchingRules.push({
+                                    selector: rule.selectorText,
+                                    styles: rule.style.cssText
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        // クロスオリジンの場合はスキップ
+                    }
+                }
+            } catch (e) {
+                log('⚠️ CSS解析エラー', e.message, 'warning');
+            }
+            
+            if (matchingRules.length > 0) {
+                log('🎨 適用されているCSSルール', matchingRules);
+            }
+        }
+        
+        function createTestPanel() {
+            testPanel = document.getElementById('test-confirm-panel');
+            testPanel.style.display = 'block';
+            
+            // 初期位置を画面中央に設定
+            const centerX = (window.innerWidth - 240) / 2; // パネル幅考慮
+            const centerY = (window.innerHeight - 200) / 2; // パネル高さ考慮
+            
+            testPanel.style.position = 'fixed';
+            testPanel.style.left = centerX + 'px';
+            testPanel.style.top = centerY + 'px';
+            testPanel.style.bottom = ''; // bottomを明示的にクリア
+            testPanel.style.right = ''; // rightを明示的にクリア
+            testPanel.style.transform = 'none';
+            
+            log('📦 テストパネル作成', {
+                初期位置: { x: centerX, y: centerY }
+            }, 'ok');
+            
+            // ドラッグ機能を追加
+            setupDragging(testPanel);
+            
+            // 作成後すぐに分析
+            setTimeout(() => analyzePanel(), 100);
+        }
+        
+        function setupDragging(panel) {
+            const header = panel.querySelector('.test-panel-header');
+            let isDragging = false;
+            let offset = { x: 0, y: 0 };
+            
+            header.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                const rect = panel.getBoundingClientRect();
+                offset.x = e.clientX - rect.left;
+                offset.y = e.clientY - rect.top;
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const newX = e.clientX - offset.x;
+                const newY = e.clientY - offset.y;
+                
+                panel.style.left = newX + 'px';
+                panel.style.top = newY + 'px';
+                panel.style.bottom = ''; // 移動時も bottom をクリア
+                panel.style.right = ''; // 移動時も right をクリア
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    analyzePanel(); // ドラッグ終了時に再分析
+                }
+            });
+        }
+        
+        function applyFix() {
+            clearLog();
+            
+            const panel = document.getElementById('edit-confirm-panel') || 
+                         document.querySelector('.confirm-panel') ||
+                         document.getElementById('test-confirm-panel');
+            
+            if (!panel) {
+                log('🚨 エラー', 'パネルが見つかりません', 'error');
+                return;
+            }
+            
+            // 強制的に修正を適用
+            const centerX = (window.innerWidth - panel.offsetWidth) / 2;
+            const centerY = (window.innerHeight - panel.offsetHeight) / 2;
+            
+            // すべてのスタイルを一度にリセット
+            panel.style.cssText = `
+                position: fixed !important;
+                left: ${centerX}px !important;
+                top: ${centerY}px !important;
+                bottom: unset !important;
+                right: unset !important;
+                transform: none !important;
+                margin: 0 !important;
+            `;
+            
+            log('✅ 修正適用完了', {
+                新しい位置: { x: centerX, y: centerY },
+                適用したスタイル: panel.style.cssText
+            }, 'ok');
+            
+            // 修正後の状態を確認
+            setTimeout(() => analyzePanel(), 100);
+        }
+        
+        function resetAll() {
+            clearLog();
+            if (testPanel) {
+                testPanel.style.display = 'none';
+            }
+            log('🔄 リセット完了', '初期状態に戻しました', 'ok');
+        }
+        
+        // ページ読み込み時に自動分析
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🚀 デバッグツール起動', '準備完了', 'ok');
+                analyzePanel();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

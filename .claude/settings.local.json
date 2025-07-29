@@ -18,7 +18,8 @@
       "Bash(node:*)",
       "Bash(sed:*)",
       "Bash(python:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

@@ -358,11 +358,19 @@ function createConfirmPanel() {
                 </div>
             </div>
         `;
+        
+        // 🔧 修正: スタイル設定を完全にリセット
+        // 画面中央への配置を強制し、bottom/right/transformを明示的に無効化
+        const centerX = (window.innerWidth - 140) / 2;
+        const centerY = (window.innerHeight - 100) / 2;
+        
         editConfirmPanel.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            position: fixed !important;
+            left: ${centerX}px !important;
+            top: ${centerY}px !important;
+            bottom: unset !important;
+            right: unset !important;
+            transform: none !important;
             background: white;
             border: 1px solid #ddd;
             border-radius: 6px;
@@ -373,6 +381,8 @@ function createConfirmPanel() {
             display: none;
         `;
         document.body.appendChild(editConfirmPanel);
+        
+        console.log('🔧 確認パネル作成時に画面中央へ強制配置:', { x: centerX, y: centerY });
         
         // 確認パネルのドラッグ機能を設定
         setupConfirmPanelDragging();
@@ -436,7 +446,40 @@ function setupConfirmPanelDragging() {
         }));
     }
     
-    // 保存された位置を復元（画面内制限付き）
+    // 🔧 修正：ドラッグ設定時にも強制的に位置をリセット
+    // 問題: 何らかの理由でbottomプロパティが設定されている可能性
+    setTimeout(() => {
+        const screenCenterX = (window.innerWidth - 140) / 2;
+        const screenCenterY = (window.innerHeight - 100) / 2;
+        
+        // すべての位置関連プロパティを強制リセット
+        editConfirmPanel.style.position = 'fixed';
+        editConfirmPanel.style.left = screenCenterX + 'px';
+        editConfirmPanel.style.top = screenCenterY + 'px';
+        editConfirmPanel.style.bottom = '';
+        editConfirmPanel.style.right = '';
+        editConfirmPanel.style.transform = '';
+        editConfirmPanel.style.margin = '0';
+        
+        // CSSクラスによる影響を除去するためにクラスを再設定
+        editConfirmPanel.className = 'confirm-panel';
+        
+        console.log('🔧 確認パネル位置を強制リセット:', { 
+            x: screenCenterX, 
+            y: screenCenterY,
+            appliedStyles: {
+                position: editConfirmPanel.style.position,
+                left: editConfirmPanel.style.left,
+                top: editConfirmPanel.style.top,
+                bottom: editConfirmPanel.style.bottom || '(空)',
+                right: editConfirmPanel.style.right || '(空)',
+                transform: editConfirmPanel.style.transform || '(空)'
+            }
+        });
+    }, 0);
+    
+    // 🚫 localStorage復元処理を無効化（問題の原因のため）
+    /*
     const savedPosition = localStorage.getItem('confirmPanelPosition');
     if (savedPosition) {
         const pos = JSON.parse(savedPosition);
@@ -453,18 +496,83 @@ function setupConfirmPanelDragging() {
         editConfirmPanel.style.transform = 'none';
         
         console.log('📍 確認パネル位置復元:', { saved: pos, adjusted: { x: boundedX, y: boundedY } });
+    } else {
+        // 初期位置：画面中央（保存された位置がない場合のみ）
+        console.log('📍 確認パネル初期位置設定: 画面中央');
     }
+    */
 }
 
 // 確認パネル位置リセット（デバッグ用）
 function resetConfirmPanelPosition() {
     localStorage.removeItem('confirmPanelPosition');
     if (editConfirmPanel) {
-        editConfirmPanel.style.left = '50%';
-        editConfirmPanel.style.top = '50%';
-        editConfirmPanel.style.bottom = '';
-        editConfirmPanel.style.transform = 'translate(-50%, -50%)';
-        console.log('🔄 確認パネル位置をリセットしました');
+        // **🆕 修正：画面中央への確実なリセット**
+        const screenCenterX = (window.innerWidth - 140) / 2;
+        const screenCenterY = (window.innerHeight - 100) / 2;
+        
+        editConfirmPanel.style.left = screenCenterX + 'px';
+        editConfirmPanel.style.top = screenCenterY + 'px';
+        editConfirmPanel.style.bottom = ''; // bottom固定を完全に削除
+        editConfirmPanel.style.transform = 'none';
+        
+        console.log('🔄 確認パネル位置を画面中央にリセット:', { 
+            x: screenCenterX, 
+            y: screenCenterY 
+        });
+    }
+}
+
+// 確認パネル位置デバッグ情報表示（デバッグ用）
+function debugConfirmPanelPosition() {
+    if (!editConfirmPanel) {
+        console.log('❌ 確認パネルが存在しません');
+        return;
+    }
+    
+    const rect = editConfirmPanel.getBoundingClientRect();
+    const computedStyle = window.getComputedStyle(editConfirmPanel);
+    const savedPosition = localStorage.getItem('confirmPanelPosition');
+    
+    console.log('🔍 確認パネル位置デバッグ情報:', {
+        dom_rect: {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height
+        },
+        inline_style: {
+            left: editConfirmPanel.style.left,
+            top: editConfirmPanel.style.top,
+            bottom: editConfirmPanel.style.bottom,
+            transform: editConfirmPanel.style.transform
+        },
+        computed_style: {
+            left: computedStyle.left,
+            top: computedStyle.top,
+            bottom: computedStyle.bottom,
+            transform: computedStyle.transform
+        },
+        saved_position: savedPosition ? JSON.parse(savedPosition) : 'なし',
+        display: computedStyle.display
+    });
+    
+    // 🆕 問題診断用の追加情報
+    const problems = [];
+    if (computedStyle.bottom !== 'auto' && computedStyle.bottom !== '') {
+        problems.push(`⚠️ bottom値が設定されています: ${computedStyle.bottom}`);
+    }
+    if (rect.bottom > window.innerHeight - 50) {
+        problems.push(`⚠️ パネルが画面下部に寄っています (bottom: ${rect.bottom}, 画面高さ: ${window.innerHeight})`);
+    }
+    if (computedStyle.transform !== 'none') {
+        problems.push(`⚠️ transform値が設定されています: ${computedStyle.transform}`);
+    }
+    
+    if (problems.length > 0) {
+        console.warn('🚨 検出された問題:', problems);
+    } else {
+        console.log('✅ 位置設定に問題はありません');
     }
 }
 
@@ -697,32 +805,73 @@ function updateUI() {
 
 function showConfirmPanel() {
     if (editConfirmPanel) {
-        editConfirmPanel.style.display = 'block';
+        // 🔧 修正：表示前にすべてのスタイルを完全リセット
+        const screenCenterX = (window.innerWidth - 140) / 2;
+        const screenCenterY = (window.innerHeight - 100) / 2;
         
-        // 表示時に画面内に収まっているか確認
+        // displayを変更する前にスタイルを完全に設定
+        editConfirmPanel.style.cssText = `
+            position: fixed !important;
+            left: ${screenCenterX}px !important;
+            top: ${screenCenterY}px !important;
+            bottom: unset !important;
+            right: unset !important;
+            transform: none !important;
+            margin: 0 !important;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            z-index: 2000;
+            cursor: move;
+            min-width: 140px;
+            display: block;
+        `;
+        
+        console.log('🔧 確認パネル表示時に完全なスタイルリセット実行:', { 
+            x: screenCenterX, 
+            y: screenCenterY,
+            cssText: editConfirmPanel.style.cssText
+        });
+        
+        // 遅延実行でも確実に位置を固定
+        setTimeout(() => {
+            if (editConfirmPanel && editConfirmPanel.style.display === 'block') {
+                const computedStyle = window.getComputedStyle(editConfirmPanel);
+                if (computedStyle.bottom !== 'auto' && computedStyle.bottom !== '') {
+                    console.warn('⚠️ bottomプロパティが再設定されています。強制的に削除します。');
+                    editConfirmPanel.style.bottom = '';
+                    editConfirmPanel.style.top = screenCenterY + 'px';
+                }
+            }
+        }, 100);
+        
+        // 🚫 元の画面内調整処理を無効化（問題の原因のため）
+        /*
         setTimeout(() => {
             const rect = editConfirmPanel.getBoundingClientRect();
-            const maxX = window.innerWidth - rect.width;
-            const maxY = window.innerHeight - rect.height;
+            const margin = 10; // 画面端からのマージン
+            const maxX = window.innerWidth - rect.width - margin;
+            const maxY = window.innerHeight - rect.height - margin;
             
             let needsAdjustment = false;
             let newX = rect.left;
             let newY = rect.top;
             
-            // 画面外にはみ出している場合は画面内に移動
+            // 完全に画面外にはみ出している場合のみ調整
             if (rect.left < 0) {
-                newX = 10;
+                newX = margin;  
                 needsAdjustment = true;
-            } else if (rect.left > maxX) {
-                newX = maxX - 10;
+            } else if (rect.right > window.innerWidth) {
+                newX = maxX;
                 needsAdjustment = true;
             }
             
             if (rect.top < 0) {
-                newY = 10;
+                newY = margin;
                 needsAdjustment = true;
-            } else if (rect.top > maxY) {
-                newY = maxY - 10;
+            } else if (rect.bottom > window.innerHeight) {
+                newY = maxY;
                 needsAdjustment = true;
             }
             
@@ -730,9 +879,19 @@ function showConfirmPanel() {
                 editConfirmPanel.style.left = newX + 'px';
                 editConfirmPanel.style.top = newY + 'px';
                 editConfirmPanel.style.transform = 'none';
-                console.log('📍 確認パネル位置調整:', { from: { x: rect.left, y: rect.top }, to: { x: newX, y: newY } });
+                console.log('📍 確認パネル画面内調整:', { 
+                    reason: '画面外はみ出し防止',
+                    from: { x: rect.left, y: rect.top }, 
+                    to: { x: newX, y: newY } 
+                });
+            } else {
+                console.log('📍 確認パネル位置調整不要:', { 
+                    position: { x: rect.left, y: rect.top },
+                    screen: { width: window.innerWidth, height: window.innerHeight }
+                });
             }
         }, 10); // 少し遅延して位置確認
+        */
         
         console.log('✅ 確認パネル表示');
     }
@@ -1117,5 +1276,10 @@ function performCharacterResize(deltaX, deltaY, position) {
 }
 
 // 🗑️ Canvas拡縮削除：不要
+
+// 🆕 グローバル関数として公開（デバッグ用）
+window.resetConfirmPanelPosition = resetConfirmPanelPosition;
+window.debugConfirmPanelPosition = debugConfirmPanelPosition;
+window.showConfirmPanel = showConfirmPanel;
 
 console.log('🎯 Spine編集システム v2.0 読み込み完了 - 全機能実装済み');
