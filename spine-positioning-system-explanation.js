@@ -347,10 +347,15 @@ function createConfirmPanel() {
         editConfirmPanel.id = 'edit-confirm-panel';
         editConfirmPanel.className = 'confirm-panel';
         editConfirmPanel.innerHTML = `
-            <div style="text-align: center; padding: 15px;">
-                <p style="margin-bottom: 15px; font-weight: bold;">編集を確定しますか？</p>
-                <button class="save-btn" onclick="confirmEdit()" style="margin-right: 10px; padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">保存</button>
-                <button class="cancel-btn" onclick="cancelEdit()" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">キャンセル</button>
+            <div id="confirm-panel-header" style="background: #f8f9fa; padding: 4px 8px; border-bottom: 1px solid #eee; border-radius: 5px 5px 0 0; cursor: move; text-align: center;">
+                <span style="font-size: 10px; font-weight: bold; color: #666;">📝 確認</span>
+            </div>
+            <div style="text-align: center; padding: 8px;">
+                <p style="margin: 0 0 8px 0; font-size: 10px; color: #333;">編集を確定しますか？</p>
+                <div style="display: flex; gap: 6px; justify-content: center;">
+                    <button class="save-btn" onclick="confirmEdit()" style="padding: 4px 8px; background: #4caf50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">保存</button>
+                    <button class="cancel-btn" onclick="cancelEdit()" style="padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">キャンセル</button>
+                </div>
             </div>
         `;
         editConfirmPanel.style.cssText = `
@@ -359,15 +364,108 @@ function createConfirmPanel() {
             left: 50%;
             transform: translateX(-50%);
             background: white;
-            border: 2px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             z-index: 2000;
+            cursor: move;
+            min-width: 140px;
             display: none;
         `;
         document.body.appendChild(editConfirmPanel);
+        
+        // 確認パネルのドラッグ機能を設定
+        setupConfirmPanelDragging();
     }
     console.log('✅ 確定パネル作成完了');
+}
+
+// 確認パネルドラッグ機能設定
+function setupConfirmPanelDragging() {
+    const confirmHeader = document.getElementById('confirm-panel-header');
+    
+    if (!confirmHeader || !editConfirmPanel) return;
+    
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+    
+    // ドラッグ開始
+    confirmHeader.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        const rect = editConfirmPanel.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
+        
+        editConfirmPanel.style.transition = 'none';
+        editConfirmPanel.style.transform = 'none'; // translateX(-50%)を無効化
+        document.addEventListener('mousemove', handleConfirmDrag);
+        document.addEventListener('mouseup', handleConfirmDragEnd);
+        e.preventDefault();
+    });
+    
+    // ドラッグ中
+    function handleConfirmDrag(e) {
+        if (!isDragging) return;
+        
+        const newX = e.clientX - dragOffset.x;
+        const newY = e.clientY - dragOffset.y;
+        
+        // 画面端からはみ出さないよう制限
+        const maxX = window.innerWidth - editConfirmPanel.offsetWidth;
+        const maxY = window.innerHeight - editConfirmPanel.offsetHeight;
+        
+        const boundedX = Math.max(0, Math.min(newX, maxX));
+        const boundedY = Math.max(0, Math.min(newY, maxY));
+        
+        editConfirmPanel.style.left = boundedX + 'px';
+        editConfirmPanel.style.top = boundedY + 'px';
+    }
+    
+    // ドラッグ終了
+    function handleConfirmDragEnd() {
+        isDragging = false;
+        editConfirmPanel.style.transition = '';
+        document.removeEventListener('mousemove', handleConfirmDrag);
+        document.removeEventListener('mouseup', handleConfirmDragEnd);
+        
+        // 位置を記憶（localStorage）
+        const rect = editConfirmPanel.getBoundingClientRect();
+        localStorage.setItem('confirmPanelPosition', JSON.stringify({
+            x: rect.left,
+            y: rect.top
+        }));
+    }
+    
+    // 保存された位置を復元（画面内制限付き）
+    const savedPosition = localStorage.getItem('confirmPanelPosition');
+    if (savedPosition) {
+        const pos = JSON.parse(savedPosition);
+        
+        // 画面内に収まるよう調整
+        const maxX = window.innerWidth - 140; // パネル最小幅を考慮
+        const maxY = window.innerHeight - 100; // パネル高さを考慮
+        
+        const boundedX = Math.max(0, Math.min(pos.x, maxX));
+        const boundedY = Math.max(0, Math.min(pos.y, maxY));
+        
+        editConfirmPanel.style.left = boundedX + 'px';
+        editConfirmPanel.style.top = boundedY + 'px';
+        editConfirmPanel.style.transform = 'none';
+        
+        console.log('📍 確認パネル位置復元:', { saved: pos, adjusted: { x: boundedX, y: boundedY } });
+    }
+}
+
+// 確認パネル位置リセット（デバッグ用）
+function resetConfirmPanelPosition() {
+    localStorage.removeItem('confirmPanelPosition');
+    if (editConfirmPanel) {
+        editConfirmPanel.style.left = '50%';
+        editConfirmPanel.style.top = '';
+        editConfirmPanel.style.bottom = '20px';
+        editConfirmPanel.style.transform = 'translateX(-50%)';
+        console.log('🔄 確認パネル位置をリセットしました');
+    }
 }
 
 // ========== 外部インターフェース ========== //
@@ -600,12 +698,50 @@ function updateUI() {
 function showConfirmPanel() {
     if (editConfirmPanel) {
         editConfirmPanel.style.display = 'block';
+        
+        // 表示時に画面内に収まっているか確認
+        setTimeout(() => {
+            const rect = editConfirmPanel.getBoundingClientRect();
+            const maxX = window.innerWidth - rect.width;
+            const maxY = window.innerHeight - rect.height;
+            
+            let needsAdjustment = false;
+            let newX = rect.left;
+            let newY = rect.top;
+            
+            // 画面外にはみ出している場合は画面内に移動
+            if (rect.left < 0) {
+                newX = 10;
+                needsAdjustment = true;
+            } else if (rect.left > maxX) {
+                newX = maxX - 10;
+                needsAdjustment = true;
+            }
+            
+            if (rect.top < 0) {
+                newY = 10;
+                needsAdjustment = true;
+            } else if (rect.top > maxY) {
+                newY = maxY - 10;
+                needsAdjustment = true;
+            }
+            
+            if (needsAdjustment) {
+                editConfirmPanel.style.left = newX + 'px';
+                editConfirmPanel.style.top = newY + 'px';
+                editConfirmPanel.style.transform = 'none';
+                console.log('📍 確認パネル位置調整:', { from: { x: rect.left, y: rect.top }, to: { x: newX, y: newY } });
+            }
+        }, 10); // 少し遅延して位置確認
+        
+        console.log('✅ 確認パネル表示');
     }
 }
 
 function hideConfirmPanel() {
     if (editConfirmPanel) {
         editConfirmPanel.style.display = 'none';
+        console.log('✅ 確認パネル非表示');
     }
 }
 

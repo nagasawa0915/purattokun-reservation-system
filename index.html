@@ -1033,15 +1033,18 @@
             const editPanel = document.createElement('div');
             editPanel.id = 'edit-control-panel';
             editPanel.innerHTML = `
-                <div style="position: fixed; top: 80px; right: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001; font-family: sans-serif;">
-                    <h3 style="margin: 0 0 15px 0; color: #ff6b6b;">🎯 ぷらっとくん編集モード</h3>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button id="edit-character-btn" style="padding: 10px 15px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer;">キャラクター編集</button>
-                        <button id="edit-canvas-btn" style="padding: 10px 15px; background: #4ECDC4; color: white; border: none; border-radius: 5px; cursor: pointer;">表示範囲編集</button>
-                        <button id="exit-edit-btn" style="padding: 10px 15px; background: #95A5A6; color: white; border: none; border-radius: 5px; cursor: pointer;">編集終了</button>
+                <div id="edit-panel-container" style="position: fixed; top: 80px; right: 20px; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,0.15); z-index: 1001; font-family: sans-serif; min-width: 120px; cursor: move;">
+                    <div id="edit-panel-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; cursor: move;">
+                        <span style="font-size: 11px; font-weight: bold; color: #ff6b6b;">🎯 ぷらっとくん編集</span>
+                        <button id="panel-minimize-btn" style="background: none; border: none; font-size: 10px; cursor: pointer; color: #666; padding: 0;">−</button>
                     </div>
-                    <div id="coordinate-display" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 12px; color: #666;">
-                        編集モード待機中...
+                    <div id="edit-panel-content" style="display: flex; flex-direction: column; gap: 4px;">
+                        <button id="edit-character-btn" style="padding: 4px 8px; background: #ff6b6b; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">キャラクター編集</button>
+                        <button id="edit-canvas-btn" style="padding: 4px 8px; background: #4ECDC4; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">表示範囲編集</button>
+                        <button id="exit-edit-btn" style="padding: 4px 8px; background: #95A5A6; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">編集終了</button>
+                        <div id="coordinate-display" style="margin-top: 4px; padding: 4px; background: #f8f9fa; border-radius: 3px; font-size: 8px; color: #666; line-height: 1.1;">
+                            編集モード待機中...
+                        </div>
                     </div>
                 </div>
             `;
@@ -1049,8 +1052,111 @@
             
             // ボタンイベント設定
             setupEditingEvents();
+            
+            // パネルドラッグ機能を設定
+            setupPanelDragging();
         }
         
+        // パネルドラッグ機能設定
+        function setupPanelDragging() {
+            const panelContainer = document.getElementById('edit-panel-container');
+            const panelHeader = document.getElementById('edit-panel-header');
+            const minimizeBtn = document.getElementById('panel-minimize-btn');
+            const panelContent = document.getElementById('edit-panel-content');
+            
+            if (!panelContainer || !panelHeader) return;
+            
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+            let isMinimized = false;
+            
+            // ドラッグ開始
+            panelHeader.addEventListener('mousedown', (e) => {
+                // 最小化ボタンクリック時はドラッグしない
+                if (e.target === minimizeBtn) return;
+                
+                isDragging = true;
+                const rect = panelContainer.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                
+                panelContainer.style.transition = 'none';
+                document.addEventListener('mousemove', handleDrag);
+                document.addEventListener('mouseup', handleDragEnd);
+                e.preventDefault();
+            });
+            
+            // ドラッグ中
+            function handleDrag(e) {
+                if (!isDragging) return;
+                
+                const newX = e.clientX - dragOffset.x;
+                const newY = e.clientY - dragOffset.y;
+                
+                // 画面端からはみ出さないよう制限
+                const maxX = window.innerWidth - panelContainer.offsetWidth;
+                const maxY = window.innerHeight - panelContainer.offsetHeight;
+                
+                const boundedX = Math.max(0, Math.min(newX, maxX));
+                const boundedY = Math.max(0, Math.min(newY, maxY));
+                
+                panelContainer.style.left = boundedX + 'px';
+                panelContainer.style.top = boundedY + 'px';
+                panelContainer.style.right = 'auto'; // rightプロパティを無効化
+            }
+            
+            // ドラッグ終了
+            function handleDragEnd() {
+                isDragging = false;
+                panelContainer.style.transition = '';
+                document.removeEventListener('mousemove', handleDrag);
+                document.removeEventListener('mouseup', handleDragEnd);
+                
+                // 位置を記憶（localStorage）
+                const rect = panelContainer.getBoundingClientRect();
+                localStorage.setItem('editPanelPosition', JSON.stringify({
+                    x: rect.left,
+                    y: rect.top
+                }));
+            }
+            
+            // 最小化/復元機能
+            minimizeBtn.addEventListener('click', () => {
+                isMinimized = !isMinimized;
+                
+                if (isMinimized) {
+                    panelContent.style.display = 'none';
+                    minimizeBtn.textContent = '+';
+                    panelContainer.style.minWidth = '90px';
+                } else {
+                    panelContent.style.display = 'flex';
+                    minimizeBtn.textContent = '−';
+                    panelContainer.style.minWidth = '120px';
+                }
+                
+                // 最小化状態を記憶
+                localStorage.setItem('editPanelMinimized', isMinimized);
+            });
+            
+            // 保存された位置と状態を復元
+            const savedPosition = localStorage.getItem('editPanelPosition');
+            const savedMinimized = localStorage.getItem('editPanelMinimized');
+            
+            if (savedPosition) {
+                const pos = JSON.parse(savedPosition);
+                panelContainer.style.left = pos.x + 'px';
+                panelContainer.style.top = pos.y + 'px';
+                panelContainer.style.right = 'auto';
+            }
+            
+            if (savedMinimized === 'true') {
+                panelContent.style.display = 'none';
+                minimizeBtn.textContent = '+';
+                panelContainer.style.minWidth = '90px';
+                isMinimized = true;
+            }
+        }
+
         // 編集イベント設定
         function setupEditingEvents() {
             document.getElementById('edit-character-btn').addEventListener('click', () => {

@@ -44,6 +44,12 @@
 - **タグ**: `#編集システム` `#サイズ` `#Canvas要素` `#ラッパー` `#CSS`
 - **別名**: 編集モードでキャラクターが小さくなる、キャラクター縮小問題、編集時サイズ変更、character size issue in edit mode
 
+#### 確認パネル画面外問題
+- **ファイル**: [確認パネル画面外問題.md](./troubleshooting/確認パネル画面外問題.md)
+- **症状**: 「編集を確定しますか？」パネルが画面外に出て見えない、画面の下に消える
+- **タグ**: `#確認パネル` `#画面外` `#位置制御` `#localStorage` `#UI`
+- **別名**: 確認パネルが消える、確認パネルが見えない、確認パネルが画面下に行く、confirm panel out of screen、編集確認パネル位置問題
+
 #### Spine配置システム編集UI問題
 - **ファイル**: [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
 - **症状**: リサイズハンドルが表示されない、ハンドルがキャラクターから離れる
@@ -114,6 +120,7 @@
 #### #UI
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
 - [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
+- [確認パネル画面外問題.md](./troubleshooting/確認パネル画面外問題.md)
 
 #### #ドラッグ
 - [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
@@ -123,6 +130,18 @@
 
 #### #ラッパー
 - [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
+
+#### #localStorage
+- [確認パネル画面外問題.md](./troubleshooting/確認パネル画面外問題.md)
+
+#### #画面外
+- [確認パネル画面外問題.md](./troubleshooting/確認パネル画面外問題.md)
+
+#### #位置制御
+- [確認パネル画面外問題.md](./troubleshooting/確認パネル画面外問題.md)
+
+#### #確認パネル
+- [確認パネル画面外問題.md](./troubleshooting/確認パネル画面外問題.md)
 
 #### #レイヤー
 - [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
@@ -188,6 +207,9 @@
 
 ### 「ドラッグ」「左上に移動」「瞬間移動」「オレンジ枠」
 → [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
+
+### 「確認パネル」「消える」「見えない」「画面外」「下に行く」
+→ [確認パネル画面外問題.md](./troubleshooting/確認パネル画面外問題.md)
 
 ---
 
