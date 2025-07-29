@@ -360,9 +360,9 @@ function createConfirmPanel() {
         `;
         editConfirmPanel.style.cssText = `
             position: fixed;
-            bottom: 20px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
             background: white;
             border: 1px solid #ddd;
             border-radius: 6px;
@@ -461,9 +461,9 @@ function resetConfirmPanelPosition() {
     localStorage.removeItem('confirmPanelPosition');
     if (editConfirmPanel) {
         editConfirmPanel.style.left = '50%';
-        editConfirmPanel.style.top = '';
-        editConfirmPanel.style.bottom = '20px';
-        editConfirmPanel.style.transform = 'translateX(-50%)';
+        editConfirmPanel.style.top = '50%';
+        editConfirmPanel.style.bottom = '';
+        editConfirmPanel.style.transform = 'translate(-50%, -50%)';
         console.log('🔄 確認パネル位置をリセットしました');
     }
 }
