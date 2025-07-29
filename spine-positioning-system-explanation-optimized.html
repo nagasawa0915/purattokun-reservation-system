@@ -716,31 +716,43 @@ let savedState = { character: getDynamicCharacterState(character) };</pre>
 
                 <h4>🔄 反転機能</h4>
                 
-                <!-- デザインサンプル：反転ボタン -->
+                <!-- デザインサンプル：確認パネル -->
                 <div class="design-sample">
-                    <h4>🔄 反転ボタンの配置</h4>
+                    <h4>🔄 確認パネルの配置（超コンパクト・ドラッグ対応）</h4>
                     <div class="sample-ui">
-                        <div class="control-panel" style="max-width: 300px;">
-                            <h4>🎯 キャラクター変形</h4>
+                        <div class="control-panel" style="max-width: 160px; min-width: 140px; font-size: 9px; padding: 8px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; cursor: move;">
+                                <span style="font-size: 10px; font-weight: bold; color: #ff6b6b;">🎯 編集を確定しますか？</span>
+                            </div>
                             
                             <!-- 反転ボタン -->
-                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                <button class="btn" style="background: #2196F3; color: white; flex: 1;">
+                            <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                                <button class="btn" style="background: #2196F3; color: white; flex: 1; padding: 3px 6px; font-size: 9px;">
                                     ⟷ 水平反転
                                 </button>
-                                <button class="btn" style="background: #2196F3; color: white; flex: 1;">
+                                <button class="btn" style="background: #2196F3; color: white; flex: 1; padding: 3px 6px; font-size: 9px;">
                                     ⟱ 垂直反転
                                 </button>
                             </div>
                             
                             <!-- 区切り線 -->
-                            <hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;">
+                            <hr style="border: none; border-top: 1px solid #eee; margin: 8px 0;">
                             
                             <!-- 保存・キャンセルボタン -->
-                            <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-success">保存</button>
-                                <button class="btn" style="background: #95A5A6; color: white;">キャンセル</button>
+                            <div style="display: flex; gap: 4px;">
+                                <button class="btn btn-success" style="flex: 1; padding: 4px 8px; font-size: 9px;">保存</button>
+                                <button class="btn" style="background: #95A5A6; color: white; flex: 1; padding: 4px 8px; font-size: 9px;">キャンセル</button>
                             </div>
+                        </div>
+                        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                            <p style="margin: 0; color: #666; font-size: 14px;">
+                                <strong>🎯 確認パネルの最新改良（2025年1月29日）：</strong><br>
+                                • <strong>画面内制限</strong>: 画面外に消えない安全設計<br>
+                                • <strong>位置記憶</strong>: ドラッグ位置をlocalStorageに保存<br>
+                                • <strong>自動調整</strong>: 表示時に画面内チェック<br>
+                                • <strong>デバッグ機能</strong>: resetConfirmPanelPosition()で強制リセット<br>
+                                • <strong>ドラッグ移動</strong>: ヘッダー部分をドラッグで移動可能
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -760,8 +772,12 @@ let savedState = { character: getDynamicCharacterState(character) };</pre>
                 </div>
 
                 <div class="warning">
-                    <strong>⚠️ 歪み防止設計：</strong><br>
-                    基本操作（緑ハンドル）では常に縦横比が維持されるため、「いつの間にか歪んでいた」ということを防げます。意図的に縦横比を変えたい場合は青ハンドルを使用してください。
+                    <strong>⚠️ システム要件・制限事項（2025年1月版）：</strong><br>
+                    • <strong>HTTPサーバー必須</strong>: file://プロトコルでは動作しません（python server.py推奨）<br>
+                    • <strong>JavaScript有効</strong>: ブラウザでJavaScriptを有効にする必要があります<br>
+                    • <strong>localStorage対応</strong>: プライベートモードでは設定保存できません<br>
+                    • <strong>Canvas要素必須</strong>: data-spine-character属性付きCanvas要素が必要<br>
+                    • <strong>歪み防止設計</strong>: 基本操作では縦横比を自動維持、意図的変更は青ハンドルで可能
                 </div>
             </div>
         </div>
