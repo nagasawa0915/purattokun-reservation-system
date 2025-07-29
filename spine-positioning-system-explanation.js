@@ -24,13 +24,59 @@ let character = null;
 let editConfirmPanel = null;
 let coordinateDisplay = null;
 
-// 保存状態（localStorage用・%座標系統一・spine-sample-simple.htmlのCSS値と一致）
+// 保存状態（localStorage用・%座標系統一・動的CSS値取得）
 let savedState = {
-    character: { left: '35%', top: '75%', width: '25%' }
-    // ☝️ spine-sample-simple.htmlのCSS値と完全一致
+    character: { left: null, top: null, width: null }
+    // ☝️ 初期化時に実際のCSS値から動的に取得される
 };
 
 console.log('✅ v2.0 基本設定完了');
+
+// ========== 汎用性システム：動的CSS値取得 ========== //
+
+function getDynamicCharacterState(character) {
+    console.log('🔍 動的CSS値取得開始');
+    
+    if (!character) {
+        console.error('❌ character要素がnullです');
+        // 🔧 汎用性フォールバック（シーンに依存しない中央配置）
+        console.warn('⚠️ フォールバック値を使用: 中央配置の汎用値');
+        return { left: '50%', top: '50%', width: '20%' }; // どのシーンでも安全な中央配置
+    }
+    
+    // 🎯 getComputedStyleで実際のブラウザ計算値を取得
+    const computedStyle = window.getComputedStyle(character);
+    const parentRect = character.parentElement.getBoundingClientRect();
+    
+    // px値を%に変換
+    const computedLeftPx = parseFloat(computedStyle.left);
+    const computedTopPx = parseFloat(computedStyle.top);
+    const computedWidthPx = parseFloat(computedStyle.width);
+    
+    const computedLeftPercent = ((computedLeftPx / parentRect.width) * 100).toFixed(1);
+    const computedTopPercent = ((computedTopPx / parentRect.height) * 100).toFixed(1);
+    const computedWidthPercent = ((computedWidthPx / parentRect.width) * 100).toFixed(1);
+    
+    const dynamicState = {
+        left: computedLeftPercent + '%',
+        top: computedTopPercent + '%',
+        width: computedWidthPercent + '%'
+    };
+    
+    console.log('✅ 動的CSS値取得完了:', {
+        computed_px: {
+            left: computedLeftPx + 'px',
+            top: computedTopPx + 'px', 
+            width: computedWidthPx + 'px'
+        },
+        computed_percent: dynamicState,
+        element: character.tagName + (character.id ? '#' + character.id : '')
+    });
+    
+    return dynamicState;
+}
+
+console.log('✅ v2.0 動的取得システム準備完了');
 
 // ========== DOM初期化システム ========== //
 
@@ -132,7 +178,7 @@ function initializeDOMElements() {
 // 🗑️ Canvas作成削除：不要（直接character要素を編集）
 
 function setupCharacterInitialState() {
-    console.log('🔧 キャラクター初期状態設定開始（getComputedStyle使用）');
+    console.log('🔧 キャラクター初期状態設定開始（動的取得使用）');
     
     // character要素の存在確認
     if (!character) {
@@ -140,31 +186,12 @@ function setupCharacterInitialState() {
         return;
     }
     
-    // 🎯 getComputedStyleで実際のブラウザ計算値を取得
-    const computedStyle = window.getComputedStyle(character);
-    const parentRect = character.parentElement.getBoundingClientRect();
+    // 🎯 動的取得関数を使用
+    const dynamicState = getDynamicCharacterState(character);
     
-    // px値を%に変換
-    const computedLeftPx = parseFloat(computedStyle.left);
-    const computedTopPx = parseFloat(computedStyle.top);
-    const computedWidthPx = parseFloat(computedStyle.width);
-    
-    const computedLeftPercent = ((computedLeftPx / parentRect.width) * 100).toFixed(1);
-    const computedTopPercent = ((computedTopPx / parentRect.height) * 100).toFixed(1);
-    const computedWidthPercent = ((computedWidthPx / parentRect.width) * 100).toFixed(1);
-    
-    console.log('📊 ブラウザ計算値分析:', {
-        computed_px: {
-            left: computedLeftPx + 'px',
-            top: computedTopPx + 'px', 
-            width: computedWidthPx + 'px'
-        },
-        computed_percent: {
-            left: computedLeftPercent + '%',
-            top: computedTopPercent + '%',
-            width: computedWidthPercent + '%'
-        },
-        css_style: {
+    console.log('📊 初期状態分析:', {
+        dynamic_state: dynamicState,
+        current_style: {
             left: character.style.left,
             top: character.style.top,
             width: character.style.width
@@ -172,25 +199,31 @@ function setupCharacterInitialState() {
         saved_state: savedState.character
     });
     
-    // インラインスタイルがない場合のみ、計算値ベースで設定
+    // savedStateが未設定の場合は動的取得結果を使用
+    if (!savedState.character.left) {
+        savedState.character = dynamicState;
+        console.log('✅ savedState初期化完了:', savedState.character);
+    }
+    
+    // インラインスタイルがない場合のみ、動的取得値で設定
     if (!character.style.left) {
-        character.style.left = computedLeftPercent + '%';
-        console.log('✅ left設定:', computedLeftPercent + '%');
+        character.style.left = dynamicState.left;
+        console.log('✅ left設定:', dynamicState.left);
     }
     if (!character.style.top) {
-        character.style.top = computedTopPercent + '%';
-        console.log('✅ top設定:', computedTopPercent + '%');
+        character.style.top = dynamicState.top;
+        console.log('✅ top設定:', dynamicState.top);
     }
     if (!character.style.width) {
-        character.style.width = computedWidthPercent + '%';
-        console.log('✅ width設定:', computedWidthPercent + '%');
+        character.style.width = dynamicState.width;
+        console.log('✅ width設定:', dynamicState.width);
     }
     
     // 基本設定は常に適用
     character.style.position = 'absolute';
     character.style.transform = 'translate(-50%, -50%)';  // 中心点基準
     
-    console.log('✅ キャラクター初期状態設定完了（計算値ベース）:', {
+    console.log('✅ キャラクター初期状態設定完了（動的取得ベース）:', {
         left: character.style.left,
         top: character.style.top,
         width: character.style.width
@@ -274,13 +307,14 @@ function startCharacterEdit() {
         width: character.style.width
     };
     
-    // スタイル値が空の場合のみデフォルト値を使用
+    // スタイル値が空の場合は動的取得を使用
     if (!currentStyles.left || !currentStyles.top || !currentStyles.width) {
-        console.log('⚠️ スタイル値が未設定。デフォルト値を使用');
-        // spine-sample-simple.htmlのデフォルト値を使用
-        currentStyles.left = currentStyles.left || '35%';
-        currentStyles.top = currentStyles.top || '75%';
-        currentStyles.width = currentStyles.width || '25%';
+        console.log('⚠️ スタイル値が未設定。動的取得を実行');
+        // 🎯 汎用性：動的取得を使用（固定値に依存しない）
+        const dynamicState = getDynamicCharacterState(character);
+        currentStyles.left = currentStyles.left || dynamicState.left;
+        currentStyles.top = currentStyles.top || dynamicState.top;
+        currentStyles.width = currentStyles.width || dynamicState.width;
         
         // デフォルト値を実際に設定
         character.style.left = currentStyles.left;
@@ -372,9 +406,13 @@ function startCharacterDrag(e) {
     startMousePos = { x: e.clientX, y: e.clientY };
     
     // 現在の%位置を記録
+    const currentState = character.style.left ? 
+        { left: character.style.left, top: character.style.top } :
+        getDynamicCharacterState(character);
+    
     startElementState = {
-        leftPercent: parseFloat(character.style.left) || 35,
-        topPercent: parseFloat(character.style.top) || 75
+        leftPercent: parseFloat(currentState.left),
+        topPercent: parseFloat(currentState.top)
     };
     
     updateCoordinateDisplay();
@@ -453,10 +491,12 @@ function updateCoordinateDisplay() {
     coordinateDisplay.style.display = 'block';
     
     if (isCharacterEditMode && character) {
-        const left = character.style.left || '35%';
-        const top = character.style.top || '75%';
-        const width = character.style.width || '25%';
-        coordinateDisplay.textContent = `キャラクター: ${left}, ${top}, W=${width}`;
+        // 🎯 動的取得を使用（固定値に依存しない）
+        const currentState = character.style.left ? 
+            { left: character.style.left, top: character.style.top, width: character.style.width } :
+            getDynamicCharacterState(character);
+            
+        coordinateDisplay.textContent = `キャラクター: ${currentState.left}, ${currentState.top}, W=${currentState.width}`;
     }
 }
 
@@ -492,28 +532,37 @@ function loadSavedState() {
             
             console.log('📊 localStorage読み込み分析:', {
                 loaded: loadedState,
-                default: savedState
+                current_state: savedState
             });
             
-            // 🔧 古い間違った値の検証・修正
+            // 🔧 保存データの検証（px単位は%に統一）
             if (loadedState.character) {
-                // top値が50%の場合は間違った古い値なので修正
-                if (loadedState.character.top === '50%') {
-                    console.log('🔧 古い間違ったtop値検出・修正:', loadedState.character.top, '→ 75%');
-                    loadedState.character.top = '75%';
-                }
-                
-                // px単位の場合は%に統一
+                // px単位の場合は%に統一が必要（ただし具体的な変換は動的取得に委ねる）
                 if (loadedState.character.width && loadedState.character.width.includes('px')) {
-                    console.log('🔧 px単位検出・%に修正:', loadedState.character.width, '→ 25%');
-                    loadedState.character.width = '25%';
+                    console.log('🔧 px単位検出・動的取得で再計算が必要:', loadedState.character.width);
+                    // 動的取得を優先するため、px値はクリア
+                    loadedState.character = null;
                 }
             }
             
-            savedState = { ...savedState, ...loadedState };
-            console.log('✅ 保存状態読み込み・検証完了:', savedState);
+            if (loadedState.character) {
+                savedState = { ...savedState, ...loadedState };
+                console.log('✅ 保存状態読み込み完了:', savedState);
+            } else {
+                console.log('📝 保存データ無効・動的取得を実行');
+                // character要素から動的取得
+                if (character) {
+                    savedState.character = getDynamicCharacterState(character);
+                    console.log('✅ 動的取得完了:', savedState);
+                }
+            }
         } else {
-            console.log('📝 localStorage未保存・デフォルト値使用:', savedState);
+            console.log('📝 localStorage未保存・動的取得を実行');
+            // character要素から動的取得
+            if (character) {
+                savedState.character = getDynamicCharacterState(character);
+                console.log('✅ 動的取得完了:', savedState);
+            }
         }
     } catch (e) {
         console.warn('⚠️ localStorage読み込みエラー:', e);
@@ -724,10 +773,14 @@ function startFixedPointResize(e, position, type) {
     activeHandle = { dataset: { position, type } };
     startMousePos = { x: e.clientX, y: e.clientY };
     
-    // 現在の%状態を記録
-    const currentLeftPercent = parseFloat(character.style.left) || 35;
-    const currentTopPercent = parseFloat(character.style.top) || 75;
-    const currentWidthPercent = parseFloat(character.style.width) || 25;
+    // 現在の%状態を記録（動的取得使用）
+    const currentState = character.style.left ? 
+        { left: character.style.left, top: character.style.top, width: character.style.width } :
+        getDynamicCharacterState(character);
+    
+    const currentLeftPercent = parseFloat(currentState.left);
+    const currentTopPercent = parseFloat(currentState.top);
+    const currentWidthPercent = parseFloat(currentState.width);
     
     startElementState = {
         leftPercent: currentLeftPercent,
