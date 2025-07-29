@@ -7,8 +7,12 @@ aliases:
   - 編集UIが機能しない
   - ハンドルが遠い
   - resize handle not working
+  - 編集モード切り替えでハンドル消失
+  - 四角いハンドルが丸い境界線に変わる
+  - 表示範囲編集からキャラクター編集でハンドルが出ない
+  - edit mode switch handle disappears
 created: 2025-01-27
-updated: 2025-01-27
+updated: 2025-01-29
 ---
 
 # 🎯 Spine配置システム編集UI問題
@@ -172,6 +176,72 @@ characterWrapper.style.height = actualHeight + 'px';
 - Spineのscale設定やCSS transformを考慮した計算が必要
 
 **環境**: Chrome/Firefox/Edge, Windows/Mac, localhost:8000
+
+### ✅ Case #4: 2025-01-29 - 編集モード切り替え時のハンドル消失問題
+
+**問題**: 表示範囲編集→キャラクター編集に切り替えると四角いハンドルが丸い境界線に変わってハンドルが消失
+
+**具体的症状**:
+- spine-sample-simple.html?edit=true で初回キャラクター編集は四角いハンドル表示
+- 表示範囲編集→キャラクター編集に切り替えると丸い境界線になってハンドルが消失
+
+**試した方法**: 
+```javascript
+// 修正前: initializeDOMElements()の要素検索
+function initializeDOMElements() {
+    character = document.querySelector('#purattokun-canvas'); // 常に元canvas要素を検索
+    // ...
+}
+
+// 修正後: 既存ラッパーを優先検索
+function initializeDOMElements() {
+    // 1. 既存のラッパーがあるかチェック
+    character = document.querySelector('.character-wrapper');
+    
+    // 2. なければ元のcanvas要素を検索
+    if (!character) {
+        character = document.querySelector('#purattokun-canvas');
+    }
+    
+    // 3. ラッパーを再利用するかどうかの判定
+    if (character && character.classList.contains('character-wrapper')) {
+        console.log('🔄 既存のラッパーを再利用します');
+        
+        // 既存ハンドルの確認
+        const existingHandles = character.querySelectorAll('.resize-handle');
+        if (existingHandles.length === 0) {
+            // ハンドルがない場合は追加
+            ['se', 'sw', 'ne', 'nw'].forEach(direction => {
+                const handle = document.createElement('div');
+                handle.className = `resize-handle ${direction}`;
+                handle.setAttribute('data-direction', direction);
+                character.appendChild(handle);
+            });
+        }
+    } else {
+        // 新規ラッパー作成処理
+        // (既存のラッパー作成コード)
+    }
+}
+```
+
+**結果**: ✅ 完全に解決
+
+**根本原因**: 
+- `initializeDOMElements()`の要素検索が既存ラッパーを無視して常に元canvas要素を検索していた
+- 表示範囲編集後にラッパーが残っているが、キャラクター編集時に元canvas要素のみを対象としていた
+
+**解決のポイント**:
+1. **要素検索の優先順位変更**: `.character-wrapper`を最優先検索
+2. **既存ラッパー再利用処理**: `classList.contains('character-wrapper')`での判定
+3. **状態別処理分岐**: ラッパー再利用 vs 新規作成の適切な選択
+
+**学び**: 
+- 編集モード切り替え時は既存DOM状態を考慮した要素検索が必要
+- 状態管理において要素の再利用パターンが重要
+- DOM構造の変化を追跡する仕組みが編集システムでは必須
+
+**環境**: Chrome, Windows, spine-sample-simple.html?edit=true
 
 ## 🛡️ 予防策
 

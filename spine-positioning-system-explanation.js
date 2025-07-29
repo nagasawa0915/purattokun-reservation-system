@@ -84,8 +84,9 @@ function startCanvasEdit() {
 
 // DOM要素の初期化（index.html用）
 function initializeDOMElements() {
-    // キャラクター要素を探す（複数の可能性を考慮）
-    character = document.querySelector('#purattokun-canvas') || 
+    // 🔧 根本修正: 既存ラッパーを最優先検索（表示範囲編集後の再利用対応）
+    character = document.querySelector('.character-wrapper') ||      // 最優先：既存ラッパー
+               document.querySelector('#purattokun-canvas') ||       // 次優先：元canvas要素
                document.querySelector('canvas[data-spine-character]') ||
                document.querySelector('#purattokun-fallback');
                
@@ -126,11 +127,31 @@ function createCharacterCanvas() {
         
         // 編集用Canvasをキャラクターの位置に配置
         characterCanvas.style.position = 'absolute';
-        characterCanvas.style.left = (charRect.left - parentRect.left) + 'px';
-        characterCanvas.style.top = (charRect.top - parentRect.top) + 'px';
-        characterCanvas.style.width = charRect.width + 'px';
-        characterCanvas.style.height = charRect.height + 'px';
-        characterCanvas.style.transform = 'none'; // transformはキャラクター側で管理
+        
+        // spine-sample-simple.htmlの場合、親要素基準のパーセント位置を維持
+        const parentWidth = parentRect.width;
+        const parentHeight = parentRect.height;
+        
+        // 元のcanvas要素の位置とサイズを取得
+        const originalLeft = character.style.left || '35%';
+        const originalTop = character.style.top || '75%';
+        const originalWidth = character.style.width || '25%';
+        
+        // 編集用Canvasに元の設定を適用
+        characterCanvas.style.left = originalLeft;
+        characterCanvas.style.top = originalTop;
+        characterCanvas.style.width = originalWidth;
+        
+        // アスペクト比も維持
+        if (character.style.aspectRatio) {
+            characterCanvas.style.aspectRatio = character.style.aspectRatio;
+        } else if (character.style.height) {
+            characterCanvas.style.height = character.style.height;
+        } else {
+            characterCanvas.style.height = charRect.height + 'px';
+        }
+        
+        characterCanvas.style.transform = 'translate(-50%, -50%)'; // 中心基準配置
         
         // ぷらっとくんの親要素に追加
         const parent = character.parentElement;
@@ -153,9 +174,29 @@ function createCharacterCanvas() {
         console.log('🔧 キャラクター要素のタイプ:', character.tagName);
         console.log('🔧 キャラクター要素:', character);
         
-        // canvas要素の場合は、ラッパーを作成する必要がある
-        if (character.tagName === 'CANVAS') {
-            console.log('⚠️ canvas要素は子要素を持てないため、ラッパーを作成します');
+        // 🔧 根本修正: 要素の状態に応じた適切な処理分岐
+        if (character.classList.contains('character-wrapper')) {
+            console.log('✅ 既存のキャラクターラッパーを再利用します');
+            
+            // 既存ラッパーに必要なクラスを確実に適用
+            character.classList.add('demo-character', 'edit-mode');
+            
+            // 既存のハンドルがない場合は追加
+            if (character.querySelectorAll('.resize-handle').length === 0) {
+                console.log('🔧 既存ラッパーにハンドルを追加します');
+                ['se', 'sw', 'ne', 'nw'].forEach(direction => {
+                    const handle = document.createElement('div');
+                    handle.className = `resize-handle ${direction}`;
+                    handle.setAttribute('data-direction', direction);
+                    character.appendChild(handle);
+                });
+            }
+            
+            // originalCanvasElementを取得（ラッパー内のcanvas要素）
+            originalCanvasElement = character.querySelector('canvas');
+            
+        } else if (character.tagName === 'CANVAS' && character.parentElement !== characterCanvas) {
+            console.log('⚠️ canvas要素は子要素を持てないため、ラッパーを作成します（初回）');
             
             // 元のcanvas要素を保存
             originalCanvasElement = character;
@@ -166,28 +207,31 @@ function createCharacterCanvas() {
             characterWrapper.style.position = 'relative';
             
             // 🎯 統一座標システム：キャラクターサイズを統一システムから取得
-            // getBoundingClientRect()で統一座標システムのサイズを取得
-            const actualRect = character.getBoundingClientRect();
-            const actualWidth = actualRect.width;
-            const actualHeight = actualRect.height;
+            // 元のcanvas要素のサイズ設定を維持
+            const computedStyle = window.getComputedStyle(character);
+            const actualWidth = computedStyle.width;
+            const actualHeight = computedStyle.height;
             
             // 統一座標システム対応デバッグ情報
             console.log('📏 統一座標システム キャラクターサイズ:', {
                 cssWidth: character.style.width,
                 cssHeight: character.style.height,
-                unifiedWidth: actualWidth,   // 統一システム実サイズ
-                unifiedHeight: actualHeight, // 統一システム実サイズ
+                computedWidth: actualWidth,   // 実際の表示サイズ
+                computedHeight: actualHeight, // 実際の表示サイズ
                 note: 'CSS=WebGL=統一解像度'
             });
             
             // 統一システムサイズに合わせてラッパーを作成
-            characterWrapper.style.width = actualWidth + 'px';
-            characterWrapper.style.height = actualHeight + 'px';
+            // 注: ラッパーのサイズは後で編集Canvas基準の100%に設定される
             
             // canvas要素の位置をラッパーに移動
             characterWrapper.style.left = '50%';
             characterWrapper.style.top = '50%';
             characterWrapper.style.transform = 'translate(-50%, -50%)';
+            
+            // 🔧 重要: ラッパーのサイズを編集Canvas基準で100%に設定
+            characterWrapper.style.width = '100%';
+            characterWrapper.style.height = '100%';
             
             // 🎯 統一座標システム：canvas要素の位置スタイルを統一システム対応でリセット
             character.style.position = 'absolute';
@@ -214,14 +258,62 @@ function createCharacterCanvas() {
             // characterをラッパーに更新
             character = characterWrapper;
             console.log('✅ キャラクターラッパーを作成しました');
-        } else {
-            // canvas以外の要素の場合は直接追加
+        } else if (character.tagName === 'CANVAS' && character.parentElement === characterCanvas) {
+            console.log('🔄 canvas要素が既にcharacterCanvas内にあります。ラッパーを再作成します');
+            
+            // 元のcanvas要素を保存
+            originalCanvasElement = character;
+            
+            // キャラクターラッパーを作成
+            const characterWrapper = document.createElement('div');
+            characterWrapper.className = 'character-wrapper demo-character';
+            characterWrapper.style.position = 'relative';
+            
+            // 🔧 重要: ラッパーのサイズを編集Canvas基準で100%に設定
+            characterWrapper.style.width = '100%';
+            characterWrapper.style.height = '100%';
+            
+            // ラッパーの位置設定（characterCanvasの中央）
+            characterWrapper.style.left = '50%';
+            characterWrapper.style.top = '50%';
+            characterWrapper.style.transform = 'translate(-50%, -50%)';
+            
+            // canvas要素の位置スタイルをリセット
+            character.style.position = 'absolute';
+            character.style.left = '0';
+            character.style.top = '0';
+            character.style.transform = 'none';
+            character.style.width = '100%';
+            character.style.height = '100%';
+            
+            // ラッパーにリサイズハンドルを追加
             ['se', 'sw', 'ne', 'nw'].forEach(direction => {
                 const handle = document.createElement('div');
                 handle.className = `resize-handle ${direction}`;
                 handle.setAttribute('data-direction', direction);
-                character.appendChild(handle);
+                characterWrapper.appendChild(handle);
             });
+            
+            // canvas要素をラッパーで包む
+            characterCanvas.appendChild(characterWrapper);
+            characterWrapper.appendChild(character);
+            
+            // characterをラッパーに更新
+            character = characterWrapper;
+            console.log('✅ キャラクターラッパーを再作成しました');
+        } else {
+            // 🔧 その他の要素（通常は実行されないはず）
+            console.log('⚠️ 予期しない要素タイプです:', character.tagName, character.className);
+            
+            // フォールバック：直接ハンドル追加を試行
+            if (character.appendChild) {
+                ['se', 'sw', 'ne', 'nw'].forEach(direction => {
+                    const handle = document.createElement('div');
+                    handle.className = `resize-handle ${direction}`;
+                    handle.setAttribute('data-direction', direction);
+                    character.appendChild(handle);
+                });
+            }
         }
         
         // Canvas用のリサイズハンドルを追加
@@ -232,13 +324,15 @@ function createCharacterCanvas() {
             characterCanvas.appendChild(handle);
         });
         
-        // 初期状態を保存
-        savedState.canvas.left = characterCanvas.style.left;
-        savedState.canvas.top = characterCanvas.style.top;
-        savedState.canvas.width = characterCanvas.style.width;
-        savedState.canvas.height = characterCanvas.style.height;
-        savedState.character.left = character.style.left;
-        savedState.character.top = character.style.top;
+        // 初期状態を保存（spine-sample-simple.html用に調整）
+        savedState.canvas.left = characterCanvas.style.left || '35%';
+        savedState.canvas.top = characterCanvas.style.top || '75%';
+        savedState.canvas.width = characterCanvas.style.width || '25%';
+        savedState.canvas.height = characterCanvas.style.height || charRect.height + 'px';
+        savedState.character.left = '50%';  // 編集Canvas内での中心位置
+        savedState.character.top = '50%';   // 編集Canvas内での中心位置
+        savedState.character.width = '100%';  // 編集Canvas基準
+        savedState.character.height = '100%'; // 編集Canvas基準
     }
     
     // demoScreenは背景要素
@@ -314,12 +408,10 @@ function startCanvasDrag(e) {
     
     startMousePos = { x: e.clientX, y: e.clientY };
     
-    const rect = characterCanvas.getBoundingClientRect();
-    const parentRect = demoScreen.getBoundingClientRect();
-    
+    // 🔧 修正: %単位で現在位置を記録（px→%単位統一）
     startElementPos = {
-        x: rect.left - parentRect.left,
-        y: rect.top - parentRect.top
+        x: parseFloat(characterCanvas.style.left) || 35,  // %単位で記録
+        y: parseFloat(characterCanvas.style.top) || 75    // %単位で記録
     };
 }
 
@@ -378,11 +470,20 @@ function moveCharacter(deltaX, deltaY) {
 
 // Canvas移動
 function moveCanvas(deltaX, deltaY) {
-    const newX = startElementPos.x + deltaX;
-    const newY = startElementPos.y + deltaY;
+    // 🔧 修正: px移動量を%移動量に変換（座標系統一）
+    const parentRect = demoScreen.getBoundingClientRect();
+    const deltaXPercent = (deltaX / parentRect.width) * 100;
+    const deltaYPercent = (deltaY / parentRect.height) * 100;
     
-    characterCanvas.style.left = newX + 'px';
-    characterCanvas.style.top = newY + 'px';
+    let newX = startElementPos.x + deltaXPercent;
+    let newY = startElementPos.y + deltaYPercent;
+    
+    // 🚧 境界制限（Canvas表示範囲内に制限）
+    newX = Math.max(10, Math.min(90, newX));  // 10%-90%の範囲
+    newY = Math.max(10, Math.min(90, newY));  // 10%-90%の範囲
+    
+    characterCanvas.style.left = newX + '%';
+    characterCanvas.style.top = newY + '%';
 }
 
 // キャラクターリサイズ
@@ -772,6 +873,8 @@ function enableNewHandleSystem() {
     
     isNewHandleSystemEnabled = true;
     character.classList.add('new-handle-system');
+    
+    // ラッパーのサイズは既に100%に設定されているため、追加の処理は不要
     
     // 既存のリサイズハンドルを非表示
     const oldHandles = character.querySelectorAll('.resize-handle');

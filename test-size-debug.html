@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>サイズ問題デバッグ</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .debug-container {
+            position: relative;
+            width: 1200px;
+            height: 800px;
+            background: white;
+            border: 2px solid #333;
+            margin: 0 auto;
+        }
+        
+        /* 元のcanvasスタイル */
+        .original-canvas {
+            position: absolute;
+            left: 35%;
+            top: 75%;
+            transform: translate(-50%, -50%);
+            width: 25%;
+            aspect-ratio: 3/2;
+            background: rgba(255, 0, 0, 0.3);
+            border: 2px solid red;
+        }
+        
+        /* 編集用Canvas */
+        .edit-canvas {
+            position: absolute;
+            left: 35%;
+            top: 75%;
+            transform: translate(-50%, -50%);
+            width: 25%;
+            aspect-ratio: 3/2;
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid green;
+        }
+        
+        /* ラッパー内のcanvas */
+        .wrapper {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            /* サイズ指定なし - これが問題！ */
+            background: rgba(0, 0, 255, 0.3);
+            border: 2px solid blue;
+        }
+        
+        .inner-canvas {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 0, 0.5);
+        }
+        
+        .info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border: 1px solid #ccc;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>キャラクターサイズ縮小問題の可視化</h1>
+    
+    <div class="debug-container">
+        <!-- 元のcanvas位置（赤） -->
+        <div class="original-canvas">
+            <div class="info">元のcanvas<br>25% × aspect-ratio</div>
+        </div>
+        
+        <!-- 編集用Canvas（緑） -->
+        <div class="edit-canvas">
+            <!-- ラッパー（青） - サイズ指定なし -->
+            <div class="wrapper">
+                <div class="inner-canvas">
+                    <div class="info">ラッパー内canvas<br>サイズ継承失敗</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 20px; padding: 20px; background: white;">
+        <h2>問題の原因</h2>
+        <ol>
+            <li><strong>編集Canvas</strong>: 親要素の25%サイズ（正しい）</li>
+            <li><strong>ラッパー</strong>: 編集Canvas内で50%, 50%配置だが、<strong>サイズ指定なし</strong></li>
+            <li><strong>結果</strong>: ラッパーのサイズが不定になり、内部のcanvasが縮小される</li>
+        </ol>
+        
+        <h2>解決策</h2>
+        <p>ラッパーに明示的にサイズを指定する必要がある：</p>
+        <ul>
+            <li>width: 100%（編集Canvas基準）</li>
+            <li>aspect-ratio: 3/2（元のcanvasと同じ）</li>
+        </ul>
+    </div>
+</body>
+</html>

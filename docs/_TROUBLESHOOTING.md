@@ -38,6 +38,12 @@
 - **タグ**: `#位置` `#レイヤー` `#編集システム` `#Canvas`
 - **別名**: 編集モードで枠がずれる、キャラクター編集で違う場所に枠が出る、edit mode position mismatch
 
+#### 編集モードキャラクターサイズ問題
+- **ファイル**: [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
+- **症状**: 編集モードに入るとキャラクターが小さくなる、編集時にサイズが縮小
+- **タグ**: `#編集システム` `#サイズ` `#Canvas要素` `#ラッパー` `#CSS`
+- **別名**: 編集モードでキャラクターが小さくなる、キャラクター縮小問題、編集時サイズ変更、character size issue in edit mode
+
 #### Spine配置システム編集UI問題
 - **ファイル**: [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
 - **症状**: リサイズハンドルが表示されない、ハンドルがキャラクターから離れる
@@ -49,6 +55,12 @@
 - **症状**: Canvas全体でクリック判定、キャラクター外をクリックしても反応
 - **タグ**: `#Spine` `#アニメーション` `#クリック判定` `#Canvas` `#UI`
 - **別名**: クリック判定改善、Canvas全体クリック問題、キャラクター画像位置でのクリック、animation not playing
+
+#### Canvas表示範囲編集ドラッグ問題
+- **ファイル**: [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
+- **症状**: 表示範囲編集でCanvasをドラッグすると左上に瞬間移動する
+- **タグ**: `#編集システム` `#Canvas` `#ドラッグ` `#座標` `#UI`
+- **別名**: Canvas左上瞬間移動、オレンジ枠瞬間移動、canvas drag jump issue
 
 ### ⚙️ Spine関連の問題
 
@@ -79,23 +91,38 @@
 - [キャラクター表示問題.md](./troubleshooting/キャラクター表示問題.md)
 - [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
 - [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
+- [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
+- [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
 
 #### #CSS
 - [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
 - [ウィンドウリサイズ問題.md](./troubleshooting/ウィンドウリサイズ問題.md)
+- [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
 
 #### #レスポンシブ
 - [ウィンドウリサイズ問題.md](./troubleshooting/ウィンドウリサイズ問題.md)
 
 #### #編集システム
 - [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
+- [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
+- [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
 
 #### #リサイズハンドル
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
 
 #### #UI
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
+- [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
+
+#### #ドラッグ
+- [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
+
+#### #座標
+- [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
+
+#### #ラッパー
+- [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
 
 #### #レイヤー
 - [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
@@ -111,6 +138,7 @@
 
 #### #サイズ
 - [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
+- [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
 
 #### #エラー
 - [Spineライブラリ読込問題.md](./troubleshooting/Spineライブラリ読込問題.md)
@@ -143,6 +171,9 @@
 ### 「サイズ」「大きさ」「変更できない」
 → [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
 
+### 「小さくなる」「縮小」「編集モードでサイズが変わる」
+→ [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
+
 ### 「エラー」「undefined」「読み込み」
 → [Spineライブラリ読込問題.md](./troubleshooting/Spineライブラリ読込問題.md)
 
@@ -152,8 +183,11 @@
 ### 「編集モード」「枠がずれる」「違う場所」
 → [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
 
-### 「リサイズハンドル」「ハンドル表示されない」「ハンドルが遠い」
+### 「リサイズハンドル」「ハンドル表示されない」「ハンドルが遠い」「編集モード切り替えでハンドル消失」
 → [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
+
+### 「ドラッグ」「左上に移動」「瞬間移動」「オレンジ枠」
+→ [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
 
 ---
 
