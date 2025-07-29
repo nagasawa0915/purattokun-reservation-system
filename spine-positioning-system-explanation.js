@@ -39,9 +39,16 @@ function getDynamicCharacterState(character) {
     
     if (!character) {
         console.error('❌ character要素がnullです');
-        // 🔧 汎用性フォールバック（シーンに依存しない中央配置）
-        console.warn('⚠️ フォールバック値を使用: 中央配置の汎用値');
-        return { left: '50%', top: '50%', width: '20%' }; // どのシーンでも安全な中央配置
+        // 🔧 汎用性フォールバック（シーンに依存しない中央配置・縦横比維持）
+        console.warn('⚠️ フォールバック値を使用: 中央配置の汎用値（縦横比維持）');
+        const fallbackWidth = 20; // 20%
+        const fallbackHeight = fallbackWidth / (1/1); // 1:1縦横比維持（正方形）
+        return { 
+            left: '50%', 
+            top: '50%', 
+            width: fallbackWidth + '%',
+            height: fallbackHeight + '%' // 縦横比維持
+        }; // どのシーンでも安全な中央配置
     }
     
     // 🎯 getComputedStyleで実際のブラウザ計算値を取得
@@ -57,10 +64,13 @@ function getDynamicCharacterState(character) {
     const computedTopPercent = ((computedTopPx / parentRect.height) * 100).toFixed(1);
     const computedWidthPercent = ((computedWidthPx / parentRect.width) * 100).toFixed(1);
     
+    // 🔧 修正: 縦横比維持のheightも追加
+    const dynamicHeightPercent = (computedWidthPercent / (1/1)).toFixed(1); // 1:1縦横比維持（正方形）
     const dynamicState = {
         left: computedLeftPercent + '%',
         top: computedTopPercent + '%',
-        width: computedWidthPercent + '%'
+        width: computedWidthPercent + '%',
+        height: dynamicHeightPercent + '%' // 縦横比維持
     };
     
     console.log('✅ 動的CSS値取得完了:', {
@@ -70,6 +80,8 @@ function getDynamicCharacterState(character) {
             width: computedWidthPx + 'px'
         },
         computed_percent: dynamicState,
+        aspect_ratio_maintained: '1:1 (width:height)',
+        正方形_aspect_ratio: '1:1',
         element: character.tagName + (character.id ? '#' + character.id : '')
     });
     
@@ -216,8 +228,8 @@ function initializeDOMElements() {
                 position: absolute;
                 left: ${wrapperLeftPercent}%;
                 top: ${wrapperTopPercent}%;
-                width: ${wrapperWidthPercent}%;
-                height: ${wrapperHeightPercent}%;
+                width: ${cssWidthPx}px;
+                height: ${cssHeightPx}px;
                 cursor: move;
                 border: 2px dashed rgba(255, 107, 107, 0.3);
                 border-radius: 8px;
@@ -229,13 +241,16 @@ function initializeDOMElements() {
             parent.insertBefore(characterWrapper, character);
             characterWrapper.appendChild(character);
             
-            // Canvas要素の位置スタイルをリセット（ラッパー内で中央配置）
+            // 🔧 修正: Canvas要素の位置スタイルをリセット（ラッパー内で中央配置・元サイズ維持）
             character.style.position = 'absolute';
             character.style.left = '50%';
             character.style.top = '50%';
             character.style.transform = 'translate(-50%, -50%)';
-            character.style.width = '100%';
-            character.style.height = '100%';
+            // 🔧 重要修正: 元のサイズを維持（100%だと縮小してしまう）
+            character.style.width = cssWidthPx + 'px';
+            character.style.height = cssHeightPx + 'px';
+            // Canvas要素のアスペクト比を維持
+            character.style.aspectRatio = '1/1'; // CSS aspect-ratioプロパティで縦横比維持（正方形）
             
             // characterをラッパーに更新
             character = characterWrapper;
@@ -244,18 +259,53 @@ function initializeDOMElements() {
         }
     }
     
-    // 保存状態読み込み
+    // 🔧 **緊急修正**: 処理順序の最適化（多重復元システム統合）
+    // 1. まずlocalStorageから保存状態を読み込む
     loadSavedState();
     
-    // UI要素作成
+    // 2. UI要素作成
     createCoordinateDisplay();
     createConfirmPanel();
     
-    // 初期状態設定（character要素が確実に取得された後に実行）
+    // 3. 初期状態設定（character要素が確実に取得された後に実行）
     if (character) {
+        // 🎯 **最重要**: setupCharacterInitialState()が保存状態復元を担当
         setupCharacterInitialState();
+        
+        // 🆕 **緊急追加**: 多重復元システムを並行実行（確実な復元のため）
+        setTimeout(() => {
+            console.log('🚨 多重復元システム起動（通常ページ読み込み時）');
+            multiRestoreSystem();
+        }, 100);
+        
+        // 4. 復元結果の最終確認（デバッグ用）
+        setTimeout(() => {
+            console.log('🔍 最終状態確認:', {
+                character_style: {
+                    left: character.style.left,
+                    top: character.style.top,
+                    width: character.style.width,
+                    height: character.style.height // 縦横比維持確認用
+                },
+                saved_state: savedState.character
+            });
+            
+            // 🚨 **緊急診断**: 復元失敗の場合は詳細診断を実行
+            if (!character.style.left || !character.style.left.includes('%')) {
+                console.warn('⚠️ 復元が失敗している可能性があります。緊急診断を実行します。');
+                setTimeout(() => {
+                    emergencyDiagnostic();
+                }, 500);
+            }
+        }, 300);
     } else {
         console.warn('⚠️ character要素がnullのため、初期状態設定をスキップ');
+        
+        // 🆕 **緊急対策**: character要素がnullでも多重復元システムを実行
+        setTimeout(() => {
+            console.log('🚨 character要素null - 多重復元システムで要素検出を試行');
+            multiRestoreSystem();
+        }, 500);
     }
     
     console.log('✅ DOM初期化完了');
@@ -265,7 +315,7 @@ function initializeDOMElements() {
 // 🗑️ Canvas作成削除：不要（直接character要素を編集）
 
 function setupCharacterInitialState() {
-    console.log('🔧 キャラクター初期状態設定開始（動的取得使用）');
+    console.log('🔧 キャラクター初期状態設定開始（復元優先処理）');
     
     // character要素の存在確認
     if (!character) {
@@ -273,47 +323,110 @@ function setupCharacterInitialState() {
         return;
     }
     
-    // 🎯 動的取得関数を使用
-    const dynamicState = getDynamicCharacterState(character);
-    
     console.log('📊 初期状態分析:', {
-        dynamic_state: dynamicState,
         current_style: {
             left: character.style.left,
             top: character.style.top,
-            width: character.style.width
+            width: character.style.width,
+            height: character.style.height // 縦横比維持確認用
         },
         saved_state: savedState.character
     });
     
-    // savedStateが未設定の場合は動的取得結果を使用
-    if (!savedState.character.left) {
+    // 🔧 **重要修正**: 保存状態が存在する場合は保存状態を最優先で復元
+    if (savedState.character && savedState.character.left) {
+        console.log('💾 保存状态を復元します（最優先処理・HTML設定制御システム競合対策）:', savedState.character);
+        
+        // 🚨 HTML設定制御システムを一時無効化
+        disableHTMLConfigSystem();
+        
+        // 🔧 修正: 縦横比維持で強制的にスタイルを適用（!important相当）
+        const savedWidth = parseFloat(savedState.character.width);
+        const restoredHeight = savedWidth / (1/1); // 1:1アスペクト比維持（正方形）
+        
+        // 強制スタイル適用（CSS競合対策）
+        character.style.cssText += `
+            position: absolute !important;
+            left: ${savedState.character.left} !important;
+            top: ${savedState.character.top} !important;
+            width: ${savedState.character.width} !important;
+            height: ${restoredHeight}% !important;
+        `;
+        
+        // 復元後の確認
+        const afterRestore = {
+            left: character.style.left,
+            top: character.style.top,
+            width: character.style.width
+        };
+        
+        console.log('✅ 保存状態復元完了:', afterRestore);
+        
+        // 復元処理後の遅延確認（CSSとの競合対策・継続監視開始）
+        setTimeout(() => {
+            if (character.style.left !== savedState.character.left) {
+                console.warn('⚠️ 復元後にスタイルが変更されました。強制再適用します。');
+                const reapplyWidth = parseFloat(savedState.character.width);
+                const reapplyHeight = reapplyWidth / (1/1); // 縦横比維持（正方形）
+                
+                // 再度強制適用
+                character.style.cssText += `
+                    position: absolute !important;
+                    left: ${savedState.character.left} !important;
+                    top: ${savedState.character.top} !important;
+                    width: ${savedState.character.width} !important;
+                    height: ${reapplyHeight}% !important;
+                `;
+                
+                console.log('🔧 強制再適用完了:', {
+                    left: character.style.left,
+                    top: character.style.top,
+                    width: character.style.width
+                });
+            } else {
+                console.log('✅ 復元状態が維持されています（縦横比維持）');
+            }
+            
+            // 🚨 継続監視システムを開始（最重要）
+            startContinuousRestoreMonitoring(savedState.character);
+        }, 100);
+        
+    } else {
+        // 保存状態がない場合のみ動的取得を実行
+        console.log('📝 保存状態が存在しません。動的取得を実行します。');
+        const dynamicState = getDynamicCharacterState(character);
+        
+        // savedStateを初期化
         savedState.character = dynamicState;
-        console.log('✅ savedState初期化完了:', savedState.character);
-    }
-    
-    // インラインスタイルがない場合のみ、動的取得値で設定
-    if (!character.style.left) {
-        character.style.left = dynamicState.left;
-        console.log('✅ left設定:', dynamicState.left);
-    }
-    if (!character.style.top) {
-        character.style.top = dynamicState.top;
-        console.log('✅ top設定:', dynamicState.top);
-    }
-    if (!character.style.width) {
-        character.style.width = dynamicState.width;
-        console.log('✅ width設定:', dynamicState.width);
+        console.log('✅ savedState初期化（動的取得）:', savedState.character);
+        
+        // インラインスタイルがない場合のみ、動的取得値で設定
+        if (!character.style.left) {
+            character.style.left = dynamicState.left;
+            console.log('✅ left設定:', dynamicState.left);
+        }
+        if (!character.style.top) {
+            character.style.top = dynamicState.top;
+            console.log('✅ top設定:', dynamicState.top);
+        }
+        if (!character.style.width) {
+            const dynamicWidth = parseFloat(dynamicState.width);
+            const dynamicHeight = dynamicWidth / (1/1); // 縦横比維持（正方形）
+            character.style.width = dynamicState.width;
+            character.style.height = dynamicHeight + '%'; // 縦横比維持（正方形）
+            console.log('✅ width設定（縦横比維持）:', dynamicState.width, 'height:', dynamicHeight + '%');
+        }
     }
     
     // 基本設定は常に適用
     character.style.position = 'absolute';
-    // 座標系統一: 左上基準に統一のためtransform削除
     
-    console.log('✅ キャラクター初期状態設定完了（動的取得ベース）:', {
+    console.log('✅ キャラクター初期状態設定完了（復元優先処理・縦横比維持）:', {
         left: character.style.left,
         top: character.style.top,
-        width: character.style.width
+        width: character.style.width,
+        height: character.style.height,
+        aspect_ratio: character.style.aspectRatio || '設定なし'
     });
 }
 
@@ -352,7 +465,32 @@ function createConfirmPanel() {
             </div>
             <div style="text-align: center; padding: 8px;">
                 <p style="margin: 0 0 8px 0; font-size: 10px; color: #333;">編集を確定しますか？</p>
-                <div style="display: flex; gap: 6px; justify-content: center;">
+                
+                <!-- 🎯 数値入力セクション -->
+                <div class="numeric-controls">
+                    <h5>📊 数値設定</h5>
+                    <div class="numeric-input">
+                        <label>横位置:</label>
+                        <input type="number" id="numeric-x" min="0" max="100" step="1" value="18">
+                        <span>%</span>
+                    </div>
+                    <div class="numeric-input">
+                        <label>縦位置:</label>
+                        <input type="number" id="numeric-y" min="0" max="100" step="1" value="49">
+                        <span>%</span>
+                    </div>
+                    <div class="numeric-input">
+                        <label>サイズ:</label>
+                        <input type="number" id="numeric-scale" min="0.1" max="2.0" step="0.1" value="0.55">
+                        <span>倍</span>
+                    </div>
+                    <div class="numeric-buttons">
+                        <button class="numeric-btn apply" onclick="applyNumericValues()">適用</button>
+                        <button class="numeric-btn reset" onclick="resetNumericValues()">リセット</button>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 6px; justify-content: center; margin-top: 8px;">
                     <button class="save-btn" onclick="confirmEdit()" style="padding: 4px 8px; background: #4caf50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">保存</button>
                     <button class="cancel-btn" onclick="cancelEdit()" style="padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">キャンセル</button>
                 </div>
@@ -361,8 +499,8 @@ function createConfirmPanel() {
         
         // 🔧 修正: スタイル設定を完全にリセット
         // 画面中央への配置を強制し、bottom/right/transformを明示的に無効化
-        const centerX = (window.innerWidth - 140) / 2;
-        const centerY = (window.innerHeight - 100) / 2;
+        const centerX = (window.innerWidth - 160) / 2;
+        const centerY = (window.innerHeight - 180) / 2;
         
         editConfirmPanel.style.cssText = `
             position: fixed !important;
@@ -377,7 +515,7 @@ function createConfirmPanel() {
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             z-index: 2000;
             cursor: move;
-            min-width: 140px;
+            min-width: 160px;
             display: none;
         `;
         document.body.appendChild(editConfirmPanel);
@@ -449,8 +587,8 @@ function setupConfirmPanelDragging() {
     // 🔧 修正：ドラッグ設定時にも強制的に位置をリセット
     // 問題: 何らかの理由でbottomプロパティが設定されている可能性
     setTimeout(() => {
-        const screenCenterX = (window.innerWidth - 140) / 2;
-        const screenCenterY = (window.innerHeight - 100) / 2;
+        const screenCenterX = (window.innerWidth - 160) / 2;
+        const screenCenterY = (window.innerHeight - 180) / 2;
         
         // すべての位置関連プロパティを強制リセット
         editConfirmPanel.style.position = 'fixed';
@@ -508,8 +646,8 @@ function resetConfirmPanelPosition() {
     localStorage.removeItem('confirmPanelPosition');
     if (editConfirmPanel) {
         // **🆕 修正：画面中央への確実なリセット**
-        const screenCenterX = (window.innerWidth - 140) / 2;
-        const screenCenterY = (window.innerHeight - 100) / 2;
+        const screenCenterX = (window.innerWidth - 160) / 2;
+        const screenCenterY = (window.innerHeight - 180) / 2;
         
         editConfirmPanel.style.left = screenCenterX + 'px';
         editConfirmPanel.style.top = screenCenterY + 'px';
@@ -655,7 +793,12 @@ function startCharacterEdit() {
     updateUI();
     showConfirmPanel();
     
-    console.log('✅ キャラクター編集モード有効化完了（計算値ベース保持）');
+    // 数値入力システム初期化（確認パネル表示後に実行）
+    setTimeout(() => {
+        initializeNumericInputs();
+    }, 100);
+    
+    console.log('✅ キャラクター編集モード有効化完了（計算値ベース保持・数値入力システム統合）');
 }
 
 // 🗑️ Canvas編集機能削除：表示範囲編集は不要
@@ -806,8 +949,8 @@ function updateUI() {
 function showConfirmPanel() {
     if (editConfirmPanel) {
         // 🔧 修正：表示前にすべてのスタイルを完全リセット
-        const screenCenterX = (window.innerWidth - 140) / 2;
-        const screenCenterY = (window.innerHeight - 100) / 2;
+        const screenCenterX = (window.innerWidth - 160) / 2;
+        const screenCenterY = (window.innerHeight - 180) / 2;
         
         // displayを変更する前にスタイルを完全に設定
         editConfirmPanel.style.cssText = `
@@ -824,7 +967,7 @@ function showConfirmPanel() {
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             z-index: 2000;
             cursor: move;
-            min-width: 140px;
+            min-width: 160px;
             display: block;
         `;
         
@@ -909,73 +1052,123 @@ function hideConfirmPanel() {
 function loadSavedState() {
     try {
         const saved = localStorage.getItem('spine-positioning-state');
+        console.log('🔍 localStorage読み込み開始:', saved ? '保存データあり' : '保存データなし');
+        
         if (saved) {
             const loadedState = JSON.parse(saved);
             
-            console.log('📊 localStorage読み込み分析:', {
-                loaded: loadedState,
+            console.log('📊 localStorage読み込み詳細分析:', {
+                raw_data: saved,
+                parsed_data: loadedState,
                 current_state: savedState
             });
             
-            // 🔧 保存データの検証（px単位は%に統一）
-            if (loadedState.character) {
-                // px単位の場合は%に統一が必要（ただし具体的な変換は動的取得に委ねる）
-                if (loadedState.character.width && loadedState.character.width.includes('px')) {
-                    console.log('🔧 px単位検出・動的取得で再計算が必要:', loadedState.character.width);
-                    // 動的取得を優先するため、px値はクリア
-                    loadedState.character = null;
+            // 🔧 **重要修正**: 保存データの厳密な検証
+            if (loadedState.character && 
+                loadedState.character.left && 
+                loadedState.character.top && 
+                loadedState.character.width) {
+                
+                // %単位のデータのみ有効とする
+                const hasValidData = 
+                    loadedState.character.left.includes('%') &&
+                    loadedState.character.top.includes('%') &&
+                    loadedState.character.width.includes('%');
+                
+                if (hasValidData) {
+                    // 有効な保存データを適用
+                    savedState.character = {
+                        left: loadedState.character.left,
+                        top: loadedState.character.top,
+                        width: loadedState.character.width
+                    };
+                    console.log('✅ 有効な保存状態を読み込み完了:', savedState.character);
+                } else {
+                    console.warn('⚠️ 保存データの形式が無効（px単位またはデータ不正）:', loadedState.character);
+                    savedState.character = null;
                 }
-            }
-            
-            if (loadedState.character) {
-                savedState = { ...savedState, ...loadedState };
-                console.log('✅ 保存状態読み込み完了:', savedState);
             } else {
-                console.log('📝 保存データ無効・動的取得を実行');
-                // character要素から動的取得
-                if (character) {
-                    savedState.character = getDynamicCharacterState(character);
-                    console.log('✅ 動的取得完了:', savedState);
-                }
+                console.warn('⚠️ 保存データが不完全:', loadedState.character);
+                savedState.character = null;
             }
         } else {
-            console.log('📝 localStorage未保存・動的取得を実行');
-            // character要素から動的取得
-            if (character) {
-                savedState.character = getDynamicCharacterState(character);
-                console.log('✅ 動的取得完了:', savedState);
-            }
+            console.log('📝 localStorage未保存');
+            savedState.character = null;
         }
+        
+        // 🔧 **重要**: character要素の準備ができるまで動的取得は行わない
+        // setupCharacterInitialState()で適切なタイミングで動的取得を実行
+        
     } catch (e) {
-        console.warn('⚠️ localStorage読み込みエラー:', e);
+        console.error('❌ localStorage読み込みエラー:', e);
+        savedState.character = null;
     }
 }
 
 function confirmEdit() {
-    console.log('💾 編集内容保存開始（%ベース）');
+    console.log('💾 編集内容保存開始（%ベース・詳細検証付き）');
     
     // 現在の%状態を保存
     if (character) {
-        savedState.character = {
+        const currentState = {
             left: character.style.left,     // 例: "35%"
             top: character.style.top,       // 例: "75%"
             width: character.style.width    // 例: "25%"
         };
+        
+        // 🔧 **重要修正**: 保存データの詳細検証
+        console.log('🔍 保存前データ検証:', {
+            current_character_style: currentState,
+            all_properties_valid: !!(currentState.left && currentState.top && currentState.width),
+            contains_percent: !!(
+                currentState.left && currentState.left.includes('%') &&
+                currentState.top && currentState.top.includes('%') &&
+                currentState.width && currentState.width.includes('%')
+            )
+        });
+        
+        if (currentState.left && currentState.top && currentState.width &&
+            currentState.left.includes('%') && currentState.top.includes('%') && currentState.width.includes('%')) {
+            
+            savedState.character = currentState;
+            console.log('✅ 有効なデータを保存対象に設定:', savedState.character);
+        } else {
+            console.error('❌ 保存データが無効です。動的取得を実行します。');
+            savedState.character = getDynamicCharacterState(character);
+            console.log('🔄 動的取得結果を保存:', savedState.character);
+        }
+    } else {
+        console.error('❌ character要素がnullです');
+        return;
     }
     
     // localStorage保存
     try {
-        localStorage.setItem('spine-positioning-state', JSON.stringify(savedState));
-        console.log('✅ 保存完了（%座標）:', savedState);
+        const saveData = JSON.stringify(savedState);
+        localStorage.setItem('spine-positioning-state', saveData);
+        
+        // 保存直後の検証
+        const verification = localStorage.getItem('spine-positioning-state');
+        const verificationData = JSON.parse(verification);
+        
+        console.log('✅ 保存完了（%座標）・検証結果:', {
+            saved_data: savedState,
+            verification_data: verificationData,
+            storage_success: !!(verification && verificationData.character),
+            data_integrity: JSON.stringify(savedState) === verification
+        });
         
         if (coordinateDisplay) {
-            coordinateDisplay.textContent = '✅ 設定を保存しました（%座標）';
+            coordinateDisplay.textContent = '✅ 設定を保存しました（%座標・検証済み）';
             setTimeout(() => {
                 coordinateDisplay.style.display = 'none';
             }, 2000);
         }
     } catch (e) {
         console.error('❌ 保存エラー:', e);
+        if (coordinateDisplay) {
+            coordinateDisplay.textContent = '❌ 保存に失敗しました';
+        }
     }
     
     endEditMode();
@@ -1171,7 +1364,7 @@ function startFixedPointResize(e, position, type) {
         // 固定点%座標（対角固定点計算用）
         leftEdgePercent: currentLeftPercent - currentWidthPercent / 2,
         rightEdgePercent: currentLeftPercent + currentWidthPercent / 2,
-        topEdgePercent: currentTopPercent - currentWidthPercent / 2,     // 正方形比率想定
+        topEdgePercent: currentTopPercent - currentWidthPercent / 2,     // 1:1正方形比率
         bottomEdgePercent: currentTopPercent + currentWidthPercent / 2
     };
     
@@ -1261,15 +1454,20 @@ function performCharacterResize(deltaX, deltaY, position) {
         }
     }
     
-    // %座標でスタイル適用
+    // 🔧 修正: 縦横比維持で%座標スタイル適用
+    const newHeightPercent = newWidthPercent / (1/1); // 1:1アスペクト比維持（正方形）
     character.style.left = newLeftPercent + '%';
     character.style.top = newTopPercent + '%';
     character.style.width = newWidthPercent + '%';
+    character.style.height = newHeightPercent + '%'; // 縦横比維持
     
-    console.log('🎨 %ベースCSS適用:', {
+    console.log('🎨 縦横比維持%ベースCSS適用:', {
         left: newLeftPercent.toFixed(1) + '%',
         top: newTopPercent.toFixed(1) + '%',
-        width: newWidthPercent.toFixed(1) + '%'
+        width: newWidthPercent.toFixed(1) + '%',
+        height: newHeightPercent.toFixed(1) + '%',
+        aspect_ratio: '1:1 (正方形)',
+        calculated_ratio: (newWidthPercent / newHeightPercent).toFixed(2)
     });
     
     updateCoordinateDisplay();
@@ -1277,9 +1475,805 @@ function performCharacterResize(deltaX, deltaY, position) {
 
 // 🗑️ Canvas拡縮削除：不要
 
-// 🆕 グローバル関数として公開（デバッグ用）
+// ========== 🎯 数値入力システム ========== //
+
+// 数値入力フィールドの参照
+let numericInputs = {
+    x: null,
+    y: null,
+    scale: null
+};
+
+// 数値入力の初期化
+function initializeNumericInputs() {
+    console.log('🔧 数値入力システム初期化開始');
+    
+    // 数値入力フィールドの参照取得
+    numericInputs.x = document.getElementById('numeric-x');
+    numericInputs.y = document.getElementById('numeric-y');
+    numericInputs.scale = document.getElementById('numeric-scale');
+    
+    // 存在確認
+    if (!numericInputs.x || !numericInputs.y || !numericInputs.scale) {
+        console.warn('⚠️ 数値入力フィールドが見つかりません');
+        return false;
+    }
+    
+    // リアルタイム更新イベントリスナー設定
+    numericInputs.x.addEventListener('input', handleNumericInput);
+    numericInputs.y.addEventListener('input', handleNumericInput);
+    numericInputs.scale.addEventListener('input', handleNumericInput);
+    
+    // 初期値を現在のキャラクター位置から取得して設定
+    updateNumericInputsFromCharacter();
+    
+    console.log('✅ 数値入力システム初期化完了');
+    return true;
+}
+
+// キャラクター位置から数値入力フィールドを更新
+function updateNumericInputsFromCharacter() {
+    if (!character || !numericInputs.x) return;
+    
+    console.log('🔄 数値入力フィールドを現在位置で更新');
+    
+    // 現在の%位置を取得
+    const currentState = character.style.left ? 
+        { left: character.style.left, top: character.style.top, width: character.style.width } :
+        getDynamicCharacterState(character);
+    
+    const leftPercent = parseFloat(currentState.left);
+    const topPercent = parseFloat(currentState.top);
+    const widthPercent = parseFloat(currentState.width);
+    
+    // 数値入力フィールドに反映
+    numericInputs.x.value = Math.round(leftPercent);
+    numericInputs.y.value = Math.round(topPercent);
+    numericInputs.scale.value = (widthPercent / 20).toFixed(2); // 20%基準でスケール計算
+    
+    console.log('✅ 数値更新完了:', {
+        x: numericInputs.x.value + '%',
+        y: numericInputs.y.value + '%',
+        scale: numericInputs.scale.value + '倍'
+    });
+}
+
+// 数値入力の変更処理（リアルタイム更新）
+function handleNumericInput(event) {
+    if (!character) return;
+    
+    const inputType = event.target.id.replace('numeric-', '');
+    const value = parseFloat(event.target.value);
+    
+    console.log('🎯 数値入力変更:', { type: inputType, value });
+    
+    // バリデーション
+    if (isNaN(value)) return;
+    
+    // 現在の状態を取得
+    const currentState = character.style.left ? 
+        { left: character.style.left, top: character.style.top, width: character.style.width } :
+        getDynamicCharacterState(character);
+    
+    let newLeftPercent = parseFloat(currentState.left);
+    let newTopPercent = parseFloat(currentState.top);
+    let newWidthPercent = parseFloat(currentState.width);
+    // 🔧 修正: height変数を追加（縦横比維持用）
+    let newHeightPercent = parseFloat(currentState.width) / (1/1); // 現在のwidthから縦横比計算（正方形）
+    
+    // 入力タイプに応じて値を更新
+    switch (inputType) {
+        case 'x':
+            newLeftPercent = Math.max(5, Math.min(95, value));
+            break;
+        case 'y':
+            newTopPercent = Math.max(5, Math.min(95, value));
+            break;
+        case 'scale':
+            // 🔧 修正: 縦横比維持のスケール処理
+            newWidthPercent = Math.max(5, Math.min(50, value * 20)); // 20%基準でスケール計算
+            // Canvas要素の縦横比を維持（1:1比率正方形）
+            const aspectRatio = 1 / 1; // Canvas要素の標準アスペクト比（正方形）
+            newHeightPercent = newWidthPercent / aspectRatio;
+            break;
+    }
+    
+    // 🔧 修正: 縦横比維持でキャラクター位置・サイズを更新
+    character.style.left = newLeftPercent + '%';
+    character.style.top = newTopPercent + '%';
+    character.style.width = newWidthPercent + '%';
+    character.style.height = (newHeightPercent || newWidthPercent / (1/1)) + '%'; // 縦横比維持（正方形）
+    
+    // 座標表示も更新
+    updateCoordinateDisplay();
+    
+    console.log('🎨 縦横比維持リアルタイム更新適用:', {
+        left: newLeftPercent.toFixed(1) + '%',
+        top: newTopPercent.toFixed(1) + '%',
+        width: newWidthPercent.toFixed(1) + '%',
+        height: (newHeightPercent || newWidthPercent / (1/1)).toFixed(1) + '%'
+    });
+}
+
+// 適用ボタンの処理
+function applyNumericValues() {
+    console.log('✅ 数値入力値を適用');
+    
+    if (!character || !numericInputs.x) return;
+    
+    const xValue = parseFloat(numericInputs.x.value);
+    const yValue = parseFloat(numericInputs.y.value);
+    const scaleValue = parseFloat(numericInputs.scale.value);
+    
+    // バリデーション
+    const validX = Math.max(5, Math.min(95, xValue));
+    const validY = Math.max(5, Math.min(95, yValue));
+    const validScale = Math.max(0.1, Math.min(2.0, scaleValue));
+    const validWidth = validScale * 20; // 20%基準
+    
+    // 🔧 修正: 縦横比維持でキャラクター位置を更新
+    const validHeight = validWidth / (1/1); // 縦横比維持（正方形）
+    character.style.left = validX + '%';
+    character.style.top = validY + '%';
+    character.style.width = validWidth + '%';
+    character.style.height = validHeight + '%'; // 縦横比維持
+    
+    // 入力フィールドの補正値を反映
+    numericInputs.x.value = Math.round(validX);
+    numericInputs.y.value = Math.round(validY);
+    numericInputs.scale.value = validScale.toFixed(2);
+    
+    // 座標表示を更新
+    updateCoordinateDisplay();
+    
+    console.log('✅ 適用完了:', {
+        x: validX + '%',
+        y: validY + '%',
+        width: validWidth + '%',
+        scale: validScale + '倍'
+    });
+}
+
+// リセットボタンの処理
+function resetNumericValues() {
+    console.log('🔄 数値入力値をリセット');
+    
+    if (!numericInputs.x) return;
+    
+    // デフォルト値
+    const defaultValues = {
+        x: 18,
+        y: 49,
+        scale: 0.55
+    };
+    
+    // 入力フィールドをリセット
+    numericInputs.x.value = defaultValues.x;
+    numericInputs.y.value = defaultValues.y;
+    numericInputs.scale.value = defaultValues.scale;
+    
+    // 🔧 修正: 縦横比維持でキャラクター位置をリセット
+    if (character) {
+        const resetWidth = defaultValues.scale * 20;
+        const resetHeight = resetWidth / (1/1); // 縦横比維持（正方形）
+        character.style.left = defaultValues.x + '%';
+        character.style.top = defaultValues.y + '%';
+        character.style.width = resetWidth + '%';
+        character.style.height = resetHeight + '%'; // 縦横比維持
+        
+        // 座標表示を更新
+        updateCoordinateDisplay();
+    }
+    
+    console.log('✅ リセット完了:', defaultValues);
+}
+
+// 既存の座標表示更新関数を拡張
+const originalUpdateCoordinateDisplay = updateCoordinateDisplay;
+updateCoordinateDisplay = function() {
+    // 元の座標表示更新を実行
+    originalUpdateCoordinateDisplay();
+    
+    // 数値入力フィールドも更新（ドラッグ操作との同期）
+    if (numericInputs.x && character && isCharacterEditMode) {
+        updateNumericInputsFromCharacter();
+    }
+};
+
+// ========== 🔍 デバッグ・診断システム（大幅強化版） ========== //
+
+// 🚨 緊急診断：リロード後位置保存失敗の完全調査
+function emergencyDiagnostic() {
+    console.log('🚨 === 緊急診断開始：リロード後位置保存失敗 ===');
+    
+    // Step 1: localStorage完全診断
+    diagnosisLocalStorage();
+    
+    // Step 2: DOM要素検出診断
+    diagnosisDOMElements();
+    
+    // Step 3: 復元処理実行状況診断
+    diagnosisRestoreProcess();
+    
+    // Step 4: CSS競合診断
+    diagnosisCSSConflicts();
+    
+    console.log('🚨 === 緊急診断完了 ===');
+}
+
+// localStorage完全診断
+function diagnosisLocalStorage() {
+    console.log('📦 === localStorage完全診断 ===');
+    
+    const saved = localStorage.getItem('spine-positioning-state');
+    console.log('Step 1 - 存在確認:', !!saved);
+    
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            console.log('Step 2 - 生データ:', saved);
+            console.log('Step 3 - パース結果:', parsed);
+            
+            // データ整合性チェック
+            const integrity = {
+                has_character_section: !!(parsed && parsed.character),
+                has_left: !!(parsed.character && parsed.character.left),
+                has_top: !!(parsed.character && parsed.character.top),
+                has_width: !!(parsed.character && parsed.character.width),
+                left_is_percent: !!(parsed.character && parsed.character.left && parsed.character.left.includes('%')),
+                top_is_percent: !!(parsed.character && parsed.character.top && parsed.character.top.includes('%')),
+                width_is_percent: !!(parsed.character && parsed.character.width && parsed.character.width.includes('%'))
+            };
+            
+            console.log('Step 4 - データ整合性:', integrity);
+            
+            const isValid = integrity.has_character_section && 
+                           integrity.has_left && integrity.has_top && integrity.has_width &&
+                           integrity.left_is_percent && integrity.top_is_percent && integrity.width_is_percent;
+            
+            console.log('Step 5 - 有効性判定:', isValid ? '✅ 有効' : '❌ 無効');
+            
+            if (!isValid) {
+                console.warn('⚠️ localStorage データが無効です:', {
+                    expected: '{ character: { left: "XX%", top: "YY%", width: "ZZ%" } }',
+                    actual: parsed
+                });
+            }
+            
+        } catch (e) {
+            console.error('❌ localStorage パースエラー:', e);
+        }
+    } else {
+        console.log('📝 localStorage は空です');
+    }
+}
+
+// DOM要素検出診断
+function diagnosisDOMElements() {
+    console.log('🎯 === DOM要素検出診断 ===');
+    
+    // 複数のセレクターで要素検出を試行
+    const selectors = [
+        '[data-spine-character="purattokun"]',
+        '#purattokun-canvas',
+        '#purattokun-fallback',
+        'canvas[data-spine-character]',
+        '.character-wrapper'
+    ];
+    
+    console.log('Step 1 - 複数セレクター検出テスト:');
+    selectors.forEach((selector, index) => {
+        const element = document.querySelector(selector);
+        console.log(`  ${index + 1}. ${selector}:`, element ? '✅ 発見' : '❌ なし');
+        if (element) {
+            console.log(`     要素詳細:`, {
+                tagName: element.tagName,
+                id: element.id,
+                className: element.className,
+                style_left: element.style.left,
+                style_top: element.style.top,
+                style_width: element.style.width
+            });
+        }
+    });
+    
+    // 現在のcharacter変数の状態
+    console.log('Step 2 - character変数状態:', {
+        exists: !!character,
+        element: character ? character.tagName + (character.id ? '#' + character.id : '') : 'null',
+        current_style: character ? {
+            left: character.style.left,
+            top: character.style.top,
+            width: character.style.width,
+            position: character.style.position
+        } : 'null'
+    });
+}
+
+// 復元処理実行状況診断
+function diagnosisRestoreProcess() {
+    console.log('🔄 === 復元処理実行状況診断 ===');
+    
+    // setupCharacterInitialState が呼ばれているか確認
+    console.log('Step 1 - 復元関数チェック:');
+    console.log('  loadSavedState:', typeof loadSavedState);
+    console.log('  setupCharacterInitialState:', typeof setupCharacterInitialState);
+    console.log('  initializeDOMElements:', typeof initializeDOMElements);
+    
+    // savedState変数の状態
+    console.log('Step 2 - savedState変数:', savedState);
+    
+    // DOMContentLoaded イベントの確認
+    console.log('Step 3 - DOM状態:');
+    console.log('  readyState:', document.readyState);
+    console.log('  body exists:', !!document.body);
+    
+    // 復元処理のタイミング問題チェック
+    console.log('Step 4 - タイミング分析:');
+    if (character) {
+        const computedStyle = window.getComputedStyle(character);
+        console.log('  computedStyle transform:', computedStyle.transform);
+        console.log('  inline style:', character.style.cssText);
+        console.log('  parent element:', character.parentElement ? character.parentElement.tagName : 'null');
+    }
+}
+
+// CSS競合診断
+function diagnosisCSSConflicts() {
+    console.log('🎨 === CSS競合診断 ===');
+    
+    if (!character) {
+        console.warn('❌ character要素がないため、CSS診断をスキップ');
+        return;
+    }
+    
+    const computedStyle = window.getComputedStyle(character);
+    const conflicts = [];
+    
+    // 1. position プロパティ
+    if (computedStyle.position !== 'absolute') {
+        conflicts.push(`position: ${computedStyle.position} (expected: absolute)`);
+    }
+    
+    // 2. transform プロパティの競合
+    if (computedStyle.transform !== 'none' && !computedStyle.transform.includes('translate(-50%, -50%)')) {
+        conflicts.push(`unexpected transform: ${computedStyle.transform}`);
+    }
+    
+    // 3. left/top プロパティの設定状況
+    if (!character.style.left || !character.style.left.includes('%')) {
+        conflicts.push(`left not set as percentage: ${character.style.left}`);
+    }
+    if (!character.style.top || !character.style.top.includes('%')) {
+        conflicts.push(`top not set as percentage: ${character.style.top}`);
+    }
+    
+    // 4. 外部CSSの影響チェック
+    const stylesheets = Array.from(document.styleSheets);
+    console.log('Step 1 - 外部CSS影響分析:');
+    console.log('  適用中のスタイルシート数:', stylesheets.length);
+    
+    console.log('Step 2 - CSS競合検出結果:');
+    if (conflicts.length > 0) {
+        console.warn('⚠️ CSS競合を検出:', conflicts);
+    } else {
+        console.log('✅ CSS競合は検出されませんでした');
+    }
+    
+    // 5. 計算値 vs インライン値の比較
+    console.log('Step 3 - スタイル値比較:');
+    console.log('  inline vs computed:', {
+        left: { inline: character.style.left, computed: computedStyle.left },
+        top: { inline: character.style.top, computed: computedStyle.top },
+        width: { inline: character.style.width, computed: computedStyle.width }
+    });
+}
+
+// 位置保存・復元システムの詳細診断（従来版も保持）
+function debugPositioningSystem() {
+    console.log('🔍 位置保存・復元システム詳細診断:');
+    
+    // 1. localStorage状態確認
+    const savedData = localStorage.getItem('spine-positioning-state');
+    console.log('📦 localStorage状態:', {
+        exists: !!savedData,
+        raw_data: savedData,
+        parsed_data: savedData ? JSON.parse(savedData) : null
+    });
+    
+    // 2. character要素状態確認
+    if (character) {
+        const computedStyle = window.getComputedStyle(character);
+        console.log('🎯 character要素状態:', {
+            element: character.tagName + (character.id ? '#' + character.id : ''),
+            inline_style: {
+                left: character.style.left,
+                top: character.style.top,
+                width: character.style.width,
+                position: character.style.position
+            },
+            computed_style: {
+                left: computedStyle.left,
+                top: computedStyle.top,
+                width: computedStyle.width,
+                position: computedStyle.position
+            },
+            bounding_rect: character.getBoundingClientRect()
+        });
+    } else {
+        console.warn('❌ character要素がnullです');
+    }
+    
+    // 3. savedState変数状態確認
+    console.log('💾 savedState変数状態:', savedState);
+    
+    // 4. 動的取得テスト
+    if (character) {
+        const dynamicResult = getDynamicCharacterState(character);
+        console.log('🔄 動的取得テスト結果:', dynamicResult);
+    }
+}
+
+// localStorage完全クリア（デバッグ用）
+function clearAllPositionData() {
+    localStorage.removeItem('spine-positioning-state');
+    console.log('🗑️ localStorage位置データを完全削除しました');
+    console.log('🔄 リロードして動作確認してください');
+}
+
+// 🚨 HTML設定制御システム無効化（localStorage復元時のみ）
+function disableHTMLConfigSystem() {
+    console.log('🔧 HTML設定制御システム無効化開始');
+    
+    const config = document.querySelector('#purattokun-config');
+    if (config) {
+        // data属性を一時的に退避・削除
+        const originalData = {
+            x: config.getAttribute('data-x'),
+            y: config.getAttribute('data-y'),
+            scale: config.getAttribute('data-scale')
+        };
+        
+        // data属性を削除してHTML設定制御システムを無効化
+        config.removeAttribute('data-x');
+        config.removeAttribute('data-y');
+        config.removeAttribute('data-scale');
+        
+        // 無効化情報をマーク
+        config.setAttribute('data-disabled-for-restore', 'true');
+        config.setAttribute('data-original-x', originalData.x || '18');
+        config.setAttribute('data-original-y', originalData.y || '49');
+        config.setAttribute('data-original-scale', originalData.scale || '0.55');
+        
+        console.log('✅ HTML設定制御システム無効化完了:', originalData);
+        return true;
+    } else {
+        console.warn('⚠️ #purattokun-config 要素が見つかりません');
+        return false;
+    }
+}
+
+// 🔄 HTML設定制御システム復活（必要に応じて）
+function restoreHTMLConfigSystem() {
+    console.log('🔄 HTML設定制御システム復活開始');
+    
+    const config = document.querySelector('#purattokun-config');
+    if (config && config.getAttribute('data-disabled-for-restore') === 'true') {
+        // 退避されたdata属性を復活
+        const originalX = config.getAttribute('data-original-x');
+        const originalY = config.getAttribute('data-original-y');
+        const originalScale = config.getAttribute('data-original-scale');
+        
+        if (originalX) config.setAttribute('data-x', originalX);
+        if (originalY) config.setAttribute('data-y', originalY);
+        if (originalScale) config.setAttribute('data-scale', originalScale);
+        
+        // 無効化マークを削除
+        config.removeAttribute('data-disabled-for-restore');
+        config.removeAttribute('data-original-x');
+        config.removeAttribute('data-original-y');
+        config.removeAttribute('data-original-scale');
+        
+        console.log('✅ HTML設定制御システム復活完了');
+        return true;
+    } else {
+        console.log('💡 HTML設定制御システムは既に有効です');
+        return false;
+    }
+}
+
+// 🆕 多重復元システム：複数の方法で確実に復元実行（HTML設定制御システム競合対策版）
+function multiRestoreSystem() {
+    console.log('🔄 === 多重復元システム開始（競合対策版） ===');
+    
+    const savedData = localStorage.getItem('spine-positioning-state');
+    if (!savedData) {
+        console.warn('⚠️ localStorage に保存データがありません');
+        return false;
+    }
+    
+    let loadedState;
+    try {
+        loadedState = JSON.parse(savedData);
+    } catch (e) {
+        console.error('❌ localStorage データの解析に失敗:', e);
+        return false;
+    }
+    
+    if (!loadedState.character) {
+        console.warn('⚠️ 保存データに character セクションがありません');
+        return false;
+    }
+    
+    console.log('📊 復元データ確認:', loadedState.character);
+    
+    // 🚨 **競合対策**: HTML設定制御システムを無効化
+    disableHTMLConfigSystem();
+    
+    // Method 1: 複数セレクターでの要素検出・復元
+    const selectors = [
+        '[data-spine-character="purattokun"]',
+        '#purattokun-canvas',
+        '#purattokun-fallback',
+        'canvas[data-spine-character]',
+        '.character-wrapper'
+    ];
+    
+    let restoredCount = 0;
+    
+    // 各セレクターで要素を発見して復元を試行
+    selectors.forEach((selector, index) => {
+        const element = document.querySelector(selector);
+        if (element) {
+            console.log(`🎯 Method ${index + 1} - ${selector} で要素発見`);
+            const success = attemptRestore(element, loadedState.character, `Method${index + 1}`);
+            if (success) {
+                restoredCount++;
+            }
+        }
+    });
+    
+    // Method 2: 定期的なリトライ復元（タイミング問題対策）
+    let retryCount = 0;
+    const maxRetries = 10;
+    const retryInterval = setInterval(() => {
+        retryCount++;
+        console.log(`🔄 リトライ復元 ${retryCount}/${maxRetries}`);
+        
+        const element = document.querySelector('#purattokun-canvas') || 
+                       document.querySelector('[data-spine-character="purattokun"]') ||
+                       document.querySelector('#purattokun-fallback');
+        
+        if (element && (!element.style.left || !element.style.left.includes('%'))) {
+            const success = attemptRestore(element, loadedState.character, `Retry${retryCount}`);
+            if (success) {
+                console.log('✅ リトライ復元成功');
+                clearInterval(retryInterval);
+            }
+        }
+        
+        if (retryCount >= maxRetries) {
+            console.warn('⚠️ リトライ復元が最大回数に達しました');
+            clearInterval(retryInterval);
+        }
+    }, 500);
+    
+    // Method 3: 遅延復元（CSS読み込み完了後）
+    setTimeout(() => {
+        console.log('🕐 遅延復元実行');
+        const element = document.querySelector('#purattokun-canvas') || 
+                       document.querySelector('[data-spine-character="purattokun"]');
+        if (element) {
+            attemptRestore(element, loadedState.character, 'DelayedRestore');
+        }
+    }, 2000);
+    
+    // Method 4: 🚨 継続監視システム（最強の復元保証）
+    startContinuousRestoreMonitoring(loadedState.character);
+    
+    console.log(`✅ 多重復元システム初期化完了 - ${restoredCount}個の要素で復元試行 + 継続監視開始`);
+    return restoredCount > 0;
+}
+
+// 🚨 継続監視システム：位置が変更されたら即座に復元
+let continuousMonitoringInterval = null;
+function startContinuousRestoreMonitoring(restoreData) {
+    console.log('👁️ 継続監視システム開始（位置変更を監視）');
+    
+    // 既存の監視を停止
+    if (continuousMonitoringInterval) {
+        clearInterval(continuousMonitoringInterval);
+    }
+    
+    continuousMonitoringInterval = setInterval(() => {
+        const element = document.querySelector('#purattokun-canvas') || 
+                       document.querySelector('[data-spine-character="purattokun"]') ||
+                       document.querySelector('#purattokun-fallback');
+        
+        if (element && restoreData) {
+            const currentLeft = element.style.left;
+            const currentTop = element.style.top;
+            const currentWidth = element.style.width;
+            
+            // 位置が保存データと異なる場合は即座に復元
+            if (currentLeft !== restoreData.left || 
+                currentTop !== restoreData.top || 
+                currentWidth !== restoreData.width) {
+                
+                console.log('🚨 位置変更検出！即座に復元実行:', {
+                    expected: restoreData,
+                    actual: { left: currentLeft, top: currentTop, width: currentWidth }
+                });
+                
+                // 強制復元実行
+                attemptRestore(element, restoreData, 'ContinuousMonitor');
+            }
+        }
+    }, 1000); // 1秒ごとに監視
+    
+    console.log('✅ 継続監視システム起動完了（1秒間隔）');
+}
+
+// 継続監視システム停止
+function stopContinuousRestoreMonitoring() {
+    if (continuousMonitoringInterval) {
+        clearInterval(continuousMonitoringInterval);
+        continuousMonitoringInterval = null;
+        console.log('🛑 継続監視システム停止');
+        return true;
+    }
+    return false;
+}
+
+// 復元実行ヘルパー関数
+function attemptRestore(element, restoreData, methodName) {
+    if (!element || !restoreData) {
+        console.warn(`❌ ${methodName}: 要素またはデータが無効`);
+        return false;
+    }
+    
+    try {
+        console.log(`🔧 ${methodName} 復元実行:`, {
+            element: element.tagName + (element.id ? '#' + element.id : ''),
+            data: restoreData
+        });
+        
+        // !important 相当の強制適用
+        const forceWidth = parseFloat(restoreData.width);
+        const forceHeight = forceWidth / (3/2); // 縦横比維持
+        
+        element.style.cssText += `
+            position: absolute !important;
+            left: ${restoreData.left} !important;
+            top: ${restoreData.top} !important;
+            width: ${restoreData.width} !important;
+            height: ${forceHeight}% !important;
+        `;
+        
+        // 復元確認
+        setTimeout(() => {
+            const verification = {
+                left: element.style.left,
+                top: element.style.top,
+                width: element.style.width,
+                success: element.style.left === restoreData.left && 
+                        element.style.top === restoreData.top && 
+                        element.style.width === restoreData.width
+            };
+            
+            console.log(`📊 ${methodName} 復元結果:`, verification);
+            
+            if (!verification.success) {
+                console.warn(`⚠️ ${methodName} 復元後に値が変更されました。再適用します。`);
+                // 再適用
+                element.style.left = restoreData.left;
+                element.style.top = restoreData.top;
+                element.style.width = restoreData.width;
+                element.style.height = forceHeight + '%';
+            }
+        }, 100);
+        
+        return true;
+        
+    } catch (e) {
+        console.error(`❌ ${methodName} 復元エラー:`, e);
+        return false;
+    }
+}
+
+// 強制的に保存状態を復元（デバッグ用・従来版も保持）
+function forceRestoreState() {
+    if (!character) {
+        console.error('❌ character要素がnullです');
+        return;
+    }
+    
+    const savedData = localStorage.getItem('spine-positioning-state');
+    if (savedData) {
+        const loadedState = JSON.parse(savedData);
+        if (loadedState.character) {
+            const forceWidth = parseFloat(loadedState.character.width);
+            const forceHeight = forceWidth / (3/2); // 縦横比維持
+            character.style.left = loadedState.character.left;
+            character.style.top = loadedState.character.top;
+            character.style.width = loadedState.character.width;
+            character.style.height = forceHeight + '%'; // 縦横比維持
+            character.style.position = 'absolute';
+            
+            console.log('🔧 強制復元完了:', {
+                applied: loadedState.character,
+                result: {
+                    left: character.style.left,
+                    top: character.style.top,
+                    width: character.style.width,
+                    height: character.style.height // 縦横比維持確認用
+                }
+            });
+        } else {
+            console.warn('❌ 保存データが無効です');
+        }
+    } else {
+        console.warn('❌ 保存データが存在しません');
+    }
+}
+
+// 🆕 グローバル関数として公開（デバッグ用・大幅強化版）
 window.resetConfirmPanelPosition = resetConfirmPanelPosition;
 window.debugConfirmPanelPosition = debugConfirmPanelPosition;
 window.showConfirmPanel = showConfirmPanel;
+window.applyNumericValues = applyNumericValues;
+window.resetNumericValues = resetNumericValues;
 
-console.log('🎯 Spine編集システム v2.0 読み込み完了 - 全機能実装済み');
+// === 🚨 緊急デバッグ関数（リロード後位置保存失敗対応・HTML設定制御システム競合対策版） ===
+window.emergencyDiagnostic = emergencyDiagnostic;                      // 🚨 完全診断
+window.multiRestoreSystem = multiRestoreSystem;                        // 🔄 多重復元システム（競合対策版）
+window.diagnosisLocalStorage = diagnosisLocalStorage;                  // 📦 localStorage診断
+window.diagnosisDOMElements = diagnosisDOMElements;                     // 🎯 DOM要素診断
+window.diagnosisRestoreProcess = diagnosisRestoreProcess;              // 🔄 復元処理診断
+window.diagnosisCSSConflicts = diagnosisCSSConflicts;                 // 🎨 CSS競合診断
+window.disableHTMLConfigSystem = disableHTMLConfigSystem;              // 🚨 HTML設定制御システム無効化
+window.restoreHTMLConfigSystem = restoreHTMLConfigSystem;              // 🔄 HTML設定制御システム復活
+window.startContinuousRestoreMonitoring = startContinuousRestoreMonitoring; // 👁️ 継続監視開始
+window.stopContinuousRestoreMonitoring = stopContinuousRestoreMonitoring;   // 🛑 継続監視停止
+
+// === 従来のデバッグ関数（互換性保持） ===
+window.debugPositioningSystem = debugPositioningSystem;
+window.clearAllPositionData = clearAllPositionData;
+window.forceRestoreState = forceRestoreState;
+
+// 🚨 総合デバッグコマンド：一括診断・修正機能
+function ultimatePositionFix() {
+    console.log('🚨 === 総合位置修正システム開始 ===');
+    console.log('🔧 Step 1: 緊急診断を実行');
+    emergencyDiagnostic();
+    
+    setTimeout(() => {
+        console.log('🔧 Step 2: HTML設定制御システムを無効化');
+        disableHTMLConfigSystem();
+        
+        setTimeout(() => {
+            console.log('🔧 Step 3: 多重復元システムを実行');
+            multiRestoreSystem();
+            
+            setTimeout(() => {
+                console.log('🔧 Step 4: 状態強制復元を実行');
+                forceRestoreState();
+                
+                setTimeout(() => {
+                    console.log('✅ === 総合位置修正システム完了 ===');
+                    console.log('🔍 位置が正しく復元されているか確認してください');
+                    console.log('💡 継続監視システムが動作中です（1秒間隔）');
+                }, 1000);
+            }, 1000);
+        }, 500);
+    }, 1000);
+}
+
+// グローバル関数として追加
+window.ultimatePositionFix = ultimatePositionFix;
+
+console.log('🚨 Spine編集システム v2.3 読み込み完了 - HTML設定制御システム競合対策版');
+console.log('🔧 新機能: HTML設定制御システム競合対策・継続監視システム・総合修正コマンド');
+console.log('💡 緊急コマンド: ultimatePositionFix() - 一括診断・修正を実行');
+console.log('💡 個別デバッグ: emergencyDiagnostic(), multiRestoreSystem(), disableHTMLConfigSystem()');
+console.log('📝 詳細: localStorage復元時に自動的にHTML設定制御システムを無効化し、継続監視を開始します');

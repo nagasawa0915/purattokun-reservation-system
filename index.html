@@ -947,8 +947,57 @@
             console.log('🎯 緊急修正完了');
         }
         
-        // 🎯 ページ読み込み時の初期座標設定（data属性から統一管理）
+        // 🚨 【緊急修正】通常ページ読み込み時のlocalStorage復元システム
+        function restorePositionFromLocalStorage() {
+            try {
+                const savedData = localStorage.getItem('spine-positioning-state');
+                if (savedData) {
+                    const parsed = JSON.parse(savedData);
+                    console.log('🔍 通常モード：保存データ発見', parsed);
+                    
+                    if (parsed.character && parsed.character.left && parsed.character.top && parsed.character.width) {
+                        const canvas = document.getElementById('purattokun-canvas');
+                        const fallback = document.getElementById('purattokun-fallback');
+                        
+                        // 保存された位置を最優先で適用（!important使用）
+                        if (canvas) {
+                            canvas.style.cssText += `
+                                left: ${parsed.character.left} !important;
+                                top: ${parsed.character.top} !important;
+                                width: ${parsed.character.width} !important;
+                            `;
+                            console.log('✅ Canvas位置復元完了:', parsed.character);
+                        }
+                        
+                        if (fallback) {
+                            fallback.style.cssText += `
+                                left: ${parsed.character.left} !important;
+                                top: ${parsed.character.top} !important;
+                                width: ${parsed.character.width} !important;
+                            `;
+                            console.log('✅ Fallback位置復元完了:', parsed.character);
+                        }
+                        
+                        console.log('🎯 localStorage復元成功 - 編集した位置が反映されました');
+                        return true; // 復元成功
+                    }
+                }
+                return false; // 復元不要または失敗
+            } catch (error) {
+                console.error('❌ localStorage復元エラー:', error);
+                return false;
+            }
+        }
+
+        // 🎯 ページ読み込み時の初期座標設定（localStorage優先、data属性フォールバック）
         function setInitialPositionFromData() {
+            // 🚨 最優先：localStorage復元を試行
+            if (restorePositionFromLocalStorage()) {
+                console.log('✅ localStorage復元完了 - data属性設定をスキップ');
+                return; // localStorage復元成功時はdata属性設定をスキップ
+            }
+            
+            // localStorage復元失敗時のみdata属性から設定
             const canvas = document.getElementById('purattokun-canvas');
             const fallback = document.getElementById('purattokun-fallback');
             const config = document.getElementById('purattokun-config');
@@ -976,12 +1025,92 @@
             }
         }
         
+        // 🚨 【緊急修正】遅延復元処理を追加（CSS初期値上書き対策）
+        function delayedRestoreCheck() {
+            setTimeout(() => {
+                const canvas = document.getElementById('purattokun-canvas');
+                const fallback = document.getElementById('purattokun-fallback');
+                const savedData = localStorage.getItem('spine-positioning-state');
+                
+                if (savedData && (canvas || fallback)) {
+                    const parsed = JSON.parse(savedData);
+                    if (parsed.character) {
+                        console.log('🕐 遅延復元チェック:', {
+                            saved: parsed.character,
+                            current_canvas: canvas ? {
+                                left: canvas.style.left,
+                                top: canvas.style.top,
+                                width: canvas.style.width
+                            } : null,
+                            current_fallback: fallback ? {
+                                left: fallback.style.left,
+                                top: fallback.style.top,
+                                width: fallback.style.width
+                            } : null
+                        });
+                        
+                        // 位置が保存値と異なる場合は再適用
+                        const needsReapply = canvas && (
+                            canvas.style.left !== parsed.character.left ||
+                            canvas.style.top !== parsed.character.top ||
+                            canvas.style.width !== parsed.character.width
+                        );
+                        
+                        if (needsReapply) {
+                            console.warn('⚠️ CSS競合を検出。保存位置を再適用します。');
+                            restorePositionFromLocalStorage();
+                        } else {
+                            console.log('✅ 位置復元が正常に維持されています');
+                        }
+                    }
+                }
+            }, 1000); // 1秒後にチェック
+        }
+        
         // 開始処理
         setInitialPositionFromData(); // 座標設定を最優先実行
+        delayedRestoreCheck(); // CSS競合対策の遅延チェック
         
         setTimeout(() => {
             emergencyDiagnosis();
         }, 2000);
+        
+        // 🚨 【緊急修正】デバッグ用グローバル関数を追加
+        window.debugPositionRestore = function() {
+            console.log('🔍 位置復元システム詳細診断:');
+            const savedData = localStorage.getItem('spine-positioning-state');
+            const canvas = document.getElementById('purattokun-canvas');
+            const fallback = document.getElementById('purattokun-fallback');
+            
+            console.log('📊 診断結果:', {
+                localStorage_exists: !!savedData,
+                localStorage_data: savedData ? JSON.parse(savedData) : null,
+                canvas_exists: !!canvas,
+                canvas_position: canvas ? {
+                    left: canvas.style.left,
+                    top: canvas.style.top,  
+                    width: canvas.style.width,
+                    computed_left: getComputedStyle(canvas).left,
+                    computed_top: getComputedStyle(canvas).top
+                } : null,
+                fallback_exists: !!fallback,
+                fallback_position: fallback ? {
+                    left: fallback.style.left,
+                    top: fallback.style.top,
+                    width: fallback.style.width
+                } : null
+            });
+            
+            if (savedData) {
+                console.log('🔧 強制復元を実行...');
+                restorePositionFromLocalStorage();
+            }
+        };
+        
+        window.clearPositionData = function() {
+            localStorage.removeItem('spine-positioning-state');
+            console.log('🗑️ 位置データを削除しました。ページをリロードしてください。');
+        };
         
         waitForSpine();
         
