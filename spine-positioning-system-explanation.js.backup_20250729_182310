@@ -267,47 +267,35 @@ function startCharacterEdit() {
         return;
     }
     
-    // 🎯 スタイル値を優先的に使用（transform影響を避ける）
-    let currentStyles = {
-        left: character.style.left,
-        top: character.style.top,
-        width: character.style.width
-    };
+    // 🎯 編集開始前の実際の計算値を正確に記録
+    const computedStyle = window.getComputedStyle(character);
+    const parentRect = character.parentElement.getBoundingClientRect();
     
-    // スタイル値が空の場合のみデフォルト値を使用
-    if (!currentStyles.left || !currentStyles.top || !currentStyles.width) {
-        console.log('⚠️ スタイル値が未設定。デフォルト値を使用');
-        // spine-sample-simple.htmlのデフォルト値を使用
-        currentStyles.left = currentStyles.left || '35%';
-        currentStyles.top = currentStyles.top || '75%';
-        currentStyles.width = currentStyles.width || '25%';
-        
-        // デフォルト値を実際に設定
-        character.style.left = currentStyles.left;
-        character.style.top = currentStyles.top;
-        character.style.width = currentStyles.width;
-    }
+    // px値を%に変換
+    const actualLeftPx = parseFloat(computedStyle.left);
+    const actualTopPx = parseFloat(computedStyle.top);
+    const actualWidthPx = parseFloat(computedStyle.width);
+    
+    const actualLeftPercent = ((actualLeftPx / parentRect.width) * 100).toFixed(1);
+    const actualTopPercent = ((actualTopPx / parentRect.height) * 100).toFixed(1);
+    const actualWidthPercent = ((actualWidthPx / parentRect.width) * 100).toFixed(1);
     
     const preEditState = {
-        style_left: currentStyles.left,
-        style_top: currentStyles.top,
-        style_width: currentStyles.width,
-        has_transform: window.getComputedStyle(character).transform !== 'none'
+        computed_left: actualLeftPercent + '%',
+        computed_top: actualTopPercent + '%',
+        computed_width: actualWidthPercent + '%',
+        style_left: character.style.left,
+        style_top: character.style.top,
+        style_width: character.style.width
     };
     
-    console.log('📍 編集開始前の位置記録（スタイル値優先）:', preEditState);
+    console.log('📍 編集開始前の正確な位置記録:', preEditState);
     
-    // 🔧 位置の再設定は基本的に不要（既にスタイル値が設定されているため）
-    // ただし、ラッパーが作成されている場合は念のため再設定
-    if (character.classList.contains('character-wrapper')) {
-        console.log('🔧 ラッパー検出 - 位置を再設定');
-        character.style.left = preEditState.style_left;
-        character.style.top = preEditState.style_top;
-        character.style.width = preEditState.style_width;
-    } else {
-        console.log('✅ 既存のスタイル値を維持');
-    }
-    
+    // 🔧 編集開始後、実際の計算値で正確に復元
+    console.log('🔧 正確な位置復元実行...');
+    character.style.left = preEditState.computed_left;
+    character.style.top = preEditState.computed_top;
+    character.style.width = preEditState.computed_width;
     
     console.log('✅ 位置復元完了:', {
         復元後_left: character.style.left,

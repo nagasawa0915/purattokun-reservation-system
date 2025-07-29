@@ -387,6 +387,53 @@
                 </div>
             </div>
 
+            <!-- 🚨 重要：システム設計思想 -->
+            <div class="warning">
+                <h3>🎯 システム設計思想（開発者向け重要情報）</h3>
+                <p><strong>⚠️ このシステムは汎用性を最優先に設計されています</strong></p>
+                
+                <div style="margin-top: 15px;">
+                    <strong>🔧 基本方針：</strong><br>
+                    • <strong>複数Spineシーン対応</strong>：様々な位置・サイズ設定に対応<br>
+                    • <strong>動的CSS値取得</strong>：固定値に依存しない柔軟な設計<br>
+                    • <strong>ハードコーディング禁止</strong>：特定の数値（35%, 75%等）を前提としない<br>
+                    • <strong>実行時判定</strong>：各シーンの実際のCSS設定から動的に値を取得
+                </div>
+
+                <div class="code-block" style="margin-top: 15px;">
+                    <pre><strong>❌ 避けるべき実装（固定値依存）：</strong>
+let savedState = {
+    character: { left: '35%', top: '75%', width: '25%' }  // NG: 特定シーン専用
+};
+
+<strong>✅ 推奨実装（動的取得）：</strong>
+function getDynamicCharacterState(character) {
+    const computedStyle = window.getComputedStyle(character);
+    return {
+        left: computedStyle.left,     // 実際のCSS値を取得
+        top: computedStyle.top,       // 各シーンに応じて変化
+        width: computedStyle.width    // 固定値に依存しない
+    };
+}
+
+let savedState = { character: getDynamicCharacterState(character) };</pre>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <strong>🎯 想定利用シーン：</strong><br>
+                    • <strong>spine-sample-simple.html</strong>：left: 35%, top: 75%, width: 30%<br>
+                    • <strong>index.html</strong>：left: 20%, top: 60%, width: 15%<br>
+                    • <strong>その他のSpineシーン</strong>：任意のCSS値<br>
+                    → <strong>すべて同一の編集システムで対応可能</strong>
+                </div>
+
+                <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 5px;">
+                    <strong>💡 なぜ動的取得が重要か：</strong><br>
+                    固定値を使用すると、シーンごとに編集システムを修正する必要が生じます。<br>
+                    動的取得により、<strong>一つの編集システムで全Spineシーンに対応</strong>できます。
+                </div>
+            </div>
+
             <div class="demo-buttons">
                 <a href="index.html?edit=true" class="demo-btn primary">
                     🎮 編集モードを開く（3分体験）

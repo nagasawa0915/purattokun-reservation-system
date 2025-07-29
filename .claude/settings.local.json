@@ -17,7 +17,8 @@
       "Bash(/agents)",
       "Bash(node:*)",
       "Bash(sed:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
