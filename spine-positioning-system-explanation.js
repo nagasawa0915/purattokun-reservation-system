@@ -1,345 +1,211 @@
-// 🎯 Spine配置システム編集モード (index.html統合用)
+// 🎯 Spine編集システム v2.0 - クリーンリビルド版
+// シンプル・保守性・動作確実性を重視した設計
 
-// グローバル変数
+console.log('🚀 Spine編集システム v2.0 読み込み開始');
+
+// ========== 基本設定・グローバル変数 ========== //
+
+// 編集モード制御
 let isCharacterEditMode = false;
-let isCanvasEditMode = false;
+// Canvas編集モード削除
+
+// 操作状態
 let isDragging = false;
 let isResizing = false;
-let resizeType = '';
-let resizeDirection = '';
-let startMousePos = { x: 0, y: 0 };
-let startElementPos = { x: 0, y: 0, width: 0, height: 0 };
-
-// 🆕 新ハンドルシステム用変数
-let isNewHandleSystemEnabled = false;
 let activeHandle = null;
-let isGlobalResizeMode = false;
-let resizeFeedback = null;
 
-// 🎯 統一座標システム対応：保存状態
+// マウス操作記録
+let startMousePos = { x: 0, y: 0 };
+let startElementState = {};
+
+// DOM要素参照
+let character = null;
+// characterCanvas削除：不要
+let editConfirmPanel = null;
+let coordinateDisplay = null;
+
+// 保存状態（localStorage用・%座標系統一・spine-sample-simple.htmlのCSS値と一致）
 let savedState = {
-    character: { left: '60px', top: '60px', width: '80px', height: '80px' },
-    canvas: { 
-        left: '20%',   // 統一システム：CSS位置制御（メインレイヤー）
-        top: '70%',    // 統一システム：CSS位置制御（メインレイヤー）
-        width: '120px',  // 統一システム：CSS=WebGL=統一解像度
-        height: '120px'  // 統一システム：CSS=WebGL=統一解像度
-    }
+    character: { left: '35%', top: '75%', width: '25%' }
+    // ☝️ spine-sample-simple.htmlのCSS値と完全一致
 };
 
-// DOM要素（index.html用に適応）
-let character = null;
-let originalCanvasElement = null; // 元のcanvas要素への参照
-let characterCanvas = null;
-let demoScreen = null;
-let coordinateDisplay = null;
-let editConfirmPanel = null;
+console.log('✅ v2.0 基本設定完了');
 
-// 🎯 外部からの呼び出し用関数
-function startCharacterEdit() {
-    if (!initializeDOMElements()) return;
-    
-    if (isCanvasEditMode) {
-        endCanvasEditMode();
-    }
-    
-    isCharacterEditMode = true;
-    character.classList.add('demo-character'); // CSSセレクタのために追加
-    character.classList.add('edit-mode');
-    
-    // 🆕 新ハンドルシステムを有効化
-    enableNewHandleSystem();
-    
-    const btn = document.getElementById('edit-character-btn');
-    if (btn) {
-        btn.textContent = 'キャラクター編集中...';
-        btn.style.background = '#4caf50';
-    }
-    
-    showConfirmPanel();
-    updateCoordinateDisplay();
-    console.log('🎯 キャラクター編集モード開始（新ハンドルシステム）');
-}
+// ========== DOM初期化システム ========== //
 
-function startCanvasEdit() {
-    if (!initializeDOMElements()) return;
-    
-    if (isCharacterEditMode) {
-        endCharacterEditMode();
-    }
-    
-    isCanvasEditMode = true;
-    characterCanvas.classList.add('canvas-edit-mode');
-    
-    const btn = document.getElementById('edit-canvas-btn');
-    if (btn) {
-        btn.textContent = '表示範囲編集中...';
-        btn.style.background = '#4caf50';
-    }
-    
-    showConfirmPanel();
-    updateCoordinateDisplay();
-    console.log('🎯 Canvas編集モード開始');
-}
-
-// DOM要素の初期化（index.html用）
 function initializeDOMElements() {
-    // 🔧 根本修正: 既存ラッパーを最優先検索（表示範囲編集後の再利用対応）
-    character = document.querySelector('.character-wrapper') ||      // 最優先：既存ラッパー
-               document.querySelector('#purattokun-canvas') ||       // 次優先：元canvas要素
+    console.log('🔧 DOM初期化開始');
+    
+    // キャラクター要素を取得
+    character = document.querySelector('#purattokun-canvas') || 
                document.querySelector('canvas[data-spine-character]') ||
                document.querySelector('#purattokun-fallback');
-               
+    
     if (!character) {
         console.error('❌ キャラクター要素が見つかりません');
         return false;
     }
     
-    // 編集用のCanvas枠を作成
-    createCharacterCanvas();
-    
-    // 座標表示要素を見つけるか作成
-    coordinateDisplay = document.getElementById('coordinate-display');
-    if (!coordinateDisplay) {
-        console.warn('座標表示要素が見つかりません');
+    console.log('✅ キャラクター要素取得:', character.tagName);
+
+    // Canvas要素の場合、ラッパーを作成
+    if (character.tagName === 'CANVAS') {
+        console.log('⚠️ Canvas要素検出: ラッパーを作成します');
+        
+        // 既存のラッパーがあるかチェック
+        let existingWrapper = character.parentElement;
+        if (existingWrapper && existingWrapper.classList.contains('character-wrapper')) {
+            console.log('🔄 既存のラッパーを再利用します');
+            character = existingWrapper;
+        } else {
+            // 新規ラッパー作成
+            const actualRect = character.getBoundingClientRect();
+            const actualWidth = actualRect.width;
+            const actualHeight = actualRect.height;
+            
+            const characterWrapper = document.createElement('div');
+            characterWrapper.className = 'character-wrapper demo-character';
+            characterWrapper.style.cssText = `
+                position: absolute;
+                left: ${character.style.left || '35%'};
+                top: ${character.style.top || '75%'};
+                width: ${actualWidth}px;
+                height: ${actualHeight}px;
+                transform: translate(-50%, -50%);
+                cursor: move;
+                border: 2px dashed rgba(255, 107, 107, 0.3);
+                border-radius: 8px;
+                transition: border-color 0.3s;
+            `;
+            
+            // Canvas要素をラッパーで包む
+            const parent = character.parentElement;
+            parent.insertBefore(characterWrapper, character);
+            characterWrapper.appendChild(character);
+            
+            // Canvas要素の位置スタイルをリセット（ラッパーが制御）
+            character.style.position = 'static';
+            character.style.left = '';
+            character.style.top = '';
+            character.style.transform = '';
+            
+            // characterをラッパーに更新
+            character = characterWrapper;
+            
+            console.log('✅ Canvas要素ラッパー作成完了');
+        }
     }
     
-    // 編集確定パネルを作成
+    // 保存状態読み込み
+    loadSavedState();
+    
+    // UI要素作成
+    createCoordinateDisplay();
     createConfirmPanel();
     
-    // イベントリスナーを設定
-    setupEventListeners();
+    // 初期状態設定（character要素が確実に取得された後に実行）
+    if (character) {
+        setupCharacterInitialState();
+    } else {
+        console.warn('⚠️ character要素がnullのため、初期状態設定をスキップ');
+    }
     
+    console.log('✅ DOM初期化完了');
     return true;
 }
 
-// キャラクター表示範囲（Canvas）を作成
-function createCharacterCanvas() {
-    characterCanvas = document.querySelector('.character-canvas');
-    if (!characterCanvas) {
-        characterCanvas = document.createElement('div');
-        characterCanvas.className = 'character-canvas';
-        characterCanvas.id = 'character-canvas-edit';
-        
-        // ぷらっとくんの実際の位置とサイズを取得
-        const charRect = character.getBoundingClientRect();
-        const parentRect = character.parentElement.getBoundingClientRect();
-        
-        // 編集用Canvasをキャラクターの位置に配置
-        characterCanvas.style.position = 'absolute';
-        
-        // spine-sample-simple.htmlの場合、親要素基準のパーセント位置を維持
-        const parentWidth = parentRect.width;
-        const parentHeight = parentRect.height;
-        
-        // 元のcanvas要素の位置とサイズを取得
-        const originalLeft = character.style.left || '35%';
-        const originalTop = character.style.top || '75%';
-        const originalWidth = character.style.width || '25%';
-        
-        // 編集用Canvasに元の設定を適用
-        characterCanvas.style.left = originalLeft;
-        characterCanvas.style.top = originalTop;
-        characterCanvas.style.width = originalWidth;
-        
-        // アスペクト比も維持
-        if (character.style.aspectRatio) {
-            characterCanvas.style.aspectRatio = character.style.aspectRatio;
-        } else if (character.style.height) {
-            characterCanvas.style.height = character.style.height;
-        } else {
-            characterCanvas.style.height = charRect.height + 'px';
-        }
-        
-        characterCanvas.style.transform = 'translate(-50%, -50%)'; // 中心基準配置
-        
-        // ぷらっとくんの親要素に追加
-        const parent = character.parentElement;
-        if (parent) {
-            parent.appendChild(characterCanvas);
-        } else {
-            document.body.appendChild(characterCanvas);
-        }
-        
-        // キャラクターを編集Canvasの中に移動
-        characterCanvas.appendChild(character);
-        
-        // キャラクターの位置を編集Canvas内での相対位置に調整
-        character.style.position = 'absolute';
-        character.style.left = '50%';
-        character.style.top = '50%';
-        character.style.transform = 'translate(-50%, -50%)';
-        
-        // キャラクター用のリサイズハンドルを追加
-        console.log('🔧 キャラクター要素のタイプ:', character.tagName);
-        console.log('🔧 キャラクター要素:', character);
-        
-        // 🔧 根本修正: 要素の状態に応じた適切な処理分岐
-        if (character.classList.contains('character-wrapper')) {
-            console.log('✅ 既存のキャラクターラッパーを再利用します');
-            
-            // 既存ラッパーに必要なクラスを確実に適用
-            character.classList.add('demo-character', 'edit-mode');
-            
-            // 既存のハンドルがない場合は追加
-            if (character.querySelectorAll('.resize-handle').length === 0) {
-                console.log('🔧 既存ラッパーにハンドルを追加します');
-                ['se', 'sw', 'ne', 'nw'].forEach(direction => {
-                    const handle = document.createElement('div');
-                    handle.className = `resize-handle ${direction}`;
-                    handle.setAttribute('data-direction', direction);
-                    character.appendChild(handle);
-                });
-            }
-            
-            // originalCanvasElementを取得（ラッパー内のcanvas要素）
-            originalCanvasElement = character.querySelector('canvas');
-            
-        } else if (character.tagName === 'CANVAS' && character.parentElement !== characterCanvas) {
-            console.log('⚠️ canvas要素は子要素を持てないため、ラッパーを作成します（初回）');
-            
-            // 元のcanvas要素を保存
-            originalCanvasElement = character;
-            
-            // キャラクターラッパーを作成
-            const characterWrapper = document.createElement('div');
-            characterWrapper.className = 'character-wrapper demo-character';
-            characterWrapper.style.position = 'relative';
-            
-            // 🎯 統一座標システム：キャラクターサイズを統一システムから取得
-            // 元のcanvas要素のサイズ設定を維持
-            const computedStyle = window.getComputedStyle(character);
-            const actualWidth = computedStyle.width;
-            const actualHeight = computedStyle.height;
-            
-            // 統一座標システム対応デバッグ情報
-            console.log('📏 統一座標システム キャラクターサイズ:', {
-                cssWidth: character.style.width,
-                cssHeight: character.style.height,
-                computedWidth: actualWidth,   // 実際の表示サイズ
-                computedHeight: actualHeight, // 実際の表示サイズ
-                note: 'CSS=WebGL=統一解像度'
-            });
-            
-            // 統一システムサイズに合わせてラッパーを作成
-            // 注: ラッパーのサイズは後で編集Canvas基準の100%に設定される
-            
-            // canvas要素の位置をラッパーに移動
-            characterWrapper.style.left = '50%';
-            characterWrapper.style.top = '50%';
-            characterWrapper.style.transform = 'translate(-50%, -50%)';
-            
-            // 🔧 重要: ラッパーのサイズを編集Canvas基準で100%に設定
-            characterWrapper.style.width = '100%';
-            characterWrapper.style.height = '100%';
-            
-            // 🎯 統一座標システム：canvas要素の位置スタイルを統一システム対応でリセット
-            character.style.position = 'absolute';
-            character.style.left = '0';
-            character.style.top = '0';
-            character.style.transform = 'none';
-            character.style.width = '100%';   // ラッパー内で100%（統一システム）
-            character.style.height = '100%';  // ラッパー内で100%（統一システム）
-            
-            console.log('🎯 統一座標システム：Canvas要素をラッパー内で統一制御に設定');
-            
-            // ラッパーにリサイズハンドルを追加
-            ['se', 'sw', 'ne', 'nw'].forEach(direction => {
-                const handle = document.createElement('div');
-                handle.className = `resize-handle ${direction}`;
-                handle.setAttribute('data-direction', direction);
-                characterWrapper.appendChild(handle);
-            });
-            
-            // canvas要素をラッパーで包む
-            characterCanvas.appendChild(characterWrapper);
-            characterWrapper.appendChild(character);
-            
-            // characterをラッパーに更新
-            character = characterWrapper;
-            console.log('✅ キャラクターラッパーを作成しました');
-        } else if (character.tagName === 'CANVAS' && character.parentElement === characterCanvas) {
-            console.log('🔄 canvas要素が既にcharacterCanvas内にあります。ラッパーを再作成します');
-            
-            // 元のcanvas要素を保存
-            originalCanvasElement = character;
-            
-            // キャラクターラッパーを作成
-            const characterWrapper = document.createElement('div');
-            characterWrapper.className = 'character-wrapper demo-character';
-            characterWrapper.style.position = 'relative';
-            
-            // 🔧 重要: ラッパーのサイズを編集Canvas基準で100%に設定
-            characterWrapper.style.width = '100%';
-            characterWrapper.style.height = '100%';
-            
-            // ラッパーの位置設定（characterCanvasの中央）
-            characterWrapper.style.left = '50%';
-            characterWrapper.style.top = '50%';
-            characterWrapper.style.transform = 'translate(-50%, -50%)';
-            
-            // canvas要素の位置スタイルをリセット
-            character.style.position = 'absolute';
-            character.style.left = '0';
-            character.style.top = '0';
-            character.style.transform = 'none';
-            character.style.width = '100%';
-            character.style.height = '100%';
-            
-            // ラッパーにリサイズハンドルを追加
-            ['se', 'sw', 'ne', 'nw'].forEach(direction => {
-                const handle = document.createElement('div');
-                handle.className = `resize-handle ${direction}`;
-                handle.setAttribute('data-direction', direction);
-                characterWrapper.appendChild(handle);
-            });
-            
-            // canvas要素をラッパーで包む
-            characterCanvas.appendChild(characterWrapper);
-            characterWrapper.appendChild(character);
-            
-            // characterをラッパーに更新
-            character = characterWrapper;
-            console.log('✅ キャラクターラッパーを再作成しました');
-        } else {
-            // 🔧 その他の要素（通常は実行されないはず）
-            console.log('⚠️ 予期しない要素タイプです:', character.tagName, character.className);
-            
-            // フォールバック：直接ハンドル追加を試行
-            if (character.appendChild) {
-                ['se', 'sw', 'ne', 'nw'].forEach(direction => {
-                    const handle = document.createElement('div');
-                    handle.className = `resize-handle ${direction}`;
-                    handle.setAttribute('data-direction', direction);
-                    character.appendChild(handle);
-                });
-            }
-        }
-        
-        // Canvas用のリサイズハンドルを追加
-        ['se', 'sw', 'ne', 'nw'].forEach(direction => {
-            const handle = document.createElement('div');
-            handle.className = `canvas-resize-handle ${direction}`;
-            handle.setAttribute('data-direction', direction);
-            characterCanvas.appendChild(handle);
-        });
-        
-        // 初期状態を保存（spine-sample-simple.html用に調整）
-        savedState.canvas.left = characterCanvas.style.left || '35%';
-        savedState.canvas.top = characterCanvas.style.top || '75%';
-        savedState.canvas.width = characterCanvas.style.width || '25%';
-        savedState.canvas.height = characterCanvas.style.height || charRect.height + 'px';
-        savedState.character.left = '50%';  // 編集Canvas内での中心位置
-        savedState.character.top = '50%';   // 編集Canvas内での中心位置
-        savedState.character.width = '100%';  // 編集Canvas基準
-        savedState.character.height = '100%'; // 編集Canvas基準
+// 🗑️ Canvas作成削除：不要（直接character要素を編集）
+
+function setupCharacterInitialState() {
+    console.log('🔧 キャラクター初期状態設定開始（getComputedStyle使用）');
+    
+    // character要素の存在確認
+    if (!character) {
+        console.error('❌ setupCharacterInitialState: character要素がnullです');
+        return;
     }
     
-    // demoScreenは背景要素
-    demoScreen = document.querySelector('.background-container') || document.body;
+    // 🎯 getComputedStyleで実際のブラウザ計算値を取得
+    const computedStyle = window.getComputedStyle(character);
+    const parentRect = character.parentElement.getBoundingClientRect();
+    
+    // px値を%に変換
+    const computedLeftPx = parseFloat(computedStyle.left);
+    const computedTopPx = parseFloat(computedStyle.top);
+    const computedWidthPx = parseFloat(computedStyle.width);
+    
+    const computedLeftPercent = ((computedLeftPx / parentRect.width) * 100).toFixed(1);
+    const computedTopPercent = ((computedTopPx / parentRect.height) * 100).toFixed(1);
+    const computedWidthPercent = ((computedWidthPx / parentRect.width) * 100).toFixed(1);
+    
+    console.log('📊 ブラウザ計算値分析:', {
+        computed_px: {
+            left: computedLeftPx + 'px',
+            top: computedTopPx + 'px', 
+            width: computedWidthPx + 'px'
+        },
+        computed_percent: {
+            left: computedLeftPercent + '%',
+            top: computedTopPercent + '%',
+            width: computedWidthPercent + '%'
+        },
+        css_style: {
+            left: character.style.left,
+            top: character.style.top,
+            width: character.style.width
+        },
+        saved_state: savedState.character
+    });
+    
+    // インラインスタイルがない場合のみ、計算値ベースで設定
+    if (!character.style.left) {
+        character.style.left = computedLeftPercent + '%';
+        console.log('✅ left設定:', computedLeftPercent + '%');
+    }
+    if (!character.style.top) {
+        character.style.top = computedTopPercent + '%';
+        console.log('✅ top設定:', computedTopPercent + '%');
+    }
+    if (!character.style.width) {
+        character.style.width = computedWidthPercent + '%';
+        console.log('✅ width設定:', computedWidthPercent + '%');
+    }
+    
+    // 基本設定は常に適用
+    character.style.position = 'absolute';
+    character.style.transform = 'translate(-50%, -50%)';  // 中心点基準
+    
+    console.log('✅ キャラクター初期状態設定完了（計算値ベース）:', {
+        left: character.style.left,
+        top: character.style.top,
+        width: character.style.width
+    });
 }
 
-// 確定パネルを作成
+function createCoordinateDisplay() {
+    coordinateDisplay = document.getElementById('coordinate-display');
+    if (!coordinateDisplay) {
+        coordinateDisplay = document.createElement('div');
+        coordinateDisplay.id = 'coordinate-display';
+        coordinateDisplay.style.cssText = `
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
+        `;
+        document.body.appendChild(coordinateDisplay);
+    }
+    console.log('✅ 座標表示作成完了');
+}
+
 function createConfirmPanel() {
     editConfirmPanel = document.getElementById('edit-confirm-panel');
     if (!editConfirmPanel) {
@@ -347,891 +213,607 @@ function createConfirmPanel() {
         editConfirmPanel.id = 'edit-confirm-panel';
         editConfirmPanel.className = 'confirm-panel';
         editConfirmPanel.innerHTML = `
-            <div style="text-align: center;">
+            <div style="text-align: center; padding: 15px;">
                 <p style="margin-bottom: 15px; font-weight: bold;">編集を確定しますか？</p>
-                <button class="save-btn" onclick="confirmEdit()">保存</button>
-                <button class="cancel-btn" onclick="cancelEdit()">キャンセル</button>
+                <button class="save-btn" onclick="confirmEdit()" style="margin-right: 10px; padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">保存</button>
+                <button class="cancel-btn" onclick="cancelEdit()" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">キャンセル</button>
             </div>
+        `;
+        editConfirmPanel.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 2000;
+            display: none;
         `;
         document.body.appendChild(editConfirmPanel);
     }
+    console.log('✅ 確定パネル作成完了');
 }
 
-// イベントリスナー設定
+// ========== 外部インターフェース ========== //
+
+function startCharacterEdit() {
+    console.log('🎯 キャラクター編集モード開始（計算値ベース位置保持）');
+    
+    // DOM初期化を先に実行
+    if (!initializeDOMElements()) {
+        console.error('❌ DOM初期化失敗');
+        return;
+    }
+    
+    // character要素の存在確認
+    if (!character) {
+        console.error('❌ character要素が見つかりません');
+        return;
+    }
+    
+    // 🎯 編集開始前の実際の計算値を正確に記録
+    const computedStyle = window.getComputedStyle(character);
+    const parentRect = character.parentElement.getBoundingClientRect();
+    
+    // px値を%に変換
+    const actualLeftPx = parseFloat(computedStyle.left);
+    const actualTopPx = parseFloat(computedStyle.top);
+    const actualWidthPx = parseFloat(computedStyle.width);
+    
+    const actualLeftPercent = ((actualLeftPx / parentRect.width) * 100).toFixed(1);
+    const actualTopPercent = ((actualTopPx / parentRect.height) * 100).toFixed(1);
+    const actualWidthPercent = ((actualWidthPx / parentRect.width) * 100).toFixed(1);
+    
+    const preEditState = {
+        computed_left: actualLeftPercent + '%',
+        computed_top: actualTopPercent + '%',
+        computed_width: actualWidthPercent + '%',
+        style_left: character.style.left,
+        style_top: character.style.top,
+        style_width: character.style.width
+    };
+    
+    console.log('📍 編集開始前の正確な位置記録:', preEditState);
+    
+    // 🔧 編集開始後、実際の計算値で正確に復元
+    console.log('🔧 正確な位置復元実行...');
+    character.style.left = preEditState.computed_left;
+    character.style.top = preEditState.computed_top;
+    character.style.width = preEditState.computed_width;
+    
+    console.log('✅ 位置復元完了:', {
+        復元後_left: character.style.left,
+        復元後_top: character.style.top,
+        復元後_width: character.style.width
+    });
+    
+    isCharacterEditMode = true;
+    character.classList.add('edit-mode');
+    
+    // ハンドル作成
+    createHandles();
+    
+    // イベントリスナー設定
+    setupEventListeners();
+    
+    // UI更新
+    updateUI();
+    showConfirmPanel();
+    
+    console.log('✅ キャラクター編集モード有効化完了（計算値ベース保持）');
+}
+
+// 🗑️ Canvas編集機能削除：表示範囲編集は不要
+
+// ========== コア機能：移動・保存・復元 ========== //
+
 function setupEventListeners() {
-    // キャラクターのドラッグイベント
-    character.addEventListener('mousedown', startCharacterDrag);
+    console.log('🔧 イベントリスナー設定開始');
     
-    // Canvasのドラッグイベント
-    characterCanvas.addEventListener('mousedown', startCanvasDrag);
+    // キャラクター移動イベント
+    if (isCharacterEditMode && character) {
+        character.addEventListener('mousedown', startCharacterDrag);
+    }
     
-    // リサイズハンドルのイベント（後で設定）
-    setupResizeHandlers();
+    // Canvas移動イベント削除：不要
     
     // グローバルイベント
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    
+    console.log('✅ イベントリスナー設定完了');
 }
 
-// キャラクタードラッグ開始
 function startCharacterDrag(e) {
-    if (!isCharacterEditMode) return;
-    if (e.target.classList.contains('resize-handle')) return;
+    // ハンドル判定を厳密に行う
+    if (!isCharacterEditMode || 
+        e.target.classList.contains('handle') || 
+        e.target.closest('.handle') ||
+        isResizing) {
+        console.log('🚫 character移動をスキップ:', {
+            isCharacterEditMode,
+            isHandle: e.target.classList.contains('handle'),
+            isResizing
+        });
+        return;
+    }
     
+    console.log('🎯 character移動開始（%ベース）');
     e.preventDefault();
     isDragging = true;
-    character.classList.add('dragging');
-    
-    // 現在の実際の位置を取得
-    const rect = character.getBoundingClientRect();
-    const canvasRect = characterCanvas.getBoundingClientRect();
-    
-    const currentX = rect.left + rect.width/2 - canvasRect.left;
-    const currentY = rect.top + rect.height/2 - canvasRect.top;
-    
-    // パーセント指定をピクセルに変換
-    character.style.left = currentX + 'px';
-    character.style.top = currentY + 'px';
-    
-    startMousePos = { x: e.clientX, y: e.clientY };
-    updateCoordinateDisplay();
-}
-
-// Canvasドラッグ開始
-function startCanvasDrag(e) {
-    if (!isCanvasEditMode) return;
-    if (e.target.classList.contains('canvas-resize-handle')) return;
-    
-    e.preventDefault();
-    isDragging = true;
-    characterCanvas.classList.add('dragging');
-    
     startMousePos = { x: e.clientX, y: e.clientY };
     
-    // 🔧 修正: %単位で現在位置を記録（px→%単位統一）
-    startElementPos = {
-        x: parseFloat(characterCanvas.style.left) || 35,  // %単位で記録
-        y: parseFloat(characterCanvas.style.top) || 75    // %単位で記録
+    // 現在の%位置を記録
+    startElementState = {
+        leftPercent: parseFloat(character.style.left) || 35,
+        topPercent: parseFloat(character.style.top) || 75
     };
+    
+    updateCoordinateDisplay();
+    console.log('🎯 キャラクタードラッグ開始（%座標）:', startElementState);
 }
 
-// マウス移動処理
+// 🗑️ Canvas移動削除：不要
+
 function handleMouseMove(e) {
     if (!isDragging && !isResizing) return;
     
     const deltaX = e.clientX - startMousePos.x;
     const deltaY = e.clientY - startMousePos.y;
     
-    if (isDragging) {
+    // リサイズを優先処理（ハンドル操作）
+    if (isResizing) {
+        console.log('🔧 リサイズ処理:', { deltaX, deltaY });
+        performResize(deltaX, deltaY);
+    } else if (isDragging) {
+        console.log('🔧 移動処理:', { deltaX, deltaY });
         if (isCharacterEditMode) {
             moveCharacter(deltaX, deltaY);
-        } else if (isCanvasEditMode) {
-            moveCanvas(deltaX, deltaY);
-        }
-    } else if (isResizing) {
-        if (resizeType === 'character') {
-            resizeCharacter(deltaX, deltaY);
-        } else if (resizeType === 'canvas') {
-            resizeCanvas(deltaX, deltaY);
         }
     }
     
     updateCoordinateDisplay();
 }
 
-// キャラクター移動
 function moveCharacter(deltaX, deltaY) {
-    const canvasRect = characterCanvas.getBoundingClientRect();
-    const charRect = character.getBoundingClientRect();
-    
-    const currentX = parseFloat(character.style.left) || 60;
-    const currentY = parseFloat(character.style.top) || 60;
-    
-    let newX = currentX + deltaX;
-    let newY = currentY + deltaY;
-    
-    // 境界制限（中心点基準）
-    const charWidth = charRect.width;
-    const charHeight = charRect.height;
-    const minX = charWidth / 2;
-    const maxX = canvasRect.width - charWidth / 2;
-    const minY = charHeight / 2;
-    const maxY = canvasRect.height - charHeight / 2;
-    
-    newX = Math.max(minX, Math.min(maxX, newX));
-    newY = Math.max(minY, Math.min(maxY, newY));
-    
-    character.style.left = newX + 'px';
-    character.style.top = newY + 'px';
-    
-    startMousePos.x = e.clientX;
-    startMousePos.y = e.clientY;
-}
-
-// Canvas移動
-function moveCanvas(deltaX, deltaY) {
-    // 🔧 修正: px移動量を%移動量に変換（座標系統一）
-    const parentRect = demoScreen.getBoundingClientRect();
+    // マウス移動量をビューポート%に変換
+    const parentRect = character.parentElement.getBoundingClientRect();
     const deltaXPercent = (deltaX / parentRect.width) * 100;
     const deltaYPercent = (deltaY / parentRect.height) * 100;
     
-    let newX = startElementPos.x + deltaXPercent;
-    let newY = startElementPos.y + deltaYPercent;
+    let newLeftPercent = startElementState.leftPercent + deltaXPercent;
+    let newTopPercent = startElementState.topPercent + deltaYPercent;
     
-    // 🚧 境界制限（Canvas表示範囲内に制限）
-    newX = Math.max(10, Math.min(90, newX));  // 10%-90%の範囲
-    newY = Math.max(10, Math.min(90, newY));  // 10%-90%の範囲
+    // 境界制限（%ベース）
+    newLeftPercent = Math.max(5, Math.min(95, newLeftPercent));
+    newTopPercent = Math.max(5, Math.min(95, newTopPercent));
     
-    characterCanvas.style.left = newX + '%';
-    characterCanvas.style.top = newY + '%';
+    // %座標でスタイル適用
+    character.style.left = newLeftPercent + '%';
+    character.style.top = newTopPercent + '%';
+    
+    console.log('🔧 移動更新（%）:', {
+        left: newLeftPercent.toFixed(1) + '%',
+        top: newTopPercent.toFixed(1) + '%'
+    });
 }
 
-// キャラクターリサイズ
-function resizeCharacter(deltaX, deltaY) {
-    const minSize = 20; // 最小サイズ
-    const maxSize = 200; // 最大サイズ
-    
-    let widthDiff = 0;
-    let heightDiff = 0;
-    
-    // 方向に応じたサイズ変更
-    switch (resizeDirection) {
-        case 'se': // 右下
-            widthDiff = deltaX;
-            heightDiff = deltaY;
-            break;
-        case 'sw': // 左下
-            widthDiff = -deltaX;
-            heightDiff = deltaY;
-            break;
-        case 'ne': // 右上
-            widthDiff = deltaX;
-            heightDiff = -deltaY;
-            break;
-        case 'nw': // 左上
-            widthDiff = -deltaX;
-            heightDiff = -deltaY;
-            break;
-    }
-    
-    const newWidth = Math.max(minSize, Math.min(maxSize, startElementPos.width + widthDiff));
-    const newHeight = Math.max(minSize, Math.min(maxSize, startElementPos.height + heightDiff));
-    
-    character.style.width = newWidth + 'px';
-    character.style.height = newHeight + 'px';
-}
+// 🗑️ Canvas移動削除：不要
 
-// Canvasリサイズ
-function resizeCanvas(deltaX, deltaY) {
-    const minSize = 60; // 最小サイズ
-    const maxSize = 300; // 最大サイズ
-    
-    let widthDiff = 0;
-    let heightDiff = 0;
-    let leftDiff = 0;
-    let topDiff = 0;
-    
-    // 方向に応じたサイズ・位置変更
-    switch (resizeDirection) {
-        case 'se': // 右下
-            widthDiff = deltaX;
-            heightDiff = deltaY;
-            break;
-        case 'sw': // 左下
-            widthDiff = -deltaX;
-            heightDiff = deltaY;
-            leftDiff = deltaX;
-            break;
-        case 'ne': // 右上
-            widthDiff = deltaX;
-            heightDiff = -deltaY;
-            topDiff = deltaY;
-            break;
-        case 'nw': // 左上
-            widthDiff = -deltaX;
-            heightDiff = -deltaY;
-            leftDiff = deltaX;
-            topDiff = deltaY;
-            break;
-    }
-    
-    const newWidth = Math.max(minSize, Math.min(maxSize, startElementPos.width + widthDiff));
-    const newHeight = Math.max(minSize, Math.min(maxSize, startElementPos.height + heightDiff));
-    const newLeft = startElementPos.left + leftDiff;
-    const newTop = startElementPos.top + topDiff;
-    
-    characterCanvas.style.width = newWidth + 'px';
-    characterCanvas.style.height = newHeight + 'px';
-    characterCanvas.style.left = newLeft + 'px';
-    characterCanvas.style.top = newTop + 'px';
-}
-
-// マウスアップ処理
 function handleMouseUp() {
-    if (isDragging) {
+    if (isDragging || isResizing) {
+        console.log('🔄 操作終了:', { isDragging, isResizing });
+        
+        // 状態リセット
         isDragging = false;
-        if (character) character.classList.remove('dragging');
-        if (characterCanvas) characterCanvas.classList.remove('dragging');
-    }
-    if (isResizing) {
         isResizing = false;
-        resizeType = '';
-        resizeDirection = '';
-        if (character) character.classList.remove('resizing');
-        if (characterCanvas) characterCanvas.classList.remove('resizing');
-    }
-}
-
-// 確定パネル表示
-function showConfirmPanel() {
-    if (editConfirmPanel) {
-        editConfirmPanel.classList.add('show');
-    }
-}
-
-// 確定パネル非表示
-function hideConfirmPanel() {
-    if (editConfirmPanel) {
-        editConfirmPanel.classList.remove('show');
-    }
-}
-
-// 編集確定
-function confirmEdit() {
-    // 現在の状態をsavedStateに保存
-    savedState.character.left = character.style.left;
-    savedState.character.top = character.style.top;
-    savedState.character.width = character.style.width;
-    savedState.character.height = character.style.height;
-    
-    savedState.canvas.left = characterCanvas.style.left;
-    savedState.canvas.top = characterCanvas.style.top;
-    savedState.canvas.width = characterCanvas.style.width;
-    savedState.canvas.height = characterCanvas.style.height;
-    
-    // localStorageに永続保存
-    localStorage.setItem('spine-positioning-state', JSON.stringify(savedState));
-    
-    endEditMode();
-    
-    if (coordinateDisplay) {
-        coordinateDisplay.textContent = '✅ 設定を保存しました';
-        setTimeout(() => {
-            coordinateDisplay.textContent = '';
-        }, 2000);
-    }
-    
-    console.log('✅ 編集内容を保存しました');
-}
-
-// 編集キャンセル
-function cancelEdit() {
-    if (coordinateDisplay) {
-        coordinateDisplay.textContent = '🔄 前回保存した状態に戻しています...';
-    }
-    
-    setTimeout(() => {
-        location.reload(); // 確実なロールバック
-    }, 500);
-}
-
-// 編集モード終了
-function endEditMode() {
-    // キャラクターを元の位置に戻す
-    if (characterCanvas && character) {
-        const originalParent = document.querySelector('.hero-content') || document.body;
+        activeHandle = null;
         
-        // ラッパーを解除する必要がある場合
-        if (originalCanvasElement && character.classList.contains('character-wrapper')) {
-            console.log('🔄 キャラクターラッパーを解除します');
-            
-            // 元のcanvas要素を取り出す
-            const canvasElement = originalCanvasElement;
-            
-            // ラッパーの位置情報を取得
-            const wrapperRect = character.getBoundingClientRect();
-            const canvasRect = characterCanvas.getBoundingClientRect();
-            const parentRect = originalParent.getBoundingClientRect();
-            
-            // canvas要素を元の親要素に戻す
-            originalParent.appendChild(canvasElement);
-            
-            // 元の位置スタイルを復元
-            if (savedState && savedState.canvas) {
-                const canvasLeft = parseFloat(savedState.canvas.left);
-                const canvasTop = parseFloat(savedState.canvas.top);
-                const canvasWidth = parseFloat(savedState.canvas.width);
-                const canvasHeight = parseFloat(savedState.canvas.height);
-                
-                // ラッパーの編集Canvas内での相対位置
-                const wrapperInCanvasX = wrapperRect.left + wrapperRect.width/2 - canvasRect.left;
-                const wrapperInCanvasY = wrapperRect.top + wrapperRect.height/2 - canvasRect.top;
-                
-                // 親要素に対する絶対位置を計算
-                const newLeft = canvasLeft + wrapperInCanvasX;
-                const newTop = canvasTop + wrapperInCanvasY;
-                
-                // 元のパーセント位置に変換
-                const parentWidth = parentRect.width;
-                const parentHeight = parentRect.height;
-                canvasElement.style.left = (newLeft / parentWidth * 100) + '%';
-                canvasElement.style.top = (newTop / parentHeight * 100) + '%';
-                canvasElement.style.width = wrapperRect.width + 'px';
-                canvasElement.style.height = wrapperRect.height + 'px';
-            }
-            
-            canvasElement.style.position = 'absolute';
-            canvasElement.style.transform = 'translate(-50%, -50%)';
-            
-            // ラッパーを削除
-            if (character.parentElement) {
-                character.parentElement.removeChild(character);
-            }
-            
-            // characterを元のcanvas要素に戻す
-            character = canvasElement;
-            originalCanvasElement = null;
-        } else {
-            // ラッパーでない場合の通常処理
-            const charRect = character.getBoundingClientRect();
-            const canvasRect = characterCanvas.getBoundingClientRect();
-            const parentRect = originalParent.getBoundingClientRect();
-            
-            originalParent.appendChild(character);
-            
-            if (savedState && savedState.canvas) {
-                const canvasLeft = parseFloat(savedState.canvas.left);
-                const canvasTop = parseFloat(savedState.canvas.top);
-                const canvasWidth = parseFloat(savedState.canvas.width);
-                const canvasHeight = parseFloat(savedState.canvas.height);
-                
-                const charInCanvasX = parseFloat(character.style.left.replace('%', '')) / 100 * canvasWidth;
-                const charInCanvasY = parseFloat(character.style.top.replace('%', '')) / 100 * canvasHeight;
-                
-                const newLeft = canvasLeft + charInCanvasX;
-                const newTop = canvasTop + charInCanvasY;
-                
-                const parentWidth = parentRect.width;
-                const parentHeight = parentRect.height;
-                character.style.left = (newLeft / parentWidth * 100) + '%';
-                character.style.top = (newTop / parentHeight * 100) + '%';
-            }
-            
-            character.style.transform = 'translate(-50%, -50%)';
+        // CSS状態リセット
+        if (character) {
+            character.classList.remove('dragging', 'resize-mode');
         }
+        // characterCanvas削除済み：不要
         
-        // 編集Canvasを削除
-        if (characterCanvas.parentElement) {
-            characterCanvas.parentElement.removeChild(characterCanvas);
-        }
-        characterCanvas = null;
-    }
-    
-    endCharacterEditMode();
-    endCanvasEditMode();
-    hideConfirmPanel();
-}
-
-function endCharacterEditMode() {
-    isCharacterEditMode = false;
-    
-    // 🆕 新ハンドルシステムを無効化
-    disableNewHandleSystem();
-    
-    if (character) {
-        character.classList.remove('edit-mode');
-        character.classList.remove('demo-character');
-    }
-    
-    const btn = document.getElementById('edit-character-btn');
-    if (btn) {
-        btn.textContent = 'キャラクター編集';
-        btn.style.background = '#ff6b6b';
+        console.log('✅ 状態リセット完了');
     }
 }
 
-function endCanvasEditMode() {
-    isCanvasEditMode = false;
-    if (characterCanvas) {
-        characterCanvas.classList.remove('canvas-edit-mode');
-    }
-    
-    const btn = document.getElementById('edit-canvas-btn');
-    if (btn) {
-        btn.textContent = '表示範囲編集';
-        btn.style.background = '#4ECDC4';
-    }
-}
-
-// 🎯 統一座標システム対応：座標表示更新
 function updateCoordinateDisplay() {
     if (!coordinateDisplay) return;
     
-    if (isCharacterEditMode) {
-        const x = parseFloat(character.style.left) || 60;
-        const y = parseFloat(character.style.top) || 60;
-        coordinateDisplay.textContent = `🎯 [統一システム] キャラクター位置: X=${x.toFixed(0)}px, Y=${y.toFixed(0)}px`;
-    } else if (isCanvasEditMode) {
-        const left = characterCanvas.style.left || '20%';
-        const top = characterCanvas.style.top || '70%';
-        const width = parseFloat(characterCanvas.style.width) || 120;
-        const height = parseFloat(characterCanvas.style.height) || 120;
-        coordinateDisplay.textContent = `🎯 [統一システム] Canvas: ${left}, ${top}, ${width.toFixed(0)}px×${height.toFixed(0)}px`;
+    coordinateDisplay.style.display = 'block';
+    
+    if (isCharacterEditMode && character) {
+        const left = character.style.left || '35%';
+        const top = character.style.top || '75%';
+        const width = character.style.width || '25%';
+        coordinateDisplay.textContent = `キャラクター: ${left}, ${top}, W=${width}`;
     }
 }
 
-// リサイズハンドラー設定
-function setupResizeHandlers() {
-    // キャラクターのリサイズハンドル（編集Canvas作成後に設定）
-    const setupCharacterHandles = () => {
-        if (character) {
-            const characterHandles = character.querySelectorAll('.resize-handle');
-            characterHandles.forEach(handle => {
-                handle.addEventListener('mousedown', (e) => {
-                    if (!isCharacterEditMode) return;
-                    startResize(e, 'character', handle.dataset.direction);
-                });
-            });
-        }
-    };
+function updateUI() {
+    // ボタンの状態更新（キャラクター編集のみ）
+    const charBtn = document.getElementById('edit-character-btn');
     
-    // Canvasのリサイズハンドル（編集Canvas作成後に設定）
-    const setupCanvasHandles = () => {
-        if (characterCanvas) {
-            const canvasHandles = characterCanvas.querySelectorAll('.canvas-resize-handle');
-            canvasHandles.forEach(handle => {
-                handle.addEventListener('mousedown', (e) => {
-                    if (!isCanvasEditMode) return;
-                    startResize(e, 'canvas', handle.dataset.direction);
-                });
-            });
-        }
-    };
-    
-    // 編集Canvas作成後に呼び出し
-    setupCharacterHandles();
-    setupCanvasHandles();
-    
-    console.log('🔧 リサイズハンドラー設定完了');
-}
-
-// リサイズ開始
-function startResize(e, target, direction) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    isResizing = true;
-    resizeType = target;
-    resizeDirection = direction;
-    
-    startMousePos = { x: e.clientX, y: e.clientY };
-    
-    if (target === 'character') {
-        const rect = character.getBoundingClientRect();
-        startElementPos = {
-            width: rect.width,
-            height: rect.height,
-            centerX: parseFloat(character.style.left.replace('%', '')) || 50,
-            centerY: parseFloat(character.style.top.replace('%', '')) || 50
-        };
-        character.classList.add('resizing');
-    } else if (target === 'canvas') {
-        const rect = characterCanvas.getBoundingClientRect();
-        startElementPos = {
-            width: rect.width,
-            height: rect.height,
-            left: parseFloat(characterCanvas.style.left) || 0,
-            top: parseFloat(characterCanvas.style.top) || 0
-        };
-        characterCanvas.classList.add('resizing');
+    if (charBtn) {
+        charBtn.textContent = isCharacterEditMode ? 'キャラクター編集中...' : 'キャラクター編集';
+        charBtn.style.background = isCharacterEditMode ? '#4caf50' : '#ff6b6b';
     }
-    
-    updateCoordinateDisplay();
 }
 
-// 初期化時にローカルストレージから復元
+function showConfirmPanel() {
+    if (editConfirmPanel) {
+        editConfirmPanel.style.display = 'block';
+    }
+}
+
+function hideConfirmPanel() {
+    if (editConfirmPanel) {
+        editConfirmPanel.style.display = 'none';
+    }
+}
+
+// ========== 保存・復元システム ========== //
+
 function loadSavedState() {
     try {
         const saved = localStorage.getItem('spine-positioning-state');
         if (saved) {
             const loadedState = JSON.parse(saved);
-            savedState = loadedState;
-            console.log('✅ 保存された状態を読み込みました');
-            return true;
+            
+            console.log('📊 localStorage読み込み分析:', {
+                loaded: loadedState,
+                default: savedState
+            });
+            
+            // 🔧 古い間違った値の検証・修正
+            if (loadedState.character) {
+                // top値が50%の場合は間違った古い値なので修正
+                if (loadedState.character.top === '50%') {
+                    console.log('🔧 古い間違ったtop値検出・修正:', loadedState.character.top, '→ 75%');
+                    loadedState.character.top = '75%';
+                }
+                
+                // px単位の場合は%に統一
+                if (loadedState.character.width && loadedState.character.width.includes('px')) {
+                    console.log('🔧 px単位検出・%に修正:', loadedState.character.width, '→ 25%');
+                    loadedState.character.width = '25%';
+                }
+            }
+            
+            savedState = { ...savedState, ...loadedState };
+            console.log('✅ 保存状態読み込み・検証完了:', savedState);
+        } else {
+            console.log('📝 localStorage未保存・デフォルト値使用:', savedState);
         }
     } catch (e) {
-        console.error('❌ localStorage読み込みエラー:', e);
+        console.warn('⚠️ localStorage読み込みエラー:', e);
     }
-    return false;
 }
 
-// ========== 🆕 新ハンドルシステム ========== //
-
-// 新ハンドルシステム有効化
-function enableNewHandleSystem() {
-    if (!character) return;
+function confirmEdit() {
+    console.log('💾 編集内容保存開始（%ベース）');
     
-    isNewHandleSystemEnabled = true;
-    character.classList.add('new-handle-system');
+    // 現在の%状態を保存
+    if (character) {
+        savedState.character = {
+            left: character.style.left,     // 例: "35%"
+            top: character.style.top,       // 例: "75%"
+            width: character.style.width    // 例: "25%"
+        };
+    }
     
-    // ラッパーのサイズは既に100%に設定されているため、追加の処理は不要
+    // localStorage保存
+    try {
+        localStorage.setItem('spine-positioning-state', JSON.stringify(savedState));
+        console.log('✅ 保存完了（%座標）:', savedState);
+        
+        if (coordinateDisplay) {
+            coordinateDisplay.textContent = '✅ 設定を保存しました（%座標）';
+            setTimeout(() => {
+                coordinateDisplay.style.display = 'none';
+            }, 2000);
+        }
+    } catch (e) {
+        console.error('❌ 保存エラー:', e);
+    }
     
-    // 既存のリサイズハンドルを非表示
-    const oldHandles = character.querySelectorAll('.resize-handle');
-    oldHandles.forEach(handle => handle.style.display = 'none');
-    
-    // 新ハンドルを作成
-    createNewHandles();
-    
-    // グローバルイベントリスナーを設定
-    setupGlobalEventListeners();
-    
-    console.log('✅ 新ハンドルシステム有効化完了');
+    endEditMode();
 }
 
-// 新ハンドル作成
-function createNewHandles() {
-    if (!character) return;
+function cancelEdit() {
+    console.log('🔄 編集キャンセル - リロード実行');
     
-    // 既存の新ハンドルを削除
-    const existingHandles = character.querySelectorAll('.new-handle');
+    if (coordinateDisplay) {
+        coordinateDisplay.textContent = '🔄 前回保存した状態に戻しています...';
+    }
+    
+    setTimeout(() => {
+        location.reload();
+    }, 500);
+}
+
+function endEditMode() {
+    console.log('🔄 編集モード終了');
+    
+    endCharacterEditMode();
+    hideConfirmPanel();
+    
+    if (coordinateDisplay) {
+        coordinateDisplay.style.display = 'none';
+    }
+}
+
+function endCharacterEditMode() {
+    isCharacterEditMode = false;
+    
+    if (character) {
+        character.classList.remove('edit-mode');
+        
+        // ハンドル削除
+        const handles = character.querySelectorAll('.handle');
+        handles.forEach(handle => handle.remove());
+    }
+    
+    updateUI();
+    console.log('✅ キャラクター編集モード終了');
+}
+
+// 🗑️ Canvas編集モード終了関数削除：不要
+
+// ========== シンプル・ハンドルシステム ========== //
+
+function createHandles() {
+    console.log('🔧 キャラクターハンドル作成開始');
+    
+    // 既存ハンドル削除
+    const existingHandles = character.querySelectorAll('.handle');
     existingHandles.forEach(handle => handle.remove());
     
-    // ハンドル定義
-    const handles = [
-        // 角ハンドル（対角拡縮）
-        { pos: 'nw', type: 'corner', title: '対角拡縮（左上）' },
-        { pos: 'ne', type: 'corner', title: '対角拡縮（右上）' },
-        { pos: 'sw', type: 'corner', title: '対角拡縮（左下）' },
-        { pos: 'se', type: 'corner', title: '対角拡縮（右下）' },
-        
-        // 辺ハンドル（片方向拡縮）
-        { pos: 'n', type: 'edge', title: '上辺拡縮' },
-        { pos: 's', type: 'edge', title: '下辺拡縮' },
-        { pos: 'w', type: 'edge', title: '左辺拡縮' },
-        { pos: 'e', type: 'edge', title: '右辺拡縮' },
-        
-        // 中央ハンドル（中心拡縮）
-        { pos: 'c', type: 'center', title: '中心基準拡縮' }
+    // ハンドル定義（対角固定点拡縮システム）
+    const handlePositions = [
+        // 4隅の緑ハンドル（対角固定点拡縮）
+        { pos: 'nw', title: '対角拡縮（右下を固定点として拡縮）', type: 'corner' },
+        { pos: 'ne', title: '対角拡縮（左下を固定点として拡縮）', type: 'corner' },
+        { pos: 'sw', title: '対角拡縮（右上を固定点として拡縮）', type: 'corner' },
+        { pos: 'se', title: '対角拡縮（左上を固定点として拡縮）', type: 'corner' },
+        // 辺の中央の青ハンドル（反対側固定点拡縮）
+        { pos: 'n', title: '上辺：下辺を固定点として拡縮', type: 'edge' },
+        { pos: 's', title: '下辺：上辺を固定点として拡縮', type: 'edge' },
+        { pos: 'w', title: '左辺：右辺を固定点として拡縮', type: 'edge' },
+        { pos: 'e', title: '右辺：左辺を固定点として拡縮', type: 'edge' },
+        // 中央の橙ハンドル（中心拡縮）
+        { pos: 'center', title: '中心拡縮（位置固定でサイズ変更）', type: 'center' }
     ];
     
-    // ハンドル要素を作成
-    handles.forEach(handle => {
-        const element = document.createElement('div');
-        element.className = `new-handle ${handle.type} ${handle.pos}`;
-        element.title = handle.title;
-        element.dataset.position = handle.pos;
-        element.dataset.type = handle.type;
+    // ハンドル要素作成
+    handlePositions.forEach(handleDef => {
+        const handle = document.createElement('div');
+        handle.className = `handle ${handleDef.pos}`;
+        handle.title = handleDef.title;
+        handle.dataset.position = handleDef.pos;
         
-        // クリックイベント
-        element.addEventListener('click', (e) => {
+        // ハンドルスタイル
+        handle.style.cssText = `
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s;
+        `;
+        
+        // 位置設定とカラー設定
+        switch (handleDef.pos) {
+            // 🟢 4隅の緑ハンドル（対角固定点拡縮）
+            case 'nw':
+                handle.style.top = '-6px';
+                handle.style.left = '-6px';
+                handle.style.background = '#4caf50';
+                break;
+            case 'ne':
+                handle.style.top = '-6px';
+                handle.style.right = '-6px';
+                handle.style.background = '#4caf50';
+                break;
+            case 'sw':
+                handle.style.bottom = '-6px';
+                handle.style.left = '-6px';
+                handle.style.background = '#4caf50';
+                break;
+            case 'se':
+                handle.style.bottom = '-6px';
+                handle.style.right = '-6px';
+                handle.style.background = '#4caf50';
+                break;
+            // 🔵 辺の中央の青ハンドル（反対側固定点拡縮）
+            case 'n':
+                handle.style.top = '-6px';
+                handle.style.left = '50%';
+                handle.style.transform = 'translateX(-50%)';
+                handle.style.background = '#2196f3';
+                break;
+            case 's':
+                handle.style.bottom = '-6px';
+                handle.style.left = '50%';
+                handle.style.transform = 'translateX(-50%)';
+                handle.style.background = '#2196f3';
+                break;
+            case 'w':
+                handle.style.left = '-6px';
+                handle.style.top = '50%';
+                handle.style.transform = 'translateY(-50%)';
+                handle.style.background = '#2196f3';
+                break;
+            case 'e':
+                handle.style.right = '-6px';
+                handle.style.top = '50%';
+                handle.style.transform = 'translateY(-50%)';
+                handle.style.background = '#2196f3';
+                break;
+            // 🟠 中央の橙ハンドル（中心拡縮）
+            case 'center':
+                handle.style.top = '50%';
+                handle.style.left = '50%';
+                handle.style.transform = 'translate(-50%, -50%)';
+                handle.style.background = '#ff9800';
+                handle.style.width = '16px';
+                handle.style.height = '16px';
+                break;
+        }
+        
+        // クリックイベント（対角固定点拡縮システム）
+        handle.addEventListener('mousedown', (e) => {
+            console.log('🎯 ハンドルmousedown:', handleDef.pos, handleDef.type);
             e.stopPropagation();
-            activateHandle(element);
-        });
+            e.preventDefault();
+            // character要素のイベントを無効化
+            isDragging = false;
+            isResizing = false;
+            startFixedPointResize(e, handleDef.pos, handleDef.type);
+        }, true); // キャプチャフェーズで実行
         
-        character.appendChild(element);
+        character.appendChild(handle);
     });
+    
+    console.log('✅ キャラクターハンドル作成完了');
 }
 
-// ハンドルアクティブ化
-function activateHandle(handleElement) {
-    // 既存のアクティブハンドルを非アクティブ化
-    if (activeHandle) {
-        activeHandle.classList.remove('active');
-    }
-    
-    // 新しいハンドルをアクティブ化
-    activeHandle = handleElement;
-    activeHandle.classList.add('active');
-    
-    // グローバルリサイズモードを有効化
-    isGlobalResizeMode = true;
-    character.classList.add('global-resize-mode');
-    
-    // フィードバック表示
-    showResizeFeedback(handleElement);
-    
-    console.log(`🎯 ハンドルアクティブ化: ${handleElement.dataset.position} (${handleElement.dataset.type})`);
-}
+// 🗑️ Canvasハンドル作成削除：不要
 
-// ハンドル非アクティブ化
-function deactivateHandle() {
-    if (activeHandle) {
-        activeHandle.classList.remove('active');
-        activeHandle = null;
-    }
+function startFixedPointResize(e, position, type) {
+    console.log('🎯 対角固定点拡縮開始（%ベース）:', { position, type });
     
-    isGlobalResizeMode = false;
-    character.classList.remove('global-resize-mode');
+    e.preventDefault();
+    e.stopPropagation();
     
-    hideResizeFeedback();
-    
-    console.log('🔄 ハンドル非アクティブ化');
-}
-
-// リサイズフィードバック表示
-function showResizeFeedback(handleElement) {
-    const type = handleElement.dataset.type;
-    const position = handleElement.dataset.position;
-    
-    let feedbackText = '';
-    switch (type) {
-        case 'corner':
-            feedbackText = `🟢 対角拡縮 (${position.toUpperCase()})`;
-            break;
-        case 'edge':
-            feedbackText = `🔵 片方向拡縮 (${position.toUpperCase()})`;
-            break;
-        case 'center':
-            feedbackText = `🟠 中心拡縮`;
-            break;
-    }
-    
-    feedbackText += ' - 画面をドラッグして拡縮';
-    
-    if (!resizeFeedback) {
-        resizeFeedback = document.createElement('div');
-        resizeFeedback.className = 'resize-feedback';
-        document.body.appendChild(resizeFeedback);
-    }
-    
-    resizeFeedback.textContent = feedbackText;
-    resizeFeedback.style.display = 'block';
-    
-    // マウス位置に追従
-    document.addEventListener('mousemove', updateFeedbackPosition);
-}
-
-// リサイズフィードバック非表示
-function hideResizeFeedback() {
-    if (resizeFeedback) {
-        resizeFeedback.style.display = 'none';
-        document.removeEventListener('mousemove', updateFeedbackPosition);
-    }
-}
-
-// フィードバック位置更新
-function updateFeedbackPosition(e) {
-    if (resizeFeedback && resizeFeedback.style.display !== 'none') {
-        resizeFeedback.style.left = (e.clientX + 10) + 'px';
-        resizeFeedback.style.top = (e.clientY - 30) + 'px';
-    }
-}
-
-// グローバルイベントリスナー設定
-function setupGlobalEventListeners() {
-    document.addEventListener('mousedown', handleGlobalMouseDown);
-    document.addEventListener('mousemove', handleGlobalMouseMove);
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-    document.addEventListener('click', handleGlobalClick);
-}
-
-// グローバルマウスダウン
-function handleGlobalMouseDown(e) {
-    if (!isNewHandleSystemEnabled || !isGlobalResizeMode) return;
-    
-    // ハンドルクリックは除外
-    if (e.target.classList.contains('new-handle')) return;
-    
-    // キャラクター以外をクリックした場合は移動モード
-    if (!character.contains(e.target)) {
-        startCharacterMove(e);
-        return;
-    }
-    
-    // アクティブハンドルがある場合はリサイズ開始
-    if (activeHandle) {
-        startGlobalResize(e);
-    }
-}
-
-// グローバルリサイズ開始
-function startGlobalResize(e) {
-    if (!activeHandle) return;
-    
-    isDragging = true;
-    isResizing = true;
+    // 確実に状態設定
+    isDragging = false; // 移動モードを無効化
+    isResizing = true;  // リサイズモードを有効化
+    activeHandle = { dataset: { position, type } };
     startMousePos = { x: e.clientX, y: e.clientY };
     
-    // キャラクターの現在状態を記録
-    const rect = character.getBoundingClientRect();
-    startElementPos = {
-        centerX: parseFloat(character.style.left) || 60,
-        centerY: parseFloat(character.style.top) || 60,
-        width: rect.width,
-        height: rect.height
+    // 現在の%状態を記録
+    const currentLeftPercent = parseFloat(character.style.left) || 35;
+    const currentTopPercent = parseFloat(character.style.top) || 75;
+    const currentWidthPercent = parseFloat(character.style.width) || 25;
+    
+    startElementState = {
+        leftPercent: currentLeftPercent,
+        topPercent: currentTopPercent,
+        widthPercent: currentWidthPercent,
+        // 固定点%座標（対角固定点計算用）
+        leftEdgePercent: currentLeftPercent - currentWidthPercent / 2,
+        rightEdgePercent: currentLeftPercent + currentWidthPercent / 2,
+        topEdgePercent: currentTopPercent - currentWidthPercent / 2,     // 正方形比率想定
+        bottomEdgePercent: currentTopPercent + currentWidthPercent / 2
     };
     
-    console.log('🎯 グローバルリサイズ開始');
+    character.classList.add('resize-mode');
+    console.log('✅ 対角固定点拡縮準備完了（%座標）:', startElementState);
 }
 
-// キャラクター移動開始
-function startCharacterMove(e) {
-    isDragging = true;
-    startMousePos = { x: e.clientX, y: e.clientY };
-    
-    // 現在位置を取得
-    const rect = character.getBoundingClientRect();
-    const canvasRect = characterCanvas.getBoundingClientRect();
-    
-    const currentX = rect.left + rect.width/2 - canvasRect.left;
-    const currentY = rect.top + rect.height/2 - canvasRect.top;
-    
-    character.style.left = currentX + 'px';
-    character.style.top = currentY + 'px';
-    
-    console.log('🎯 キャラクター移動開始');
-}
+// 🗑️ Canvas拡縮削除：不要
 
-// グローバルマウス移動
-function handleGlobalMouseMove(e) {
-    if (!isDragging) return;
-    
-    const deltaX = e.clientX - startMousePos.x;
-    const deltaY = e.clientY - startMousePos.y;
-    
-    if (isResizing && activeHandle) {
-        performGlobalResize(deltaX, deltaY);
-    } else {
-        moveCharacter(deltaX, deltaY);
-    }
-}
-
-// グローバルリサイズ実行
-function performGlobalResize(deltaX, deltaY) {
+function performResize(deltaX, deltaY) {
     if (!activeHandle) return;
     
     const position = activeHandle.dataset.position;
+    const type = activeHandle.dataset.type || 'character';
+    
+    console.log('🔧 リサイズ実行:', { position, type, deltaX, deltaY });
+    
+    // Canvas編集削除：キャラクター編集のみ対応
+    if (type === 'character' || type === 'corner' || type === 'edge' || type === 'center') {
+        performCharacterResize(deltaX, deltaY, position);
+    }
+}
+
+function performCharacterResize(deltaX, deltaY, position) {
     const type = activeHandle.dataset.type;
+    let newLeftPercent = startElementState.leftPercent;
+    let newTopPercent = startElementState.topPercent;
+    let newWidthPercent = startElementState.widthPercent;
     
-    let newWidth = startElementPos.width;
-    let newHeight = startElementPos.height;
-    let newCenterX = startElementPos.centerX;
-    let newCenterY = startElementPos.centerY;
+    // マウス移動量を%スケールに変換（感度調整）
+    const parentRect = character.parentElement.getBoundingClientRect();
+    const scaleFactorX = (deltaX / parentRect.width) * 100;
+    const scaleFactorY = (deltaY / parentRect.height) * 100;
+    const combinedScaleFactor = (scaleFactorX + scaleFactorY) / 2; // 平均値
     
-    // リサイズロジック
-    switch (type) {
-        case 'center':
-            // 中心基準（位置変更なし）
-            const scale = 1 + (deltaX + deltaY) / 200;
-            newWidth = Math.max(20, startElementPos.width * scale);
-            newHeight = Math.max(20, startElementPos.height * scale);
-            break;
-            
-        case 'corner':
-            // 対角拡縮（縦横比維持）
-            const cornerScale = 1 + (deltaX + deltaY) / 200;
-            newWidth = Math.max(20, startElementPos.width * cornerScale);
-            newHeight = Math.max(20, startElementPos.height * cornerScale);
-            
-            // 対角固定点調整
-            switch (position) {
-                case 'se':
-                    newCenterX = startElementPos.centerX + (newWidth - startElementPos.width) / 2;
-                    newCenterY = startElementPos.centerY + (newHeight - startElementPos.height) / 2;
-                    break;
-                case 'sw':
-                    newCenterX = startElementPos.centerX - (newWidth - startElementPos.width) / 2;
-                    newCenterY = startElementPos.centerY + (newHeight - startElementPos.height) / 2;
-                    break;
-                case 'ne':
-                    newCenterX = startElementPos.centerX + (newWidth - startElementPos.width) / 2;
-                    newCenterY = startElementPos.centerY - (newHeight - startElementPos.height) / 2;
-                    break;
-                case 'nw':
-                    newCenterX = startElementPos.centerX - (newWidth - startElementPos.width) / 2;
-                    newCenterY = startElementPos.centerY - (newHeight - startElementPos.height) / 2;
-                    break;
-            }
-            break;
-            
-        case 'edge':
-            // 片方向拡縮
-            switch (position) {
-                case 'n':
-                    newHeight = Math.max(20, startElementPos.height - deltaY);
-                    newCenterY = startElementPos.centerY + deltaY / 2;
-                    break;
-                case 's':
-                    newHeight = Math.max(20, startElementPos.height + deltaY);
-                    newCenterY = startElementPos.centerY + deltaY / 2;
-                    break;
-                case 'w':
-                    newWidth = Math.max(20, startElementPos.width - deltaX);
-                    newCenterX = startElementPos.centerX + deltaX / 2;
-                    break;
-                case 'e':
-                    newWidth = Math.max(20, startElementPos.width + deltaX);
-                    newCenterX = startElementPos.centerX + deltaX / 2;
-                    break;
-            }
-            break;
+    // %ベースでのサイズ変更
+    const sizeChange = combinedScaleFactor * 0.5; // 感度調整
+    newWidthPercent = Math.max(5, Math.min(50, startElementState.widthPercent + sizeChange));
+    
+    console.log('📊 %ベーススケール計算:', {
+        deltaX, deltaY, scaleFactorX, scaleFactorY, combinedScaleFactor,
+        sizeChange, newWidthPercent, type, position
+    });
+    
+    if (type === 'center') {
+        // 🟠 中心拡縮：位置固定でサイズのみ変更
+        // newLeftPercent, newTopPercentはそのまま（位置維持）
+        
+    } else if (type === 'corner') {
+        // 🟢 角ハンドル：対角の角を固定点として拡縮
+        const halfSizeChange = (newWidthPercent - startElementState.widthPercent) / 2;
+        
+        switch (position) {
+            case 'nw': // 左上 → 右下を固定点として拡縮
+                newLeftPercent = startElementState.rightEdgePercent - newWidthPercent / 2;
+                newTopPercent = startElementState.bottomEdgePercent - newWidthPercent / 2;
+                break;
+            case 'ne': // 右上 → 左下を固定点として拡縮
+                newLeftPercent = startElementState.leftEdgePercent + newWidthPercent / 2;
+                newTopPercent = startElementState.bottomEdgePercent - newWidthPercent / 2;
+                break;
+            case 'sw': // 左下 → 右上を固定点として拡縮
+                newLeftPercent = startElementState.rightEdgePercent - newWidthPercent / 2;
+                newTopPercent = startElementState.topEdgePercent + newWidthPercent / 2;
+                break;
+            case 'se': // 右下 → 左上を固定点として拡縮
+                newLeftPercent = startElementState.leftEdgePercent + newWidthPercent / 2;
+                newTopPercent = startElementState.topEdgePercent + newWidthPercent / 2;
+                break;
+        }
+        
+    } else if (type === 'edge') {
+        // 🔵 辺ハンドル：反対側の辺を固定点として拡縮
+        switch (position) {
+            case 'n': // 上辺 → 下辺を固定として拡縮
+                newTopPercent = startElementState.bottomEdgePercent - newWidthPercent / 2;
+                break;
+            case 's': // 下辺 → 上辺を固定として拡縮
+                newTopPercent = startElementState.topEdgePercent + newWidthPercent / 2;
+                break;
+            case 'w': // 左辺 → 右辺を固定として拡縮
+                newLeftPercent = startElementState.rightEdgePercent - newWidthPercent / 2;
+                break;
+            case 'e': // 右辺 → 左辺を固定として拡縮
+                newLeftPercent = startElementState.leftEdgePercent + newWidthPercent / 2;
+                break;
+        }
     }
     
-    // サイズと位置を適用
-    character.style.width = newWidth + 'px';
-    character.style.height = newHeight + 'px';
-    character.style.left = newCenterX + 'px';
-    character.style.top = newCenterY + 'px';
+    // %座標でスタイル適用
+    character.style.left = newLeftPercent + '%';
+    character.style.top = newTopPercent + '%';
+    character.style.width = newWidthPercent + '%';
+    
+    console.log('🎨 %ベースCSS適用:', {
+        left: newLeftPercent.toFixed(1) + '%',
+        top: newTopPercent.toFixed(1) + '%',
+        width: newWidthPercent.toFixed(1) + '%'
+    });
     
     updateCoordinateDisplay();
 }
 
-// グローバルマウスアップ
-function handleGlobalMouseUp() {
-    if (isDragging) {
-        isDragging = false;
-        isResizing = false;
-        console.log('🔄 グローバル操作終了');
-    }
-}
+// 🗑️ Canvas拡縮削除：不要
 
-// グローバルクリック（ハンドル非アクティブ化用）
-function handleGlobalClick(e) {
-    if (!isNewHandleSystemEnabled) return;
-    
-    // ハンドルまたはキャラクター内のクリックは無視
-    if (e.target.classList.contains('new-handle') || character.contains(e.target)) {
-        return;
-    }
-    
-    // 空白クリックでハンドル非アクティブ化
-    deactivateHandle();
-}
-
-// 新ハンドルシステム無効化
-function disableNewHandleSystem() {
-    if (!isNewHandleSystemEnabled) return;
-    
-    isNewHandleSystemEnabled = false;
-    deactivateHandle();
-    
-    if (character) {
-        character.classList.remove('new-handle-system', 'global-resize-mode');
-        
-        // 新ハンドルを削除
-        const newHandles = character.querySelectorAll('.new-handle');
-        newHandles.forEach(handle => handle.remove());
-        
-        // 既存ハンドルを復活
-        const oldHandles = character.querySelectorAll('.resize-handle');
-        oldHandles.forEach(handle => handle.style.display = 'block');
-    }
-    
-    // グローバルイベントリスナーを削除
-    document.removeEventListener('mousedown', handleGlobalMouseDown);
-    document.removeEventListener('mousemove', handleGlobalMouseMove);
-    document.removeEventListener('mouseup', handleGlobalMouseUp);
-    document.removeEventListener('click', handleGlobalClick);
-    
-    hideResizeFeedback();
-    
-    console.log('🔄 新ハンドルシステム無効化完了');
-}
-
-console.log('✅ 統一座標システム対応 Spine編集システム読み込み完了');
-console.log('🎯 統一座標システム: 4レイヤー→CSSメインレイヤーに統一完了');
-console.log('  - CSS位置・サイズ制御（メインレイヤー）');
-console.log('  - WebGL解像度 = CSS表示サイズ（統一）');
-console.log('  - Skeleton座標 = Canvas中央固定（簡素化）');
-console.log('🆕 新ハンドルシステム: ○→●アクティブ化方式対応');
+console.log('🎯 Spine編集システム v2.0 読み込み完了 - 全機能実装済み');

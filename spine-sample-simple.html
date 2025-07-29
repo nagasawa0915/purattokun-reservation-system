@@ -369,7 +369,6 @@
             <h3 style="margin: 0 0 15px 0; color: #ff6b6b;">🎯 シンプル編集モード</h3>
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <button id="edit-character-btn" style="padding: 10px 15px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer;">キャラクター編集</button>
-              <button id="edit-canvas-btn" style="padding: 10px 15px; background: #4ECDC4; color: white; border: none; border-radius: 5px; cursor: pointer;">表示範囲編集</button>
               <button id="exit-edit-btn" style="padding: 10px 15px; background: #95A5A6; color: white; border: none; border-radius: 5px; cursor: pointer;">編集終了</button>
             </div>
             <div id="coordinate-display" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 12px; color: #666;">
@@ -398,16 +397,7 @@
           }
         });
         
-        document.getElementById('edit-canvas-btn').addEventListener('click', () => {
-          console.log('🎯 Canvas編集モード開始');
-          // spine-positioning-system-explanation.js の関数を呼び出し
-          if (typeof startCanvasEdit === 'function') {
-            startCanvasEdit();
-          } else {
-            console.error('❌ Canvas編集機能が見つかりません');
-            alert('Canvas編集機能が読み込まれていません。編集システムファイルを確認してください。');
-          }
-        });
+        // Canvas編集ボタン削除：表示範囲編集は不要
         
         document.getElementById('exit-edit-btn').addEventListener('click', () => {
           if (confirm('編集モードを終了しますか？')) {

@@ -307,3 +307,72 @@
     background: #f44336;
     color: white;
 }
+
+/* ========== 🎯 新統一ハンドルシステム（.handle クラス） ========== */
+
+/* ベースハンドルスタイル */
+.handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #333;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
+}
+
+/* 編集モード有効時のみハンドル表示 */
+.edit-mode .handle {
+    display: block;
+}
+
+/* 4隅の緑ハンドル（対角固定点拡縮） */
+.handle.nw, .handle.ne, .handle.sw, .handle.se {
+    background: #4caf50;
+}
+
+.handle.nw:hover, .handle.ne:hover, .handle.sw:hover, .handle.se:hover {
+    background: #66bb6a;
+    transform: scale(1.2);
+}
+
+/* 辺の中央の青ハンドル（反対側固定点拡縮） */
+.handle.n, .handle.s, .handle.w, .handle.e {
+    background: #2196f3;
+}
+
+.handle.n:hover, .handle.s:hover, .handle.w:hover, .handle.e:hover {
+    background: #42a5f5;
+    transform: scale(1.2);
+}
+
+/* 中央の橙ハンドル（中心拡縮） */
+.handle.center {
+    background: #ff9800;
+    width: 16px;
+    height: 16px;
+}
+
+.handle.center:hover {
+    background: #ffb74d;
+    transform: scale(1.2);
+}
+
+/* ハンドル位置設定 */
+.handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+.handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+.handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+.handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+
+.handle.n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.handle.s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.handle.w { left: -6px; top: 50%; transform: translateY(-50%); cursor: w-resize; }
+.handle.e { right: -6px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
+
+.handle.center { 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%); 
+    cursor: move; 
+}

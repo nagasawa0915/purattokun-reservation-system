@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スケールシステムテスト</title>
+    <link rel="stylesheet" href="spine-positioning-system-explanation.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        
+        .test-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: white;
+            border: 2px solid #ccc;
+            margin: 20px auto;
+        }
+        
+        .test-character {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: 2px solid #333;
+            transform: translate(-50%, -50%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h3>🎯 新スケールシステムテスト</h3>
+        <p><strong>テスト手順：</strong></p>
+        <ol>
+            <li>「編集開始」ボタンをクリック</li>
+            <li><strong>対角拡縮テスト</strong>: 角のハンドル（〇）をクリックして●にした後、画面をドラッグ</li>
+            <li><strong>中心拡縮テスト</strong>: 中央のオレンジハンドル（〇）をクリックして●にした後、上下にドラッグ</li>
+            <li>期待動作：
+                <ul>
+                    <li>角ハンドル: 対角の点を固定点として拡縮</li>
+                    <li>中央ハンドル: 上で縮小、下で拡大（中心位置固定）</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+    
+    <div class="controls">
+        <button id="start-edit" onclick="startTest()">編集開始</button>
+        <button id="end-edit" onclick="endTest()" style="display:none;">編集終了</button>
+        <div id="status">テスト準備完了</div>
+    </div>
+    
+    <div class="test-container">
+        <div class="test-character" id="test-character">
+            テスト
+        </div>
+    </div>
+    
+    <script src="spine-positioning-system-explanation.js"></script>
+    <script>
+        function startTest() {
+            // 編集システムに必要な要素を設定
+            const character = document.getElementById('test-character');
+            const container = character.parentElement;
+            
+            // 編集システム用のIDを設定
+            character.id = 'purattokun-canvas';
+            
+            // 座標表示用要素を作成
+            if (!document.getElementById('coordinate-display')) {
+                const coordDisplay = document.createElement('div');
+                coordDisplay.id = 'coordinate-display';
+                coordDisplay.style.cssText = 'position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-family: monospace; z-index: 1000;';
+                document.body.appendChild(coordDisplay);
+            }
+            
+            // 編集モード開始
+            try {
+                startCharacterEdit();
+                document.getElementById('start-edit').style.display = 'none';
+                document.getElementById('end-edit').style.display = 'inline-block';
+                document.getElementById('status').textContent = '✅ 編集モード開始 - ハンドルをクリックしてテストしてください';
+            } catch (error) {
+                document.getElementById('status').textContent = '❌ エラー: ' + error.message;
+                console.error('編集モード開始エラー:', error);
+            }
+        }
+        
+        function endTest() {
+            try {
+                endEditMode();
+                document.getElementById('start-edit').style.display = 'inline-block';
+                document.getElementById('end-edit').style.display = 'none';
+                document.getElementById('status').textContent = '🔄 編集モード終了';
+            } catch (error) {
+                document.getElementById('status').textContent = '❌ 終了エラー: ' + error.message;
+                console.error('編集モード終了エラー:', error);
+            }
+        }
+        
+        // ページ読み込み完了後の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ テストページ読み込み完了');
+        });
+    </script>
+</body>
+</html>
