@@ -105,119 +105,36 @@ function initializeDOMElements() {
             console.log('🔄 既存のラッパーを再利用します');
             character = existingWrapper;
         } else {
-            // 🎯 修正: CSS位置値を直接取得（transform前の値）
+            // 🎯 修正: 実際のCSS計算値を正確に取得
             const computedStyle = window.getComputedStyle(character);
             const parentRect = character.parentElement.getBoundingClientRect();
-            const canvasRect = character.getBoundingClientRect();
             
-            console.log('🔍 Canvas要素の現在の状態:', {
-                element: character.tagName + (character.id ? '#' + character.id : ''),
-                style: {
-                    left: character.style.left || 'not set',
-                    top: character.style.top || 'not set',
-                    transform: character.style.transform || 'not set',
-                    width: character.style.width || 'not set'
-                },
-                computed: {
-                    left: computedStyle.left,
-                    top: computedStyle.top,
-                    transform: computedStyle.transform,
-                    width: computedStyle.width
-                },
-                rect: {
-                    left: canvasRect.left,
-                    top: canvasRect.top,
-                    width: canvasRect.width,
-                    height: canvasRect.height
-                }
-            });
+            const actualLeftPx = parseFloat(computedStyle.left);
+            const actualTopPx = parseFloat(computedStyle.top);
+            const actualWidthPx = parseFloat(computedStyle.width);
+            const actualHeightPx = parseFloat(computedStyle.height);
             
-            // CSS position値を取得（transform適用前の値）
-            const cssLeftPx = parseFloat(computedStyle.left);
-            const cssTopPx = parseFloat(computedStyle.top);
-            const cssWidthPx = canvasRect.width;  // 実際の表示サイズ
-            const cssHeightPx = canvasRect.height; // 実際の表示サイズ
+            const actualLeftPercent = ((actualLeftPx / parentRect.width) * 100).toFixed(1);
+            const actualTopPercent = ((actualTopPx / parentRect.height) * 100).toFixed(1);
+            const actualWidthPercent = ((actualWidthPx / parentRect.width) * 100).toFixed(1);
+            const actualHeightPercent = ((actualHeightPx / parentRect.height) * 100).toFixed(1);
             
-            // transformの中心点補正を計算
-            const hasTransform = computedStyle.transform !== 'none' && computedStyle.transform !== '';
-            let adjustedLeftPx = cssLeftPx;
-            let adjustedTopPx = cssTopPx;
-            
-            // transformの検出（matrix形式の値を解析）
-            const transformStr = computedStyle.transform;
-            let needsCenterCorrection = false;
-            
-            // style属性から元のtransform値を確認
-            if (character.style.transform && character.style.transform.includes('translate(-50%, -50%)')) {
-                needsCenterCorrection = true;
-                console.log('✅ style.transformから translate(-50%, -50%) を検出');
-            } else if (hasTransform && transformStr.includes('matrix')) {
-                // matrix値から実際の変換を解析
-                const matrixMatch = transformStr.match(/matrix\(([\d\s,.-]+)\)/);
-                if (matrixMatch) {
-                    const values = matrixMatch[1].split(',').map(v => parseFloat(v.trim()));
-                    const translateX = values[4]; // matrix の5番目の値がX移動
-                    const translateY = values[5]; // matrix の6番目の値がY移動
-                    
-                    // translateの値が要素サイズの約半分なら、translate(-50%, -50%)相当
-                    if (Math.abs(translateX) > cssWidthPx * 0.4 && Math.abs(translateX) < cssWidthPx * 0.6 &&
-                        Math.abs(translateY) > cssHeightPx * 0.4 && Math.abs(translateY) < cssHeightPx * 0.6) {
-                        needsCenterCorrection = true;
-                        console.log('✅ matrixから translate(-50%, -50%) 相当を検出', {
-                            translateX, translateY,
-                            halfWidth: cssWidthPx / 2,
-                            halfHeight: cssHeightPx / 2
-                        });
-                    }
-                }
-            }
-            
-            if (needsCenterCorrection) {
-                // translate(-50%, -50%)がある場合、左上基準の位置に変換
-                // CSS位置は中心点なので、幅/高さの半分を引く
-                adjustedLeftPx = cssLeftPx - (cssWidthPx / 2);
-                adjustedTopPx = cssTopPx - (cssHeightPx / 2);
-                console.log('🔄 Transform補正適用:', {
-                    original: { left: cssLeftPx, top: cssTopPx },
-                    adjusted: { left: adjustedLeftPx, top: adjustedTopPx },
-                    size: { width: cssWidthPx, height: cssHeightPx },
-                    transform: transformStr
-                });
-            } else {
-                console.log('ℹ️ Transform補正なし:', {
-                    hasTransform,
-                    needsCenterCorrection,
-                    transform: transformStr
-                });
-            }
-            
-            const wrapperLeftPercent = ((adjustedLeftPx / parentRect.width) * 100).toFixed(1);
-            const wrapperTopPercent = ((adjustedTopPx / parentRect.height) * 100).toFixed(1);
-            const wrapperWidthPercent = ((cssWidthPx / parentRect.width) * 100).toFixed(1);
-            const wrapperHeightPercent = ((cssHeightPx / parentRect.height) * 100).toFixed(1);
-            
-            console.log("🔧 ラッパー位置計算（CSS基準・transform補正済み）:", {
-                css_position: { 
-                    left: computedStyle.left, 
-                    top: computedStyle.top,
-                    transform: computedStyle.transform
-                },
-                wrapper_position: {
-                    left: wrapperLeftPercent + "%",
-                    top: wrapperTopPercent + "%",
-                    width: wrapperWidthPercent + "%",
-                    height: wrapperHeightPercent + "%"
-                }
+            console.log("🔧 ラッパー位置計算（%統一版）:", {
+                computed_left: actualLeftPx + "px → " + actualLeftPercent + "%",
+                computed_top: actualTopPx + "px → " + actualTopPercent + "%",
+                width: actualWidthPx + "px → " + actualWidthPercent + "%",
+                height: actualHeightPx + "px → " + actualHeightPercent + "%"
             });
             
             const characterWrapper = document.createElement('div');
             characterWrapper.className = 'character-wrapper demo-character';
             characterWrapper.style.cssText = `
                 position: absolute;
-                left: ${wrapperLeftPercent}%;
-                top: ${wrapperTopPercent}%;
-                width: ${wrapperWidthPercent}%;
-                height: ${wrapperHeightPercent}%;
+                left: ${actualLeftPercent}%;
+                top: ${actualTopPercent}%;
+                width: ${actualWidthPercent}%;
+                height: ${actualHeightPercent}%;
+                transform: translate(-50%, -50%);
                 cursor: move;
                 border: 2px dashed rgba(255, 107, 107, 0.3);
                 border-radius: 8px;
@@ -229,13 +146,11 @@ function initializeDOMElements() {
             parent.insertBefore(characterWrapper, character);
             characterWrapper.appendChild(character);
             
-            // Canvas要素の位置スタイルをリセット（ラッパー内で中央配置）
-            character.style.position = 'absolute';
-            character.style.left = '50%';
-            character.style.top = '50%';
-            character.style.transform = 'translate(-50%, -50%)';
-            character.style.width = '100%';
-            character.style.height = '100%';
+            // Canvas要素の位置スタイルをリセット（ラッパーが制御）
+            character.style.position = 'static';
+            character.style.left = '';
+            character.style.top = '';
+            character.style.transform = '';
             
             // characterをラッパーに更新
             character = characterWrapper;
@@ -308,7 +223,7 @@ function setupCharacterInitialState() {
     
     // 基本設定は常に適用
     character.style.position = 'absolute';
-    // 座標系統一: 左上基準に統一のためtransform削除
+    character.style.transform = 'translate(-50%, -50%)';  // 中心点基準
     
     console.log('✅ キャラクター初期状態設定完了（動的取得ベース）:', {
         left: character.style.left,
