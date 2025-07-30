@@ -456,29 +456,6 @@ function createConfirmPanel() {
             <div style="text-align: center; padding: 8px;">
                 <p style="margin: 0 0 8px 0; font-size: 10px; color: #333;">編集を確定しますか？</p>
                 
-                <!-- 🎯 数値入力セクション -->
-                <div class="numeric-controls">
-                    <h5>📊 数値設定</h5>
-                    <div class="numeric-input">
-                        <label>横位置:</label>
-                        <input type="number" id="numeric-x" min="0" max="100" step="1" value="18">
-                        <span>%</span>
-                    </div>
-                    <div class="numeric-input">
-                        <label>縦位置:</label>
-                        <input type="number" id="numeric-y" min="0" max="100" step="1" value="49">
-                        <span>%</span>
-                    </div>
-                    <div class="numeric-input">
-                        <label>サイズ:</label>
-                        <input type="number" id="numeric-scale" min="0.1" max="2.0" step="0.1" value="0.55">
-                        <span>倍</span>
-                    </div>
-                    <div class="numeric-buttons">
-                        <button class="numeric-btn apply" onclick="applyNumericValues()">適用</button>
-                        <button class="numeric-btn reset" onclick="resetNumericValues()">リセット</button>
-                    </div>
-                </div>
                 
                 <div style="display: flex; gap: 6px; justify-content: center; margin-top: 8px;">
                     <button class="save-btn" onclick="confirmEdit()" style="padding: 4px 8px; background: #4caf50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 9px;">保存</button>
@@ -783,10 +760,6 @@ function startCharacterEdit() {
     updateUI();
     showConfirmPanel();
     
-    // 数値入力システム初期化（確認パネル表示後に実行）
-    setTimeout(() => {
-        initializeNumericInputs();
-    }, 100);
     
     console.log('✅ キャラクター編集モード有効化完了（計算値ベース保持・数値入力システム統合）');
 }
@@ -1465,210 +1438,11 @@ function performCharacterResize(deltaX, deltaY, position) {
 
 // 🗑️ Canvas拡縮削除：不要
 
-// ========== 🎯 数値入力システム ========== //
+// ========== 🔍 デバッグ・診断システム（大幅強化版） ========== //
 
-// 数値入力フィールドの参照
-let numericInputs = {
-    x: null,
-    y: null,
-    scale: null
-};
 
-// 数値入力の初期化
-function initializeNumericInputs() {
-    console.log('🔧 数値入力システム初期化開始');
-    
-    // 数値入力フィールドの参照取得
-    numericInputs.x = document.getElementById('numeric-x');
-    numericInputs.y = document.getElementById('numeric-y');
-    numericInputs.scale = document.getElementById('numeric-scale');
-    
-    // 存在確認
-    if (!numericInputs.x || !numericInputs.y || !numericInputs.scale) {
-        console.warn('⚠️ 数値入力フィールドが見つかりません');
-        return false;
-    }
-    
-    // リアルタイム更新イベントリスナー設定
-    numericInputs.x.addEventListener('input', handleNumericInput);
-    numericInputs.y.addEventListener('input', handleNumericInput);
-    numericInputs.scale.addEventListener('input', handleNumericInput);
-    
-    // 初期値を現在のキャラクター位置から取得して設定
-    updateNumericInputsFromCharacter();
-    
-    console.log('✅ 数値入力システム初期化完了');
-    return true;
-}
 
-// キャラクター位置から数値入力フィールドを更新
-function updateNumericInputsFromCharacter() {
-    if (!character || !numericInputs.x) return;
-    
-    console.log('🔄 数値入力フィールドを現在位置で更新');
-    
-    // 現在の%位置を取得
-    const currentState = character.style.left ? 
-        { left: character.style.left, top: character.style.top, width: character.style.width } :
-        getDynamicCharacterState(character);
-    
-    const leftPercent = parseFloat(currentState.left);
-    const topPercent = parseFloat(currentState.top);
-    const widthPercent = parseFloat(currentState.width);
-    
-    // 数値入力フィールドに反映
-    numericInputs.x.value = Math.round(leftPercent);
-    numericInputs.y.value = Math.round(topPercent);
-    numericInputs.scale.value = (widthPercent / 20).toFixed(2); // 20%基準でスケール計算
-    
-    console.log('✅ 数値更新完了:', {
-        x: numericInputs.x.value + '%',
-        y: numericInputs.y.value + '%',
-        scale: numericInputs.scale.value + '倍'
-    });
-}
 
-// 数値入力の変更処理（リアルタイム更新）
-function handleNumericInput(event) {
-    if (!character) return;
-    
-    const inputType = event.target.id.replace('numeric-', '');
-    const value = parseFloat(event.target.value);
-    
-    console.log('🎯 数値入力変更:', { type: inputType, value });
-    
-    // バリデーション
-    if (isNaN(value)) return;
-    
-    // 現在の状態を取得
-    const currentState = character.style.left ? 
-        { left: character.style.left, top: character.style.top, width: character.style.width } :
-        getDynamicCharacterState(character);
-    
-    let newLeftPercent = parseFloat(currentState.left);
-    let newTopPercent = parseFloat(currentState.top);
-    let newWidthPercent = parseFloat(currentState.width);
-    // 🔧 修正: height変数を追加（縦横比維持用）
-    let newHeightPercent = parseFloat(currentState.width) / (1/1); // 現在のwidthから縦横比計算（正方形）
-    
-    // 入力タイプに応じて値を更新
-    switch (inputType) {
-        case 'x':
-            newLeftPercent = Math.max(5, Math.min(95, value));
-            break;
-        case 'y':
-            newTopPercent = Math.max(5, Math.min(95, value));
-            break;
-        case 'scale':
-            // 🔧 修正: 縦横比維持のスケール処理
-            newWidthPercent = Math.max(5, Math.min(50, value * 20)); // 20%基準でスケール計算
-            // Canvas要素の縦横比を維持（1:1比率正方形）
-            const aspectRatio = 1 / 1; // Canvas要素の標準アスペクト比（正方形）
-            newHeightPercent = newWidthPercent / aspectRatio;
-            break;
-    }
-    
-    // 🔧 修正: 縦横比維持でキャラクター位置・サイズを更新
-    character.style.left = newLeftPercent + '%';
-    character.style.top = newTopPercent + '%';
-    character.style.width = newWidthPercent + '%';
-    character.style.height = (newHeightPercent || newWidthPercent / (1/1)) + '%'; // 縦横比維持（正方形）
-    
-    // 座標表示も更新
-    updateCoordinateDisplay();
-    
-    console.log('🎨 縦横比維持リアルタイム更新適用:', {
-        left: newLeftPercent.toFixed(1) + '%',
-        top: newTopPercent.toFixed(1) + '%',
-        width: newWidthPercent.toFixed(1) + '%',
-        height: (newHeightPercent || newWidthPercent / (1/1)).toFixed(1) + '%'
-    });
-}
-
-// 適用ボタンの処理
-function applyNumericValues() {
-    console.log('✅ 数値入力値を適用');
-    
-    if (!character || !numericInputs.x) return;
-    
-    const xValue = parseFloat(numericInputs.x.value);
-    const yValue = parseFloat(numericInputs.y.value);
-    const scaleValue = parseFloat(numericInputs.scale.value);
-    
-    // バリデーション
-    const validX = Math.max(5, Math.min(95, xValue));
-    const validY = Math.max(5, Math.min(95, yValue));
-    const validScale = Math.max(0.1, Math.min(2.0, scaleValue));
-    const validWidth = validScale * 20; // 20%基準
-    
-    // 🔧 修正: 縦横比維持でキャラクター位置を更新
-    const validHeight = validWidth / (1/1); // 縦横比維持（正方形）
-    character.style.left = validX + '%';
-    character.style.top = validY + '%';
-    character.style.width = validWidth + '%';
-    character.style.height = validHeight + '%'; // 縦横比維持
-    
-    // 入力フィールドの補正値を反映
-    numericInputs.x.value = Math.round(validX);
-    numericInputs.y.value = Math.round(validY);
-    numericInputs.scale.value = validScale.toFixed(2);
-    
-    // 座標表示を更新
-    updateCoordinateDisplay();
-    
-    console.log('✅ 適用完了:', {
-        x: validX + '%',
-        y: validY + '%',
-        width: validWidth + '%',
-        scale: validScale + '倍'
-    });
-}
-
-// リセットボタンの処理
-function resetNumericValues() {
-    console.log('🔄 数値入力値をリセット');
-    
-    if (!numericInputs.x) return;
-    
-    // デフォルト値
-    const defaultValues = {
-        x: 18,
-        y: 49,
-        scale: 0.55
-    };
-    
-    // 入力フィールドをリセット
-    numericInputs.x.value = defaultValues.x;
-    numericInputs.y.value = defaultValues.y;
-    numericInputs.scale.value = defaultValues.scale;
-    
-    // 🔧 修正: 縦横比維持でキャラクター位置をリセット
-    if (character) {
-        const resetWidth = defaultValues.scale * 20;
-        const resetHeight = resetWidth / (1/1); // 縦横比維持（正方形）
-        character.style.left = defaultValues.x + '%';
-        character.style.top = defaultValues.y + '%';
-        character.style.width = resetWidth + '%';
-        character.style.height = resetHeight + '%'; // 縦横比維持
-        
-        // 座標表示を更新
-        updateCoordinateDisplay();
-    }
-    
-    console.log('✅ リセット完了:', defaultValues);
-}
-
-// 既存の座標表示更新関数を拡張
-const originalUpdateCoordinateDisplay = updateCoordinateDisplay;
-updateCoordinateDisplay = function() {
-    // 元の座標表示更新を実行
-    originalUpdateCoordinateDisplay();
-    
-    // 数値入力フィールドも更新（ドラッグ操作との同期）
-    if (numericInputs.x && character && isCharacterEditMode) {
-        updateNumericInputsFromCharacter();
-    }
-};
 
 // ========== 🔍 デバッグ・診断システム（大幅強化版） ========== //
 
@@ -2211,8 +1985,6 @@ function forceRestoreState() {
 window.resetConfirmPanelPosition = resetConfirmPanelPosition;
 window.debugConfirmPanelPosition = debugConfirmPanelPosition;
 window.showConfirmPanel = showConfirmPanel;
-window.applyNumericValues = applyNumericValues;
-window.resetNumericValues = resetNumericValues;
 
 // === 🚨 緊急デバッグ関数（リロード後位置保存失敗対応・HTML設定制御システム競合対策版） ===
 window.emergencyDiagnostic = emergencyDiagnostic;                      // 🚨 完全診断
