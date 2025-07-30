@@ -320,15 +320,46 @@ function restorePosition() {
 
 // ========== 初期化実行 ========== //
 document.addEventListener('DOMContentLoaded', () => {
-    // Spine初期化完了を待つ（既存システムの後に実行）
-    setTimeout(() => {
-        initializeMinimalEditSystem();
-        // emergencyDiagnosis の後に実行されるように遅延を増やす
-        setTimeout(() => {
+    console.log('📄 DOMContentLoaded: 最速位置復元システム開始');
+    
+    // 即座に編集システム初期化（遅延なし）
+    initializeMinimalEditSystem();
+    
+    // 最速でSpine初期化完了を監視
+    let positionRestored = false;
+    const waitForSpineInit = () => {
+        if (positionRestored) return; // 重複実行防止
+        
+        // Canvas作成時に既に位置復元済みかチェック
+        if (window.spinePositionAlreadyRestored) {
+            console.log('✅ Canvas作成時に位置復元済み、スキップ');
+            positionRestored = true;
+            return;
+        }
+        
+        const canvas = document.getElementById('purattokun-canvas');
+        if (canvas && canvas.getBoundingClientRect().width > 0) {
+            // Canvas要素が実際にレンダリングされた時点で位置復元
+            positionRestored = true;
             restorePosition();
-            console.log('🔄 最小限編集システムによる位置復元を実行');
-        }, 3000);
-    }, 1000);
+            console.log('⚡ 最速：Spine初期化完了を検出、即座に位置復元を実行');
+        } else {
+            // 50ms間隔で高速監視（100ms→50msに短縮）
+            setTimeout(waitForSpineInit, 50);
+        }
+    };
+    
+    // 初期化監視を即座に開始
+    waitForSpineInit();
+    
+    // フォールバック：2秒後に必ず実行（3秒→2秒に短縮）
+    setTimeout(() => {
+        if (!positionRestored) {
+            positionRestored = true;
+            restorePosition();
+            console.log('🔄 フォールバック：位置復元を実行');
+        }
+    }, 2000);
 });
 
 // デバッグ用グローバル関数

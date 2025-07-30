@@ -237,15 +237,42 @@ class SpineCharacterManager {
             canvas.style.zIndex = existingCanvas.style.zIndex || computedStyle.zIndex || '10';
             console.log('📍 既存Canvas位置を保持:', canvas.style.left, canvas.style.top);
         } else {
-            // 既存Canvasがない場合のみデフォルト値を使用
+            // 既存Canvasがない場合：保存位置があれば使用、なければデフォルト値
             canvas.style.position = 'absolute';
-            canvas.style.left = '20%';   // メインレイヤー: 位置X
-            canvas.style.top = '70%';    // メインレイヤー: 位置Y
-            canvas.style.width = defaultDisplaySize + 'px';  // メインレイヤー: サイズW
-            canvas.style.height = defaultDisplaySize + 'px'; // メインレイヤー: サイズH
+            
+            // 保存位置を確認
+            let savedPosition = null;
+            try {
+                const saved = localStorage.getItem('spine-positioning-state');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    if (data.character) {
+                        savedPosition = data.character;
+                        console.log('📍 保存位置を発見:', savedPosition);
+                    }
+                }
+            } catch (e) {
+                console.log('⚠️ 保存位置の読み込みエラー:', e);
+            }
+            
+            // 位置設定（保存位置 or デフォルト位置）
+            if (savedPosition && savedPosition.left && savedPosition.top) {
+                canvas.style.left = savedPosition.left;
+                canvas.style.top = savedPosition.top;
+                console.log('✅ 保存位置から初期配置:', canvas.style.left, canvas.style.top);
+                
+                // 位置復元システムの重複実行を防ぐフラグを設定
+                window.spinePositionAlreadyRestored = true;
+            } else {
+                canvas.style.left = '20%';   // デフォルト位置X
+                canvas.style.top = '70%';    // デフォルト位置Y
+                console.log('📍 デフォルト位置を使用:', canvas.style.left, canvas.style.top);
+            }
+            
+            canvas.style.width = defaultDisplaySize + 'px';  // サイズW
+            canvas.style.height = defaultDisplaySize + 'px'; // サイズH
             canvas.style.transform = 'translate(-50%, -50%)';
             canvas.style.zIndex = '10';
-            console.log('📍 デフォルト位置を使用:', canvas.style.left, canvas.style.top);
         }
         
         console.log('📍 統一座標システム: CSS制御レイヤー適用完了');

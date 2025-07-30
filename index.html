@@ -1141,6 +1141,9 @@
         
         waitForSpine();
         
+        // 🎯 位置復元システム（常時読み込み）
+        loadPositionSystem();
+        
         // 🎯 編集モード対応（URLパラメータ）
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('edit') === 'true') {
@@ -1148,22 +1151,36 @@
             loadEditingSystem();
         }
         
-        // 編集システム動的読み込み
+        // 位置復元システム読み込み（常時実行）
+        function loadPositionSystem() {
+            console.log('📥 位置復元システムを読み込み中...');
+            
+            const positionJS = document.createElement('script');
+            positionJS.src = 'spine-positioning-system-minimal.js';
+            positionJS.onload = function() {
+                console.log('✅ 位置復元システム読み込み完了');
+            };
+            positionJS.onerror = function() {
+                console.error('❌ 位置復元システム読み込み失敗');
+            };
+            document.head.appendChild(positionJS);
+        }
+        
+        // 編集システム動的読み込み（編集モード時のみ）
         function loadEditingSystem() {
             console.log('📥 編集システムを読み込み中...');
             
-            // 編集システムのCSS読み込み（最小限実装版では不要）
-            // const editCSS = document.createElement('link');
-            // editCSS.rel = 'stylesheet';
-            // editCSS.href = 'spine-positioning-system-explanation.css';
-            // document.head.appendChild(editCSS);
+            // 編集システムのCSS読み込み
+            const editCSS = document.createElement('link');
+            editCSS.rel = 'stylesheet';
+            editCSS.href = 'spine-positioning-system-explanation.css';
+            document.head.appendChild(editCSS);
             
-            // 編集システムのJS読み込み（最小限実装版）
+            // 編集システムのJS読み込み
             const editJS = document.createElement('script');
-            editJS.src = 'spine-positioning-system-minimal.js';
+            editJS.src = 'spine-positioning-system-explanation.js';
             editJS.onload = function() {
-                console.log('✅ 最小限編集システム読み込み完了');
-                // initEditingMode()は不要（minimal版は自動初期化）
+                console.log('✅ 編集システム読み込み完了');
             };
             editJS.onerror = function() {
                 console.error('❌ 編集システム読み込み失敗');
