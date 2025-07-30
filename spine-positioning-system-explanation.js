@@ -224,12 +224,13 @@ function initializeDOMElements() {
             
             const characterWrapper = document.createElement('div');
             characterWrapper.className = 'character-wrapper demo-character';
+            // 🔧 修正: width/heightをパーセンテージで設定（保存値との互換性）
             characterWrapper.style.cssText = `
                 position: absolute;
                 left: ${wrapperLeftPercent}%;
                 top: ${wrapperTopPercent}%;
-                width: ${cssWidthPx}px;
-                height: ${cssHeightPx}px;
+                width: ${wrapperWidthPercent}%;
+                height: ${wrapperHeightPercent}%;
                 cursor: move;
                 border: 2px dashed rgba(255, 107, 107, 0.3);
                 border-radius: 8px;
@@ -241,16 +242,17 @@ function initializeDOMElements() {
             parent.insertBefore(characterWrapper, character);
             characterWrapper.appendChild(character);
             
-            // 🔧 修正: Canvas要素の位置スタイルをリセット（ラッパー内で中央配置・元サイズ維持）
+            // 🔧 修正: Canvas要素の位置スタイルをリセット（ラッパー内で中央配置）
             character.style.position = 'absolute';
             character.style.left = '50%';
             character.style.top = '50%';
             character.style.transform = 'translate(-50%, -50%)';
-            // 🔧 重要修正: 元のサイズを維持（100%だと縮小してしまう）
-            character.style.width = cssWidthPx + 'px';
-            character.style.height = cssHeightPx + 'px';
-            // Canvas要素のアスペクト比を維持
-            character.style.aspectRatio = '1/1'; // CSS aspect-ratioプロパティで縦横比維持（正方形）
+            // 🔧 重要修正: Canvas要素はラッパー内で100%サイズ（ラッパーのサイズに従う）
+            character.style.width = '100%';
+            character.style.height = '100%';
+            // 🔧 修正: 元のアスペクト比を維持（spine-sample-simple.htmlは3/2）
+            const originalAspectRatio = character.style.aspectRatio || '3/2';
+            character.style.aspectRatio = originalAspectRatio;
             
             // characterをラッパーに更新
             character = characterWrapper;
@@ -340,17 +342,13 @@ function setupCharacterInitialState() {
         // 🚨 HTML設定制御システムを一時無効化
         disableHTMLConfigSystem();
         
-        // 🔧 修正: 縦横比維持で強制的にスタイルを適用（!important相当）
-        const savedWidth = parseFloat(savedState.character.width);
-        const restoredHeight = savedWidth / (1/1); // 1:1アスペクト比維持（正方形）
-        
+        // 🔧 修正: 保存された位置とサイズを適用（アスペクト比は自動維持）
         // 強制スタイル適用（CSS競合対策）
         character.style.cssText += `
             position: absolute !important;
             left: ${savedState.character.left} !important;
             top: ${savedState.character.top} !important;
             width: ${savedState.character.width} !important;
-            height: ${restoredHeight}% !important;
         `;
         
         // 復元後の確認
@@ -366,8 +364,6 @@ function setupCharacterInitialState() {
         setTimeout(() => {
             if (character.style.left !== savedState.character.left) {
                 console.warn('⚠️ 復元後にスタイルが変更されました。強制再適用します。');
-                const reapplyWidth = parseFloat(savedState.character.width);
-                const reapplyHeight = reapplyWidth / (1/1); // 縦横比維持（正方形）
                 
                 // 再度強制適用
                 character.style.cssText += `
@@ -375,7 +371,6 @@ function setupCharacterInitialState() {
                     left: ${savedState.character.left} !important;
                     top: ${savedState.character.top} !important;
                     width: ${savedState.character.width} !important;
-                    height: ${reapplyHeight}% !important;
                 `;
                 
                 console.log('🔧 強制再適用完了:', {
@@ -384,7 +379,7 @@ function setupCharacterInitialState() {
                     width: character.style.width
                 });
             } else {
-                console.log('✅ 復元状態が維持されています（縦横比維持）');
+                console.log('✅ 復元状態が維持されています');
             }
             
             // 🚨 継続監視システムを開始（最重要）
@@ -410,23 +405,18 @@ function setupCharacterInitialState() {
             console.log('✅ top設定:', dynamicState.top);
         }
         if (!character.style.width) {
-            const dynamicWidth = parseFloat(dynamicState.width);
-            const dynamicHeight = dynamicWidth / (1/1); // 縦横比維持（正方形）
             character.style.width = dynamicState.width;
-            character.style.height = dynamicHeight + '%'; // 縦横比維持（正方形）
-            console.log('✅ width設定（縦横比維持）:', dynamicState.width, 'height:', dynamicHeight + '%');
+            console.log('✅ width設定:', dynamicState.width);
         }
     }
     
     // 基本設定は常に適用
     character.style.position = 'absolute';
     
-    console.log('✅ キャラクター初期状態設定完了（復元優先処理・縦横比維持）:', {
+    console.log('✅ キャラクター初期状態設定完了（復元優先処理）:', {
         left: character.style.left,
         top: character.style.top,
-        width: character.style.width,
-        height: character.style.height,
-        aspect_ratio: character.style.aspectRatio || '設定なし'
+        width: character.style.width
     });
 }
 

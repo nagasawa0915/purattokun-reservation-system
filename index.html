@@ -917,7 +917,21 @@
             console.log('  - Spine定義:', typeof spine);
             console.log('  - WebGL対応:', !!canvas.getContext('webgl'));
             
-            // data属性から座標を読み取って設定
+            // 🚨 【重要修正】localStorageが存在する場合はdata属性設定をスキップ
+            const savedData = localStorage.getItem('spine-positioning-state');
+            if (savedData) {
+                console.log('✅ localStorage保存データが存在するため、data属性設定をスキップします');
+                console.log('💾 保存されている位置:', JSON.parse(savedData));
+                console.log('📍 現在の位置:', {
+                    left: canvas.style.left,
+                    top: canvas.style.top,
+                    width: canvas.style.width
+                });
+                console.log('🎯 緊急診断完了（localStorage優先）');
+                return; // localStorage優先のため処理を終了
+            }
+            
+            // data属性から座標を読み取って設定（localStorageが無い場合のみ）
             const config = document.getElementById('purattokun-config');
             if (config) {
                 const x = config.getAttribute('data-x') || '18';
