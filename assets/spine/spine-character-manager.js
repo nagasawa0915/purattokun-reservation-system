@@ -223,14 +223,30 @@ class SpineCharacterManager {
             }
         }
         
-        // 🎯 統一座標システム: CSS位置・サイズ制御（メインレイヤー）
-        canvas.style.position = 'absolute';
-        canvas.style.left = '20%';   // メインレイヤー: 位置X
-        canvas.style.top = '70%';    // メインレイヤー: 位置Y
-        canvas.style.width = defaultDisplaySize + 'px';  // メインレイヤー: サイズW
-        canvas.style.height = defaultDisplaySize + 'px'; // メインレイヤー: サイズH
-        canvas.style.transform = 'translate(-50%, -50%)';
-        canvas.style.zIndex = '10';
+        // 🎯 統一座標システム: 既存のCanvas要素があればその位置を保持
+        const existingCanvas = document.getElementById('purattokun-canvas');
+        if (existingCanvas) {
+            // 既存のCanvas要素の位置情報を保持
+            const computedStyle = window.getComputedStyle(existingCanvas);
+            canvas.style.position = 'absolute';
+            canvas.style.left = existingCanvas.style.left || computedStyle.left;
+            canvas.style.top = existingCanvas.style.top || computedStyle.top;
+            canvas.style.width = existingCanvas.style.width || computedStyle.width || defaultDisplaySize + 'px';
+            canvas.style.height = existingCanvas.style.height || computedStyle.height || defaultDisplaySize + 'px';
+            canvas.style.transform = existingCanvas.style.transform || computedStyle.transform;
+            canvas.style.zIndex = existingCanvas.style.zIndex || computedStyle.zIndex || '10';
+            console.log('📍 既存Canvas位置を保持:', canvas.style.left, canvas.style.top);
+        } else {
+            // 既存Canvasがない場合のみデフォルト値を使用
+            canvas.style.position = 'absolute';
+            canvas.style.left = '20%';   // メインレイヤー: 位置X
+            canvas.style.top = '70%';    // メインレイヤー: 位置Y
+            canvas.style.width = defaultDisplaySize + 'px';  // メインレイヤー: サイズW
+            canvas.style.height = defaultDisplaySize + 'px'; // メインレイヤー: サイズH
+            canvas.style.transform = 'translate(-50%, -50%)';
+            canvas.style.zIndex = '10';
+            console.log('📍 デフォルト位置を使用:', canvas.style.left, canvas.style.top);
+        }
         
         console.log('📍 統一座標システム: CSS制御レイヤー適用完了');
         console.log('  - Position:', canvas.style.left, canvas.style.top);
@@ -263,8 +279,18 @@ class SpineCharacterManager {
         log(LogLevel.INFO, 'animation', `Upgrading ${name} to Spine WebGL...`);
 
         try {
-            // 🎯 統一座標システム: Canvas内部解像度をCSS表示サイズと統一
-            const canvas = document.createElement('canvas');
+            // 🎯 統一座標システム: 既存Canvasを優先的に使用
+            let canvas = document.getElementById('purattokun-canvas');
+            const isExistingCanvas = !!canvas;
+            
+            if (!canvas) {
+                // 既存Canvasがない場合のみ新規作成
+                canvas = document.createElement('canvas');
+                canvas.id = 'purattokun-canvas';
+                console.log('🆕 新規Canvas作成: purattokun-canvas');
+            } else {
+                console.log('♻️ 既存Canvas再利用: purattokun-canvas');
+            }
             
             // デフォルトCSS表示サイズ（編集システムと統一）
             const defaultDisplaySize = 120;
@@ -421,9 +447,13 @@ class SpineCharacterManager {
             // Spineアップグレード完了をマネージャーに通知
             console.log('🔄 Spineアップグレード完了、レスポンシブハンドラーを更新...');
             
-            // 新配置システムの統合実行
-            console.log('🎯 新配置システム統合開始...');
-            await this.integrateWithPositioningSystem(canvas, name);
+            // 新配置システムの統合実行（既存Canvasの場合はスキップ）
+            if (!isExistingCanvas) {
+                console.log('🎯 新配置システム統合開始...');
+                await this.integrateWithPositioningSystem(canvas, name);
+            } else {
+                console.log('♻️ 既存Canvas使用のため配置統合をスキップ');
+            }
             
             console.log('🎯 CSS基準配置: 背景画像と同じ.hero基準で位置固定');
             

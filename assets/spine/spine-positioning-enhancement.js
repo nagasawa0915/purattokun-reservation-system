@@ -312,7 +312,12 @@
             this.fallbackImage = null;
             this.currentPosition = { x: 0, y: 0 };
             this.currentSize = { width: 100, height: 100 };
-            this.clickRange = { ...CONFIG.clickRange };
+            this.clickRange = { 
+                centerX: CONFIG.clickRange.defaultCenterX,
+                centerY: CONFIG.clickRange.defaultCenterY,
+                width: CONFIG.clickRange.defaultWidth,
+                height: CONFIG.clickRange.defaultHeight
+            };
             
             this.init();
         }

@@ -156,10 +156,12 @@
         /* 🎯 ぷらっとくんCanvas - 基本スタイルのみ（座標統一管理） */
         #purattokun-canvas {
             position: absolute;
-            /* 📍 left/topは#purattokun-configのdata属性から動的設定 */
+            /* 📍 デフォルト位置（data属性で上書き可能） */
+            left: 18%;      /* デスクトップ版デフォルト */
+            top: 49%;       /* デスクトップ版デフォルト */
+            width:30%;     /* デスクトップ版サイズ（モバイル版は30%） */
+            height: auto;   /* アスペクト比維持 */
             transform: translate(-50%, -50%); /* 中心点基準配置 */
-            width: 120px;   /* 表示サイズ（固定） */
-            height: 120px;
             pointer-events: auto;
             cursor: pointer;
             z-index: 10;    /* レイヤー順序 */
@@ -483,8 +485,7 @@
             #purattokun-canvas {
                 left: 50%;   /* モバイル中央 */
                 top: 65%;    /* モバイル調整 */
-                width: 80px;    /* ✅ 固定サイズ */
-                height: 80px;
+                width: 30%;     /* レスポンシブ対応 - サイズ調整 */
             }
             
             #purattokun-fallback {
@@ -536,7 +537,7 @@
                 <img src="assets/images/purattokunn.png" 
                      alt="ぷらっとくん画像" 
                      id="purattokun-fallback"
-                     style="position: absolute; transform: translate(-50%, -50%); width: 120px; height: 120px; z-index: 10; display: block; object-fit: contain;">
+                     style="position: absolute; transform: translate(-50%, -50%); width: 35%; aspect-ratio: 3/2; z-index: 10; display: block; object-fit: contain;">
                      
                 <!-- 🎯 ぷらっとくん座標設定（統一管理） -->
                 <!-- 📍 座標変更はここのdata属性のみ編集してください -->
@@ -940,18 +941,17 @@
                 console.log('🔧 data属性から座標設定:', x + '%', y + '%');
                 
                 canvas.style.position = 'absolute';
-                canvas.style.left = x + '%';
-                canvas.style.top = y + '%';
+                canvas.style.left = x + '%';  // 親要素基準の%単位（解決策1準拠）
+                canvas.style.top = y + '%';   // 親要素基準の%単位（解決策1準拠）
                 canvas.style.transform = 'translate(-50%, -50%)';
-                canvas.style.width = '120px';
-                canvas.style.height = '120px';
+                // widthとaspect-ratioはCSSで設定済み
                 canvas.style.zIndex = '10';
                 
                 // フォールバック画像も同期
                 const fallback = document.getElementById('purattokun-fallback');
                 if (fallback) {
-                    fallback.style.left = x + '%';
-                    fallback.style.top = y + '%';
+                    fallback.style.left = x + '%';  // %単位に戻す
+                    fallback.style.top = y + '%';   // %単位に戻す
                     console.log('🔧 フォールバック画像座標も同期設定');
                 }
             } else {
@@ -969,26 +969,32 @@
                     const parsed = JSON.parse(savedData);
                     console.log('🔍 通常モード：保存データ発見', parsed);
                     
+                    // レスポンシブ判定（768px以下はモバイル版）
+                    const isMobile = window.innerWidth <= 768;
+                    console.log(`📱 画面サイズ: ${window.innerWidth}px (${isMobile ? 'モバイル' : 'デスクトップ'})`);
+                    
+                    // モバイル版の場合はCSS優先のため復元をスキップ
+                    if (isMobile) {
+                        console.log('📱 モバイル版のためlocalStorage復元をスキップ（CSS優先）');
+                        return false;
+                    }
+                    
                     if (parsed.character && parsed.character.left && parsed.character.top && parsed.character.width) {
                         const canvas = document.getElementById('purattokun-canvas');
                         const fallback = document.getElementById('purattokun-fallback');
                         
-                        // 保存された位置を最優先で適用（!important使用）
+                        // 保存された位置を適用（!important削除でCSS優先可能に）
                         if (canvas) {
-                            canvas.style.cssText += `
-                                left: ${parsed.character.left} !important;
-                                top: ${parsed.character.top} !important;
-                                width: ${parsed.character.width} !important;
-                            `;
+                            canvas.style.left = parsed.character.left;
+                            canvas.style.top = parsed.character.top;
+                            canvas.style.width = parsed.character.width;
                             console.log('✅ Canvas位置復元完了:', parsed.character);
                         }
                         
                         if (fallback) {
-                            fallback.style.cssText += `
-                                left: ${parsed.character.left} !important;
-                                top: ${parsed.character.top} !important;
-                                width: ${parsed.character.width} !important;
-                            `;
+                            fallback.style.left = parsed.character.left;
+                            fallback.style.top = parsed.character.top;
+                            fallback.style.width = parsed.character.width;
                             console.log('✅ Fallback位置復元完了:', parsed.character);
                         }
                         
@@ -1023,7 +1029,7 @@
                 
                 console.log('🎯 初期座標設定 (data属性統一管理):', x + '%', y + '%');
                 
-                // Canvas要素に座標適用
+                // Canvas要素に座標適用（%単位で親要素基準）
                 if (canvas) {
                     canvas.style.left = x + '%';
                     canvas.style.top = y + '%';
@@ -1042,6 +1048,13 @@
         // 🚨 【緊急修正】遅延復元処理を追加（CSS初期値上書き対策）
         function delayedRestoreCheck() {
             setTimeout(() => {
+                // モバイル版の場合は遅延チェックもスキップ
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    console.log('📱 モバイル版のため遅延復元チェックをスキップ');
+                    return;
+                }
+                
                 const canvas = document.getElementById('purattokun-canvas');
                 const fallback = document.getElementById('purattokun-fallback');
                 const savedData = localStorage.getItem('spine-positioning-state');
@@ -1352,5 +1365,111 @@
     
     <!-- 🔢 数値入力アドオン（軽量版） -->
     <script src="assets/spine/numeric-input-addon.js" defer></script>
+    
+    <!-- 🎯 統一座標システム関数 -->
+    <script>
+        // ResponsiveCoordinateSystemの自動リサイズを無効化
+        // 最小限編集システムとの競合を防ぐため
+        window.addEventListener('DOMContentLoaded', () => {
+            // 既存のリサイズイベントリスナーを削除
+            const oldResize = window.onresize;
+            window.onresize = null;
+            
+            // ResponsiveCoordinateSystemの無効化を試行
+            setTimeout(() => {
+                if (window.spinePositioningSystem) {
+                    window.spinePositioningSystem.config.enableResize = false;
+                    if (window.spinePositioningSystem.coordinateSystem) {
+                        window.spinePositioningSystem.coordinateSystem.config.autoResize = false;
+                    }
+                    console.log('🔧 SpinePositioningSystemの自動リサイズを無効化しました');
+                }
+                
+                // ResponsiveCoordinateSystemの直接アクセス
+                if (window.ResponsiveCoordinateSystem) {
+                    const instances = document.querySelectorAll('[data-responsive-coord]');
+                    instances.forEach(el => {
+                        if (el._coordinateSystem) {
+                            el._coordinateSystem.config.autoResize = false;
+                        }
+                    });
+                }
+            }, 1000);
+            
+            // リサイズイベントの監視（デバッグ用）
+            let resizeCount = 0;
+            window.addEventListener('resize', (e) => {
+                resizeCount++;
+                console.log(`🔍 [${resizeCount}] ウィンドウリサイズイベント検出`);
+                
+                // 現在のCanvas状態を記録
+                const canvas = document.getElementById('purattokun-canvas');
+                if (canvas) {
+                    const currentState = {
+                        left: canvas.style.left,
+                        top: canvas.style.top,
+                        width: canvas.style.width,
+                        height: canvas.style.height,
+                        computedLeft: window.getComputedStyle(canvas).left,
+                        computedTop: window.getComputedStyle(canvas).top
+                    };
+                    console.log('📍 現在のCanvas状態:', currentState);
+                }
+            }, true); // キャプチャフェーズで監視
+        });
+        
+        // CSS側とSpine側の制御を分離した統一座標システム
+        window.adjustCanvasUnified = function(leftPercent, topPercent, scale) {
+            const canvas = document.getElementById('purattokun-canvas');
+            if (!canvas) {
+                console.error('❌ Canvas要素が見つかりません');
+                return;
+            }
+            
+            // 位置制御（CSS側）
+            if (leftPercent !== undefined && topPercent !== undefined) {
+                canvas.style.left = leftPercent + '%';
+                canvas.style.top = topPercent + '%';
+                console.log(`📍 位置調整: left=${leftPercent}%, top=${topPercent}%`);
+            }
+            
+            // スケール制御（Spine側）
+            if (scale !== undefined && window.adjustPurattokun) {
+                // Canvasの中心座標を維持したままスケールを変更
+                const canvasWidth = 120;  // spine-character-manager.js の固定値
+                const canvasHeight = 120;
+                window.adjustPurattokun(canvasWidth / 2, canvasHeight / 2, scale);
+                console.log(`📏 スケール調整: ${scale}`);
+            }
+            
+            console.log('✅ 統一座標システムで調整完了');
+        };
+        
+        // デバッグ用：現在の設定を確認
+        window.getCanvasSettings = function() {
+            const canvas = document.getElementById('purattokun-canvas');
+            if (!canvas) return null;
+            
+            const computedStyle = window.getComputedStyle(canvas);
+            const settings = {
+                position: {
+                    left: canvas.style.left || computedStyle.left,
+                    top: canvas.style.top || computedStyle.top
+                },
+                size: {
+                    width: canvas.style.width || computedStyle.width,
+                    height: canvas.style.height || computedStyle.height
+                },
+                transform: computedStyle.transform
+            };
+            
+            // Spineの内部設定も取得
+            if (window.getCurrentPosition) {
+                settings.spine = window.getCurrentPosition();
+            }
+            
+            return settings;
+        };
+    </script>
 </body>
 </html>
