@@ -1139,18 +1139,18 @@
         function loadEditingSystem() {
             console.log('📥 編集システムを読み込み中...');
             
-            // 編集システムのCSS読み込み
-            const editCSS = document.createElement('link');
-            editCSS.rel = 'stylesheet';
-            editCSS.href = 'spine-positioning-system-explanation.css';
-            document.head.appendChild(editCSS);
+            // 編集システムのCSS読み込み（最小限実装版では不要）
+            // const editCSS = document.createElement('link');
+            // editCSS.rel = 'stylesheet';
+            // editCSS.href = 'spine-positioning-system-explanation.css';
+            // document.head.appendChild(editCSS);
             
-            // 編集システムのJS読み込み
+            // 編集システムのJS読み込み（最小限実装版）
             const editJS = document.createElement('script');
-            editJS.src = 'spine-positioning-system-explanation.js';
+            editJS.src = 'spine-positioning-system-minimal.js';
             editJS.onload = function() {
-                console.log('✅ 編集システム読み込み完了');
-                initEditingMode();
+                console.log('✅ 最小限編集システム読み込み完了');
+                // initEditingMode()は不要（minimal版は自動初期化）
             };
             editJS.onerror = function() {
                 console.error('❌ 編集システム読み込み失敗');
@@ -1159,7 +1159,8 @@
             document.head.appendChild(editJS);
         }
         
-        // 編集モード初期化
+        // 編集モード初期化（最小限実装版では不要）
+        /*
         function initEditingMode() {
             // 編集UIを表示
             showEditingInterface();
@@ -1169,8 +1170,10 @@
             
             console.log('🎯 編集モード開始！index.html?edit=false で通常モードに戻れます');
         }
+        */
         
-        // 編集インターフェース表示
+        // 編集インターフェース表示（最小限実装版では不要）
+        /*
         function showEditingInterface() {
             // 編集用パネルを動的作成
             const editPanel = document.createElement('div');
@@ -1328,6 +1331,7 @@
                 }
             });
         }
+        */
     </script>
     
     <!-- 構造化データ（SEO最適化） -->

@@ -20,7 +20,8 @@
       "Bash(python:*)",
       "Bash(cat:*)",
       "Bash(grep:*)",
-      "Bash(ss:*)"
+      "Bash(ss:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

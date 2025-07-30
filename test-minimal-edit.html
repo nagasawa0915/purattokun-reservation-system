@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>最小限編集システムテスト</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: sans-serif;
+            background: #f0f0f0;
+        }
+        
+        .container {
+            position: relative;
+            width: 80%;
+            height: 500px;
+            margin: 0 auto;
+            background: white;
+            border: 2px solid #ddd;
+            overflow: hidden;
+        }
+        
+        #purattokun-canvas {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: #ff6b6b;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            user-select: none;
+        }
+        
+        .info {
+            margin-top: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>最小限編集システムテスト</h1>
+    
+    <div class="container">
+        <div id="purattokun-canvas">
+            ぷらっとくん<br>（テスト用）
+        </div>
+    </div>
+    
+    <div class="info">
+        <h3>使い方：</h3>
+        <ol>
+            <li>右上の「位置編集」ボタンをクリック</li>
+            <li>ぷらっとくんをドラッグして移動</li>
+            <li>「編集終了」をクリックして位置を保存</li>
+            <li>ページをリロードして位置が保存されていることを確認</li>
+        </ol>
+        <p>現在の保存データ: <span id="saved-data">なし</span></p>
+        <button onclick="clearSavedData()">保存データをクリア</button>
+    </div>
+    
+    <!-- 最小限編集システムを読み込み -->
+    <script src="spine-positioning-system-minimal.js"></script>
+    
+    <script>
+        // 保存データの表示
+        function updateSavedDataDisplay() {
+            const saved = localStorage.getItem('spine-minimal-position');
+            const display = document.getElementById('saved-data');
+            if (saved) {
+                display.textContent = saved;
+            } else {
+                display.textContent = 'なし';
+            }
+        }
+        
+        // 保存データのクリア
+        function clearSavedData() {
+            localStorage.removeItem('spine-minimal-position');
+            updateSavedDataDisplay();
+            alert('保存データをクリアしました。ページをリロードしてください。');
+        }
+        
+        // 初期表示
+        updateSavedDataDisplay();
+        
+        // 位置変更を監視
+        setInterval(updateSavedDataDisplay, 1000);
+    </script>
+</body>
+</html>
