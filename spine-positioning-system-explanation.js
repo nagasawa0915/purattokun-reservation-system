@@ -769,20 +769,25 @@ function startCharacterEdit() {
 // ========== コア機能：移動・保存・復元 ========== //
 
 function setupEventListeners() {
-    console.log('🔧 イベントリスナー設定開始');
+    console.log('🔧 イベントリスナー設定開始（マウス・タッチ対応）');
     
-    // キャラクター移動イベント
+    // キャラクター移動イベント（マウス・タッチ両対応）
     if (isCharacterEditMode && character) {
+        // マウスイベント
         character.addEventListener('mousedown', startCharacterDrag);
+        // タッチイベント
+        character.addEventListener('touchstart', handleTouchStart, { passive: false });
     }
     
     // Canvas移動イベント削除：不要
     
-    // グローバルイベント
+    // グローバルイベント（マウス・タッチ両対応）
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
     
-    console.log('✅ イベントリスナー設定完了');
+    console.log('✅ イベントリスナー設定完了（マウス・タッチ対応）');
 }
 
 function startCharacterDrag(e) {
@@ -819,6 +824,92 @@ function startCharacterDrag(e) {
 }
 
 // 🗑️ Canvas移動削除：不要
+
+// ========== タッチイベント対応（モバイル操作実現） ========== //
+
+function handleTouchStart(e) {
+    console.log('📱 タッチ開始（キャラクター）');
+    
+    // ハンドル判定を厳密に行う（マウスイベントと同様）
+    if (!isCharacterEditMode || 
+        e.target.classList.contains('handle') || 
+        e.target.closest('.handle') ||
+        isResizing) {
+        console.log('🚫 キャラクタータッチをスキップ:', {
+            isCharacterEditMode,
+            isHandle: e.target.classList.contains('handle'),
+            isResizing
+        });
+        return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // タッチ座標を取得（最初のタッチポイント）
+    const touch = e.touches[0];
+    
+    // マウスイベントと同じロジックでドラッグ開始
+    console.log('🎯 キャラクタータッチ移動開始（%ベース）');
+    isDragging = true;
+    startMousePos = { x: touch.clientX, y: touch.clientY };
+    
+    // 現在の%位置を記録
+    const currentState = character.style.left ? 
+        { left: character.style.left, top: character.style.top } :
+        getDynamicCharacterState(character);
+    
+    startElementState = {
+        leftPercent: parseFloat(currentState.left),
+        topPercent: parseFloat(currentState.top)
+    };
+    
+    updateCoordinateDisplay();
+    console.log('🎯 キャラクタータッチドラッグ開始（%座標）:', startElementState);
+}
+
+function handleTouchMove(e) {
+    if (!isDragging && !isResizing) return;
+    
+    e.preventDefault(); // スクロール防止
+    
+    // タッチ座標を取得（最初のタッチポイント）
+    const touch = e.touches[0];
+    
+    const deltaX = touch.clientX - startMousePos.x;
+    const deltaY = touch.clientY - startMousePos.y;
+    
+    // リサイズを優先処理（ハンドル操作）
+    if (isResizing) {
+        console.log('🔧 タッチリサイズ処理:', { deltaX, deltaY });
+        performResize(deltaX, deltaY);
+    } else if (isDragging) {
+        console.log('🔧 タッチ移動処理:', { deltaX, deltaY });
+        if (isCharacterEditMode) {
+            moveCharacter(deltaX, deltaY);
+        }
+    }
+    
+    updateCoordinateDisplay();
+}
+
+function handleTouchEnd(e) {
+    if (isDragging || isResizing) {
+        console.log('🔄 タッチ操作終了:', { isDragging, isResizing });
+        
+        // 状態リセット（マウスイベントと同じ）
+        isDragging = false;
+        isResizing = false;
+        activeHandle = null;
+        
+        // CSS状態リセット
+        if (character) {
+            character.classList.remove('dragging', 'resize-mode');
+        }
+        
+        console.log('✅ タッチ状態リセット完了');
+    }
+}
 
 function handleMouseMove(e) {
     if (!isDragging && !isResizing) return;
@@ -1280,7 +1371,7 @@ function createHandles() {
                 break;
         }
         
-        // クリックイベント（対角固定点拡縮システム）
+        // イベント（対角固定点拡縮システム・マウス・タッチ両対応）
         handle.addEventListener('mousedown', (e) => {
             console.log('🎯 ハンドルmousedown:', handleDef.pos, handleDef.type);
             e.stopPropagation();
@@ -1291,6 +1382,17 @@ function createHandles() {
             startFixedPointResize(e, handleDef.pos, handleDef.type);
         }, true); // キャプチャフェーズで実行
         
+        // タッチイベント
+        handle.addEventListener('touchstart', (e) => {
+            console.log('📱 ハンドルtouchstart:', handleDef.pos, handleDef.type);
+            e.stopPropagation();
+            e.preventDefault();
+            // character要素のイベントを無効化
+            isDragging = false;
+            isResizing = false;
+            startFixedPointResizeTouch(e, handleDef.pos, handleDef.type);
+        }, true); // キャプチャフェーズで実行
+        
         character.appendChild(handle);
     });
     
@@ -1298,6 +1400,45 @@ function createHandles() {
 }
 
 // 🗑️ Canvasハンドル作成削除：不要
+
+function startFixedPointResizeTouch(e, position, type) {
+    console.log('📱 対角固定点拡縮開始（タッチ・%ベース）:', { position, type });
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // タッチ座標を取得（最初のタッチポイント）
+    const touch = e.touches[0];
+    
+    // 確実に状態設定
+    isDragging = false; // 移動モードを無効化
+    isResizing = true;  // リサイズモードを有効化
+    activeHandle = { dataset: { position, type } };
+    startMousePos = { x: touch.clientX, y: touch.clientY };
+    
+    // 現在の%状態を記録（動的取得使用）
+    const currentState = character.style.left ? 
+        { left: character.style.left, top: character.style.top, width: character.style.width } :
+        getDynamicCharacterState(character);
+    
+    const currentLeftPercent = parseFloat(currentState.left);
+    const currentTopPercent = parseFloat(currentState.top);
+    const currentWidthPercent = parseFloat(currentState.width);
+    
+    startElementState = {
+        leftPercent: currentLeftPercent,
+        topPercent: currentTopPercent,
+        widthPercent: currentWidthPercent,
+        // 固定点%座標（対角固定点計算用）
+        leftEdgePercent: currentLeftPercent - currentWidthPercent / 2,
+        rightEdgePercent: currentLeftPercent + currentWidthPercent / 2,
+        topEdgePercent: currentTopPercent - currentWidthPercent / 2,     // 1:1正方形比率
+        bottomEdgePercent: currentTopPercent + currentWidthPercent / 2
+    };
+    
+    character.classList.add('resize-mode');
+    console.log('✅ タッチ対角固定点拡縮準備完了（%座標）:', startElementState);
+}
 
 function startFixedPointResize(e, position, type) {
     console.log('🎯 対角固定点拡縮開始（%ベース）:', { position, type });
@@ -2003,6 +2144,54 @@ window.debugPositioningSystem = debugPositioningSystem;
 window.clearAllPositionData = clearAllPositionData;
 window.forceRestoreState = forceRestoreState;
 
+// 🔍 ハンドル表示診断機能
+function debugHandleVisibility() {
+    console.log('🔍 === ハンドル表示診断開始 ===');
+    
+    // Step 1: character要素の確認
+    if (!character) {
+        console.error('❌ character要素がnull');
+        return false;
+    }
+    
+    console.log('✅ character要素確認:', {
+        element: character.tagName + (character.id ? '#' + character.id : ''),
+        classes: character.className,
+        hasEditMode: character.classList.contains('edit-mode')
+    });
+    
+    // Step 2: ハンドル要素の確認
+    const handles = character.querySelectorAll('.handle');
+    console.log('🎯 ハンドル要素確認:', {
+        count: handles.length,
+        expected: 9
+    });
+    
+    handles.forEach((handle, index) => {
+        const computedStyle = window.getComputedStyle(handle);
+        console.log(`Handle ${index + 1}:`, {
+            classes: handle.className,
+            position: handle.dataset.position,
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity,
+            zIndex: computedStyle.zIndex,
+            background: computedStyle.backgroundColor,
+            rect: handle.getBoundingClientRect()
+        });
+    });
+    
+    // Step 3: 編集モード状態確認
+    console.log('📊 編集モード状態:', {
+        isCharacterEditMode,
+        isDragging,
+        isResizing
+    });
+    
+    console.log('🔍 === ハンドル表示診断完了 ===');
+    return handles.length === 9;
+}
+
 // 🚨 総合デバッグコマンド：一括診断・修正機能
 function ultimatePositionFix() {
     console.log('🚨 === 総合位置修正システム開始 ===');
@@ -2033,6 +2222,7 @@ function ultimatePositionFix() {
 
 // グローバル関数として追加
 window.ultimatePositionFix = ultimatePositionFix;
+window.debugHandleVisibility = debugHandleVisibility;
 
 console.log('🚨 Spine編集システム v2.3 読み込み完了 - HTML設定制御システム競合対策版');
 console.log('🔧 新機能: HTML設定制御システム競合対策・継続監視システム・総合修正コマンド');

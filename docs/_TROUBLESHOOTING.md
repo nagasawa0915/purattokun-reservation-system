@@ -87,6 +87,12 @@
 - **タグ**: `#編集システム` `#Canvas` `#ドラッグ` `#座標` `#UI`
 - **別名**: Canvas左上瞬間移動、オレンジ枠瞬間移動、canvas drag jump issue
 
+#### スケール機能問題
+- **ファイル**: [スケール機能問題.md](./troubleshooting/スケール機能問題.md)
+- **症状**: スケール調整が効かない、数値入力できない、debugScale関数エラー
+- **タグ**: `#編集システム` `#スケール` `#数値入力` `#ドラッグ` `#transform` `#座標系` `#最小限実装版`
+- **別名**: スケールが効かない、debugScale is not defined、スケールバー動かない、数値入力できない、scale function not working、スケール調整問題、transform scale issue
+
 ### ⚙️ Spine関連の問題
 
 #### Spineライブラリ読込問題
@@ -133,6 +139,7 @@
 - [編集モード位置保存問題.md](./troubleshooting/編集モード位置保存問題.md)
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
 - [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
+- [スケール機能問題.md](./troubleshooting/スケール機能問題.md)
 
 #### #リサイズハンドル
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
@@ -255,6 +262,9 @@
 
 ### 「位置保存」「リロード後」「localStorage」「復元失敗」「保存されない」
 → [編集モード位置保存問題.md](./troubleshooting/編集モード位置保存問題.md)
+
+### 「スケール」「効かない」「数値入力」「debugScale」「動かない」「スケールバー」
+→ [スケール機能問題.md](./troubleshooting/スケール機能問題.md)
 
 ---
 

@@ -6,10 +6,14 @@ console.log('🚀 Spine編集システム v3.0 (最小限実装版) 読み込み
 // ========== グローバル変数 ========== //
 let isEditMode = false;
 let isDragging = false;
-let character = null;
+let character = null; // メインキャラクター（後方互換性のため）
 let startMousePos = { x: 0, y: 0 };
 let startElementPos = { left: 0, top: 0 };
 let currentScale = 1.0; // Spineスケール値を保持
+
+// 複数キャラクター管理
+let characters = []; // 全キャラクター配列
+let activeCharacterIndex = 0; // 現在選択中のキャラクター
 
 // ========== 初期化 ========== //
 function initializeMinimalEditSystem() {
@@ -19,7 +23,18 @@ function initializeMinimalEditSystem() {
     character = document.querySelector('#purattokun-canvas');
     if (!character) {
         console.error('❌ キャラクター要素が見つかりません');
-        return;
+        // フォールバック: 他のキャラクター要素も検索
+        character = document.querySelector('#purattokun-fallback') || 
+                   document.querySelector('canvas[data-spine-character]');
+        
+        if (character) {
+            console.log('✅ フォールバック要素を発見:', character.tagName + (character.id ? '#' + character.id : ''));
+        } else {
+            console.error('❌ すべてのキャラクター要素が見つかりません');
+            return;
+        }
+    } else {
+        console.log('✅ キャラクター要素取得成功:', character.tagName + (character.id ? '#' + character.id : ''));
     }
     
     // CSSサイズ設定を削除（Spine側でサイズ制御）
@@ -81,40 +96,101 @@ function createScalePanel() {
     panel.innerHTML = `
         <div style="margin-bottom: 8px;">
             <label style="display: block; margin-bottom: 4px;">スケール:</label>
-            <input type="range" id="scale-slider" min="0.1" max="3" step="0.05" value="${currentScale}" style="width: 150px;">
-            <span id="scale-value" style="margin-left: 8px; font-weight: bold;">${currentScale.toFixed(2)}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="range" id="scale-slider" min="0.1" max="3" step="0.05" value="${currentScale}" style="width: 100px;">
+                <input type="number" id="scale-input" min="0.1" max="3" step="0.05" value="${currentScale.toFixed(2)}" style="width: 60px; padding: 2px 4px; font-size: 12px;">
+            </div>
         </div>
         <div style="text-align: center; margin-top: 8px;">
             <button id="scale-reset-btn" style="padding: 4px 12px; font-size: 12px;">リセット (1.0)</button>
+            <button id="scale-test-btn" style="padding: 4px 12px; font-size: 12px; margin-left: 4px;">テスト</button>
         </div>
     `;
     
     document.body.appendChild(panel);
     
-    // スライダーイベント
+    // スライダー・入力要素イベント
     const slider = document.getElementById('scale-slider');
-    const valueDisplay = document.getElementById('scale-value');
+    const numberInput = document.getElementById('scale-input');
     const resetBtn = document.getElementById('scale-reset-btn');
+    const testBtn = document.getElementById('scale-test-btn');
     
+    // スケール更新共通関数
+    function updateScale(newScale) {
+        currentScale = newScale;
+        slider.value = newScale;
+        numberInput.value = newScale.toFixed(2);
+        
+        // 直接CSSでスケール調整
+        if (character) {
+            // transformの既存値を保持しつつscaleを更新
+            const baseTransform = 'translate(-50%, -50%)';
+            character.style.transform = `${baseTransform} scale(${newScale})`;
+            console.log('🔧 スケール更新:', {
+                element: character.tagName + (character.id ? '#' + character.id : ''),
+                newScale: newScale,
+                appliedTransform: character.style.transform,
+                characterExists: !!character,
+                elementRect: character.getBoundingClientRect()
+            });
+        } else {
+            console.error('❌ character要素がnullです - スケール更新失敗');
+        }
+    }
+    
+    // スライダーイベント
     slider.addEventListener('input', (e) => {
         const newScale = parseFloat(e.target.value);
-        currentScale = newScale;
-        valueDisplay.textContent = newScale.toFixed(2);
-        
-        // 統一座標システムでスケール更新
-        if (window.adjustCanvasUnified) {
-            window.adjustCanvasUnified(undefined, undefined, newScale);
+        updateScale(newScale);
+    });
+    
+    // 数値入力イベント
+    numberInput.addEventListener('input', (e) => {
+        const newScale = parseFloat(e.target.value);
+        if (newScale >= 0.1 && newScale <= 3) {
+            updateScale(newScale);
         }
     });
     
+    // リセットボタン
     resetBtn.addEventListener('click', () => {
-        currentScale = 1.0;
-        slider.value = 1.0;
-        valueDisplay.textContent = '1.00';
+        updateScale(1.0);
+        console.log('🔄 スケールリセット: 1.0');
+    });
+    
+    // テストボタン（診断機能）
+    testBtn.addEventListener('click', () => {
+        console.log('🧪 === スケールテスト開始 ===');
         
-        if (window.adjustCanvasUnified) {
-            window.adjustCanvasUnified(undefined, undefined, 1.0);
+        if (!character) {
+            console.error('❌ character要素がnull');
+            alert('キャラクター要素が見つかりません');
+            return;
         }
+        
+        const computedStyle = window.getComputedStyle(character);
+        const rect = character.getBoundingClientRect();
+        
+        console.log('📊 現在の状態:', {
+            element: character.tagName + (character.id ? '#' + character.id : ''),
+            inlineTransform: character.style.transform,
+            computedTransform: computedStyle.transform,
+            boundingRect: { width: rect.width, height: rect.height },
+            currentScale: currentScale
+        });
+        
+        // 2倍スケールテスト
+        const originalScale = currentScale;
+        updateScale(2.0);
+        
+        setTimeout(() => {
+            const newRect = character.getBoundingClientRect();
+            console.log('📏 2倍スケール後:', { width: newRect.width, height: newRect.height });
+            alert(`スケールテスト完了\n元サイズ: ${rect.width}x${rect.height}\n2倍後: ${newRect.width}x${newRect.height}`);
+            
+            // 元に戻す
+            updateScale(originalScale);
+        }, 2000);
     });
 }
 
@@ -217,7 +293,8 @@ function handleDrag(e) {
     character.style.position = 'absolute';
     character.style.left = newLeft + '%';
     character.style.top = newTop + '%';
-    character.style.transform = 'translate(-50%, -50%)';
+    // スケール値を保持したtransformを適用
+    character.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
 }
 
 function endDrag() {
@@ -305,13 +382,27 @@ function restorePosition() {
             character.style.top = position.top;
         }
         
-        character.style.transform = 'translate(-50%, -50%)';
-        
         // Spineスケールを復元
-        if (position.scale !== undefined && window.adjustCanvasUnified) {
-            // 位置は既に設定済みなので、スケールのみ復元
-            window.adjustCanvasUnified(undefined, undefined, position.scale);
+        if (position.scale !== undefined) {
             currentScale = position.scale;
+            console.log('🔄 保存されたスケール値を復元:', currentScale);
+        }
+        
+        // スケール値を反映したtransformを適用
+        character.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
+        
+        // スケールパネルのUI要素も同期
+        const slider = document.getElementById('scale-slider');
+        const numberInput = document.getElementById('scale-input');
+        if (slider && numberInput) {
+            slider.value = currentScale;
+            numberInput.value = currentScale.toFixed(2);
+            console.log('🎛️ スケールパネルUIを同期:', currentScale);
+        }
+        
+        // 外部APIとの連携（存在する場合）
+        if (position.scale !== undefined && window.adjustCanvasUnified) {
+            window.adjustCanvasUnified(undefined, undefined, position.scale);
         }
         
         console.log('✅ 位置とスケールを復元:', position);
@@ -367,6 +458,49 @@ window.clearMinimalPosition = function() {
     localStorage.removeItem('spine-positioning-state');
     localStorage.removeItem('spine-minimal-position');
     console.log('🗑️ 保存データをクリアしました');
+};
+
+// スケール診断関数
+window.debugScale = function() {
+    console.log('🔍 === スケール診断開始 ===');
+    
+    if (!character) {
+        console.error('❌ character要素がnull');
+        return;
+    }
+    
+    const computedStyle = window.getComputedStyle(character);
+    const rect = character.getBoundingClientRect();
+    
+    console.log('📊 キャラクター要素状態:', {
+        element: character.tagName + (character.id ? '#' + character.id : ''),
+        inlineTransform: character.style.transform,
+        computedTransform: computedStyle.transform,
+        inlineWidth: character.style.width,
+        computedWidth: computedStyle.width,
+        boundingRect: {
+            width: rect.width,
+            height: rect.height
+        },
+        currentScale: currentScale
+    });
+    
+    // テストスケール適用
+    const testScale = 2.0;
+    character.style.transform = `translate(-50%, -50%) scale(${testScale})`;
+    console.log('🧪 テストスケール適用:', testScale);
+    
+    setTimeout(() => {
+        const newRect = character.getBoundingClientRect();
+        console.log('📏 スケール後のサイズ:', {
+            width: newRect.width,
+            height: newRect.height,
+            transform: character.style.transform
+        });
+        
+        // 元に戻す
+        character.style.transform = `translate(-50%, -50%) scale(1.0)`;
+    }, 1000);
 };
 
 console.log('✅ Spine編集システム v3.0 (最小限実装版) 読み込み完了');

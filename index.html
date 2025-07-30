@@ -1141,17 +1141,17 @@
         
         waitForSpine();
         
-        // 🎯 位置復元システム（常時読み込み）
-        loadPositionSystem();
-        
         // 🎯 編集モード対応（URLパラメータ）
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('edit') === 'true') {
             console.log('🎯 編集モードが有効化されました');
             loadEditingSystem();
+        } else {
+            // 通常モード時のみ位置復元システムを読み込み
+            loadPositionSystem();
         }
         
-        // 位置復元システム読み込み（常時実行）
+        // 位置復元システム読み込み（通常モード時のみ）
         function loadPositionSystem() {
             console.log('📥 位置復元システムを読み込み中...');
             
@@ -1178,9 +1178,12 @@
             
             // 編集システムのJS読み込み
             const editJS = document.createElement('script');
-            editJS.src = 'spine-positioning-system-explanation.js';
+            editJS.src = 'spine-positioning-system-minimal.js';
             editJS.onload = function() {
                 console.log('✅ 編集システム読み込み完了');
+                // 最小限実装版の場合は簡易的なメッセージ表示
+                console.log('🎯 編集モード有効: 最小限実装版による安全な編集機能');
+                alert('編集モード有効\n\n最小限実装版では、以下の機能が利用可能です:\n- 左上の編集ボタンでドラッグ&スケール編集\n- clearMinimalPosition() でデータクリア（コンソール）\n\nバグ回避のため安全な最小限実装版を使用中です。');
             };
             editJS.onerror = function() {
                 console.error('❌ 編集システム読み込み失敗');
@@ -1202,9 +1205,15 @@
         }
         */
         
-        // 編集インターフェース表示（最小限実装版では不要）
-        /*
+        // 編集インターフェース表示
         function showEditingInterface() {
+            // 既存のパネルが存在する場合は削除
+            const existingPanel = document.getElementById('edit-control-panel');
+            if (existingPanel) {
+                existingPanel.remove();
+                console.log('🔄 既存の編集パネルを削除');
+            }
+            
             // 編集用パネルを動的作成
             const editPanel = document.createElement('div');
             editPanel.id = 'edit-control-panel';
@@ -1361,7 +1370,6 @@
                 }
             });
         }
-        */
     </script>
     
     <!-- 構造化データ（SEO最適化） -->
