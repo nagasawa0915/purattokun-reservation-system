@@ -17,6 +17,10 @@ updated: 2025-01-29
 
 # 🎯 Spine配置システム編集UI問題
 
+> ⚠️ **注意**: この問題は旧編集システム（spine-positioning-system-explanation.js）に関するものです。
+> 2025-01-30以降は最小限実装版（spine-positioning-system-minimal.js）を使用しているため、この問題は発生しません。
+> 歴史的記録として保存しています。
+
 ## 📊 現在の状況
 **ステータス**: 解決済み - Canvas要素の子要素制限を回避するラッパー方式で解決
 
