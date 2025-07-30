@@ -93,6 +93,12 @@
 - **タグ**: `#編集システム` `#スケール` `#数値入力` `#ドラッグ` `#transform` `#座標系` `#最小限実装版`
 - **別名**: スケールが効かない、debugScale is not defined、スケールバー動かない、数値入力できない、scale function not working、スケール調整問題、transform scale issue
 
+#### 複数キャラクター対応実装記録
+- **ファイル**: [複数キャラクター対応実装記録.md](./troubleshooting/複数キャラクター対応実装記録.md)
+- **症状**: 複数キャラクター編集、レイヤー順序制御、ドラッグハンドル位置ずれ
+- **タグ**: `#編集システム` `#複数キャラクター` `#レイヤー制御` `#ドラッグ&ドロップ` `#z-index` `#位置ずれ修正`
+- **別名**: 複数キャラクター編集、キャラクター選択機能、レイヤー順序制御、multiple character support、character layer management、drag and drop reordering
+
 ### ⚙️ Spine関連の問題
 
 #### Spineライブラリ読込問題
@@ -140,6 +146,7 @@
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
 - [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
 - [スケール機能問題.md](./troubleshooting/スケール機能問題.md)
+- [複数キャラクター対応実装記録.md](./troubleshooting/複数キャラクター対応実装記録.md)
 
 #### #リサイズハンドル
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
@@ -265,6 +272,9 @@
 
 ### 「スケール」「効かない」「数値入力」「debugScale」「動かない」「スケールバー」
 → [スケール機能問題.md](./troubleshooting/スケール機能問題.md)
+
+### 「複数キャラクター」「キャラクター選択」「レイヤー制御」「ドラッグ&ドロップ」「z-index」「並び替え」
+→ [複数キャラクター対応実装記録.md](./troubleshooting/複数キャラクター対応実装記録.md)
 
 ---
 

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>複数キャラクター対応テスト</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px dashed #fff;
+            border-radius: 10px;
+        }
+        
+        .test-character {
+            position: absolute;
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+        
+        #purattokun-canvas {
+            width: 120px;
+            height: 120px;
+            background: #ff6b6b;
+            left: 25%;
+            top: 50%;
+        }
+        
+        #character-2 {
+            width: 100px;
+            height: 100px;
+            background: #4CAF50;
+            left: 50%;
+            top: 30%;
+        }
+        
+        .spine-character {
+            width: 80px;
+            height: 80px;
+            background: #2196F3;
+            left: 75%;
+            top: 70%;
+        }
+        
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 400px;
+        }
+        
+        .info-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ff6b6b;
+        }
+        
+        .debug-commands {
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: white; text-align: center; margin-bottom: 30px;">🎯 複数キャラクター対応テスト</h1>
+    
+    <div class="container">
+        <!-- メインキャラクター（従来通り） -->
+        <div id="purattokun-canvas" class="test-character">
+            ぷらっとくん<br>
+            (メイン)
+        </div>
+        
+        <!-- 追加キャラクター1 -->
+        <div id="character-2" class="test-character" data-character-name="サブキャラクター1">
+            サブ1
+        </div>
+        
+        <!-- 追加キャラクター2 -->
+        <div class="spine-character test-character" data-character-name="サブキャラクター2">
+            サブ2
+        </div>
+    </div>
+    
+    <div class="info-panel">
+        <div class="info-title">📋 テスト情報</div>
+        <div>• 複数キャラクター検出システムのテスト</div>
+        <div>• 右上の「位置編集」ボタンでテスト開始</div>
+        <div>• キャラクター選択パネルで切り替え</div>
+        <div>• ハイライト機能で選択中を表示</div>
+        
+        <div class="debug-commands">
+            <div style="margin-top: 8px; font-weight: bold;">🔧 デバッグコマンド (F12コンソール):</div>
+            <div>debugMultipleCharacters() - 状態診断</div>
+            <div>switchToCharacter(0~2) - キャラクター切り替え</div>
+            <div>addTestCharacter() - テストキャラクター追加</div>
+        </div>
+    </div>
+
+    <!-- 複数キャラクター対応編集システム読み込み -->
+    <script src="spine-positioning-system-minimal.js"></script>
+    
+    <script>
+        // テスト用の初期化確認
+        window.addEventListener('load', () => {
+            console.log('🚀 複数キャラクターテストページ読み込み完了');
+            
+            // 少し遅延してからキャラクター検出状況を確認
+            setTimeout(() => {
+                console.log('🔍 初期キャラクター検出状況:');
+                if (typeof debugMultipleCharacters === 'function') {
+                    debugMultipleCharacters();
+                } else {
+                    console.warn('⚠️ debugMultipleCharacters関数がまだ利用できません');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
