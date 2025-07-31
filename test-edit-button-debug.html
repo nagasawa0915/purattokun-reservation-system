@@ -1,0 +1,62 @@
+<\!DOCTYPE html>
+<html>
+<head>
+    <title>編集ボタン診断テスト</title>
+</head>
+<body>
+    <h1>編集ボタン表示診断</h1>
+    <div id="test-area"></div>
+    
+    <script>
+        console.log('🔍 編集ボタン診断開始');
+        
+        // URLパラメータ確認
+        const urlParams = new URLSearchParams(window.location.search);
+        const editMode = urlParams.get('edit') === 'true';
+        console.log('📋 URLパラメータ edit:', urlParams.get('edit'));
+        console.log('📋 編集モード:', editMode);
+        
+        if (editMode) {
+            console.log('✅ 編集モード検出 - JSファイル読み込み開始');
+            
+            const script = document.createElement('script');
+            script.src = 'spine-positioning-system-minimal.js';
+            script.onload = function() {
+                console.log('✅ JSファイル読み込み完了');
+                
+                // 1秒後にボタン存在確認
+                setTimeout(() => {
+                    const button = document.getElementById('minimal-edit-button');
+                    if (button) {
+                        console.log('✅ 編集ボタン発見:', button.textContent);
+                        console.log('📍 ボタン位置:', {
+                            position: button.style.position,
+                            top: button.style.top,
+                            right: button.style.right,
+                            display: button.style.display,
+                            visible: button.offsetHeight > 0
+                        });
+                    } else {
+                        console.error('❌ 編集ボタンが見つかりません');
+                        
+                        // DOM内のボタン要素を全て確認
+                        const allButtons = document.querySelectorAll('button');
+                        console.log('📋 DOM内の全ボタン:', Array.from(allButtons).map(b => ({
+                            id: b.id,
+                            text: b.textContent,
+                            style: b.style.cssText
+                        })));
+                    }
+                }, 1000);
+            };
+            script.onerror = function() {
+                console.error('❌ JSファイル読み込み失敗');
+            };
+            document.head.appendChild(script);
+        } else {
+            console.log('📋 通常モード - ?edit=true を追加してください');
+        }
+    </script>
+</body>
+</html>
+EOF < /dev/null

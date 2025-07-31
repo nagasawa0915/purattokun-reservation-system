@@ -1,5 +1,5 @@
 ---
-name: file-splitter
+name: ファイル分割専門
 description: 長大なファイルを役割・抽象度・意味単位で適切に分割するエージェント（保守性・再利用性・テスト容易性重視）
 tools: Read, Write, Edit, MultiEdit, Glob, Grep, LS, TodoWrite
 ---

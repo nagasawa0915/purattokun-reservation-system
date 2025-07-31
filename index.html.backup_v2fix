@@ -1146,15 +1146,11 @@
         
         waitForSpine();
         
-        // 🎯 編集モード対応（URLパラメータ） - v2.0システム対応
+        // 🎯 編集モード対応（URLパラメータ）
         const urlParams = new URLSearchParams(window.location.search);
-        const editParam = urlParams.get('edit');
-        const versionParam = urlParams.get('version');
-        
-        if (editParam === 'true') {
+        if (urlParams.get('edit') === 'true') {
             console.log('🎯 編集モードが有効化されました');
-            console.log('🔍 バージョンパラメータ:', versionParam);
-            loadEditingSystem(versionParam);
+            loadEditingSystem();
         } else {
             // 通常モード時のみ位置復元システムを読み込み
             loadPositionSystem();
@@ -1175,41 +1171,21 @@
             document.head.appendChild(positionJS);
         }
         
-        // 編集システム動的読み込み（編集モード時のみ） - v2.0システム対応
-        function loadEditingSystem(version) {
-            console.log("📥 編集システムを読み込み中...", version ? `(version: ${version})` : "(標準版)");
-            
-            // v2.0システムの場合
-            if (version === "v2") {
-                console.log("🚀 v2.0システムを読み込みます");
-                const v2JS = document.createElement("script");
-                v2JS.src = "spine-positioning-v2.js";
-                v2JS.onload = function() {
-                    console.log("✅ v2.0システム読み込み完了");
-                    // v2.0システムは自動初期化される
-                };
-                v2JS.onerror = function() {
-                    console.error("❌ v2.0システム読み込み失敗");
-                    alert("v2.0システムの読み込みに失敗しました。spine-positioning-v2.js を確認してください。");
-                };
-                document.head.appendChild(v2JS);
-                return;
-            }
-            
-            // 標準システム（従来版）
-            console.log("📥 標準編集システムを読み込みます");
+        // 編集システム動的読み込み（編集モード時のみ）
+        function loadEditingSystem() {
+            console.log('📥 編集システムを読み込み中...');
             
             // 編集システムのCSS読み込み
-            const editCSS = document.createElement("link");
-            editCSS.rel = "stylesheet";
-            editCSS.href = "spine-positioning-system-explanation.css";
+            const editCSS = document.createElement('link');
+            editCSS.rel = 'stylesheet';
+            editCSS.href = 'spine-positioning-system-explanation.css';
             document.head.appendChild(editCSS);
             
             // 編集システムのJS読み込み
-            const editJS = document.createElement("script");
-            editJS.src = "spine-positioning-system-minimal.js";
+            const editJS = document.createElement('script');
+            editJS.src = 'spine-positioning-system-minimal.js';
             editJS.onload = function() {
-                console.log("✅ 標準編集システム読み込み完了");
+                console.log("✅ 編集システム読み込み完了");
                 
                 // 🚨 重要: 動的読み込み時は明示的に初期化実行
                 setTimeout(() => {
@@ -1235,8 +1211,8 @@
                 }, 100);
             };
             editJS.onerror = function() {
-                console.error("❌ 標準編集システム読み込み失敗");
-                alert("編集システムの読み込みに失敗しました。spine-positioning-system-explanation.html から必要なファイルを確認してください。");
+                console.error('❌ 編集システム読み込み失敗');
+                alert('編集システムの読み込みに失敗しました。spine-positioning-system-explanation.html から必要なファイルを確認してください。');
             };
             document.head.appendChild(editJS);
         }
