@@ -287,6 +287,12 @@ function toggleEditMode() {
             tempSaveButton.style.display = 'block';
         }
         
+        // CSS出力ボタン表示
+        const cssExportButton = document.getElementById('css-export-button');
+        if (cssExportButton) {
+            cssExportButton.style.display = 'block';
+        }
+        
         console.log('✅ 編集モード有効化完了');
         
     } else {
@@ -384,6 +390,10 @@ function endEditModeCommon(shouldSave = false) {
     // 一時保存ボタン非表示
     const tempSaveButton = document.getElementById('temp-save-button');
     if (tempSaveButton) tempSaveButton.style.display = 'none';
+    
+    // CSS出力ボタン非表示
+    const cssExportButton = document.getElementById('css-export-button');
+    if (cssExportButton) cssExportButton.style.display = 'none';
     
     // 保存処理（必要な場合のみ）
     if (shouldSave && typeof window.savePositionV2 === 'function') {

@@ -229,6 +229,48 @@ function createEditButton() {
         });
         document.body.appendChild(tempSaveButton);
         
+        // CSS出力ボタン（編集モード時のみ表示）
+        const cssExportButton = document.createElement('button');
+        cssExportButton.id = 'css-export-button';
+        cssExportButton.textContent = '📋 CSS出力';
+        cssExportButton.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 240px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 10000;
+            font-size: 12px;
+            font-weight: 600;
+            display: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        `;
+        
+        cssExportButton.addEventListener('click', () => {
+            if (typeof window.showCSSExportDialog === 'function') {
+                window.showCSSExportDialog();
+            } else {
+                console.error('❌ showCSSExportDialog関数が見つかりません（CSS出力モジュール未読み込み）');
+                alert('CSS出力機能を利用するには、CSS出力モジュールを読み込んでください。');
+            }
+        });
+        cssExportButton.addEventListener('mouseenter', () => {
+            cssExportButton.style.background = 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)';
+            cssExportButton.style.transform = 'translateY(-1px)';
+            cssExportButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+        });
+        cssExportButton.addEventListener('mouseleave', () => {
+            cssExportButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            cssExportButton.style.transform = 'translateY(0)';
+            cssExportButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        });
+        document.body.appendChild(cssExportButton);
+        
         // キャラクター選択パネル
         createCharacterSelectPanel();
         

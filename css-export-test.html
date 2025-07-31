@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS出力機能テスト - Spine編集システム</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            position: relative;
+            width: 100%;
+            height: 70vh;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .spine-character {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            cursor: move;
+            user-select: none;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease;
+        }
+        
+        #character-1 {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            left: 25%;
+            top: 30%;
+        }
+        
+        #character-2 {
+            background: linear-gradient(135deg, #4ecdc4, #6dd5db);
+            left: 75%;
+            top: 30%;
+        }
+        
+        #character-3 {
+            background: linear-gradient(135deg, #45b7d1, #6cc8e8);
+            left: 50%;
+            top: 70%;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .test-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .test-btn.primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .test-btn.success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .test-btn.info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-panel">
+        <h1>🎯 CSS出力機能テスト</h1>
+        <p>Spine編集システムv2.0のCSS出力機能をテストします。</p>
+        
+        <div id="loading-status" class="status warning">
+            ⏳ モジュール読み込み中... 
+        </div>
+        
+        <div id="system-status" class="status" style="display: none;">
+            <!-- システム状況がここに表示されます -->
+        </div>
+    </div>
+    
+    <div class="container">
+        <div id="character-1" class="spine-character" data-character-name="キャラA">🐱</div>
+        <div id="character-2" class="spine-character" data-character-name="キャラB">🐶</div>
+        <div id="character-3" class="spine-character" data-character-name="キャラC">🐸</div>
+    </div>
+    
+    <div class="info-panel">
+        <h3>🧪 テスト機能</h3>
+        <div class="test-buttons">
+            <button class="test-btn primary" onclick="testModuleLoading()">
+                📦 モジュール読み込み確認
+            </button>
+            <button class="test-btn info" onclick="testCharacterDetection()">
+                🎭 キャラクター検出テスト
+            </button>
+            <button class="test-btn success" onclick="testCSSGeneration()">
+                📋 CSS生成テスト
+            </button>
+            <button class="test-btn info" onclick="showExportDialog()">
+                🎨 CSS出力ダイアログ表示
+            </button>
+            <button class="test-btn primary" onclick="toggleEditMode()">
+                ✏️ 編集モード切り替え
+            </button>
+        </div>
+        
+        <div id="test-output">
+            <h4>テスト結果</h4>
+            <pre id="test-results">テストボタンをクリックして結果を確認してください。</pre>
+        </div>
+    </div>
+
+    <!-- Spine編集システムv2.0モジュール読み込み -->
+    <script src="spine-positioning-system.js"></script>
+    <script src="spine-state-manager.js"></script>
+    <script src="spine-character-manager.js"></script>
+    <script src="spine-ui-panels.js"></script>
+    <script src="spine-drag-system.js"></script>
+    <script src="spine-css-export.js"></script>
+
+    <script>
+        // ========== テスト用スクリプト ========== //
+        
+        let testResults = [];
+        
+        function addTestResult(test, result, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            testResults.push(`[${timestamp}] ${test}: ${result} - ${message}`);
+            updateTestOutput();
+        }
+        
+        function updateTestOutput() {
+            const output = document.getElementById('test-results');
+            output.textContent = testResults.join('\n');
+        }
+        
+        function updateSystemStatus() {
+            const statusEl = document.getElementById('system-status');
+            const loadingEl = document.getElementById('loading-status');
+            
+            // モジュール読み込み状況確認
+            const modules = {
+                '状態管理': typeof window.savePositionV2 === 'function',
+                'キャラクター管理': typeof window.detectCharacters === 'function', 
+                'UIパネル': typeof window.createEditButton === 'function',
+                'ドラッグシステム': typeof window.toggleEditMode === 'function',
+                'CSS出力': typeof window.showCSSExportDialog === 'function'
+            };
+            
+            const loadedCount = Object.values(modules).filter(loaded => loaded).length;
+            const totalCount = Object.keys(modules).length;
+            
+            let statusHTML = '';
+            let statusClass = '';
+            
+            if (loadedCount === totalCount) {
+                statusHTML = `✅ 全モジュール読み込み完了 (${loadedCount}/${totalCount})`;
+                statusClass = 'success';
+                loadingEl.style.display = 'none';
+            } else if (loadedCount > 0) {
+                statusHTML = `⚠️ 部分的読み込み (${loadedCount}/${totalCount})`;
+                statusClass = 'warning';
+                loadingEl.style.display = 'none';
+            } else {
+                statusHTML = `❌ モジュール読み込み失敗 (${loadedCount}/${totalCount})`;
+                statusClass = 'error';
+                loadingEl.textContent = '❌ モジュール読み込みに失敗しました';
+            }
+            
+            statusEl.innerHTML = statusHTML + '<br><small>' + 
+                Object.entries(modules).map(([name, loaded]) => 
+                    `${loaded ? '✅' : '❌'} ${name}`).join(' | ') + '</small>';
+            statusEl.className = `status ${statusClass}`;
+            statusEl.style.display = 'block';
+        }
+        
+        // テスト関数群
+        function testModuleLoading() {
+            console.log('🧪 モジュール読み込みテスト開始');
+            
+            const tests = [
+                ['状態管理モジュール', typeof window.savePositionV2 === 'function'],
+                ['キャラクター管理', typeof window.detectCharacters === 'function'],
+                ['UIパネル', typeof window.createEditButton === 'function'],
+                ['ドラッグシステム', typeof window.toggleEditMode === 'function'],
+                ['CSS出力モジュール', typeof window.showCSSExportDialog === 'function'],
+                ['CSS生成エンジン', typeof window.generateCSS === 'function'],
+                ['データ収集機能', typeof window.collectCharacterData === 'function']
+            ];
+            
+            tests.forEach(([name, result]) => {
+                addTestResult('モジュール読み込み', result ? 'PASS' : 'FAIL', name);
+            });
+            
+            updateSystemStatus();
+        }
+        
+        function testCharacterDetection() {
+            console.log('🧪 キャラクター検出テスト開始');
+            
+            try {
+                if (typeof window.detectCharacters !== 'function') {
+                    addTestResult('キャラクター検出', 'FAIL', 'detectCharacters関数が見つかりません');
+                    return;
+                }
+                
+                // 手動でキャラクターを登録（テスト用）
+                window.characters = [
+                    {
+                        id: 'character-1',
+                        name: 'キャラA',
+                        element: document.getElementById('character-1'),
+                        selector: '#character-1',
+                        scale: 1.0,
+                        zIndex: 1001,
+                        isActive: true,
+                        originalOrder: 0
+                    },
+                    {
+                        id: 'character-2', 
+                        name: 'キャラB',
+                        element: document.getElementById('character-2'),
+                        selector: '#character-2',
+                        scale: 1.2,
+                        zIndex: 1002,
+                        isActive: false,
+                        originalOrder: 1
+                    },
+                    {
+                        id: 'character-3',
+                        name: 'キャラC', 
+                        element: document.getElementById('character-3'),
+                        selector: '#character-3',
+                        scale: 0.8,
+                        zIndex: 1003,
+                        isActive: false,
+                        originalOrder: 2
+                    }
+                ];
+                window.activeCharacterIndex = 0;
+                
+                addTestResult('キャラクター検出', 'PASS', `${window.characters.length}個のキャラクターを検出`);
+                
+                // データ収集テスト
+                if (typeof window.collectCharacterData === 'function') {
+                    const data = window.collectCharacterData();
+                    if (data && data.length > 0) {
+                        addTestResult('データ収集', 'PASS', `${data.length}個のキャラクターデータを収集`);
+                    } else {
+                        addTestResult('データ収集', 'FAIL', 'データ収集に失敗');
+                    }
+                }
+                
+            } catch (error) {
+                addTestResult('キャラクター検出', 'ERROR', error.message);
+            }
+        }
+        
+        function testCSSGeneration() {
+            console.log('🧪 CSS生成テスト開始');
+            
+            try {
+                if (typeof window.generateCSS !== 'function') {
+                    addTestResult('CSS生成', 'FAIL', 'generateCSS関数が見つかりません');
+                    return;
+                }
+                
+                // 各形式でCSS生成テスト
+                const formats = ['individual', 'generic', 'compressed', 'commented'];
+                
+                formats.forEach(format => {
+                    try {
+                        const css = window.generateCSS(format);
+                        if (css && css.length > 0) {
+                            addTestResult('CSS生成', 'PASS', `${format}形式: ${css.length}文字`);
+                        } else {
+                            addTestResult('CSS生成', 'FAIL', `${format}形式: 空のCSS`);
+                        }
+                    } catch (error) {
+                        addTestResult('CSS生成', 'ERROR', `${format}形式: ${error.message}`);
+                    }
+                });
+                
+            } catch (error) {
+                addTestResult('CSS生成', 'ERROR', error.message);
+            }
+        }
+        
+        function showExportDialog() {
+            console.log('🧪 CSS出力ダイアログテスト開始');
+            
+            try {
+                if (typeof window.showCSSExportDialog !== 'function') {
+                    addTestResult('ダイアログ表示', 'FAIL', 'showCSSExportDialog関数が見つかりません');
+                    return;
+                }
+                
+                window.showCSSExportDialog();
+                addTestResult('ダイアログ表示', 'PASS', 'CSS出力ダイアログを表示');
+                
+            } catch (error) {
+                addTestResult('ダイアログ表示', 'ERROR', error.message);
+            }
+        }
+        
+        function toggleEditMode() {
+            console.log('🧪 編集モード切り替えテスト');
+            
+            try {
+                if (typeof window.toggleEditMode !== 'function') {
+                    addTestResult('編集モード', 'FAIL', 'toggleEditMode関数が見つかりません');
+                    return;
+                }
+                
+                const wasEditMode = window.isEditMode || false;
+                window.toggleEditMode();
+                const isEditMode = window.isEditMode || false;
+                
+                addTestResult('編集モード', 'PASS', 
+                    `${wasEditMode ? '編集モード' : '通常モード'} → ${isEditMode ? '編集モード' : '通常モード'}`);
+                
+            } catch (error) {
+                addTestResult('編集モード', 'ERROR', error.message);
+            }
+        }
+        
+        // ページ読み込み完了時の自動テスト
+        window.addEventListener('load', () => {
+            console.log('🚀 CSS出力機能テストページ読み込み完了');
+            
+            // 1秒後にシステム状況を更新
+            setTimeout(() => {
+                updateSystemStatus();
+                
+                // 自動で基本テストを実行
+                setTimeout(() => {
+                    testModuleLoading();
+                    setTimeout(() => {
+                        testCharacterDetection();
+                    }, 500);
+                }, 1000);
+            }, 1000);
+        });
+        
+        // デバッグ用
+        window.testCSS = {
+            testModuleLoading,
+            testCharacterDetection, 
+            testCSSGeneration,
+            showExportDialog,
+            toggleEditMode
+        };
+    </script>
+</body>
+</html>
