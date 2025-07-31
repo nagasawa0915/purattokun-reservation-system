@@ -186,3 +186,46 @@ async function initSpineCharacter() {
 **原因推測**: try-catch でエラーをキャッチしてフォールバック処理が確実に実行
 **学び**: エラーハンドリングとフォールバック処理の重要性
 **環境**: 全ブラウザで安定動作確認
+
+### ✅ Case #6: 2025-01-31 - CDN依存問題の完全解決（パッケージ出力機能）
+
+**問題**: パッケージ出力時にCDN依存によりSpineアニメーションが動作しない
+**発生条件**: 
+- 完全パッケージ出力機能でZIPファイル生成時
+- インターネット接続のない環境での実行
+- CDNからのSpine WebGLライブラリ読み込み失敗
+
+**試した方法**: 
+```javascript
+// CDN依存排除・ローカル化システム
+// spine-webgl.jsをローカルに含める処理
+const spineScript = await fetch('https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js');
+const spineLibContent = await spineScript.text();
+
+// HTMLにインライン化
+const inlineSpineScript = `<script>${spineLibContent}</script>`;
+htmlContent = htmlContent.replace('<script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js"></script>', inlineSpineScript);
+```
+
+**結果**: ✅ 完全に解決
+**効果確認**: 
+- パッケージ化されたHTMLファイルでSpineアニメーション正常動作
+- オフライン環境でも完全なアニメーション再生
+- CDN接続なしでの完全自立動作
+- 商用納品パッケージとしての信頼性確立
+
+**原因分析**: 
+- CDN依存による外部ネットワーク要求がパッケージの自立性を阻害
+- ライブラリのローカル化により完全な独立動作が実現
+
+**技術的学び**: 
+- **CDN依存の根本的解決**: 外部依存を完全排除する設計の重要性
+- **インライン化技術**: スクリプトの動的取得・埋め込み手法の有効性
+- **パッケージ自立性**: 商用制作ツールでは外部依存ゼロが必須
+
+**商用価値**: 
+- **お客様納品品質向上**: ネットワーク環境に依存しない確実動作
+- **制作フロー改善**: CDN障害やバージョン変更の影響回避
+- **品質保証強化**: 完全制御下でのアニメーション動作保証
+
+**環境**: Chrome/Firefox/Safari全ブラウザ、オフライン環境で検証済み

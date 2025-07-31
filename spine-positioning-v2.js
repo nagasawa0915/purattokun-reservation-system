@@ -714,11 +714,20 @@ function createControlPanel() {
             </div>
             
             <!-- CSS出力 -->
-            <div>
+            <div style="margin-bottom: 8px;">
                 <button id="v2-css-export" style="width: 100%; padding: 6px; font-size: 12px; 
                                                    background: #4CAF50; color: white; border: none; border-radius: 4px;
                                                    cursor: pointer; transition: background-color 0.2s;">
                     📋 CSS出力
+                </button>
+            </div>
+            
+            <!-- 完全パッケージ出力 -->
+            <div>
+                <button id="v2-package-export" style="width: 100%; padding: 8px; font-size: 12px; 
+                                                       background: #ff6b6b; color: white; border: none; border-radius: 4px;
+                                                       cursor: pointer; transition: background-color 0.2s; font-weight: bold;">
+                    📦 完全パッケージ出力
                 </button>
             </div>
         </div>
@@ -841,6 +850,40 @@ function setupControlPanelEvents() {
         });
         cssExportBtn.addEventListener('mouseleave', () => {
             cssExportBtn.style.backgroundColor = '#4CAF50';
+        });
+    }
+    
+    // 完全パッケージ出力ボタン
+    const packageExportBtn = document.getElementById('v2-package-export');
+    if (packageExportBtn) {
+        packageExportBtn.addEventListener('click', async () => {
+            console.log('📦 v2.0: 完全パッケージ出力開始');
+            
+            // パッケージ出力システムの存在確認
+            if (typeof window.PackageExportPhase1 === 'undefined') {
+                // パッケージ出力システムを動的読み込み
+                await loadPackageExportSystem();
+            }
+            
+            if (window.PackageExportPhase1) {
+                try {
+                    await PackageExportPhase1.init();
+                    await PackageExportPhase1.generatePackage();
+                } catch (error) {
+                    console.error('❌ v2.0: パッケージ出力エラー:', error);
+                    alert('パッケージ出力中にエラーが発生しました。コンソールを確認してください。');
+                }
+            } else {
+                alert('パッケージ出力システムの読み込みに失敗しました。ページを再読み込みしてお試しください。');
+            }
+        });
+        
+        // ホバー効果
+        packageExportBtn.addEventListener('mouseenter', () => {
+            packageExportBtn.style.backgroundColor = '#e55555';
+        });
+        packageExportBtn.addEventListener('mouseleave', () => {
+            packageExportBtn.style.backgroundColor = '#ff6b6b';
         });
     }
 }
@@ -1027,6 +1070,29 @@ function updateRealtimeDisplay() {
     // リアルタイム表示はシンプル化のため削除
     // 必要に応じて他のUI更新処理を追加
     console.log('🔄 v2.0: UI更新スキップ（シンプル化済み）');
+}
+
+// ========== 📦 パッケージ出力システム動的読み込み ========== //
+async function loadPackageExportSystem() {
+    console.log('📦 v2.0: パッケージ出力システム読み込み開始...');
+    
+    try {
+        const script = document.createElement('script');
+        script.src = './package-export-phase1.js';
+        
+        await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+        
+        console.log('✅ v2.0: パッケージ出力システム読み込み完了');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ v2.0: パッケージ出力システム読み込みエラー:', error);
+        return false;
+    }
 }
 
 // ========== 📋 CSS出力システム ========== //
@@ -1336,6 +1402,47 @@ SpinePositioningV2.getStatus = function() {
         activeIndex: SpinePositioningV2.activeIndex,
         activeCharacter: SpinePositioningV2.characters[SpinePositioningV2.activeIndex]?.name || null
     };
+};
+
+// 📦 完全パッケージ出力用の位置データ取得機能
+SpinePositioningV2.getCurrentPositions = function() {
+    console.log('📦 v2.0: 現在の位置データを取得中...');
+    
+    const positionData = {
+        version: '2.0',
+        timestamp: new Date().toISOString(),
+        characters: {}
+    };
+    
+    SpinePositioningV2.characters.forEach(char => {
+        const element = char.element;
+        const id = char.id;
+        
+        positionData.characters[id] = {
+            name: char.name,
+            selector: char.selector,
+            position: {
+                left: element.style.left || '0%',
+                top: element.style.top || '0%',
+                transform: element.style.transform || 'translate(-50%, -50%)',
+                scale: char.scale || 1.0
+            },
+            layer: {
+                zIndex: char.zIndex || 1000
+            },
+            isActive: char.isActive,
+            // data-*属性形式の値も生成
+            dataAttributes: {
+                'data-x': parseFloat(element.style.left) || 0,
+                'data-y': parseFloat(element.style.top) || 0,
+                'data-scale': char.scale || 1.0,
+                'data-z-index': char.zIndex || 1000
+            }
+        };
+    });
+    
+    console.log(`📦 v2.0: ${Object.keys(positionData.characters).length}個のキャラクター位置データを取得`);
+    return positionData;
 };
 
 // ========== 🔗 既存システムとの統合 ========== //
