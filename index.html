@@ -141,12 +141,12 @@
         }
         
         /* 各雲の位置とアニメーション */
-        .cloud1 { left: -5%; top: 10%; width: 100px; animation: moveCloud1 25s linear infinite; }
-        .cloud2 { left: -5%; top: 15%; width: 100px; animation: moveCloud2 30s linear infinite; }
-        .cloud3 { left: -5%; top: 8%; width: 100px; animation: moveCloud3 35s linear infinite; }
-        .cloud4 { left: -5%; top: 20%; width: 100px; animation: moveCloud1 28s linear infinite; animation-delay: -5s; }
-        .cloud5 { left: -5%; top: 12%; width: 100px; animation: moveCloud2 32s linear infinite; animation-delay: -8s; }
-        .cloud6 { left: -5%; top: 18%; width: 100px; animation: moveCloud3 26s linear infinite; animation-delay: -12s; }
+        .cloud1 { left: -5%; top: 10%; width: 8vw; animation: moveCloud1 25s linear infinite; }
+        .cloud2 { left: -5%; top: 15%; width: 8vw; animation: moveCloud2 30s linear infinite; }
+        .cloud3 { left: -5%; top: 8%; width: 8vw; animation: moveCloud3 35s linear infinite; }
+        .cloud4 { left: -5%; top: 20%; width: 8vw; animation: moveCloud1 28s linear infinite; animation-delay: -5s; }
+        .cloud5 { left: -5%; top: 12%; width: 8vw; animation: moveCloud2 32s linear infinite; animation-delay: -8s; }
+        .cloud6 { left: -5%; top: 18%; width: 8vw; animation: moveCloud3 26s linear infinite; animation-delay: -12s; }
         
         /* 雲のアニメーション */
         @keyframes moveCloud1 { from { left: -10%; } to { left: 110%; } }
@@ -479,6 +479,11 @@
             
             .service-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            /* モバイル版雲のサイズ調整 */
+            .cloud1, .cloud2, .cloud3, .cloud4, .cloud5, .cloud6 {
+                width: 8vw; /* デスクトップ版と統一 */
             }
             
             /* モバイル版キャラクター位置（調整容易） */
