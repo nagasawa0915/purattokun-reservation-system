@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnimationSelector モジュール デモ・テスト</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .demo-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .demo-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .debug-panel {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        .demo-button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .demo-button.primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .demo-button.primary:hover {
+            background: #2980b9;
+        }
+        
+        .demo-button.success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .demo-button.success:hover {
+            background: #229954;
+        }
+        
+        .demo-button.warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .demo-button.warning:hover {
+            background: #e67e22;
+        }
+        
+        .demo-button.danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .demo-button.danger:hover {
+            background: #c0392b;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.success {
+            background: #27ae60;
+        }
+        
+        .status-indicator.warning {
+            background: #f39c12;
+        }
+        
+        .status-indicator.error {
+            background: #e74c3c;
+        }
+        
+        .mock-v2-panel {
+            border: 2px dashed #3498db;
+            padding: 20px;
+            border-radius: 8px;
+            background: #ecf0f1;
+            margin: 20px 0;
+        }
+        
+        .mock-character {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            margin: 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .character-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>🎬 AnimationSelector モジュール デモ</h1>
+            <p>アニメーション選択システムの完全モジュール化版のテスト・デモンストレーション</p>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🔍 システム状態確認</h2>
+            <div class="button-group">
+                <button class="demo-button primary" onclick="checkSystemStatus()">システムステータス確認</button>
+                <button class="demo-button success" onclick="createTestSelector()">テストAnimationSelector作成</button>
+                <button class="demo-button warning" onclick="simulateSystemIntegration()">システム統合シミュレーション</button>
+                <button class="demo-button danger" onclick="resetAll()">全リセット</button>
+            </div>
+            <div id="system-status" class="debug-panel">システムステータスを確認中...
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🧪 機能テスト</h2>
+            <div class="button-group">
+                <button class="demo-button primary" onclick="testBasicFunctionality()">基本機能テスト</button>
+                <button class="demo-button primary" onclick="testUIGeneration()">モックUI生成テスト</button>
+                <button class="demo-button success" onclick="testAnimationPreview()">アニメーションプレビューテスト</button>
+                <button class="demo-button warning" onclick="testErrorHandling()">エラーハンドリングテスト</button>
+            </div>
+            <div id="test-results" class="debug-panel">テスト結果がここに表示されます...
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🎛️ モックv2.0パネル</h2>
+            <p>以下は本物のv2.0編集パネルのモックです。AnimationSelectorが自動的に統合されることをテストできます。</p>
+            <div class="mock-v2-panel positioning-v2-panel">
+                <h3>🚀 Spine編集システム v2.0</h3>
+                <div class="positioning-v2-edit-controls">
+                    <button class="demo-button primary">🎯 キャラクター編集</button>
+                    <button class="demo-button success">📋 CSS出力</button>
+                    <button class="demo-button warning">📦 パッケージ出力</button>
+                </div>
+                <!-- AnimationSelector がここに自動統合される -->
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🎬 モックキャラクター</h2>
+            <p>アニメーションテスト用のモックキャラクター</p>
+            <div class="character-container" id="mock-characters">
+                <div class="mock-character" data-character="purattokun">🐱</div>
+                <div class="mock-character" data-character="hero-character">🦸</div>
+                <div class="mock-character" data-character="test-character">🤖</div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>📦 コンソールコマンド</h2>
+            <p>ブラウザのF12コンソールで以下のコマンドを実行できます：</p>
+            <div class="debug-panel">
+// AnimationSelector の作成・テスト
+window.createAnimationSelector({ debugMode: true })
+window.testAnimationSelector()
+window.diagnoseAnimationSelector()
+
+// アニメーション制御（統合後）
+window.animationSelector.playPreview('purattokun')
+window.animationSelector.setCharacterAnimation('purattokun', 'yarare')
+window.animationSelector.stopAllAnimations()
+
+// システム診断
+window.animationSelector.getAllCharacterAnimations()
+window.mockSpineManager.getAllCharacters() // モックシステム
+
+// リセット
+window.resetAnimationSelector()
+            </div>
+        </div>
+    </div>
+    
+    <!-- AnimationSelector モジュールの読み込み -->
+    <script src="animation-selector.js"></script>
+    
+    <!-- デモ・テスト用スクリプト -->
+    <script>
+        // デモ用のグローバル変数
+        let testAnimationSelector = null;
+        let mockSystemsCreated = false;
+        
+        // ログ出力用ユーティリティ
+        function logToPanel(panelId, message, type = 'info') {
+            const panel = document.getElementById(panelId);
+            const timestamp = new Date().toLocaleTimeString();
+            const colorMap = {
+                'info': '#ffffff',
+                'success': '#27ae60',
+                'warning': '#f39c12',
+                'error': '#e74c3c'
+            };
+            const color = colorMap[type] || '#ffffff';
+            
+            panel.innerHTML += `<div style="color: ${color}; margin: 2px 0;">[${timestamp}] ${message}</div>`;
+            panel.scrollTop = panel.scrollHeight;
+        }
+        
+        // システムステータス確認
+        function checkSystemStatus() {
+            const panel = document.getElementById('system-status');
+            panel.innerHTML = '';
+            
+            logToPanel('system-status', '🔍 システムステータス確認開始', 'info');
+            
+            // 基本システム確認
+            const systems = {
+                'AnimationSelectorクラス': typeof AnimationSelector,
+                'window.animationSelector': typeof window.animationSelector,
+                'window.spineManager': typeof window.spineManager,
+                'window.spinePositioningV2': typeof window.spinePositioningV2,
+                'window.createAnimationSelector': typeof window.createAnimationSelector,
+                'window.testAnimationSelector': typeof window.testAnimationSelector
+            };
+            
+            for (const [name, type] of Object.entries(systems)) {
+                const status = type !== 'undefined' ? '✅ 存在' : '❌ 無し';
+                const logType = type !== 'undefined' ? 'success' : 'warning';
+                logToPanel('system-status', `${name}: ${status} (${type})`, logType);
+            }
+            
+            // AnimationSelectorインスタンス確認
+            if (window.animationSelector) {
+                logToPanel('system-status', '📊 AnimationSelectorインスタンス詳細:', 'info');
+                logToPanel('system-status', `  - キャラクター数: ${window.animationSelector.characterAnimations.size}`, 'info');
+                logToPanel('system-status', `  - UI要素数: ${window.animationSelector.uiElements.size}`, 'info');
+                logToPanel('system-status', `  - 統合状態: ${!!window.animationSelector.animationController}`, 'info');
+            }
+            
+            logToPanel('system-status', '✅ システムステータス確認完了', 'success');
+        }
+        
+        // テストAnimationSelector作成
+        function createTestSelector() {
+            logToPanel('system-status', '🎬 テストAnimationSelector作成開始', 'info');
+            
+            try {
+                testAnimationSelector = new AnimationSelector({
+                    debugMode: true,
+                    autoIntegrate: false // テストのため手動統合
+                });
+                
+                window.testAnimationSelector = testAnimationSelector;
+                
+                logToPanel('system-status', '✅ テストAnimationSelector作成成功', 'success');
+                logToPanel('system-status', '📊 window.testAnimationSelector でアクセス可能', 'info');
+                
+            } catch (error) {
+                logToPanel('system-status', `❌ エラー: ${error.message}`, 'error');
+                console.error('テストAnimationSelector作成エラー:', error);
+            }
+        }
+        
+        // システム統合シミュレーション
+        function simulateSystemIntegration() {
+            logToPanel('system-status', '🔄 システム統合シミュレーション開始', 'info');
+            
+            if (!mockSystemsCreated) {
+                createMockSystems();
+            }
+            
+            if (testAnimationSelector) {
+                // 手動統合テスト
+                const mockController = window.mockSpineManager.animationController;
+                const mockManager = window.mockSpineManager.characterManager;
+                
+                testAnimationSelector.integrateWithExistingSystems(mockController, mockManager, null);
+                
+                logToPanel('system-status', '✅ モックシステムとの統合完了', 'success');
+                logToPanel('system-status', `📊 検出キャラクター数: ${testAnimationSelector.characterAnimations.size}`, 'info');
+            } else {
+                logToPanel('system-status', '⚠️ テストAnimationSelectorが未作成です', 'warning');
+            }
+        }
+        
+        // モックシステム作成
+        function createMockSystems() {
+            logToPanel('system-status', '🤖 モックシステム作成中...', 'info');
+            
+            // モックAnimationController
+            const mockAnimationController = {
+                playAnimation: (characterId, animationId, loop) => {
+                    console.log(`🎬 Mock: Playing ${animationId} for ${characterId} (loop: ${loop})`);
+                    logToPanel('test-results', `🎬 Mockアニメーション再生: ${characterId} → ${animationId}`, 'success');
+                },
+                playSequence: (characterId, sequence) => {
+                    console.log(`🔄 Mock: Playing sequence for ${characterId}:`, sequence);
+                    logToPanel('test-results', `🔄 Mockシーケンス再生: ${characterId} → ${sequence.join(' → ')}`, 'success');
+                },
+                stopAllAnimations: (characterId) => {
+                    console.log(`⏹️ Mock: Stopping animations for ${characterId}`);
+                    logToPanel('test-results', `⏹️ Mockアニメーション停止: ${characterId}`, 'warning');
+                }
+            };
+            
+            // モックCharacterManager
+            const mockCharacters = new Map([
+                ['purattokun', { type: 'spine', name: 'purattokun' }],
+                ['hero-character', { type: 'placeholder', name: 'hero-character' }],
+                ['test-character', { type: 'spine', name: 'test-character' }]
+            ]);
+            
+            const mockCharacterManager = {
+                characters: mockCharacters,
+                getCharacter: (id) => mockCharacters.get(id)
+            };
+            
+            // グローバルモックシステム設定
+            window.mockSpineManager = {
+                animationController: mockAnimationController,
+                characterManager: mockCharacterManager,
+                getAllCharacters: () => {
+                    return Object.fromEntries(mockCharacters);
+                }
+            };
+            
+            mockSystemsCreated = true;
+            logToPanel('system-status', '✅ モックシステム作成完了', 'success');
+            logToPanel('system-status', '📊 window.mockSpineManager でアクセス可能', 'info');
+        }
+        
+        // 基本機能テスト
+        function testBasicFunctionality() {
+            const panel = document.getElementById('test-results');
+            panel.innerHTML = '';
+            
+            logToPanel('test-results', '🧪 基本機能テスト開始', 'info');
+            
+            if (!testAnimationSelector) {
+                logToPanel('test-results', '❌ テストAnimationSelectorが未作成です', 'error');
+                return;
+            }
+            
+            try {
+                // キャラクター設定テスト
+                const success1 = testAnimationSelector.setCharacterAnimation('test-char', 'yarare');
+                logToPanel('test-results', `アニメーション設定テスト: ${success1 ? '✅ 成功' : '❌ 失敗'}`, success1 ? 'success' : 'warning');
+                
+                // ループ設定テスト
+                const success2 = testAnimationSelector.setCharacterLoop('test-char', true);
+                logToPanel('test-results', `ループ設定テスト: ${success2 ? '✅ 成功' : '❌ 失敗'}`, success2 ? 'success' : 'warning');
+                
+                // 情報取得テスト
+                const info = testAnimationSelector.getAllCharacterAnimations();
+                logToPanel('test-results', `情報取得テスト: ${Object.keys(info).length}個のキャラクター情報を取得`, 'info');
+                
+                logToPanel('test-results', '✅ 基本機能テスト完了', 'success');
+                
+            } catch (error) {
+                logToPanel('test-results', `❌ テストエラー: ${error.message}`, 'error');
+                console.error('基本機能テストエラー:', error);
+            }
+        }
+        
+        // UI生成テスト
+        function testUIGeneration() {
+            logToPanel('test-results', '🎛️ モックUI生成テスト開始', 'info');
+            
+            if (!testAnimationSelector) {
+                logToPanel('test-results', '❌ テストAnimationSelectorが未作成です', 'error');
+                return;
+            }
+            
+            try {
+                const mockPanel = document.querySelector('.positioning-v2-panel');
+                if (mockPanel) {
+                    testAnimationSelector.createV2IntegratedUI(mockPanel);
+                    logToPanel('test-results', '✅ v2.0統合UIがモックパネルに追加されました', 'success');
+                } else {
+                    logToPanel('test-results', '⚠️ モックパネルが見つかりません', 'warning');
+                }
+                
+            } catch (error) {
+                logToPanel('test-results', `❌ UI生成エラー: ${error.message}`, 'error');
+                console.error('UI生成テストエラー:', error);
+            }
+        }
+        
+        // アニメーションプレビューテスト
+        function testAnimationPreview() {
+            logToPanel('test-results', '🎬 アニメーションプレビューテスト開始', 'info');
+            
+            if (!testAnimationSelector || !testAnimationSelector.animationController) {
+                logToPanel('test-results', '❌ 統合されたAnimationSelectorが必要です', 'error');
+                return;
+            }
+            
+            try {
+                // 各アニメーションのテスト
+                const animations = ['syutugen', 'taiki', 'yarare', 'click'];
+                
+                animations.forEach((anim, index) => {
+                    setTimeout(() => {
+                        const success = testAnimationSelector.playPreview('purattokun', anim);
+                        logToPanel('test-results', `${anim}アニメーションプレビュー: ${success ? '✅ 成功' : '❌ 失敗'}`, success ? 'success' : 'warning');
+                    }, index * 500);
+                });
+                
+            } catch (error) {
+                logToPanel('test-results', `❌ プレビューテストエラー: ${error.message}`, 'error');
+                console.error('アニメーションプレビューテストエラー:', error);
+            }
+        }
+        
+        // エラーハンドリングテスト
+        function testErrorHandling() {
+            logToPanel('test-results', '⚠️ エラーハンドリングテスト開始', 'warning');
+            
+            if (!testAnimationSelector) {
+                logToPanel('test-results', '❌ テストAnimationSelectorが未作成です', 'error');
+                return;
+            }
+            
+            try {
+                // 存在しないキャラクターテスト
+                const result1 = testAnimationSelector.playPreview('nonexistent-character');
+                logToPanel('test-results', `存在しないキャラクターテスト: ${result1 ? '⚠️ 予期外成功' : '✅ 正常に失敗'}`, result1 ? 'warning' : 'success');
+                
+                // 無効なアニメーションIDテスト
+                const result2 = testAnimationSelector.setCharacterAnimation('purattokun', 'invalid-animation');
+                logToPanel('test-results', `無効アニメーションIDテスト: ${result2 ? '⚠️ 予期外成功' : '✅ 正常に失敗'}`, result2 ? 'warning' : 'success');
+                
+                logToPanel('test-results', '✅ エラーハンドリングテスト完了', 'success');
+                
+            } catch (error) {
+                logToPanel('test-results', `❌ エラーハンドリングテストエラー: ${error.message}`, 'error');
+                console.error('エラーハンドリングテストエラー:', error);
+            }
+        }
+        
+        // 全リセット
+        function resetAll() {
+            logToPanel('system-status', '🧹 全リセット開始', 'warning');
+            
+            // AnimationSelectorインスタンスの破棄
+            if (testAnimationSelector) {
+                testAnimationSelector.destroy();
+                testAnimationSelector = null;
+            }
+            
+            if (window.animationSelector) {
+                window.animationSelector.destroy();
+                delete window.animationSelector;
+            }
+            
+            // モックシステムの削除
+            if (window.mockSpineManager) {
+                delete window.mockSpineManager;
+                mockSystemsCreated = false;
+            }
+            
+            if (window.testAnimationSelector) {
+                delete window.testAnimationSelector;
+            }
+            
+            // UIのクリア
+            const mockUI = document.querySelector('.animation-selector-section');
+            if (mockUI) {
+                mockUI.remove();
+            }
+            
+            // 成果パネルのクリア
+            document.getElementById('system-status').innerHTML = 'リセット完了';
+            document.getElementById('test-results').innerHTML = 'リセット完了';
+            
+            logToPanel('system-status', '✅ 全リセット完了', 'success');
+        }
+        
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            logToPanel('system-status', '🚀 AnimationSelectorデモページが読み込まれました', 'success');
+            logToPanel('system-status', '💡 上のボタンでテストを開始してください', 'info');
+            
+            // 自動システムステータス確認
+            setTimeout(checkSystemStatus, 500);
+        });
+        
+    </script>
+</body>
+</html>

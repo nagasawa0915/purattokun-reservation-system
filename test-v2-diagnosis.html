@@ -1,0 +1,319 @@
+<\!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v2.0システム診断テスト</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .diagnosis-box { 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        button:hover { background: #0056b3; }
+        #test-character { 
+            position: absolute;
+            left: 50%;
+            top: 300px;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: 2px solid #333;
+            border-radius: 10px;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: move;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Spine編集システムv2.0 診断テスト</h1>
+    
+    <div class="diagnosis-box">
+        <h3>📋 診断手順</h3>
+        <ol>
+            <li><button onclick="runBasicDiagnosis()">基本診断実行</button> - システム読み込み状態確認</li>
+            <li><button onclick="testInitialization()">初期化テスト</button> - v2.0システム初期化</li>
+            <li><button onclick="testCharacterDetection()">キャラクター検出テスト</button> - 要素検出機能</li>
+            <li><button onclick="testCharacterSelection()">選択機能テスト</button> - UI作成・選択機能</li>
+            <li><button onclick="testDragMovement()">ドラッグ移動テスト</button> - マウス・タッチ操作</li>
+        </ol>
+    </div>
+
+    <\!-- テスト用キャラクター -->
+    <div id="test-character">
+        テストキャラ
+    </div>
+    
+    <div id="purattokun-canvas" style="position: absolute; left: 30%; top: 200px; width: 80px; height: 80px; background: #ff6b6b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: move; z-index: 1001;">
+        ぷらっと
+    </div>
+
+    <\!-- 診断結果表示エリア -->
+    <div id="diagnosis-results"></div>
+
+    <\!-- 診断用JavaScriptライブラリ -->
+    <script src="spine-positioning-v2.js"></script>
+    
+    <script>
+        console.log('🚀 診断テストページ開始');
+        
+        let diagnosisResults = [];
+        
+        function addDiagnosisResult(category, status, message, details = null) {
+            const result = {
+                category,
+                status, // 'success', 'error', 'warning', 'info'
+                message,
+                details,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            diagnosisResults.push(result);
+            updateDiagnosisDisplay();
+            
+            // コンソールにも出力
+            const emoji = {
+                success: '✅',
+                error: '❌', 
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            console.log(`${emoji[status]} [${category}] ${message}`, details || '');
+        }
+        
+        function updateDiagnosisDisplay() {
+            const container = document.getElementById('diagnosis-results');
+            container.innerHTML = '';
+            
+            diagnosisResults.forEach(result => {
+                const div = document.createElement('div');
+                div.className = `diagnosis-box ${result.status}`;
+                
+                let html = `
+                    <h4>[${result.category}] ${result.message}</h4>
+                    <small>時刻: ${result.timestamp}</small>
+                `;
+                
+                if (result.details) {
+                    html += `<pre>${JSON.stringify(result.details, null, 2)}</pre>`;
+                }
+                
+                div.innerHTML = html;
+                container.appendChild(div);
+            });
+        }
+        
+        function runBasicDiagnosis() {
+            addDiagnosisResult('基本診断', 'info', '基本診断を開始します');
+            
+            // 1. SpinePositioningV2オブジェクト存在確認
+            if (typeof SpinePositioningV2 \!== 'undefined') {
+                addDiagnosisResult('基本診断', 'success', 'SpinePositioningV2オブジェクトが存在します', {
+                    type: typeof SpinePositioningV2,
+                    initialized: SpinePositioningV2.initialized,
+                    editMode: SpinePositioningV2.editMode,
+                    charactersCount: SpinePositioningV2.characters.length
+                });
+            } else {
+                addDiagnosisResult('基本診断', 'error', 'SpinePositioningV2オブジェクトが見つかりません');
+            }
+            
+            // 2. 必要な関数の存在確認
+            const requiredFunctions = ['detectCharacters', 'selectCharacter', 'setupDragMovement', 'createPanels'];
+            const existingFunctions = [];
+            const missingFunctions = [];
+            
+            requiredFunctions.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    existingFunctions.push(funcName);
+                } else {
+                    missingFunctions.push(funcName);
+                }
+            });
+            
+            if (existingFunctions.length > 0) {
+                addDiagnosisResult('基本診断', 'success', '必要な関数が見つかりました', {
+                    existing: existingFunctions,
+                    missing: missingFunctions
+                });
+            }
+            
+            if (missingFunctions.length > 0) {
+                addDiagnosisResult('基本診断', 'warning', '一部の関数が見つかりません', {
+                    missing: missingFunctions
+                });
+            }
+            
+            // 3. DOM要素確認
+            const testCharacter = document.getElementById('test-character');
+            const purattokun = document.getElementById('purattokun-canvas');
+            
+            addDiagnosisResult('基本診断', 'info', 'DOM要素確認', {
+                testCharacter: testCharacter ? 'あり' : 'なし',
+                purattokun: purattokun ? 'あり' : 'なし'
+            });
+        }
+        
+        function testInitialization() {
+            addDiagnosisResult('初期化テスト', 'info', 'v2.0システム初期化テストを開始');
+            
+            try {
+                if (typeof SpinePositioningV2 \!== 'undefined' && SpinePositioningV2.init) {
+                    SpinePositioningV2.init();
+                    
+                    setTimeout(() => {
+                        addDiagnosisResult('初期化テスト', 'success', 'v2.0システム初期化完了', {
+                            initialized: SpinePositioningV2.initialized,
+                            editMode: SpinePositioningV2.editMode,
+                            charactersDetected: SpinePositioningV2.characters.length
+                        });
+                    }, 1000);
+                    
+                } else {
+                    addDiagnosisResult('初期化テスト', 'error', 'SpinePositioningV2.init関数が見つかりません');
+                }
+            } catch (error) {
+                addDiagnosisResult('初期化テスト', 'error', '初期化中にエラー発生', {
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+        }
+        
+        function testCharacterDetection() {
+            addDiagnosisResult('キャラクター検出', 'info', 'キャラクター検出テストを開始');
+            
+            try {
+                if (typeof detectCharacters === 'function') {
+                    const result = detectCharacters();
+                    
+                    addDiagnosisResult('キャラクター検出', result ? 'success' : 'warning', 
+                        `検出結果: ${result ? '成功' : '失敗'}`, {
+                        charactersFound: SpinePositioningV2.characters.length,
+                        characters: SpinePositioningV2.characters.map(char => ({
+                            id: char.id,
+                            name: char.name,
+                            selector: char.selector
+                        }))
+                    });
+                } else {
+                    addDiagnosisResult('キャラクター検出', 'error', 'detectCharacters関数が見つかりません');
+                }
+            } catch (error) {
+                addDiagnosisResult('キャラクター検出', 'error', 'キャラクター検出中にエラー', error);
+            }
+        }
+        
+        function testCharacterSelection() {
+            addDiagnosisResult('選択機能', 'info', 'キャラクター選択機能テストを開始');
+            
+            try {
+                // UI作成テスト
+                if (typeof createPanels === 'function') {
+                    createPanels();
+                    
+                    setTimeout(() => {
+                        const characterPanel = document.getElementById('v2-character-select-panel');
+                        const controlPanel = document.getElementById('v2-control-panel');
+                        
+                        addDiagnosisResult('選択機能', characterPanel ? 'success' : 'error', 
+                            'キャラクター選択パネル', {
+                            exists: characterPanel ? 'あり' : 'なし',
+                            visible: characterPanel ? (characterPanel.style.display \!== 'none') : false
+                        });
+                        
+                        addDiagnosisResult('選択機能', controlPanel ? 'success' : 'error', 
+                            'コントロールパネル', {
+                            exists: controlPanel ? 'あり' : 'なし'
+                        });
+                        
+                        // 選択テスト
+                        if (SpinePositioningV2.characters.length > 0 && typeof selectCharacter === 'function') {
+                            selectCharacter(0);
+                            addDiagnosisResult('選択機能', 'success', 'キャラクター選択テスト完了', {
+                                selectedIndex: SpinePositioningV2.activeIndex,
+                                selectedCharacter: SpinePositioningV2.characters[SpinePositioningV2.activeIndex]?.name
+                            });
+                        }
+                    }, 500);
+                    
+                } else {
+                    addDiagnosisResult('選択機能', 'error', 'createPanels関数が見つかりません');
+                }
+            } catch (error) {
+                addDiagnosisResult('選択機能', 'error', '選択機能テスト中にエラー', error);
+            }
+        }
+        
+        function testDragMovement() {
+            addDiagnosisResult('ドラッグ移動', 'info', 'ドラッグ移動機能テストを開始');
+            
+            try {
+                if (typeof setupDragMovement === 'function') {
+                    setupDragMovement();
+                    
+                    // ドラッグイベントテスト
+                    const testChar = document.getElementById('test-character');
+                    if (testChar) {
+                        // mousedownイベントシミュレーション
+                        const mousedownEvent = new MouseEvent('mousedown', {
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: 100,
+                            clientY: 100
+                        });
+                        
+                        testChar.dispatchEvent(mousedownEvent);
+                        
+                        setTimeout(() => {
+                            addDiagnosisResult('ドラッグ移動', 'success', 'ドラッグ移動機能設定完了', {
+                                dragState: SpinePositioningV2.dragState.isDragging,
+                                handlersSet: SpinePositioningV2.handlers.drag.length > 0
+                            });
+                            
+                            // ドラッグ状態をリセット
+                            SpinePositioningV2.dragState.isDragging = false;
+                            SpinePositioningV2.dragState.dragTarget = null;
+                        }, 100);
+                    }
+                    
+                } else {
+                    addDiagnosisResult('ドラッグ移動', 'error', 'setupDragMovement関数が見つかりません');
+                }
+            } catch (error) {
+                addDiagnosisResult('ドラッグ移動', 'error', 'ドラッグ移動テスト中にエラー', error);
+            }
+        }
+        
+        // ページ読み込み完了時に基本診断を自動実行
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                console.log('🔍 自動診断開始');
+                runBasicDiagnosis();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+EOF < /dev/null

@@ -60,7 +60,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const cards = document.querySelectorAll('.service-card');
                     const index = Array.from(cards).indexOf(entry.target);
                     
-                    // 🔍 Phase C: 詳細ガタン測定システム
+                    /*
+                    // 🔍 Phase C: 詳細ガタン測定システム - 一時的に無効化（座標競合対応）
                     console.log(`🔍 [PHASE C] サービスカード${index + 1} - 詳細測定開始`);
                     
                     // 測定対象要素を収集
@@ -119,13 +120,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     };
                     
                     console.log(`📏 [BEFORE] 全要素測定完了:`, beforeMeasurements);
+                    */
                     
                     setTimeout(() => {
                         entry.target.classList.add('animate');
                         animatedCards++;
-                        console.log(`🎬 [GATAN] サービスカード${index + 1}アニメーション実行`);
+                        console.log(`🎬 サービスカード${index + 1}アニメーション実行`);
                         
-                        // AFTER測定（アニメーション完了を待つ）
+                        /*
+                        // AFTER測定（アニメーション完了を待つ） - 一時的に無効化
                         setTimeout(() => {
                             console.log(`🔍 [PHASE C] サービスカード${index + 1} - AFTER測定開始`);
                             
@@ -204,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         if (before.styles[prop] !== after.styles[prop]) {
                                             styleChanges[prop] = {
                                                 before: before.styles[prop],
-                                                after: after.styles[prop]
+                                                after: after.styles[proj]
                                             };
                                             hasChanges = true;
                                         }
@@ -253,6 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.groupEnd();
                             
                         }, 700); // アニメーション完了後に測定
+                        */
                         
                         (window.pageYOffset);
                     }, index * 150);
@@ -265,7 +269,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     (window.pageYOffset);
                 } else if (entry.target.classList.contains('concept') || 
                           entry.target.classList.contains('contact')) {
-                    // 🔍 コンセプト・お問い合わせセクションの詳細測定
+                    /*
+                    // 🔍 コンセプト・お問い合わせセクションの詳細測定 - 一時的に無効化（座標競合対応）
                     const sectionName = entry.target.classList.contains('concept') ? 'コンセプト' : 'お問い合わせ';
                     console.log(`🔍 [PHASE C] ${sectionName}セクション - 詳細測定開始`);
                     
@@ -305,12 +310,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     
                     console.log(`📏 [${sectionName}] BEFORE測定完了:`, beforeMeasurements);
+                    */
                     
                     // セクション表示時の処理
+                    const sectionName = entry.target.classList.contains('concept') ? 'コンセプト' : 'お問い合わせ';
                     entry.target.classList.add('animate');
                     console.log(`🎬 ${sectionName}セクションが画面に入りました`);
                     
-                    // AFTER測定
+                    /*
+                    // AFTER測定 - 一時的に無効化
                     setTimeout(() => {
                         const afterMeasurements = {};
                         Object.keys(measurementTargets).forEach(key => {
@@ -368,6 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.groupEnd();
                         
                     }, 700);
+                    */
                     
                 } else {
                     entry.target.classList.add('animate');

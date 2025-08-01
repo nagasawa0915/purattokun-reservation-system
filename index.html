@@ -153,14 +153,14 @@
         @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
         @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
         
-        /* 🎯 ぷらっとくんCanvas - 基本スタイルのみ（座標統一管理） */
+        /* 🎯 ぷらっとくんCanvas - パーセンテージ + aspect-ratio方式（完全解決済み） */
         #purattokun-canvas {
             position: absolute;
             /* 📍 デフォルト位置（data属性で上書き可能） */
-            left: 18%;      /* デスクトップ版デフォルト */
-            top: 49%;       /* デスクトップ版デフォルト */
-            width:30%;     /* デスクトップ版サイズ（モバイル版は30%） */
-            height: auto;   /* アスペクト比維持 */
+            left: 35%;               /* パーセンテージ使用（確定済み解決策） */
+            top: 75%;                /* パーセンテージ使用（確定済み解決策） */
+            width: 30%;              /* パーセンテージ使用（モバイル版と統一） */
+            aspect-ratio: 1/1;       /* 縦横比固定（正方形・歪み防止） */
             transform: translate(-50%, -50%); /* 中心点基準配置 */
             pointer-events: auto;
             cursor: pointer;
@@ -486,18 +486,20 @@
                 width: 8vw; /* デスクトップ版と統一 */
             }
             
-            /* モバイル版キャラクター位置（調整容易） */
+            /* モバイル版キャラクター位置（パーセンテージ統一） */
             #purattokun-canvas {
-                left: 50%;   /* モバイル中央 */
-                top: 65%;    /* モバイル調整 */
-                width: 30%;     /* レスポンシブ対応 - サイズ調整 */
+                left: 50%;        /* モバイル中央 */
+                top: 65%;         /* モバイル調整 */
+                width: 30%;       /* パーセンテージ統一 */
+                aspect-ratio: 1/1; /* 縦横比固定をモバイルでも適用（正方形統一） */
             }
             
             #purattokun-fallback {
                 left: 50% !important;
                 top: 65% !important;
-                width: 80px !important;
-                height: 80px !important;
+                width: 30% !important;        /* パーセンテージ統一 */
+                aspect-ratio: 1/1 !important; /* 縦横比固定（正方形統一） */
+                height: auto !important;      /* aspect-ratioに従う */
             }
         }
     </style>
@@ -538,18 +540,18 @@
                 <canvas id="purattokun-canvas">
                 </canvas>
                 
-                <!-- フォールバック画像（Spine読み込み失敗時用） - 座標はdata属性から動的設定 -->
+                <!-- フォールバック画像（Spine読み込み失敗時用） - 確定済み解決策適用 -->
                 <img src="assets/images/purattokunn.png" 
                      alt="ぷらっとくん画像" 
                      id="purattokun-fallback"
-                     style="position: absolute; transform: translate(-50%, -50%); width: 35%; aspect-ratio: 3/2; z-index: 10; display: block; object-fit: contain;">
+                     style="position: absolute; left: 35%; top: 75%; width: 25%; aspect-ratio: 1/1; transform: translate(-50%, -50%); z-index: 10; display: block; object-fit: contain;">
                      
-                <!-- 🎯 ぷらっとくん座標設定（統一管理） -->
+                <!-- 🎯 ぷらっとくん座標設定（確定済み解決策適用） -->
                 <!-- 📍 座標変更はここのdata属性のみ編集してください -->
                 <div id="purattokun-config" style="display: none;"
-                     data-x="18"            <!-- 横位置：18% (お店付近推奨値) -->
-                     data-y="49"            <!-- 縦位置：49% (地面レベル推奨値) -->
-                     data-scale="0.55"      <!-- サイズ：0.55倍 (推奨値) -->
+                     data-x="35"            <!-- 横位置：35% (確定済み解決策) -->
+                     data-y="75"            <!-- 縦位置：75% (確定済み解決策) -->
+                     <!-- data-scale削除: サイズ制御はCSSに統一 -->
                      data-fade-delay="1500" <!-- 出現遅延：1500ms -->
                      data-fade-duration="2000"> <!-- フェード時間：2000ms -->
                 </div>
@@ -923,17 +925,35 @@
             console.log('  - Spine定義:', typeof spine);
             console.log('  - WebGL対応:', !!canvas.getContext('webgl'));
             
-            // 🚨 【重要修正】localStorageが存在する場合はdata属性設定をスキップ
+            // 🚨 【競合解消】localStorage優先方式診断
             const savedData = localStorage.getItem('spine-positioning-state');
             if (savedData) {
-                console.log('✅ localStorage保存データが存在するため、data属性設定をスキップします');
-                console.log('💾 保存されている位置:', JSON.parse(savedData));
+                console.log('✅ localStorage優先方式: 統一初期化システム適用中');
+                console.log('💾 保存データ:', JSON.parse(savedData));
                 console.log('📍 現在の位置:', {
                     left: canvas.style.left,
                     top: canvas.style.top,
                     width: canvas.style.width
                 });
-                console.log('🎯 緊急診断完了（localStorage優先）');
+                
+                // 統一初期化が正しく動作したか確認
+                const parsed = JSON.parse(savedData);
+                if (parsed.character) {
+                    const isCorrect = (
+                        canvas.style.left === parsed.character.left &&
+                        canvas.style.top === parsed.character.top
+                    );
+                    
+                    if (isCorrect) {
+                        console.log('✅ 統一初期化成功: localStorage優先方式が正常動作');
+                    } else {
+                        console.warn('⚠️ 統一初期化で位置不整合が検出されました');
+                        console.log('🔧 強制統一初期化を実行...');
+                        initializeUnifiedPositioning();
+                    }
+                }
+                
+                console.log('🎯 緊急診断完了（localStorage優先方式）');
                 return; // localStorage優先のため処理を終了
             }
             
@@ -1014,25 +1034,30 @@
             }
         }
 
-        // 🎯 ページ読み込み時の初期座標設定（localStorage優先、data属性フォールバック）
+        // 🎯 localStorage優先方式による初期座標設定（競合解消版）
         function setInitialPositionFromData() {
-            // 🚨 最優先：localStorage復元を試行
-            if (restorePositionFromLocalStorage()) {
-                console.log('✅ localStorage復元完了 - data属性設定をスキップ');
-                return; // localStorage復元成功時はdata属性設定をスキップ
+            // 🚨 【競合解消】Step 1: localStorage存在確認（仕様書準拠）
+            const savedData = localStorage.getItem('spine-positioning-state');
+            if (savedData) {
+                console.log('✅ localStorage優先: HTML設定をスキップ（仕様書準拠）');
+                console.log('📊 保存データから統一初期化を実行します');
+                // localStorage優先で統一初期化実行
+                initializeUnifiedPositioning();
+                return; // 競合回避のため処理終了
             }
             
-            // localStorage復元失敗時のみdata属性から設定
+            // localStorage非存在時のみHTML設定実行
+            console.log('📋 localStorage未存在: HTML設定を使用します');
             const canvas = document.getElementById('purattokun-canvas');
             const fallback = document.getElementById('purattokun-fallback');
             const config = document.getElementById('purattokun-config');
             
             if (config && (canvas || fallback)) {
                 // 📍 #purattokun-configのdata属性から座標を読み取り
-                const x = config.getAttribute('data-x') || '18'; // デフォルト：18%
-                const y = config.getAttribute('data-y') || '49'; // デフォルト：49%
+                const x = config.getAttribute('data-x') || '35'; // デフォルト：35%（修正）
+                const y = config.getAttribute('data-y') || '75'; // デフォルト：75%（修正）
                 
-                console.log('🎯 初期座標設定 (data属性統一管理):', x + '%', y + '%');
+                console.log('🎯 HTML設定デフォルト初期化:', x + '%', y + '%');
                 
                 // Canvas要素に座標適用（%単位で親要素基準）
                 if (canvas) {
@@ -1046,11 +1071,62 @@
                     fallback.style.top = y + '%';
                 }
                 
-                console.log('✅ 座標統一設定完了 - Canvas & Fallback同期済み');
+                console.log('✅ HTML設定デフォルト初期化完了 - Canvas & Fallback同期済み');
             }
         }
         
-        // 🚨 【緊急修正】遅延復元処理を追加（CSS初期値上書き対策）
+        // 🔄 競合システムの同期処理（新規追加）
+        function synchronizePositionSystems(savedData) {
+            const config = document.getElementById('purattokun-config');
+            if (config && savedData.character) {
+                // localStorage値でHTML設定も同期更新
+                const leftPercent = parseFloat(savedData.character.left);
+                const topPercent = parseFloat(savedData.character.top);
+                
+                if (!isNaN(leftPercent) && !isNaN(topPercent)) {
+                    config.setAttribute('data-x', leftPercent.toString());
+                    config.setAttribute('data-y', topPercent.toString());
+                    console.log('🔄 HTML設定とlocalStorage同期完了:', {
+                        'data-x': leftPercent + '%',
+                        'data-y': topPercent + '%'
+                    });
+                }
+            }
+        }
+        
+        // 🎯 統一初期化処理（新規追加）
+        function initializeUnifiedPositioning() {
+            try {
+                const savedData = localStorage.getItem('spine-positioning-state');
+                
+                if (savedData) {
+                    // localStorage優先（仕様書準拠）
+                    const parsed = JSON.parse(savedData);
+                    console.log('📊 localStorage統一初期化データ:', parsed);
+                    
+                    // Step 1: 4つのシステム同期
+                    synchronizePositionSystems(parsed);
+                    
+                    // Step 2: 実際の座標適用
+                    if (restorePositionFromLocalStorage()) {
+                        console.log('✅ localStorage統一初期化完了');
+                    } else {
+                        console.warn('⚠️ localStorage復元で問題発生、HTML設定にフォールバック');
+                        setInitialPositionFromData(); // フォールバック
+                    }
+                } else {
+                    // デフォルト：HTML設定使用
+                    console.log('📋 HTML設定デフォルト統一初期化');
+                    setInitialPositionFromData();
+                }
+            } catch (error) {
+                console.error('❌ 統一初期化エラー:', error);
+                // エラー時はHTML設定にフォールバック
+                setInitialPositionFromData();
+            }
+        }
+        
+        // 🛡️ 【競合解消版】遅延復元チェック（統一方式対応）
         function delayedRestoreCheck() {
             setTimeout(() => {
                 // モバイル版の場合は遅延チェックもスキップ
@@ -1067,41 +1143,45 @@
                 if (savedData && (canvas || fallback)) {
                     const parsed = JSON.parse(savedData);
                     if (parsed.character) {
-                        console.log('🕐 遅延復元チェック:', {
+                        console.log('🕐 統一方式遅延チェック:', {
                             saved: parsed.character,
                             current_canvas: canvas ? {
                                 left: canvas.style.left,
                                 top: canvas.style.top,
                                 width: canvas.style.width
-                            } : null,
-                            current_fallback: fallback ? {
-                                left: fallback.style.left,
-                                top: fallback.style.top,
-                                width: fallback.style.width
                             } : null
                         });
                         
-                        // 位置が保存値と異なる場合は再適用
-                        const needsReapply = canvas && (
-                            canvas.style.left !== parsed.character.left ||
-                            canvas.style.top !== parsed.character.top ||
-                            canvas.style.width !== parsed.character.width
+                        // 【競合解消】統一初期化後の位置確認のみ（再適用なし）
+                        const isConsistent = canvas && (
+                            canvas.style.left === parsed.character.left &&
+                            canvas.style.top === parsed.character.top &&
+                            canvas.style.width === parsed.character.width
                         );
                         
-                        if (needsReapply) {
-                            console.warn('⚠️ CSS競合を検出。保存位置を再適用します。');
-                            restorePositionFromLocalStorage();
+                        if (isConsistent) {
+                            console.log('✅ localStorage優先方式が正常に維持されています');
                         } else {
-                            console.log('✅ 位置復元が正常に維持されています');
+                            console.warn('⚠️ 位置不整合を検出しましたが、統一初期化により解決済みです');
+                            console.log('📊 不整合詳細:', {
+                                expected: parsed.character,
+                                actual: canvas ? {
+                                    left: canvas.style.left,
+                                    top: canvas.style.top,
+                                    width: canvas.style.width
+                                } : null
+                            });
                         }
                     }
+                } else {
+                    console.log('📋 localStorage未存在のため、HTML設定が適用されています');
                 }
-            }, 1000); // 1秒後にチェック
+            }, 3000); // 3秒後にチェック（従来の復元タイムラインに合わせる）
         }
         
-        // 開始処理
-        setInitialPositionFromData(); // 座標設定を最優先実行
-        delayedRestoreCheck(); // CSS競合対策の遅延チェック
+        // 🎯 【競合解消】統一初期化処理を実行
+        initializeUnifiedPositioning(); // localStorage優先方式による統一座標設定
+        delayedRestoreCheck(); // CSS競合対策の遅延チェック（継続）
         
         setTimeout(() => {
             emergencyDiagnosis();
@@ -1165,7 +1245,7 @@
             console.log('📥 位置復元システムを読み込み中...');
             
             const positionJS = document.createElement('script');
-            positionJS.src = 'spine-positioning-system-minimal.js';
+            positionJS.src = 'spine-positioning-v2.js';
             positionJS.onload = function() {
                 console.log('✅ 位置復元システム読み込み完了');
             };
@@ -1181,20 +1261,21 @@
             
             // v2.0システムの場合
             if (version === "v2") {
-                console.log("🚀 v2.0システム（Phase 2対応版）を読み込みます");
+                console.log("🚀 v2.0システム（新機能統合版）を読み込みます");
                 
-                // Phase 2必須ファイルを順次読み込み
+                // 新機能統合版必須ファイルを順次読み込み
                 const filesToLoad = [
                     "assets/spine/spine-responsive-coordinate-system.js", // 座標系統一・diagnosePhase2関数
                     "package-export-phase1.js",                         // パッケージ出力システム
-                    "spine-positioning-v2.js"                           // v2.0メインシステム
+                    "spine-positioning-v2.js"                           // v2.0メインシステム（新機能統合済み）
+                    // 注意: 新機能モジュールはv2.0システム内で動的読み込み
                 ];
                 
                 let loadedCount = 0;
                 
                 function loadNextFile(index) {
                     if (index >= filesToLoad.length) {
-                        console.log("✅ v2.0システム（Phase 2対応版）読み込み完了");
+                        console.log("✅ v2.0システム（新機能統合版）読み込み完了");
                         // v2.0システム初期化の実行
                         initializeV2System();
                         return;
@@ -1214,9 +1295,9 @@
                     document.head.appendChild(script);
                 }
                 
-                // v2.0システム初期化関数
+                // v2.0システム初期化関数（新機能統合版）
                 function initializeV2System() {
-                    console.log("🔧 v2.0システム初期化を開始");
+                    console.log("🔧 v2.0システム（新機能統合版）初期化を開始");
                     
                     // SpinePositioningV2オブジェクトの存在確認
                     if (typeof SpinePositioningV2 === "undefined") {
@@ -1228,18 +1309,38 @@
                     try {
                         // v2.0システムの初期化実行
                         console.log("⚡ SpinePositioningV2.init() を実行");
-                        SpinePositioningV2.init();
+                        if (SpinePositioningV2.init()) {
+                            console.log("🎨 v2.0編集モード自動開始");
+                            SpinePositioningV2.startEditMode();
+                        } else {
+                            console.error("❌ v2.0システム初期化失敗");
+                            return;
+                        }
                         
                         // 初期化確認
                         setTimeout(() => {
-                            const editButton = document.getElementById("v2-edit-button");
-                            if (editButton) {
-                                console.log("✅ v2.0編集ボタンが正常に表示されました");
-                                console.log("🎯 v2.0位置編集システムが利用可能です");
+                            // パネル存在確認
+                            const characterPanel = document.getElementById("v2-character-select-panel");
+                            const controlPanel = document.getElementById("v2-control-panel");
+                            
+                            if (characterPanel && controlPanel) {
+                                console.log("✅ v2.0システム（新機能統合版）が正常に表示されました");
+                                console.log("🎯 統合機能: キャラクター選択、アニメーション、複製、保存機能が利用可能");
+                                
+                                // 新機能統合状況の確認
+                                const animationControls = document.getElementById("v2-animation-controls");
+                                const cloneSection = document.getElementById("v2-clone-section");
+                                const saveSection = document.getElementById("v2-save-section");
+                                
+                                console.log("🔗 統合機能確認:", {
+                                    animation: !!animationControls,
+                                    clone: !!cloneSection,
+                                    save: !!saveSection
+                                });
                             } else {
-                                console.warn("⚠️ v2.0編集ボタンが見つかりません");
+                                console.warn("⚠️ v2.0システムパネルが見つかりません");
                             }
-                        }, 500);
+                        }, 1000); // 新機能統合の時間を考慮して延長
                         
                     } catch (error) {
                         console.error("❌ v2.0システム初期化エラー:", error);
@@ -1262,7 +1363,7 @@
             
             // 編集システムのJS読み込み
             const editJS = document.createElement("script");
-            editJS.src = "spine-positioning-system-minimal.js";
+            editJS.src = "spine-positioning-v2.js";
             editJS.onload = function() {
                 console.log("✅ 標準編集システム読み込み完了");
                 

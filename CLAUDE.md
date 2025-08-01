@@ -143,6 +143,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - プレビュー時の視覚効果向上
 
 ### 🤖 開発スタイル推奨事項
+
+**📋 即座実用化ガイド**: [🚀 docs/subagents/QUICK_START.md](./docs/subagents/QUICK_START.md) - 5分で高効率開発を開始
+
 - **🚀 サブエージェント優先**: 基本的に全ての作業でサブエージェントを積極活用
 - **⚡ 並列処理推奨**: 複数タスクがある場合は必ずサブエージェントで並列実行
 - **🎯 適切なエージェント選択**: タスクの性質に応じて最適なサブエージェントを選択
@@ -299,7 +302,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 📍 現在の技術状況（2025-01-31 完全実装達成）
 
 #### 🆕 **v2.0軽量システム（推奨）**
-- **メインファイル**: spine-positioning-system-minimal.js（v2.0・完全実装版）
+- **メインファイル**: spine-positioning-v2.js（v2.0・完全実装版）
 - **特徴**: 900行・45KB・83%軽量化・高速動作・シンプルUI
 - **アクセス**: `http://localhost:8000/index.html?edit=true&version=v2`
 - **操作方法**: 
@@ -343,6 +346,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 目的 | ドキュメント |
 |------|-------------|
+| **🚀 サブエージェント即座実用化** | [🚀 docs/subagents/QUICK_START.md](./docs/subagents/QUICK_START.md) |
 | **📋 編集システム仕様書** | [🎯 docs/POSITIONING_SYSTEM_SPECIFICATIONS.md](./docs/POSITIONING_SYSTEM_SPECIFICATIONS.md) |
 | **📊 実装進捗管理** | [📈 docs/POSITIONING_SYSTEM_PROGRESS.md](./docs/POSITIONING_SYSTEM_PROGRESS.md) |
 | **🎯 Spine初期セットアップガイド** | [🚀 docs/SPINE_SETUP_GUIDE.md](./docs/SPINE_SETUP_GUIDE.md) |
@@ -508,9 +512,9 @@ git log --oneline
 
 ---
 
-## 🎯 ぷらっとくん位置調整（HTML設定制御システム）
+## 🎯 ぷらっとくん位置調整（パーセンテージ統一システム）
 
-### 簡単調整方法
+### パーセンテージ統一による簡単調整（2025年1月統一完了）
 **ぷらっとくんの位置・演出設定をHTMLから直接制御可能**
 
 #### 設定場所
@@ -518,36 +522,39 @@ git log --oneline
 
 ```html
 <div id="purattokun-config" style="display: none;"
-     data-x="18"            <!-- 横位置：18vw（背景画像同期） -->
-     data-y="49"            <!-- 縦位置：49vh（地面レベル） -->
-     data-scale="0.55"      <!-- サイズ：0.55倍 -->
+     data-x="35"            <!-- 横位置：35%（パーセンテージ統一） -->
+     data-y="75"            <!-- 縦位置：75%（パーセンテージ統一） -->
+     <!-- data-scale削除: サイズ制御はCSSに統一 -->
      data-fade-delay="1500" <!-- 出現遅延（ms） -->
      data-fade-duration="2000"> <!-- フェード時間（ms） -->
 </div>
 ```
 
+#### 2レイヤー統一システムの仕組み
+1. **HTMLレイヤー**: `data-x="35"` → JavaScript経由でパーセンテージ値として使用
+2. **CSSレイヤー**: `left: 35%; top: 75%; width: 25%;` → パーセンテージ統一
+
 #### 調整手順
 1. `index.html`の`#purattokun-config`を見つける
-2. `data-*`属性の数値を変更
+2. `data-x`・`data-y`属性の数値を変更（パーセンテージ値として）
 3. ファイル保存 → ブラウザリロード（F5）
-4. 変更を即座に確認
+4. レスポンシブ対応により全画面サイズで最適表示
 
-#### よく使う設定値
+#### よく使う設定値（パーセンテージ統一）
 **横位置（data-x）:**
-- 道路側: 8vw
-- お店の入口: 15vw  
-- **お店付近: 18vw（推奨・現在の設定）**
-- 右寄り: 25vw
+- 左寄り: 20%
+- **道路付近: 35%（現在の設定・推奨）**
+- 中央: 50%
+- 右寄り: 70%
 
 **縦位置（data-y）:**
-- 上の方: 40vh
-- **地面レベル: 49vh（推奨・現在の設定）**
-- 下の方: 55vh
+- 上の方: 60%
+- **地面レベル: 75%（現在の設定・推奨）**
+- 下の方: 85%
 
-**サイズ（data-scale）:**
-- 大きめ: 1.0
-- **普通: 0.55（現在の設定）**
-- 小さめ: 0.25
+**サイズ制御:**
+- CSSで統一管理: `width: 25%; aspect-ratio: 3/2;`
+- data-scale属性は廃止（CSS統一のため）
 
 > ⚠️ **重要**: Spineキャラクターのサイズは**Canvas要素のCSS設定**と**Skeletonオブジェクトのscale値**の**両方**が影響します。どちらか一方だけでは変更できません。
 > - CSS側: `width`, `height`属性

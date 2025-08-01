@@ -18,6 +18,12 @@
 - **タグ**: `#表示` `#Spine` `#Canvas` `#初期化`
 - **別名**: ぷらっとくん見えない、キャラクター消えた、purattokun not visible
 
+#### キャラクター歪み問題
+- **ファイル**: [キャラクター歪み問題.md](./troubleshooting/キャラクター歪み問題.md)
+- **症状**: キャラクターが縦横に歪んで表示される、aspect-ratio設定による変形
+- **タグ**: `#歪み` `#Canvas` `#CSS` `#aspect-ratio` `#レスポンシブ` `#編集システム`
+- **別名**: キャラクター歪んでる、縦横歪み、縦も横も同数値、character distortion、canvas distortion
+
 ### 🔄 位置・レイアウト関連の問題
 
 #### レスポンシブ版位置ズレ問題
@@ -105,6 +111,12 @@
 - **タグ**: `#編集システム` `#複数キャラクター` `#レイヤー制御` `#ドラッグ&ドロップ` `#z-index` `#位置ずれ修正`
 - **別名**: 複数キャラクター編集、キャラクター選択機能、レイヤー順序制御、multiple character support、character layer management、drag and drop reordering
 
+#### v2.0システム初期化問題
+- **ファイル**: [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
+- **症状**: v2.0システムでキャラクター移動・選択機能が動作しない、編集モード未開始
+- **タグ**: `#v2.0システム` `#初期化` `#編集モード` `#startEditMode` `#キャラクター選択` `#ドラッグ移動` `#解決済み`
+- **別名**: v2.0編集モード開始しない、キャラクター選択効かない、ドラッグ移動動かない、v2 system initialization issue、edit mode not started
+
 ### 🔧 機能・UI関連の問題
 
 #### ドラッグハンドル診断システム
@@ -146,21 +158,31 @@
 
 #### #Canvas  
 - [キャラクター表示問題.md](./troubleshooting/キャラクター表示問題.md)
+- [キャラクター歪み問題.md](./troubleshooting/キャラクター歪み問題.md)
 - [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
 - [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
 - [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
 - [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
 
 #### #CSS
+- [キャラクター歪み問題.md](./troubleshooting/キャラクター歪み問題.md)
 - [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)
 - [ウィンドウリサイズ問題.md](./troubleshooting/ウィンドウリサイズ問題.md)
 - [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
 - [パッケージ出力位置ズレ問題.md](./troubleshooting/パッケージ出力位置ズレ問題.md)
 
 #### #レスポンシブ
+- [キャラクター歪み問題.md](./troubleshooting/キャラクター歪み問題.md)
 - [ウィンドウリサイズ問題.md](./troubleshooting/ウィンドウリサイズ問題.md)
 
+#### #歪み
+- [キャラクター歪み問題.md](./troubleshooting/キャラクター歪み問題.md)
+
+#### #aspect-ratio
+- [キャラクター歪み問題.md](./troubleshooting/キャラクター歪み問題.md)
+
 #### #編集システム
+- [キャラクター歪み問題.md](./troubleshooting/キャラクター歪み問題.md)
 - [編集モード位置ずれ問題.md](./troubleshooting/編集モード位置ずれ問題.md)
 - [編集モードキャラクターサイズ問題.md](./troubleshooting/編集モードキャラクターサイズ問題.md)
 - [編集モード位置保存問題.md](./troubleshooting/編集モード位置保存問題.md)
@@ -170,6 +192,7 @@
 - [複数キャラクター対応実装記録.md](./troubleshooting/複数キャラクター対応実装記録.md)
 - [ドラッグハンドル診断システム.md](./troubleshooting/ドラッグハンドル診断システム.md)
 - [Spine編集システム完全実装記録.md](./troubleshooting/Spine編集システム完全実装記録.md)
+- [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
 
 #### #リサイズハンドル
 - [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
@@ -246,6 +269,24 @@
 #### #エラー
 - [Spineライブラリ読込問題.md](./troubleshooting/Spineライブラリ読込問題.md)
 
+#### #v2.0システム
+- [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
+
+#### #初期化
+- [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
+
+#### #startEditMode
+- [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
+
+#### #キャラクター選択
+- [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
+
+#### #ドラッグ移動
+- [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
+
+#### #解決済み
+- [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
+
 ---
 
 ## 🚧 未解決問題
@@ -278,6 +319,9 @@
 
 ### 「見えない」「表示されない」「消えた」
 → [キャラクター表示問題.md](./troubleshooting/キャラクター表示問題.md)
+
+### 「歪んでる」「縦横歪み」「縦も横も同数値」「aspect-ratio」「変形」
+→ [キャラクター歪み問題.md](./troubleshooting/キャラクター歪み問題.md)
 
 ### 「ずれる」「位置がおかしい」「合わない」  
 → [ウィンドウリサイズ問題.md](./troubleshooting/ウィンドウリサイズ問題.md)
@@ -327,6 +371,9 @@
 
 ### 「パッケージ出力」「ZIP出力」「登場時正常途中からズレ」「パッケージ出力後位置ずれ」「商用制作ツール」
 → [パッケージ出力位置ズレ問題.md](./troubleshooting/パッケージ出力位置ズレ問題.md)
+
+### 「v2.0」「編集モード開始しない」「キャラクター選択効かない」「ドラッグ移動動かない」「初期化問題」「startEditMode」
+→ [v2.0システム初期化問題.md](./troubleshooting/v2.0システム初期化問題.md)
 
 ---
 

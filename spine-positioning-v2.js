@@ -679,7 +679,7 @@ function createControlPanel() {
     panel.id = 'v2-control-panel';
     panel.innerHTML = `
         <div style="background: white; border: 1px solid #ddd; border-radius: 8px; 
-                    padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 250px;">
             <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #333;">
                 ⚡ 操作パネル
             </div>
@@ -713,6 +713,39 @@ function createControlPanel() {
                 </div>
             </div>
             
+            <!-- 🎬 アニメーション制御セクション -->
+            <div id="v2-animation-section" style="margin-bottom: 10px; border-top: 1px solid #eee; padding-top: 8px;">
+                <label style="font-size: 12px; color: #666; font-weight: bold;">🎬 アニメーション:</label>
+                <div id="v2-animation-controls" style="margin-top: 5px;">
+                    <!-- アニメーション制御UI（動的生成） -->
+                </div>
+            </div>
+            
+            <!-- 🔄 複製機能セクション -->
+            <div id="v2-clone-section" style="margin-bottom: 10px; border-top: 1px solid #eee; padding-top: 8px;">
+                <label style="font-size: 12px; color: #666; font-weight: bold;">🔄 複製:</label>
+                <div style="display: flex; gap: 5px; margin-top: 3px;">
+                    <button id="v2-clone-character" style="flex: 1; padding: 4px; font-size: 11px; background: #17a2b8; color: white; border: none; border-radius: 3px; cursor: pointer;">🔄 複製</button>
+                    <button id="v2-delete-clones" style="flex: 1; padding: 4px; font-size: 11px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">🗑️ 削除</button>
+                </div>
+                <div id="v2-clone-info" style="font-size: 10px; color: #666; margin-top: 3px; text-align: center;">
+                    複製: 0個
+                </div>
+            </div>
+            
+            <!-- 💾 保存機能セクション -->
+            <div id="v2-save-section" style="margin-bottom: 10px; border-top: 1px solid #eee; padding-top: 8px;">
+                <label style="font-size: 12px; color: #666; font-weight: bold;">💾 保存:</label>
+                <div style="display: flex; gap: 3px; margin-top: 3px;">
+                    <button id="v2-manual-save" style="flex: 1; padding: 4px; font-size: 11px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">💾 保存</button>
+                    <button id="v2-auto-save-toggle" style="padding: 4px 6px; font-size: 11px; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer;">⚡</button>
+                    <button id="v2-backup" style="padding: 4px 6px; font-size: 11px; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;">📦</button>
+                </div>
+                <div id="v2-save-status" style="font-size: 10px; color: #666; margin-top: 3px; text-align: center;">
+                    <!-- 保存状態表示 -->
+                </div>
+            </div>
+            
             <!-- CSS出力 -->
             <div style="margin-bottom: 8px;">
                 <button id="v2-css-export" style="width: 100%; padding: 6px; font-size: 12px; 
@@ -733,13 +766,15 @@ function createControlPanel() {
         </div>
     `;
     
-    // 配置
+    // 配置（拡張UI対応でサイズ調整）
     panel.style.cssText = `
         position: fixed;
         top: 280px;
         right: 10px;
         z-index: 10000;
-        min-width: 200px;
+        min-width: 250px;
+        max-height: 80vh;
+        overflow-y: auto;
     `;
     
     document.body.appendChild(panel);
@@ -884,6 +919,71 @@ function setupControlPanelEvents() {
         });
         packageExportBtn.addEventListener('mouseleave', () => {
             packageExportBtn.style.backgroundColor = '#ff6b6b';
+        });
+    }
+    
+    // 🔄 複製機能ボタン
+    const cloneBtn = document.getElementById('v2-clone-character');
+    const deleteClonesBtn = document.getElementById('v2-delete-clones');
+    
+    if (cloneBtn) {
+        cloneBtn.addEventListener('click', () => {
+            if (integratedModules.cloneManager) {
+                const result = integratedModules.cloneManager.cloneActiveCharacter(50, 50);
+                if (result) {
+                    updateCloneUI();
+                    updateCharacterSelectUI(); // キャラクター選択UIも更新
+                    console.log('✅ v2.0: キャラクター複製完了');
+                } else {
+                    console.error('❌ v2.0: キャラクター複製失敗');
+                }
+            }
+        });
+    }
+    
+    if (deleteClonesBtn) {
+        deleteClonesBtn.addEventListener('click', () => {
+            if (integratedModules.cloneManager) {
+                const count = integratedModules.cloneManager.deleteAllClones();
+                updateCloneUI();
+                updateCharacterSelectUI(); // キャラクター選択UIも更新
+                console.log(`✅ v2.0: ${count}個の複製を削除`);
+            }
+        });
+    }
+    
+    // 💾 保存機能ボタン
+    const manualSaveBtn = document.getElementById('v2-manual-save');
+    const autoSaveToggleBtn = document.getElementById('v2-auto-save-toggle');
+    const backupBtn = document.getElementById('v2-backup');
+    
+    if (manualSaveBtn) {
+        manualSaveBtn.addEventListener('click', async () => {
+            if (integratedModules.enhancedSaveSystem) {
+                const result = await integratedModules.enhancedSaveSystem.manualSave(false); // 確認なしで即座保存
+                updateSaveUI();
+                console.log('💾 v2.0: 手動保存完了:', result);
+            }
+        });
+    }
+    
+    if (autoSaveToggleBtn) {
+        autoSaveToggleBtn.addEventListener('click', () => {
+            if (integratedModules.enhancedSaveSystem) {
+                const currentState = integratedModules.enhancedSaveSystem.autoSaveEnabled;
+                integratedModules.enhancedSaveSystem.setAutoSaveEnabled(!currentState);
+                updateSaveUI();
+                console.log('⚡ v2.0: 自動保存切り替え:', !currentState);
+            }
+        });
+    }
+    
+    if (backupBtn) {
+        backupBtn.addEventListener('click', async () => {
+            if (integratedModules.enhancedSaveSystem) {
+                await integratedModules.enhancedSaveSystem.createBackup();
+                console.log('📦 v2.0: バックアップ作成完了');
+            }
         });
     }
 }
@@ -1070,6 +1170,180 @@ function updateRealtimeDisplay() {
     // リアルタイム表示はシンプル化のため削除
     // 必要に応じて他のUI更新処理を追加
     console.log('🔄 v2.0: UI更新スキップ（シンプル化済み）');
+}
+
+// ========== 🔗 新機能モジュール統合システム ========== //
+
+// 統合されたモジュール参照
+let integratedModules = {
+    cloneManager: null,
+    animationSelector: null,
+    enhancedSaveSystem: null
+};
+
+// モジュール動的読み込み・統合システム
+async function loadAndIntegrateModules() {
+    console.log('🔗 v2.0: 新機能モジュール統合開始...');
+    
+    const moduleList = [
+        { name: 'cloneManager', path: 'assets/spine/modules/character-clone-manager.js' },
+        { name: 'animationSelector', path: 'assets/spine/modules/animation-selector.js' },
+        { name: 'enhancedSaveSystem', path: 'assets/spine/modules/enhanced-save-system.js' }
+    ];
+    
+    let loadedCount = 0;
+    const totalModules = moduleList.length;
+    
+    for (const module of moduleList) {
+        try {
+            await loadSingleModule(module.path);
+            loadedCount++;
+            console.log(`✅ v2.0: ${module.name} 読み込み完了 (${loadedCount}/${totalModules})`);
+        } catch (error) {
+            console.error(`❌ v2.0: ${module.name} 読み込み失敗:`, error);
+        }
+    }
+    
+    // モジュール統合初期化
+    if (loadedCount > 0) {
+        await initializeIntegratedModules();
+        updateIntegratedUI();
+        console.log(`✅ v2.0: ${loadedCount}/${totalModules}個のモジュール統合完了`);
+    }
+    
+    return loadedCount;
+}
+
+// 単一モジュール読み込み
+function loadSingleModule(path) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = path;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+// 統合モジュール初期化
+async function initializeIntegratedModules() {
+    console.log('🔧 v2.0: 統合モジュール初期化中...');
+    
+    // キャラクター複製マネージャー初期化
+    if (typeof window.CharacterCloneManager !== 'undefined') {
+        integratedModules.cloneManager = new window.CharacterCloneManager(SpinePositioningV2);
+        integratedModules.cloneManager.init(SpinePositioningV2);
+        console.log('✅ v2.0: CloneManager 統合完了');
+    }
+    
+    // アニメーション選択システム初期化
+    if (typeof window.createAnimationSelector !== 'undefined') {
+        integratedModules.animationSelector = window.createAnimationSelector({
+            debugMode: true,
+            autoIntegrate: false // 手動統合
+        });
+        
+        // v2.0システムとの統合
+        if (window.spineManager?.animationController) {
+            integratedModules.animationSelector.integrateWithExistingSystems(
+                window.spineManager.animationController,
+                window.spineManager.characterManager,
+                SpinePositioningV2
+            );
+        }
+        console.log('✅ v2.0: AnimationSelector 統合完了');
+    }
+    
+    // 拡張保存システム初期化
+    if (typeof window.initializeEnhancedSaveSystem !== 'undefined') {
+        integratedModules.enhancedSaveSystem = window.initializeEnhancedSaveSystem(SpinePositioningV2);
+        console.log('✅ v2.0: EnhancedSaveSystem 統合完了');
+    }
+}
+
+// 統合UI更新
+function updateIntegratedUI() {
+    console.log('🎨 v2.0: 統合UI更新中...');
+    
+    // アニメーション制御UI更新
+    updateAnimationUI();
+    
+    // 複製機能UI更新
+    updateCloneUI();
+    
+    // 保存機能UI更新
+    updateSaveUI();
+}
+
+// アニメーション制御UI更新
+function updateAnimationUI() {
+    const container = document.getElementById('v2-animation-controls');
+    if (!container || !integratedModules.animationSelector) return;
+    
+    // シンプルなアニメーション制御UI
+    container.innerHTML = `
+        <div style="display: flex; gap: 3px; margin-bottom: 3px;">
+            <select id="v2-animation-select" style="flex: 1; font-size: 10px; padding: 2px;">
+                <option value="taiki">待機</option>
+                <option value="syutugen">出現</option>
+                <option value="yarare">やられ</option>
+                <option value="click">クリック</option>
+            </select>
+            <button id="v2-animation-play" style="padding: 2px 6px; font-size: 10px; background: #007bff; color: white; border: none; border-radius: 2px; cursor: pointer;">▶</button>
+        </div>
+        <div style="font-size: 10px;">
+            <label style="display: flex; align-items: center; gap: 3px;">
+                <input type="checkbox" id="v2-animation-loop" style="margin: 0;"> ループ
+            </label>
+        </div>
+    `;
+    
+    // イベントリスナー設定
+    setupAnimationEvents();
+}
+
+// 複製機能UI更新
+function updateCloneUI() {
+    const infoElement = document.getElementById('v2-clone-info');
+    if (!infoElement || !integratedModules.cloneManager) return;
+    
+    const cloneCount = integratedModules.cloneManager.getCloneCount();
+    infoElement.textContent = `複製: ${cloneCount}個`;
+}
+
+// 保存機能UI更新
+function updateSaveUI() {
+    const statusElement = document.getElementById('v2-save-status');
+    if (!statusElement || !integratedModules.enhancedSaveSystem) return;
+    
+    const status = integratedModules.enhancedSaveSystem.getStatus();
+    const statusText = status.hasUnsavedChanges ? '未保存の変更あり' : '保存済み';
+    const autoSaveText = status.autoSaveEnabled ? '自動保存: ON' : '自動保存: OFF';
+    
+    statusElement.innerHTML = `
+        <div style="color: ${status.hasUnsavedChanges ? '#ffc107' : '#28a745'};">${statusText}</div>
+        <div>${autoSaveText}</div>
+    `;
+}
+
+// アニメーションイベント設定
+function setupAnimationEvents() {
+    const selectElement = document.getElementById('v2-animation-select');
+    const playButton = document.getElementById('v2-animation-play');
+    const loopCheckbox = document.getElementById('v2-animation-loop');
+    
+    if (playButton && integratedModules.animationSelector) {
+        playButton.addEventListener('click', () => {
+            const animation = selectElement.value;
+            const loop = loopCheckbox.checked;
+            
+            // アクティブキャラクターのアニメーション再生
+            const activeChar = SpinePositioningV2.characters[SpinePositioningV2.activeIndex];
+            if (activeChar) {
+                integratedModules.animationSelector.playPreview(activeChar.id, animation, loop);
+            }
+        });
+    }
 }
 
 // ========== 📦 パッケージ出力システム動的読み込み ========== //
@@ -1333,6 +1607,16 @@ SpinePositioningV2.startEditMode = function() {
     if (v2UI.panels.control) v2UI.panels.control.style.display = 'block';
     
     updateUI();
+    
+    // 🔗 新機能モジュール統合の遅延実行
+    setTimeout(async () => {
+        try {
+            await loadAndIntegrateModules();
+            console.log('🔗 v2.0: 新機能モジュール統合完了');
+        } catch (error) {
+            console.warn('⚠️ v2.0: 新機能モジュール統合で一部失敗:', error);
+        }
+    }, 500); // UI作成後に実行
     
     console.log('✅ v2.0: 編集モード開始完了');
     return true;
