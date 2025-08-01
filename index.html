@@ -1181,18 +1181,73 @@
             
             // v2.0システムの場合
             if (version === "v2") {
-                console.log("🚀 v2.0システムを読み込みます");
-                const v2JS = document.createElement("script");
-                v2JS.src = "spine-positioning-v2.js";
-                v2JS.onload = function() {
-                    console.log("✅ v2.0システム読み込み完了");
-                    // v2.0システムは自動初期化される
-                };
-                v2JS.onerror = function() {
-                    console.error("❌ v2.0システム読み込み失敗");
-                    alert("v2.0システムの読み込みに失敗しました。spine-positioning-v2.js を確認してください。");
-                };
-                document.head.appendChild(v2JS);
+                console.log("🚀 v2.0システム（Phase 2対応版）を読み込みます");
+                
+                // Phase 2必須ファイルを順次読み込み
+                const filesToLoad = [
+                    "assets/spine/spine-responsive-coordinate-system.js", // 座標系統一・diagnosePhase2関数
+                    "package-export-phase1.js",                         // パッケージ出力システム
+                    "spine-positioning-v2.js"                           // v2.0メインシステム
+                ];
+                
+                let loadedCount = 0;
+                
+                function loadNextFile(index) {
+                    if (index >= filesToLoad.length) {
+                        console.log("✅ v2.0システム（Phase 2対応版）読み込み完了");
+                        // v2.0システム初期化の実行
+                        initializeV2System();
+                        return;
+                    }
+                    
+                    const script = document.createElement("script");
+                    script.src = filesToLoad[index];
+                    script.onload = function() {
+                        loadedCount++;
+                        console.log(`✅ ${filesToLoad[index]} 読み込み完了 (${loadedCount}/${filesToLoad.length})`);
+                        loadNextFile(index + 1);
+                    };
+                    script.onerror = function() {
+                        console.error(`❌ ${filesToLoad[index]} 読み込み失敗`);
+                        alert(`v2.0システムファイルの読み込みに失敗しました: ${filesToLoad[index]}`);
+                    };
+                    document.head.appendChild(script);
+                }
+                
+                // v2.0システム初期化関数
+                function initializeV2System() {
+                    console.log("🔧 v2.0システム初期化を開始");
+                    
+                    // SpinePositioningV2オブジェクトの存在確認
+                    if (typeof SpinePositioningV2 === "undefined") {
+                        console.error("❌ SpinePositioningV2オブジェクトが見つかりません");
+                        alert("v2.0システムの初期化に失敗しました。ページを再読み込みしてください。");
+                        return;
+                    }
+                    
+                    try {
+                        // v2.0システムの初期化実行
+                        console.log("⚡ SpinePositioningV2.init() を実行");
+                        SpinePositioningV2.init();
+                        
+                        // 初期化確認
+                        setTimeout(() => {
+                            const editButton = document.getElementById("v2-edit-button");
+                            if (editButton) {
+                                console.log("✅ v2.0編集ボタンが正常に表示されました");
+                                console.log("🎯 v2.0位置編集システムが利用可能です");
+                            } else {
+                                console.warn("⚠️ v2.0編集ボタンが見つかりません");
+                            }
+                        }, 500);
+                        
+                    } catch (error) {
+                        console.error("❌ v2.0システム初期化エラー:", error);
+                        alert("v2.0システムの初期化中にエラーが発生しました: " + error.message);
+                    }
+                }
+                
+                loadNextFile(0);
                 return;
             }
             

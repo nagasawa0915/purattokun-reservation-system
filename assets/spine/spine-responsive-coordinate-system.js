@@ -19,14 +19,30 @@ class ResponsiveCoordinateSystem {
         this.characters = new Map();
         this.resizeTimeout = null;
         
+        // 🔒 Phase 2: 位置変更ロックシステム
+        this.positionLock = {
+            enabled: false,
+            reason: null,
+            lockedAt: null,
+            allowedOperations: new Set()
+        };
+        
+        // 初期化制御システム
+        this.initializationState = {
+            completed: false,
+            inProgress: false,
+            startedAt: null,
+            errors: []
+        };
+        
         // ログ用
         this.log = this.config.debugMode ? console.log : () => {};
         
-        this.log('📐 ResponsiveCoordinateSystem 初期化開始', this.config);
+        this.log('📐 ResponsiveCoordinateSystem Phase 2 初期化開始', this.config);
     }
     
     /**
-     * システム初期化
+     * システム初期化（Phase 2改良版）
      */
     initialize() {
         if (this.isInitialized) {
@@ -34,14 +50,96 @@ class ResponsiveCoordinateSystem {
             return;
         }
         
-        // ウィンドウリサイズイベント
-        if (this.config.autoResize) {
-            window.addEventListener('resize', this.handleResize.bind(this));
-            this.log('🔄 ウィンドウリサイズ監視開始');
+        this.initializationState.inProgress = true;
+        this.initializationState.startedAt = Date.now();
+        
+        try {
+            // 🔒 グローバル位置変更ロック状態をチェック
+            this.checkGlobalPositionLock();
+            
+            // ウィンドウリサイズイベント
+            if (this.config.autoResize && !this.positionLock.enabled) {
+                window.addEventListener('resize', this.handleResize.bind(this));
+                this.log('🔄 ウィンドウリサイズ監視開始');
+            } else if (this.positionLock.enabled) {
+                this.log('🔒 位置ロック中のためリサイズ監視を無効化');
+            }
+            
+            this.isInitialized = true;
+            this.initializationState.completed = true;
+            this.initializationState.inProgress = false;
+            
+            this.log('✅ ResponsiveCoordinateSystem Phase 2 初期化完了');
+            
+        } catch (error) {
+            this.initializationState.errors.push(error);
+            this.initializationState.inProgress = false;
+            this.log('❌ 初期化エラー:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * グローバル位置変更ロック状態をチェック（Phase 2）
+     */
+    checkGlobalPositionLock() {
+        if (window.SPINE_POSITION_LOCK) {
+            this.enablePositionLock(
+                window.SPINE_POSITION_LOCK.reason || 'global-lock',
+                window.SPINE_POSITION_LOCK.timestamp
+            );
+            this.log('🔒 グローバル位置ロックを検出・適用:', window.SPINE_POSITION_LOCK);
+        }
+    }
+    
+    /**
+     * 位置変更ロックを有効化（Phase 2）
+     */
+    enablePositionLock(reason, timestamp = null) {
+        this.positionLock = {
+            enabled: true,
+            reason: reason,
+            lockedAt: timestamp || new Date().toISOString(),
+            allowedOperations: new Set(['read', 'debug'])
+        };
+        
+        this.log(`🔒 位置変更ロック有効化: ${reason} at ${this.positionLock.lockedAt}`);
+    }
+    
+    /**
+     * 位置変更ロックを解除（Phase 2）
+     */
+    disablePositionLock() {
+        if (!this.positionLock.enabled) {
+            this.log('⚠️ 位置ロックは既に無効です');
+            return;
         }
         
-        this.isInitialized = true;
-        this.log('✅ ResponsiveCoordinateSystem 初期化完了');
+        const previousReason = this.positionLock.reason;
+        this.positionLock = {
+            enabled: false,
+            reason: null,
+            lockedAt: null,
+            allowedOperations: new Set()
+        };
+        
+        this.log(`🔓 位置変更ロック解除完了 (前回理由: ${previousReason})`);
+    }
+    
+    /**
+     * 位置変更が許可されているかチェック（Phase 2）
+     */
+    isPositionChangeAllowed(operation = 'update') {
+        if (!this.positionLock.enabled) {
+            return true;
+        }
+        
+        const allowed = this.positionLock.allowedOperations.has(operation);
+        if (!allowed) {
+            this.log(`🚫 位置変更拒否: ${operation} (理由: ${this.positionLock.reason})`);
+        }
+        
+        return allowed;
     }
     
     /**
@@ -130,7 +228,7 @@ class ResponsiveCoordinateSystem {
     }
     
     /**
-     * HTML設定からキャラクター位置を取得
+     * HTML設定からキャラクター位置を取得（v2.0座標系統一対応）
      */
     getPositionFromHTMLConfig(configElementId) {
         const configElement = document.getElementById(configElementId);
@@ -139,22 +237,144 @@ class ResponsiveCoordinateSystem {
             return null;
         }
         
+        // 🚨 Phase 2修正: パッケージ出力モード検出
+        const isPackageMode = this.detectPackageMode();
+        
+        // 🔧 v2.0編集システムの位置データが存在する場合は最優先
+        const v2PositionData = this.getV2PositionData(configElementId);
+        if (v2PositionData && !isPackageMode) {
+            this.log(`🎯 v2.0編集システム位置データを使用: ${configElementId}`, v2PositionData);
+            return v2PositionData;
+        }
+        
+        // 🚨 HTML設定システム無効化チェック
+        const xValue = configElement.dataset.x;
+        const yValue = configElement.dataset.y;
+        const scaleValue = configElement.dataset.scale;
+        
+        if (xValue === 'disabled' || yValue === 'disabled' || scaleValue === 'disabled') {
+            console.log(`🚨 HTML設定システムが無効化されています: ${configElementId} - v2.0座標系を使用`);
+            
+            // localStorage から v2.0 位置データを取得
+            const savedV2Data = this.loadV2PositionFromStorage(configElementId);
+            if (savedV2Data) {
+                this.log(`💾 localStorage からv2.0位置データを復元: ${configElementId}`, savedV2Data);
+                return savedV2Data;
+            }
+            
+            // フォールバック: デフォルト中央配置（編集システム座標系）
+            return {
+                x: 50, y: 50, scale: 1.0,
+                fadeDelay: parseInt(configElement.dataset.fadeDelay) || 0,
+                fadeDuration: parseInt(configElement.dataset.fadeDuration) || 1000,
+                coordinateSystem: 'v2.0-unified'
+            };
+        }
+        
+        // 🔄 従来のHTML設定システム値を読み込み（後方互換性保持）
         const config = {
-            x: parseFloat(configElement.dataset.x) || 50,
-            y: parseFloat(configElement.dataset.y) || 50,
-            scale: parseFloat(configElement.dataset.scale) || 1.0,
+            x: parseFloat(xValue) || 50,
+            y: parseFloat(yValue) || 50,
+            scale: parseFloat(scaleValue) || 1.0,
             fadeDelay: parseInt(configElement.dataset.fadeDelay) || 0,
-            fadeDuration: parseInt(configElement.dataset.fadeDuration) || 1000
+            fadeDuration: parseInt(configElement.dataset.fadeDuration) || 1000,
+            coordinateSystem: 'html-legacy'
         };
         
-        this.log(`⚙️ HTML設定取得: ${configElementId}`, config);
+        this.log(`⚙️ HTML設定取得（従来システム）: ${configElementId}`, config);
         return config;
     }
     
     /**
-     * キャラクター位置を更新
+     * パッケージ出力モード検出（Phase 2修正）
+     */
+    detectPackageMode() {
+        // v2.0編集システムが無効でHTML設定が"disabled"の場合はパッケージモード
+        const isEditSystemDisabled = !window.SpinePositioningV2 || !window.SpinePositioningV2.initialized;
+        const hasDisabledConfig = document.querySelector('[data-positioning-system="v2.0-direct-css"]');
+        
+        return isEditSystemDisabled && hasDisabledConfig;
+    }
+    
+    /**
+     * v2.0編集システムの位置データを取得（Phase 2修正）
+     */
+    getV2PositionData(configElementId) {
+        if (!window.SpinePositioningV2 || !window.SpinePositioningV2.initialized) {
+            return null;
+        }
+        
+        // キャラクターIDをconfigElementIdから推定
+        const characterId = configElementId.replace('-config', '-canvas');
+        const positionData = window.SpinePositioningV2.getCurrentPositions();
+        
+        if (positionData && positionData.characters && positionData.characters[characterId]) {
+            const charData = positionData.characters[characterId];
+            
+            // 編集システム座標系から%座標に変換
+            return {
+                x: this.parsePercentValue(charData.position.left),
+                y: this.parsePercentValue(charData.position.top),
+                scale: parseFloat(charData.position.scale) || 1.0,
+                fadeDelay: 0,
+                fadeDuration: 1000,
+                coordinateSystem: 'v2.0-unified'
+            };
+        }
+        
+        return null;
+    }
+    
+    /**
+     * localStorage からv2.0位置データを読み込み（Phase 2修正）
+     */
+    loadV2PositionFromStorage(configElementId) {
+        try {
+            const savedData = localStorage.getItem('spine-positioning-state-v2');
+            if (!savedData) return null;
+            
+            const parsedData = JSON.parse(savedData);
+            const characterId = configElementId.replace('-config', '-canvas');
+            
+            if (parsedData.characters && parsedData.characters[characterId]) {
+                const charData = parsedData.characters[characterId];
+                
+                return {
+                    x: this.parsePercentValue(charData.position.left),
+                    y: this.parsePercentValue(charData.position.top),
+                    scale: parseFloat(charData.position.scale) || 1.0,
+                    fadeDelay: 0,
+                    fadeDuration: 1000,
+                    coordinateSystem: 'v2.0-storage'
+                };
+            }
+        } catch (error) {
+            this.log('⚠️ localStorage からのv2.0データ読み込みエラー:', error);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * パーセント値をパース（"50%" → 50）
+     */
+    parsePercentValue(value) {
+        if (typeof value === 'string' && value.endsWith('%')) {
+            return parseFloat(value.replace('%', ''));
+        }
+        return parseFloat(value) || 50;
+    }
+    
+    /**
+     * キャラクター位置を更新（Phase 2: 位置ロック対応）
      */
     updateCharacterPosition(characterName, vpX, vpY, scale = null) {
+        // 🔒 Phase 2: 位置変更許可チェック
+        if (!this.isPositionChangeAllowed('update')) {
+            this.log(`🚫 位置更新拒否: ${characterName} (ロック理由: ${this.positionLock.reason})`);
+            return false;
+        }
+        
         const character = this.characters.get(characterName);
         if (!character) {
             console.warn(`⚠️ 未登録のキャラクター: ${characterName}`);
@@ -179,7 +399,8 @@ class ResponsiveCoordinateSystem {
             viewport: { x: vpX, y: vpY },
             pixel: pixelPos,
             scale: scale || character.lastPosition?.scale || 1.0,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            lockedStatus: this.positionLock.enabled
         };
         
         this.log(`🔄 キャラクター位置更新: ${characterName}`, character.lastPosition);
@@ -262,22 +483,87 @@ class ResponsiveCoordinateSystem {
     }
     
     /**
-     * デバッグ情報表示
+     * デバッグ情報表示（Phase 2拡張版）
      */
     debugInfo() {
         return {
+            version: 'Phase 2',
             isInitialized: this.isInitialized,
             characterCount: this.characters.size,
+            positionLock: {
+                enabled: this.positionLock.enabled,
+                reason: this.positionLock.reason,
+                lockedAt: this.positionLock.lockedAt,
+                allowedOperations: Array.from(this.positionLock.allowedOperations)
+            },
+            initializationState: this.initializationState,
             viewportSize: {
                 width: window.innerWidth,
                 height: window.innerHeight
             },
+            globalLockStatus: window.SPINE_POSITION_LOCK || null,
             characters: Array.from(this.characters.entries()).map(([name, char]) => ({
                 name,
                 hasElement: !!char.element,
                 lastPosition: char.lastPosition
             }))
         };
+    }
+    
+    /**
+     * Phase 2システム状態診断（商用制作ツール用）
+     */
+    diagnosePhase2Status() {
+        console.log('🔍 Phase 2システム状態診断開始...');
+        
+        const diagnosis = {
+            timestamp: new Date().toISOString(),
+            system: {
+                initialized: this.isInitialized,
+                positionLockEnabled: this.positionLock.enabled,
+                lockReason: this.positionLock.reason
+            },
+            compatibility: {
+                v2EditingSystem: !!(window.SpinePositioningV2 && window.SpinePositioningV2.initialized),
+                packageMode: this.detectPackageMode(),
+                globalLock: !!(window.SPINE_POSITION_LOCK && window.SPINE_POSITION_LOCK.enabled)
+            },
+            coordination: {
+                htmlConfigDisabled: document.querySelectorAll('[data-x="locked-by-phase2"]').length > 0,
+                directCSSApplied: document.querySelectorAll('[data-positioning-system="v2.0-phase2-locked"]').length > 0
+            },
+            recommendation: this.getPhase2Recommendation()
+        };
+        
+        console.log('📊 Phase 2診断結果:', diagnosis);
+        
+        // 商用制作ツールとしての稼働状態評価
+        if (diagnosis.system.initialized && diagnosis.coordination.htmlConfigDisabled) {
+            console.log('✅ Phase 2システム: 商用制作ツールとして正常稼働中');
+        } else {
+            console.log('⚠️ Phase 2システム: 設定の確認が必要です');
+        }
+        
+        return diagnosis;
+    }
+    
+    /**
+     * Phase 2推奨アクション
+     */
+    getPhase2Recommendation() {
+        if (!this.isInitialized) {
+            return 'システム初期化が必要';
+        }
+        
+        if (this.positionLock.enabled) {
+            return 'パッケージ出力モード - 位置は完全に固定済み';
+        }
+        
+        if (window.SpinePositioningV2 && window.SpinePositioningV2.initialized) {
+            return 'v2.0編集システム連携中 - 編集可能';
+        }
+        
+        return '通常モード - HTML設定システムを使用中';
     }
     
     /**
@@ -311,13 +597,44 @@ class ResponsiveCoordinateSystem {
 // グローバルアクセス用
 window.ResponsiveCoordinateSystem = ResponsiveCoordinateSystem;
 
-// デバッグ用ヘルパー関数
+// デバッグ用ヘルパー関数（Phase 2拡張版）
 window.debugCoordinateSystem = function() {
     if (window.spineCoordinateSystem) {
         console.log('🔍 座標システム デバッグ情報:', window.spineCoordinateSystem.debugInfo());
+        
+        // Phase 2診断も実行
+        if (typeof window.spineCoordinateSystem.diagnosePhase2Status === 'function') {
+            window.spineCoordinateSystem.diagnosePhase2Status();
+        }
     } else {
         console.log('⚠️ 座標システムが初期化されていません');
     }
+};
+
+// Phase 2専用診断関数
+window.diagnosePhase2 = function() {
+    console.log('🚀 Phase 2 完全診断開始...');
+    
+    // 1. 座標システム診断
+    if (window.spineCoordinateSystem && typeof window.spineCoordinateSystem.diagnosePhase2Status === 'function') {
+        window.spineCoordinateSystem.diagnosePhase2Status();
+    }
+    
+    // 2. パッケージ出力システム統合テスト
+    if (typeof window.phase2IntegratedTest === 'function') {
+        window.phase2IntegratedTest();
+    }
+    
+    // 3. v2.0編集システム状態確認
+    if (window.SpinePositioningV2) {
+        console.log('📝 v2.0編集システム状態:', {
+            initialized: window.SpinePositioningV2.initialized,
+            selectedCharacter: window.SpinePositioningV2.selectedCharacter,
+            editMode: window.SpinePositioningV2.editMode
+        });
+    }
+    
+    console.log('✅ Phase 2 完全診断完了');
 };
 
 console.log('✅ Spine Responsive Coordinate System ロード完了');

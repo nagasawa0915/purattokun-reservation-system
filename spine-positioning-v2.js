@@ -1431,12 +1431,14 @@ SpinePositioningV2.getCurrentPositions = function() {
                 zIndex: char.zIndex || 1000
             },
             isActive: char.isActive,
-            // data-*属性形式の値も生成
-            dataAttributes: {
-                'data-x': parseFloat(element.style.left) || 0,
-                'data-y': parseFloat(element.style.top) || 0,
-                'data-scale': char.scale || 1.0,
-                'data-z-index': char.zIndex || 1000
+            // 🚨 重要修正: data-*属性は無効化し、編集システム座標系を直接使用
+            // HTML設定システム（data-*属性）は位置不整合の原因となるため削除
+            coordinateSystem: {
+                type: 'percentage-with-center-transform',
+                left: element.style.left || '0%',
+                top: element.style.top || '0%', 
+                transform: element.style.transform || 'translate(-50%, -50%)',
+                note: 'HTML設定システム無効化により100%の位置一致を保証'
             }
         };
     });
