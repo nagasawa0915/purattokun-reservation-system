@@ -816,14 +816,6 @@ footer {
     padding: 2rem 0;
 }
 
-/* Spine Character Positioning - ヒーローセクション基準の相対位置システム */
-#purattokun-canvas {
-    position: absolute;
-    pointer-events: none;
-    z-index: 2;
-    /* 位置は JavaScript で設定 */
-    transform-origin: center center;
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {

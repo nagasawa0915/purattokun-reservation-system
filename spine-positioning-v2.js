@@ -92,6 +92,60 @@ function detectCharacters() {
     return false;
 }
 
+// ========== 💡 視覚的ハイライト機能 ========== //
+function addCharacterHighlight(element) {
+    if (!element) return;
+    
+    // 既存ハイライト除去
+    removeCharacterHighlight(element);
+    
+    // 🚨 重要修正: ハイライト適用前にCSS位置を明示的に保存
+    // 初回選択時にstyle.leftとstyle.topが未設定の場合、CSS位置を取得して設定
+    if (!element.style.left || !element.style.top) {
+        const computedStyle = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        const parentRect = element.parentElement.getBoundingClientRect();
+        
+        // 現在の表示位置をパーセンテージで計算
+        const leftPercent = ((rect.left + rect.width/2 - parentRect.left) / parentRect.width) * 100;
+        const topPercent = ((rect.top + rect.height/2 - parentRect.top) / parentRect.height) * 100;
+        
+        // 明示的にstyle属性として設定（CSS位置の保護）
+        element.style.position = 'absolute';
+        element.style.left = leftPercent.toFixed(2) + '%';
+        element.style.top = topPercent.toFixed(2) + '%';
+        
+        console.log(`🔧 v2.0: CSS位置保護 (${element.id}): left=${element.style.left}, top=${element.style.top}`);
+    }
+    
+    // ハイライト境界線スタイル
+    const highlightStyle = `
+        border: 2px solid #ff6b6b !important;
+        box-shadow: 0 0 10px rgba(255, 107, 107, 0.5) !important;
+        transition: all 0.3s ease !important;
+    `;
+    
+    // スタイル適用
+    element.style.cssText += highlightStyle;
+    element.dataset.v2Highlighted = 'true';
+    
+    console.log('🎨 v2.0: ハイライト追加:', element.id || element.tagName);
+}
+
+function removeCharacterHighlight(element) {
+    if (!element) return;
+    
+    // ハイライト境界線とボックスシャドウを除去
+    element.style.border = '';
+    element.style.boxShadow = '';
+    element.style.transition = '';
+    
+    // ハイライト状態フラグ除去
+    delete element.dataset.v2Highlighted;
+    
+    console.log('🧹 v2.0: ハイライト除去:', element.id || element.tagName);
+}
+
 // ========== 🎯 キャラクター選択システム ========== //
 function selectCharacter(index) {
     if (index < 0 || index >= SpinePositioningV2.characters.length) {
@@ -118,39 +172,6 @@ function selectCharacter(index) {
     
     console.log('✅ v2.0: キャラクター選択:', activeChar.name);
     return true;
-}
-
-// ========== 💡 視覚的ハイライト機能 ========== //
-function addCharacterHighlight(element) {
-    if (!element) return;
-    
-    // 既存ハイライト除去
-    removeCharacterHighlight(element);
-    
-    // ハイライト境界線スタイル
-    const highlightStyle = `
-        border: 2px solid #ff6b6b !important;
-        box-shadow: 0 0 10px rgba(255, 107, 107, 0.5) !important;
-        transition: all 0.3s ease !important;
-    `;
-    
-    // スタイル適用
-    element.style.cssText += highlightStyle;
-    element.dataset.v2Highlighted = 'true';
-    
-    console.log('🎨 v2.0: ハイライト追加:', element.id || element.tagName);
-}
-
-function removeCharacterHighlight(element) {
-    if (!element || !element.dataset.v2Highlighted) return;
-    
-    // ハイライト関連スタイルを除去
-    element.style.border = '';
-    element.style.boxShadow = '';
-    element.style.transition = '';
-    delete element.dataset.v2Highlighted;
-    
-    console.log('🎨 v2.0: ハイライト除去:', element.id || element.tagName);
 }
 
 // ========== 🖱️ マウス/タッチドラッグ移動システム ========== //
@@ -529,6 +550,193 @@ function moveLayer(index, direction) {
     return true;
 }
 
+// ========== 🎯 ドラッグ&ドロップ レイヤー管理システム ========== //
+// 🚨 2キャラクター限定対応 - HTML5 Drag and Drop API使用
+
+let dragDropState = {
+    isDragging: false,
+    draggedIndex: -1,
+    targetIndex: -1,
+    dragOverElement: null
+};
+
+function initializeDragDropLayerSystem() {
+    console.log('🎯 v2.0: ドラッグ&ドロップレイヤー機能を初期化中...');
+    
+    // 2キャラクター限定チェック
+    if (SpinePositioningV2.characters.length !== 2) {
+        console.warn('⚠️ v2.0: ドラッグ&ドロップレイヤー機能は2キャラクター限定です');
+        console.log(`   現在のキャラクター数: ${SpinePositioningV2.characters.length}`);
+        return false;
+    }
+    
+    // キャラクター選択パネル内のアイテムを取得
+    const characterList = document.getElementById('v2-character-list');
+    if (!characterList) {
+        console.error('❌ v2.0: キャラクター選択パネルが見つかりません');
+        return false;
+    }
+    
+    // ドラッグイベントを設定
+    setupDragDropEvents(characterList);
+    
+    console.log('✅ v2.0: ドラッグ&ドロップレイヤー機能を初期化完了');
+    return true;
+}
+
+function setupDragDropEvents(characterList) {
+    // 全ての子要素にドラッグイベントを設定
+    const items = characterList.querySelectorAll('[data-character-index]');
+    
+    items.forEach((item, index) => {
+        const characterIndex = parseInt(item.dataset.characterIndex);
+        
+        // ドラッグ開始
+        item.addEventListener('dragstart', (e) => {
+            console.log(`🎯 v2.0: ドラッグ開始: ${SpinePositioningV2.characters[characterIndex].name}`);
+            
+            dragDropState.isDragging = true;
+            dragDropState.draggedIndex = characterIndex;
+            
+            // ドラッグ中の視覚効果
+            item.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', characterIndex.toString());
+        });
+        
+        // ドラッグ終了
+        item.addEventListener('dragend', (e) => {
+            console.log('🎯 v2.0: ドラッグ終了');
+            
+            // 視覚効果リセット
+            item.style.opacity = '1';
+            if (dragDropState.dragOverElement) {
+                dragDropState.dragOverElement.style.backgroundColor = '';
+                dragDropState.dragOverElement.style.borderColor = '';
+            }
+            
+            // 状態リセット
+            dragDropState.isDragging = false;
+            dragDropState.draggedIndex = -1;
+            dragDropState.targetIndex = -1;
+            dragDropState.dragOverElement = null;
+        });
+        
+        // ドラッグオーバー（ドロップ可能領域）
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const targetIndex = parseInt(item.dataset.characterIndex);
+            
+            // 自分自身への無効ドロップを防止
+            if (targetIndex !== dragDropState.draggedIndex) {
+                // 視覚フィードバック
+                item.style.backgroundColor = '#fff3cd';
+                item.style.borderColor = '#ffc107';
+                
+                dragDropState.targetIndex = targetIndex;
+                dragDropState.dragOverElement = item;
+            }
+        });
+        
+        // ドラッグリーブ（ドロップ領域から離れる）
+        item.addEventListener('dragleave', (e) => {
+            // 視覚フィードバック除去
+            item.style.backgroundColor = '';
+            item.style.borderColor = '';
+        });
+        
+        // ドロップ（実際の並び替え処理）
+        item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            const draggedIndex = dragDropState.draggedIndex;
+            const targetIndex = parseInt(item.dataset.characterIndex);
+            
+            console.log(`🎯 v2.0: ドロップ実行: ${draggedIndex} → ${targetIndex}`);
+            
+            // 自分自身へのドロップは無効
+            if (draggedIndex === targetIndex) {
+                console.log('ℹ️ v2.0: 同じ位置へのドロップ - 無効');
+                return;
+            }
+            
+            // 2キャラクター限定の並び替え実行
+            swapCharacterLayers(draggedIndex, targetIndex);
+            
+            // UI更新
+            updateCharacterSelectUI();
+            
+            // 視覚フィードバック除去
+            item.style.backgroundColor = '';
+            item.style.borderColor = '';
+        });
+    });
+}
+
+function swapCharacterLayers(index1, index2) {
+    if (index1 < 0 || index1 >= SpinePositioningV2.characters.length ||
+        index2 < 0 || index2 >= SpinePositioningV2.characters.length) {
+        console.error('❌ v2.0: 無効なキャラクターインデックス:', index1, index2);
+        return false;
+    }
+    
+    const char1 = SpinePositioningV2.characters[index1];
+    const char2 = SpinePositioningV2.characters[index2];
+    
+    console.log(`🔄 v2.0: レイヤー交換: ${char1.name} ↔ ${char2.name}`);
+    
+    // z-indexを交換
+    const temp = char1.zIndex;
+    char1.zIndex = char2.zIndex;
+    char2.zIndex = temp;
+    
+    // DOM要素に適用
+    char1.element.style.zIndex = char1.zIndex;
+    char2.element.style.zIndex = char2.zIndex;
+    
+    // 内部配列も並び替え（アクティブインデックスの調整が必要）
+    const activeChar = SpinePositioningV2.characters[SpinePositioningV2.activeIndex];
+    
+    // 配列要素を交換
+    [SpinePositioningV2.characters[index1], SpinePositioningV2.characters[index2]] = 
+    [SpinePositioningV2.characters[index2], SpinePositioningV2.characters[index1]];
+    
+    // アクティブインデックスを再計算
+    SpinePositioningV2.activeIndex = SpinePositioningV2.characters.findIndex(char => char === activeChar);
+    
+    // 設定保存
+    saveToStorage();
+    
+    console.log(`✅ v2.0: レイヤー交換完了 (${char1.name}: z-index ${char1.zIndex}, ${char2.name}: z-index ${char2.zIndex})`);
+    return true;
+}
+
+function disableDragDropLayerSystem() {
+    console.log('🎯 v2.0: ドラッグ&ドロップレイヤー機能を無効化');
+    
+    // 状態リセット
+    dragDropState.isDragging = false;
+    dragDropState.draggedIndex = -1;
+    dragDropState.targetIndex = -1;
+    dragDropState.dragOverElement = null;
+    
+    // ドラッグ可能属性を無効化
+    const characterList = document.getElementById('v2-character-list');
+    if (characterList) {
+        const items = characterList.querySelectorAll('[data-character-index]');
+        items.forEach(item => {
+            item.draggable = false;
+            item.style.opacity = '1';
+            item.style.backgroundColor = '';
+            item.style.borderColor = '';
+        });
+    }
+    
+    console.log('✅ v2.0: ドラッグ&ドロップレイヤー機能を無効化完了');
+}
+
 // ========== 💾 localStorage 永続化システム ========== //
 function saveToStorage() {
     try {
@@ -648,7 +856,7 @@ function createCharacterSelectPanel() {
     const panel = document.createElement('div');
     panel.id = 'v2-character-select-panel';
     panel.innerHTML = `
-        <div style="background: white; border: 1px solid #ddd; border-radius: 8px; 
+        <div id="v2-character-select-container" style="background: white; border: 1px solid #ddd; border-radius: 8px; 
                     padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #333;">
                 🎭 キャラクター選択
@@ -671,7 +879,56 @@ function createCharacterSelectPanel() {
     document.body.appendChild(panel);
     v2UI.panels.characterSelect = panel;
     
+    // 🚨 重要追加: 初期状態では無効表示
+    setCharacterSelectPanelState(false);
+    
     updateCharacterSelectUI();
+}
+
+// ========== 🎭 キャラクター選択パネル状態制御 ========== //
+function setCharacterSelectPanelState(enabled) {
+    const panel = v2UI.panels.characterSelect;
+    const container = document.getElementById('v2-character-select-container');
+    const characterList = document.getElementById('v2-character-list');
+    
+    if (!panel || !container) {
+        console.warn('⚠️ v2.0: キャラクター選択パネルが見つかりません');
+        return;
+    }
+    
+    if (enabled) {
+        // 有効状態: 通常表示・クリック有効
+        container.style.opacity = '1';
+        container.style.filter = 'none';
+        container.style.pointerEvents = 'auto';
+        container.style.background = 'white';
+        container.style.borderColor = '#ddd';
+        
+        console.log('✅ v2.0: キャラクター選択パネルを有効化');
+    } else {
+        // 無効状態: 灰色・半透明・クリック無効
+        container.style.opacity = '0.6';
+        container.style.filter = 'grayscale(50%)';
+        container.style.pointerEvents = 'none';
+        container.style.background = '#f5f5f5';
+        container.style.borderColor = '#ccc';
+        
+        console.log('🔒 v2.0: キャラクター選択パネルを無効化');
+    }
+    
+    // キャラクター項目にも状態を適用
+    if (characterList) {
+        const items = characterList.querySelectorAll('[data-character-index]');
+        items.forEach(item => {
+            if (enabled) {
+                item.style.cursor = 'pointer';
+                item.style.opacity = '1';
+            } else {
+                item.style.cursor = 'not-allowed';
+                item.style.opacity = '0.7';
+            }
+        });
+    }
 }
 
 function createControlPanel() {
@@ -682,6 +939,24 @@ function createControlPanel() {
                     padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 250px;">
             <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #333;">
                 ⚡ 操作パネル
+            </div>
+            
+            <!-- 編集制御ボタン -->
+            <div style="margin-bottom: 10px;">
+                <div style="display: flex; gap: 3px; margin-bottom: 5px;">
+                    <button id="v2-start-edit" style="flex: 1; padding: 4px; font-size: 11px; 
+                                                     background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                        🎨 編集開始
+                    </button>
+                    <button id="v2-end-edit" style="flex: 1; padding: 4px; font-size: 11px; 
+                                                   background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                        🔚 編集終了
+                    </button>
+                    <button id="v2-save" style="flex: 1; padding: 4px; font-size: 11px; 
+                                               background: #ff9800; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                        💾 保存
+                    </button>
+                </div>
             </div>
             
             <!-- 移動操作案内 -->
@@ -704,12 +979,11 @@ function createControlPanel() {
                 </div>
             </div>
             
-            <!-- レイヤー移動 -->
+            <!-- レイヤー移動（ドラッグ&ドロップ） -->
             <div style="margin-bottom: 10px;">
                 <label style="font-size: 12px; color: #666;">📚 レイヤー:</label>
-                <div style="display: flex; gap: 5px; margin-top: 3px;">
-                    <button id="v2-layer-up" style="flex: 1; padding: 4px; font-size: 12px;">↑ 前面</button>
-                    <button id="v2-layer-down" style="flex: 1; padding: 4px; font-size: 12px;">↓ 背面</button>
+                <div style="font-size: 11px; color: #888; margin-top: 2px;">
+                    キャラクター行の「≡」をドラッグ&ドロップで並び替え
                 </div>
             </div>
             
@@ -780,6 +1054,45 @@ function createControlPanel() {
     document.body.appendChild(panel);
     v2UI.panels.control = panel;
     
+    // 🚨 重要追加: 初期状態では編集モード外なので、編集開始ボタンのみ有効化
+    setTimeout(() => {
+        const startEditBtn = document.getElementById('v2-start-edit');
+        const endEditBtn = document.getElementById('v2-end-edit');
+        const saveBtn = document.getElementById('v2-save');
+        const scaleSlider = document.getElementById('v2-scale-slider');
+        const scaleInput = document.getElementById('v2-scale-input');
+        const scaleReset = document.getElementById('v2-scale-reset');
+        // 🚨 削除: レイヤー移動ボタンはドラッグ&ドロップに変更
+        // const layerUpBtn = document.getElementById('v2-layer-up');
+        // const layerDownBtn = document.getElementById('v2-layer-down');
+        
+        // 初期状態: 編集開始ボタンのみ有効
+        if (startEditBtn) {
+            startEditBtn.disabled = false;
+            startEditBtn.style.opacity = '1';
+            startEditBtn.style.cursor = 'pointer';
+        }
+        
+        // その他のボタンは無効状態
+        [endEditBtn, saveBtn, scaleReset].forEach(btn => {
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        });
+        
+        // スライダー・入力欄も無効状態
+        [scaleSlider, scaleInput].forEach(element => {
+            if (element) {
+                element.disabled = true;
+                element.style.opacity = '0.5';
+            }
+        });
+        
+        console.log('🎨 v2.0: 初期UI状態設定完了（編集開始ボタンのみ有効）');
+    }, 100);
+    
     // イベントハンドラー設定
     setupControlPanelEvents();
 }
@@ -828,6 +1141,42 @@ function createStatusPanel() {
 
 // ========== 🎮 イベントハンドリング統合 ========== //
 function setupControlPanelEvents() {
+    // 編集制御ボタン
+    const startEditBtn = document.getElementById('v2-start-edit');
+    const endEditBtn = document.getElementById('v2-end-edit');
+    const saveBtn = document.getElementById('v2-save');
+    
+    if (startEditBtn) {
+        startEditBtn.addEventListener('click', () => {
+            console.log('🎨 v2.0: 編集開始ボタンクリック');
+            SpinePositioningV2.startEditMode();
+        });
+    }
+    
+    if (endEditBtn) {
+        endEditBtn.addEventListener('click', () => {
+            console.log('🔚 v2.0: 編集終了ボタンクリック');
+            SpinePositioningV2.endEditMode();
+        });
+    }
+    
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            console.log('💾 v2.0: 保存ボタンクリック');
+            if (saveToStorage()) {
+                // 成功時の視覚的フィードバック
+                const originalText = saveBtn.textContent;
+                const originalBg = saveBtn.style.backgroundColor;
+                saveBtn.textContent = '✅ 保存完了!';
+                saveBtn.style.backgroundColor = '#4CAF50';
+                setTimeout(() => {
+                    saveBtn.textContent = originalText;
+                    saveBtn.style.backgroundColor = originalBg;
+                }, 1500);
+            }
+        });
+    }
+    
     // スケールスライダー
     const slider = document.getElementById('v2-scale-slider');
     const input = document.getElementById('v2-scale-input');
@@ -856,21 +1205,8 @@ function setupControlPanelEvents() {
         });
     }
     
-    // レイヤー移動ボタン
-    const layerUpBtn = document.getElementById('v2-layer-up');
-    const layerDownBtn = document.getElementById('v2-layer-down');
-    
-    if (layerUpBtn) {
-        layerUpBtn.addEventListener('click', () => {
-            moveLayer(SpinePositioningV2.activeIndex, 'up');
-        });
-    }
-    
-    if (layerDownBtn) {
-        layerDownBtn.addEventListener('click', () => {
-            moveLayer(SpinePositioningV2.activeIndex, 'down');
-        });
-    }
+    // 🚨 削除: レイヤー移動ボタンはドラッグ&ドロップに変更
+    // レイヤー移動はキャラクター選択パネル内のドラッグ&ドロップで実装
     
     // CSS出力ボタン
     const cssExportBtn = document.getElementById('v2-css-export');
@@ -1127,7 +1463,10 @@ function updateCharacterSelectUI() {
                         background: ${isActive ? '#e3f2fd' : 'transparent'};
                         border: ${isActive ? '2px solid #ff6b6b' : '1px solid #ddd'};
                         display: flex; align-items: center; gap: 8px;
-                        transition: all 0.2s ease;">
+                        transition: all 0.2s ease;"
+                 data-character-index="${index}" draggable="true">
+                <span class="drag-handle" style="font-size: 14px; color: #888; cursor: move; user-select: none;" 
+                      title="ドラッグしてレイヤー順序を変更">≡</span>
                 <span style="font-size: 16px;">${isActive ? '🎯' : '⚪'}</span>
                 <div style="flex: 1;">
                     <div style="font-weight: ${isActive ? 'bold' : 'normal'}; 
@@ -1141,12 +1480,30 @@ function updateCharacterSelectUI() {
             </div>
         `;
         
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+            // ドラッグハンドルクリック時はキャラクター選択を無効化
+            if (e.target.classList.contains('drag-handle')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
             selectCharacter(index);
         });
         
         characterList.appendChild(item);
     });
+    
+    // 🎯 編集モード中はドラッグ&ドロップイベントを再設定
+    if (SpinePositioningV2.editMode && SpinePositioningV2.characters.length === 2) {
+        setTimeout(() => {
+            setupDragDropEvents(characterList);
+        }, 100); // DOM更新後に実行
+    }
+    
+    // 🚨 重要追加: UI更新時に現在の編集状態に応じてパネル状態を同期
+    setTimeout(() => {
+        setCharacterSelectPanelState(SpinePositioningV2.editMode);
+    }, 150); // DOM更新完了後に実行
 }
 
 function updateScaleUI(scale) {
@@ -1579,9 +1936,19 @@ SpinePositioningV2.init = function() {
 };
 
 SpinePositioningV2.startEditMode = function() {
+    console.log('🎨 v2.0: 編集モード開始処理を実行中...');
+    console.log('  - 現在の editMode:', SpinePositioningV2.editMode);
+    console.log('  - 初期化状態:', SpinePositioningV2.initialized);
+    console.log('  - キャラクター数:', SpinePositioningV2.characters.length);
+    
     if (SpinePositioningV2.editMode) {
         console.log('ℹ️ v2.0: 既に編集モード中');
         return true;
+    }
+    
+    if (!SpinePositioningV2.initialized) {
+        console.error('❌ v2.0: 初期化されていません。先に init() を実行してください');
+        return false;
     }
     
     console.log('🎨 v2.0: 編集モード開始');
@@ -1589,23 +1956,95 @@ SpinePositioningV2.startEditMode = function() {
     SpinePositioningV2.editMode = true;
     
     // キーボード移動機能有効化
+    console.log('⌨️ v2.0: キーボード機能初期化中...');
     initializeKeyboardMovement();
     
     // マウス/タッチドラッグ移動機能有効化
+    console.log('🖱️ v2.0: ドラッグ機能初期化中...');
     initializeMouseDragMovement();
     
     // キャラクタークリック選択有効化
+    console.log('🎯 v2.0: クリック選択機能初期化中...');
     setupCharacterClickSelection();
     
     // 初期アクティブキャラクターハイライト
     if (SpinePositioningV2.characters[SpinePositioningV2.activeIndex]) {
-        addCharacterHighlight(SpinePositioningV2.characters[SpinePositioningV2.activeIndex].element);
+        const activeChar = SpinePositioningV2.characters[SpinePositioningV2.activeIndex];
+        console.log('🎨 v2.0: アクティブキャラクターハイライト追加:', activeChar.name);
+        addCharacterHighlight(activeChar.element);
+    } else {
+        console.warn('⚠️ v2.0: アクティブキャラクターが見つかりません');
     }
     
     // UI表示
-    if (v2UI.panels.characterSelect) v2UI.panels.characterSelect.style.display = 'block';
-    if (v2UI.panels.control) v2UI.panels.control.style.display = 'block';
+    console.log('🎨 v2.0: UI表示設定中...');
+    if (v2UI.panels.characterSelect) {
+        v2UI.panels.characterSelect.style.display = 'block';
+        // 🚨 重要追加: 編集開始時にキャラクター選択パネルを有効化
+        setCharacterSelectPanelState(true);
+        console.log('  ✓ キャラクター選択パネル表示・有効化');
+    } else {
+        console.warn('  ⚠️ キャラクター選択パネルが見つかりません');
+    }
     
+    if (v2UI.panels.control) {
+        v2UI.panels.control.style.display = 'block';
+        console.log('  ✓ 操作パネル表示');
+        
+        // 🚨 重要追加: 編集開始時に全ボタンを有効化
+        const startEditBtn = document.getElementById('v2-start-edit');
+        const endEditBtn = document.getElementById('v2-end-edit');
+        const saveBtn = document.getElementById('v2-save');
+        const scaleSlider = document.getElementById('v2-scale-slider');
+        const scaleInput = document.getElementById('v2-scale-input');
+        const scaleReset = document.getElementById('v2-scale-reset');
+        // 🚨 削除: レイヤー移動ボタンはドラッグ&ドロップに変更
+        // const layerUpBtn = document.getElementById('v2-layer-up');
+        // const layerDownBtn = document.getElementById('v2-layer-down');
+        
+        // 編集開始ボタンは無効化
+        if (startEditBtn) {
+            startEditBtn.disabled = true;
+            startEditBtn.style.opacity = '0.5';
+            startEditBtn.style.cursor = 'not-allowed';
+        }
+        
+        // 編集終了・保存ボタンは有効化
+        if (endEditBtn) {
+            endEditBtn.disabled = false;
+            endEditBtn.style.opacity = '1';
+            endEditBtn.style.cursor = 'pointer';
+        }
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.style.opacity = '1';
+            saveBtn.style.cursor = 'pointer';
+        }
+        
+        // スケール調整機能は有効化
+        if (scaleSlider) {
+            scaleSlider.disabled = false;
+            scaleSlider.style.opacity = '1';
+        }
+        if (scaleInput) {
+            scaleInput.disabled = false;
+            scaleInput.style.opacity = '1';
+        }
+        if (scaleReset) {
+            scaleReset.disabled = false;
+            scaleReset.style.opacity = '1';
+            scaleReset.style.cursor = 'pointer';
+        }
+        
+        // 🎯 ドラッグ&ドロップレイヤー機能を初期化
+        initializeDragDropLayerSystem();
+        
+        console.log('  ✓ 編集モード用UIボタンを有効化');
+    } else {
+        console.warn('  ⚠️ 操作パネルが見つかりません');
+    }
+    
+    console.log('🔄 v2.0: UI更新中...');
     updateUI();
     
     // 🔗 新機能モジュール統合の遅延実行
@@ -1619,6 +2058,8 @@ SpinePositioningV2.startEditMode = function() {
     }, 500); // UI作成後に実行
     
     console.log('✅ v2.0: 編集モード開始完了');
+    console.log('  - editMode:', SpinePositioningV2.editMode);
+    console.log('  - アクティブキャラクター:', SpinePositioningV2.characters[SpinePositioningV2.activeIndex]?.name || 'なし');
     return true;
 };
 
@@ -1643,14 +2084,73 @@ SpinePositioningV2.endEditMode = function() {
         removeCharacterHighlight(char.element);
     });
     
-    // UI非表示
-    if (v2UI.panels.characterSelect) v2UI.panels.characterSelect.style.display = 'none';
-    if (v2UI.panels.control) v2UI.panels.control.style.display = 'none';
+    // 🚨 重要修正: 編集終了時はキャラクター選択パネルを無効表示に変更
+    // キャラクター選択パネルは表示維持し、無効状態にする
+    if (v2UI.panels.characterSelect) {
+        v2UI.panels.characterSelect.style.display = 'block';
+        // 🚨 重要追加: 編集終了時にキャラクター選択パネルを無効化
+        setCharacterSelectPanelState(false);
+        console.log('  ✓ キャラクター選択パネルを無効表示に変更');
+    }
+    
+    // 操作パネルは表示維持し、編集開始ボタンを有効化
+    if (v2UI.panels.control) {
+        // パネル自体は表示を維持
+        v2UI.panels.control.style.display = 'block';
+        
+        // 編集開始ボタンのみ有効化、他は無効化
+        const startEditBtn = document.getElementById('v2-start-edit');
+        const endEditBtn = document.getElementById('v2-end-edit');
+        const saveBtn = document.getElementById('v2-save');
+        const scaleSlider = document.getElementById('v2-scale-slider');
+        const scaleInput = document.getElementById('v2-scale-input');
+        const scaleReset = document.getElementById('v2-scale-reset');
+        // 🚨 削除: レイヤー移動ボタンはドラッグ&ドロップに変更
+        // const layerUpBtn = document.getElementById('v2-layer-up');
+        // const layerDownBtn = document.getElementById('v2-layer-down');
+        
+        // 編集開始ボタンは有効化
+        if (startEditBtn) {
+            startEditBtn.disabled = false;
+            startEditBtn.style.opacity = '1';
+            startEditBtn.style.cursor = 'pointer';
+        }
+        
+        // 編集終了・保存ボタンは無効化
+        if (endEditBtn) {
+            endEditBtn.disabled = true;
+            endEditBtn.style.opacity = '0.5';
+            endEditBtn.style.cursor = 'not-allowed';
+        }
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = '0.5';
+            saveBtn.style.cursor = 'not-allowed';
+        }
+        
+        // スケール調整機能は無効化
+        if (scaleSlider) {
+            scaleSlider.disabled = true;
+            scaleSlider.style.opacity = '0.5';
+        }
+        if (scaleInput) {
+            scaleInput.disabled = true;
+            scaleInput.style.opacity = '0.5';
+        }
+        if (scaleReset) {
+            scaleReset.disabled = true;
+            scaleReset.style.opacity = '0.5';
+            scaleReset.style.cursor = 'not-allowed';
+        }
+        
+        // 🎯 ドラッグ&ドロップレイヤー機能を無効化
+        disableDragDropLayerSystem();
+    }
     
     // 最終保存
     saveToStorage();
     
-    console.log('✅ v2.0: 編集モード終了完了');
+    console.log('✅ v2.0: 編集モード終了完了 - メニューパネルは表示維持');
     return true;
 };
 
@@ -1735,11 +2235,17 @@ SpinePositioningV2.getCurrentPositions = function() {
 
 // URLパラメータ解析
 function checkURLParams() {
-    const urlParams = new URLSearchParams(window.location.search);
+    const url = window.location.href;
+    const search = window.location.search;
+    const urlParams = new URLSearchParams(search);
     const editParam = urlParams.get('edit');
     const versionParam = urlParams.get('version');
     
-    console.log('🔍 v2.0: URLパラメータ確認:', { edit: editParam, version: versionParam });
+    console.log('🔍 v2.0: URL詳細確認:');
+    console.log('  - 完全URL:', url);
+    console.log('  - search部分:', search);
+    console.log('  - editParam:', editParam);
+    console.log('  - versionParam:', versionParam);
     
     // ?edit=true&version=v2 の場合のみv2.0を使用
     if (editParam === 'true' && versionParam === 'v2') {
@@ -1754,6 +2260,7 @@ function checkURLParams() {
     }
     
     // デフォルトは既存システム
+    console.log('ℹ️ v2.0: 既存システムまたはv2.0対象外');
     return 'legacy';
 }
 
@@ -1761,35 +2268,67 @@ function checkURLParams() {
 document.addEventListener('DOMContentLoaded', () => {
     const mode = checkURLParams();
     
+    console.log('🔍 v2.0: 検出モード:', mode);
+    
     if (mode === 'v2' || mode === 'test') {
         console.log('🚀 v2.0: 自動初期化開始');
         
         // 短い遅延後に初期化（Spine読み込み待ち）
         setTimeout(() => {
+            console.log('🚀 v2.0: 初期化実行中...');
             if (SpinePositioningV2.init()) {
+                console.log('✅ v2.0: 初期化成功');
                 if (mode === 'v2') {
+                    console.log('🎯 v2.0: 編集モード自動開始');
                     // v2.0単独モード - 自動的に編集モード開始
-                    SpinePositioningV2.startEditMode();
+                    setTimeout(() => {
+                        SpinePositioningV2.startEditMode();
+                        console.log('✅ v2.0: 編集モード開始完了');
+                    }, 500); // 追加の遅延で確実に開始
                 } else {
                     // テストモード - 手動開始待ち
                     console.log('🧪 v2.0: テストモード準備完了。SpinePositioningV2.startEditMode() で開始してください');
                 }
+            } else {
+                console.error('❌ v2.0: 初期化失敗');
             }
         }, 1000);
+    } else {
+        console.log('ℹ️ v2.0: v2.0システムは起動しません（モード: ' + mode + '）');
     }
 });
 
 // デバッグ用グローバル関数
 window.SpinePositioningV2 = SpinePositioningV2;
 window.v2Debug = function() {
-    console.log('🔍 v2.0: デバッグ情報:', SpinePositioningV2.getStatus());
+    console.log('=== 🔍 v2.0: 詳細デバッグ情報 ===');
+    console.log('📊 システム状態:', SpinePositioningV2.getStatus());
     console.log('🎭 キャラクター一覧:', SpinePositioningV2.characters.map(char => ({
         name: char.name,
         id: char.id,
         scale: char.scale,
         zIndex: char.zIndex,
-        isActive: char.isActive
+        isActive: char.isActive,
+        elementExists: !!char.element,
+        position: {
+            left: char.element?.style.left || 'unset',
+            top: char.element?.style.top || 'unset'
+        }
     })));
+    console.log('🎨 UI状態:', {
+        created: v2UI.created,
+        panels: Object.keys(v2UI.panels).map(key => ({
+            name: key,
+            exists: !!v2UI.panels[key],
+            visible: v2UI.panels[key]?.style.display !== 'none'
+        }))
+    });
+    console.log('🌐 URL状態:', {
+        url: window.location.href,
+        search: window.location.search,
+        mode: checkURLParams()
+    });
+    console.log('===============================');
 };
 
 console.log('✅ Spine Positioning System v2.0 読み込み完了');
