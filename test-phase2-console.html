@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2 コンソール管理システム テスト</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            margin: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .status {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        .feature-title {
+            color: #4ecdc4;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎛️ Phase 2 コンソール管理システム テスト</h1>
+        <p>F12 でコンソールを開いて、段階的クリア機能の動作を確認してください。</p>
+
+        <div class="test-section">
+            <div class="feature-title">🚀 フェーズ管理テスト</div>
+            <button onclick="testPhaseManagement()">フェーズ管理テスト実行</button>
+            <button onclick="testMultiplePhases()">複数フェーズ同時テスト</button>
+            <div class="status" id="phase-status">準備完了</div>
+        </div>
+
+        <div class="test-section">
+            <div class="feature-title">🔧 ログ間引きテスト</div>
+            <button onclick="testLogThrottling()">25回 → 5回間引きテスト</button>
+            <button onclick="generateMassiveLogs()">大量ログ生成（100回）</button>
+            <div class="status" id="throttle-status">準備完了</div>
+        </div>
+
+        <div class="test-section">
+            <div class="feature-title">💎 重要情報保持テスト</div>
+            <button onclick="testImportantMessages()">重要メッセージ保持テスト</button>
+            <button onclick="testPhaseClearing()">段階的クリア＋重要情報保持</button>
+            <div class="status" id="important-status">準備完了</div>
+        </div>
+
+        <div class="test-section">
+            <div class="feature-title">📊 統合シナリオテスト</div>
+            <button onclick="testCPULoopScenario()">CPU無限ループ問題シミュレート</button>
+            <button onclick="testCompleteWorkflow()">完全ワークフローテスト</button>
+            <div class="status" id="scenario-status">準備完了</div>
+        </div>
+
+        <div class="test-section">
+            <div class="feature-title">📋 システム状況確認</div>
+            <button onclick="showPhaseStatus()">フェーズ状況表示</button>
+            <button onclick="showSystemStats()">システム統計表示</button>
+            <button onclick="clearConsole()">コンソール手動クリア</button>
+        </div>
+    </div>
+
+    <!-- Phase 2 Console Manager 読み込み -->
+    <script src="assets/js/console-manager.js"></script>
+
+    <script>
+        // テスト用のユーティリティ関数
+        function updateStatus(elementId, message) {
+            document.getElementById(elementId).textContent = message;
+        }
+
+        // 🚀 フェーズ管理テスト
+        function testPhaseManagement() {
+            updateStatus('phase-status', 'フェーズ管理テスト実行中...');
+            
+            // アセット読み込みフェーズをシミュレート
+            ConsoleManager.startPhase('test-asset-loading', 'ASSET');
+            ConsoleManager.info('テスト用アセット読み込み開始', 'ASSET');
+            
+            // 3秒後に成功として完了
+            setTimeout(() => {
+                ConsoleManager.success('テスト用アセット読み込み完了', 'ASSET');
+                ConsoleManager.completePhase('test-asset-loading', true);
+                updateStatus('phase-status', 'フェーズ管理テスト完了 - コンソールがクリアされました');
+            }, 3000);
+        }
+
+        function testMultiplePhases() {
+            updateStatus('phase-status', '複数フェーズテスト実行中...');
+            
+            // 複数フェーズを同時開始
+            ConsoleManager.startPhase('phase-a', 'SYSTEM');
+            ConsoleManager.startPhase('phase-b', 'SPINE');
+            ConsoleManager.startPhase('phase-c', 'UI');
+            
+            // 段階的に完了
+            setTimeout(() => ConsoleManager.completePhase('phase-a', true), 1000);
+            setTimeout(() => ConsoleManager.completePhase('phase-b', true), 2000);
+            setTimeout(() => {
+                ConsoleManager.completePhase('phase-c', true);
+                updateStatus('phase-status', '複数フェーズテスト完了');
+            }, 3000);
+        }
+
+        // 🔧 ログ間引きテスト
+        function testLogThrottling() {
+            updateStatus('throttle-status', 'ログ間引きテスト実行中...');
+            
+            // 間引き設定
+            ConsoleManager.enableThrottling('TEST-安全チェック', { maxCount: 5, interval: 50 });
+            
+            // 25回のログを生成（5回まで表示されるはず）
+            for (let i = 1; i <= 25; i++) {
+                ConsoleManager.debug(`安全チェック ${i}/25: テスト進行中`, 'ASSET');
+            }
+            
+            updateStatus('throttle-status', '25回→5回間引き完了 - コンソールで確認してください');
+        }
+
+        function generateMassiveLogs() {
+            updateStatus('throttle-status', '大量ログ生成中...');
+            
+            // より強力な間引き設定
+            ConsoleManager.enableThrottling('MASSIVE-LOG', { maxCount: 3, interval: 10 });
+            
+            // 100回のログを生成
+            for (let i = 1; i <= 100; i++) {
+                ConsoleManager.debug(`大量ログテスト ${i}/100`, 'PERFORMANCE');
+            }
+            
+            updateStatus('throttle-status', '100回→3回間引き完了');
+        }
+
+        // 💎 重要情報保持テスト
+        function testImportantMessages() {
+            updateStatus('important-status', '重要メッセージ保持テスト実行中...');
+            
+            // 重要メッセージを設定
+            ConsoleManager.preserveImportant([
+                '✅ 重要なテスト成功メッセージ',
+                '✅ Phase 2 システム動作確認',
+                '✅ 段階的クリア機能有効'
+            ]);
+            
+            // 通常のログを大量生成
+            for (let i = 1; i <= 15; i++) {
+                ConsoleManager.info(`通常ログ ${i}/15`, 'SYSTEM');
+            }
+            
+            ConsoleManager.success('重要メッセージ保持設定完了', 'SYSTEM');
+            updateStatus('important-status', '重要メッセージ保持テスト完了');
+        }
+
+        function testPhaseClearing() {
+            updateStatus('important-status', '段階的クリア＋重要情報保持テスト実行中...');
+            
+            // フェーズ開始
+            ConsoleManager.startPhase('test-clearing', 'SYSTEM');
+            
+            // 重要メッセージを追加
+            ConsoleManager.preserveImportant('🎯 クリア後も保持されるメッセージ');
+            
+            // ノイズログを生成
+            for (let i = 1; i <= 10; i++) {
+                ConsoleManager.debug(`ノイズログ ${i}/10 (クリア対象)`, 'SYSTEM');
+            }
+            
+            // 成功メッセージ
+            ConsoleManager.success('テスト処理完了 - この後クリアされます', 'SYSTEM');
+            
+            // 3秒後にクリア実行
+            setTimeout(() => {
+                ConsoleManager.completePhase('test-clearing', true);
+                updateStatus('important-status', 'クリア完了 - 重要メッセージのみ保持されました');
+            }, 3000);
+        }
+
+        // 📊 統合シナリオテスト
+        function testCPULoopScenario() {
+            updateStatus('scenario-status', 'CPU無限ループ問題シミュレート実行中...');
+            
+            // CPU無限ループ問題のシミュレート
+            ConsoleManager.startPhase('cpu-loop-simulation', 'PERFORMANCE');
+            ConsoleManager.enableThrottling('CPU-LOOP', { maxCount: 5, interval: 10 });
+            
+            // 25回の安全チェックを模擬
+            let count = 0;
+            const interval = setInterval(() => {
+                count++;
+                ConsoleManager.debug(`CPU集約処理 ${count}/25: メモリ使用量チェック`, 'PERFORMANCE');
+                
+                if (count >= 25) {
+                    clearInterval(interval);
+                    ConsoleManager.success('CPU処理完了 - システム安定', 'PERFORMANCE');
+                    ConsoleManager.completePhase('cpu-loop-simulation', true);
+                    updateStatus('scenario-status', 'CPU無限ループ問題対策テスト完了');
+                }
+            }, 50);
+        }
+
+        function testCompleteWorkflow() {
+            updateStatus('scenario-status', '完全ワークフローテスト実行中...');
+            
+            // 段階1: 初期化
+            ConsoleManager.startPhase('workflow-init', 'SYSTEM');
+            ConsoleManager.info('ワークフロー初期化開始', 'SYSTEM');
+            
+            setTimeout(() => {
+                ConsoleManager.completePhase('workflow-init', true);
+                
+                // 段階2: アセット読み込み
+                ConsoleManager.startPhase('workflow-assets', 'ASSET');
+                ConsoleManager.enableThrottling('WORKFLOW-ASSET', { maxCount: 3, interval: 100 });
+                
+                for (let i = 1; i <= 10; i++) {
+                    ConsoleManager.debug(`アセット ${i}/10 読み込み中`, 'ASSET');
+                }
+                
+                setTimeout(() => {
+                    ConsoleManager.completePhase('workflow-assets', true);
+                    
+                    // 段階3: 描画
+                    ConsoleManager.startPhase('workflow-rendering', 'SPINE');
+                    ConsoleManager.success('描画処理完了', 'SPINE');
+                    
+                    setTimeout(() => {
+                        ConsoleManager.completePhase('workflow-rendering', true);
+                        updateStatus('scenario-status', '完全ワークフローテスト完了');
+                    }, 1000);
+                }, 2000);
+            }, 1000);
+        }
+
+        // 📋 システム状況確認
+        function showPhaseStatus() {
+            const status = ConsoleManager.getPhaseStatus();
+            console.log('📊 Phase 2 システム状況確認完了 - 詳細はコンソールで確認してください');
+        }
+
+        function showSystemStats() {
+            const stats = ConsoleManager.getStats();
+            console.log('📈 システム統計表示完了 - 詳細はコンソールで確認してください');
+        }
+
+        function clearConsole() {
+            console.clear();
+            ConsoleManager.success('手動コンソールクリア実行', 'SYSTEM');
+        }
+
+        // 初期化完了メッセージ
+        document.addEventListener('DOMContentLoaded', () => {
+            ConsoleManager.success('🎛️ Phase 2 テストページ初期化完了', 'SYSTEM');
+            ConsoleManager.info('各ボタンをクリックしてPhase 2機能をテストしてください', 'SYSTEM');
+            console.log('%c🎯 Phase 2 コンソール管理システム テスト環境', 'color: #4ecdc4; font-size: 16px; font-weight: bold;');
+            console.log('%c📋 F12コンソールでログの変化を確認してください', 'color: #ff6b6b; font-size: 14px;');
+        });
+    </script>
+</body>
+</html>
