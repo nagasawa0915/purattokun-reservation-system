@@ -705,12 +705,22 @@ function createControlPanel() {
             </div>
             
             <!-- レイヤー移動 -->
-            <div>
+            <div style="margin-bottom: 10px;">
                 <label style="font-size: 12px; color: #666;">📚 レイヤー:</label>
                 <div style="display: flex; gap: 5px; margin-top: 3px;">
                     <button id="v2-layer-up" style="flex: 1; padding: 4px; font-size: 12px;">↑ 前面</button>
                     <button id="v2-layer-down" style="flex: 1; padding: 4px; font-size: 12px;">↓ 背面</button>
                 </div>
+            </div>
+            
+            <!-- CSS出力機能 -->
+            <div>
+                <button id="v2-css-export" 
+                        style="width: 100%; padding: 8px; font-size: 12px; 
+                               background: #4CAF50; color: white; border: none; border-radius: 4px;
+                               cursor: pointer; font-weight: bold;">
+                    📋 CSS出力
+                </button>
             </div>
         </div>
     `;
@@ -816,6 +826,14 @@ function setupControlPanelEvents() {
     if (layerDownBtn) {
         layerDownBtn.addEventListener('click', () => {
             moveLayer(SpinePositioningV2.activeIndex, 'down');
+        });
+    }
+    
+    // CSS出力ボタン
+    const cssExportBtn = document.getElementById('v2-css-export');
+    if (cssExportBtn) {
+        cssExportBtn.addEventListener('click', () => {
+            exportCSS();
         });
     }
 }
@@ -1193,9 +1211,252 @@ window.v2Debug = function() {
     })));
 };
 
+// ========== 📋 CSS出力機能モジュール（独立実装） ========== //
+
+/**
+ * 現在の配置データからCSS形式の文字列を生成
+ * 既存の位置計算ロジックは一切変更せず、読み取り専用でデータを取得
+ */
+function generateCSS() {
+    console.log('📋 v2.0: CSS出力処理開始');
+    
+    try {
+        const activeChar = SpinePositioningV2.characters[SpinePositioningV2.activeIndex];
+        if (!activeChar) {
+            throw new Error('アクティブキャラクターが見つかりません');
+        }
+        
+        const element = activeChar.element;
+        if (!element) {
+            throw new Error('キャラクター要素が見つかりません');
+        }
+        
+        // 現在の位置・スケール・z-index情報を安全に取得
+        const currentLeft = element.style.left || '0%';
+        const currentTop = element.style.top || '0%';
+        const currentScale = activeChar.scale || 1.0;
+        const currentZIndex = activeChar.zIndex || 1000;
+        
+        // CSS形式で出力
+        const cssContent = `/* Spine Positioning System v2.0 - CSS出力 */
+/* 生成日時: ${new Date().toLocaleString('ja-JP')} */
+/* キャラクター: ${activeChar.name} */
+
+#${element.id || 'purattokun-canvas'} {
+    position: absolute;
+    left: ${currentLeft};
+    top: ${currentTop};
+    transform: translate(-50%, -50%) scale(${currentScale.toFixed(3)});
+    z-index: ${currentZIndex};
+}
+
+/* 📊 設定値詳細 */
+/*
+  位置: X=${currentLeft}, Y=${currentTop}
+  スケール: ${currentScale.toFixed(3)}倍
+  レイヤー順序: z-index ${currentZIndex}
+  
+  使用方法:
+  1. このCSSをお客様サイトのスタイルシートにコピー
+  2. キャラクター要素のidが上記と一致することを確認
+  3. position: relative のコンテナ内に配置
+*/`;
+        
+        console.log('✅ v2.0: CSS生成完了');
+        return cssContent;
+        
+    } catch (error) {
+        console.error('❌ v2.0: CSS生成エラー:', error);
+        return `/* CSS生成エラー: ${error.message} */`;
+    }
+}
+
+/**
+ * CSS出力ダイアログを表示
+ * モーダル形式でCSS内容を表示し、コピー機能を提供
+ */
+function showCSSDialog(cssContent) {
+    console.log('📋 v2.0: CSS出力ダイアログ表示');
+    
+    // 既存ダイアログがある場合は除去
+    const existingDialog = document.getElementById('v2-css-dialog');
+    if (existingDialog) {
+        existingDialog.remove();
+    }
+    
+    // ダイアログ要素作成
+    const dialog = document.createElement('div');
+    dialog.id = 'v2-css-dialog';
+    dialog.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0,0,0,0.5); z-index: 99999; display: flex; 
+                    align-items: center; justify-content: center;">
+            <div style="background: white; border-radius: 8px; padding: 20px; 
+                        max-width: 80%; max-height: 80%; overflow: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                <div style="display: flex; align-items: center; justify-content: space-between; 
+                            margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+                    <h3 style="margin: 0; color: #333; font-size: 18px;">📋 CSS出力結果</h3>
+                    <button id="v2-css-dialog-close" 
+                            style="background: none; border: none; font-size: 20px; cursor: pointer; 
+                                   color: #666; padding: 0; width: 30px; height: 30px;">×</button>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">
+                        以下のCSSをお客様サイトに適用してください：
+                    </p>
+                    <textarea id="v2-css-content" readonly
+                              style="width: 100%; height: 300px; font-family: monospace; 
+                                     border: 1px solid #ddd; border-radius: 4px; padding: 10px; 
+                                     background: #f9f9f9; resize: vertical; font-size: 13px;">${cssContent}</textarea>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="v2-css-copy" 
+                            style="padding: 8px 16px; background: #4CAF50; color: white; 
+                                   border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        📋 コピー
+                    </button>
+                    <button id="v2-css-download" 
+                            style="padding: 8px 16px; background: #2196F3; color: white; 
+                                   border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        💾 ダウンロード
+                    </button>
+                    <button id="v2-css-close" 
+                            style="padding: 8px 16px; background: #666; color: white; 
+                                   border: none; border-radius: 4px; cursor: pointer;">
+                        閉じる
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    
+    // イベントハンドラー設定
+    const closeDialog = () => {
+        dialog.remove();
+        console.log('📋 v2.0: CSS出力ダイアログ閉じました');
+    };
+    
+    // 閉じるボタン
+    document.getElementById('v2-css-dialog-close').addEventListener('click', closeDialog);
+    document.getElementById('v2-css-close').addEventListener('click', closeDialog);
+    
+    // 背景クリックで閉じる
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) {
+            closeDialog();
+        }
+    });
+    
+    // ESCキーで閉じる
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeDialog();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+    
+    // コピーボタン
+    document.getElementById('v2-css-copy').addEventListener('click', async () => {
+        const textarea = document.getElementById('v2-css-content');
+        try {
+            await navigator.clipboard.writeText(textarea.value);
+            
+            // 成功フィードバック
+            const button = document.getElementById('v2-css-copy');
+            const originalText = button.textContent;
+            button.textContent = '✅ コピー完了!';
+            button.style.background = '#4CAF50';
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.background = '#4CAF50';
+            }, 2000);
+            
+            console.log('📋 v2.0: CSS内容をクリップボードにコピーしました');
+            
+        } catch (error) {
+            console.error('❌ v2.0: クリップボードコピーエラー:', error);
+            
+            // フォールバック: テキストエリア選択
+            textarea.select();
+            document.execCommand('copy');
+            
+            alert('CSSをコピーしました（フォールバック方式）');
+        }
+    });
+    
+    // ダウンロードボタン
+    document.getElementById('v2-css-download').addEventListener('click', () => {
+        try {
+            const activeChar = SpinePositioningV2.characters[SpinePositioningV2.activeIndex];
+            const filename = `spine-positioning-${activeChar?.name || 'character'}-${new Date().toISOString().split('T')[0]}.css`;
+            
+            const blob = new Blob([cssContent], { type: 'text/css' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            
+            console.log('💾 v2.0: CSSファイルをダウンロードしました:', filename);
+            
+        } catch (error) {
+            console.error('❌ v2.0: CSSダウンロードエラー:', error);
+            alert('ダウンロードエラーが発生しました。コピー機能をご利用ください。');
+        }
+    });
+}
+
+/**
+ * CSS出力メイン機能
+ * 安全なエラーハンドリングを含む統合関数
+ */
+function exportCSS() {
+    console.log('📋 v2.0: CSS出力機能実行');
+    
+    try {
+        // 基本チェック
+        if (!SpinePositioningV2.initialized) {
+            throw new Error('システムが初期化されていません');
+        }
+        
+        if (!SpinePositioningV2.editMode) {
+            throw new Error('編集モードではありません');
+        }
+        
+        if (SpinePositioningV2.characters.length === 0) {
+            throw new Error('キャラクターが検出されていません');
+        }
+        
+        // CSS生成
+        const cssContent = generateCSS();
+        
+        // ダイアログ表示
+        showCSSDialog(cssContent);
+        
+        console.log('✅ v2.0: CSS出力機能完了');
+        
+    } catch (error) {
+        console.error('❌ v2.0: CSS出力機能エラー:', error);
+        alert(`CSS出力エラー: ${error.message}`);
+    }
+}
+
+// 外部API追加
+SpinePositioningV2.exportCSS = exportCSS;
+
 console.log('✅ Spine Positioning System v2.0 読み込み完了');
 console.log('💡 使用方法:');
 console.log('  URL: ?edit=true&version=v2 (v2.0使用)');
 console.log('  URL: ?edit=true&version=test (テストモード)');
 console.log('  URL: ?edit=true (既存システム使用)');
 console.log('  コンソール: SpinePositioningV2.* または v2Debug()');
+console.log('📋 新機能: CSS出力機能（📋 CSS出力ボタン または SpinePositioningV2.exportCSS()）');
