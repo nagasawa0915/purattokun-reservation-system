@@ -61,10 +61,19 @@ assets/images/
         
         <!-- Step 1.4: フォールバック画像 -->
         <img src="assets/images/キャラクター.png" alt="キャラクター" id="character-fallback">
+        
+        <!-- Step 1.6: 編集システム統合用（編集機能を追加する場合） -->
+        <div id="purattokun-config" style="display: none;"
+             data-x="35"            <!-- 横位置：35%（背景画像基準） -->
+             data-y="75"            <!-- 縦位置：75%（背景画像基準） -->
+             data-scale="0.55"      <!-- スケール：0.55倍 -->
+             data-fade-delay="1500" <!-- 出現遅延（ms） -->
+             data-fade-duration="2000"> <!-- フェード時間（ms） -->
+        </div>
     </div>
 
-    <!-- Step 1.5: Spine WebGL Runtime -->
-    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    <!-- Step 1.5: Spine WebGL Runtime（正しいバージョン指定） -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
     
     <script>
         /* Step 3のJavaScript設定をここに記述 */
@@ -77,6 +86,8 @@ assets/images/
 - **コンテナは1つ**：`.scene-container`でシンプル構造
 - **Canvas解像度**：`width="300" height="200"`（3:2比率推奨）
 - **要素順序**：背景→Canvas→フォールバック の順番を守る
+- **Spine WebGL CDN**：4.1.24を指定（4.1.00は存在しないため注意）
+- **編集システム統合**：`#purattokun-config`要素が必要（編集機能追加時）
 
 ## 🎨 Step 2: CSS設定（完全レスポンシブ対応）
 
@@ -281,7 +292,9 @@ async function initSpineCharacter() {
         }
         render();
 
-        // 🎯 重要：精密クリック判定（キャラクター画像位置のみ）
+        // 🎯 重要：クリック判定の実装（2つのパターンから選択）
+        
+        // 【パターン1】設定可能範囲システム（推奨・実用的）
         canvas.addEventListener("click", (event) => {
             // Canvas内の相対座標を取得
             const rect = canvas.getBoundingClientRect();
@@ -292,7 +305,7 @@ async function initSpineCharacter() {
             const normalizedX = clickX / rect.width;
             const normalizedY = clickY / rect.height;
             
-            // キャラクター画像の範囲を定義（skeleton位置に合わせて調整）
+            // キャラクター画像の範囲を定義（skeleton位置に合わせて調整可能）
             const charCenterX = 0.5;  // Canvas中央（50%）
             const charCenterY = 0.6;  // Canvas中央より少し下（60%）
             const charWidth = 0.4;    // キャラクター幅（40%）
@@ -301,6 +314,10 @@ async function initSpineCharacter() {
             // キャラクター画像範囲内かチェック
             const withinX = Math.abs(normalizedX - charCenterX) < charWidth / 2;
             const withinY = Math.abs(normalizedY - charCenterY) < charHeight / 2;
+            
+            // デバッグログ（開発時に有効）
+            console.log(`🔍 クリック座標: (${normalizedX.toFixed(3)}, ${normalizedY.toFixed(3)})`);
+            console.log(`📐 キャラクター範囲: X=${withinX}, Y=${withinY}`);
             
             if (withinX && withinY) {
                 // キャラクター画像内をクリックした場合のみリアクション
@@ -315,6 +332,40 @@ async function initSpineCharacter() {
                 console.log("🔍 キャラクター画像外をクリック（リアクションなし）");
             }
         });
+        
+        /* 【パターン2】ピクセルベース判定（高精度だが複雑）
+        canvas.addEventListener("click", (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const canvasX = event.clientX - rect.left;
+            const canvasY = event.clientY - rect.top;
+            
+            // Canvas座標をWebGL座標に変換
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const webglX = Math.floor(canvasX * scaleX);
+            const webglY = Math.floor((rect.height - canvasY) * scaleY); // Y軸反転
+            
+            // ピクセル判定
+            const pixels = new Uint8Array(4);
+            gl.readPixels(webglX, webglY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+            
+            console.log(`🔍 クリック座標: Canvas(${canvasX}, ${canvasY}) WebGL(${webglX}, ${webglY})`);
+            console.log(`🎨 ピクセル色: RGBA(${pixels[0]}, ${pixels[1]}, ${pixels[2]}, ${pixels[3]})`);
+            
+            // 透明でない（Alpha > 0）場合にキャラクターとして認識
+            if (pixels[3] > 0) {
+                if (skeleton.data.findAnimation("yarare")) {
+                    console.log("🎯 キャラクター画像をクリック - yarareアニメーション開始");
+                    animationState.setAnimation(0, "yarare", false);
+                    animationState.addAnimation(0, "taiki", true, 0);
+                } else {
+                    console.log("⚠️ yarareアニメーションが見つかりません");
+                }
+            } else {
+                console.log("🔍 背景をクリック（リアクションなし）");
+            }
+        });
+        */
 
         // 成功時：Canvas表示、フォールバック非表示
         canvas.style.display = "block";
@@ -342,10 +393,21 @@ window.addEventListener("load", () => {
 
 ### 🔑 JavaScript設定の重要なポイント
 
-#### 1. 精密クリック判定の実装
-- **座標正規化**：Canvas内の相対座標を0-1範囲に変換
-- **範囲チェック**：キャラクター画像位置のみでリアクション
-- **デバッグログ**：クリック位置の判定結果を確認可能
+#### 1. クリック判定システムの選択
+**【推奨】設定可能範囲システム**：
+- **メリット**：設定簡単、調整容易、デバッグしやすい、パフォーマンス良好
+- **用途**：一般的なWebサイト、ゲーム的要素のあるサイト
+- **実装**：キャラクター位置に合わせて範囲パラメータを調整
+
+**【高精度】ピクセルベース判定**：
+- **メリット**：画像の形状に完全一致、透明部分は反応しない
+- **デメリット**：座標変換が複雑、readPixels()がやや重い
+- **用途**：非常に精密な判定が必要な場合
+
+#### 2. デバッグ機能の活用
+- **座標ログ**：クリック位置と判定結果をコンソール出力
+- **アニメーション確認**：利用可能なアニメーション一覧表示
+- **エラーハンドリング**：各段階での失敗要因を特定
 
 #### 2. エラーハンドリング
 - **読み込み待ち**：Spine WebGLとアセットの確実な読み込み
@@ -374,13 +436,33 @@ skeleton.y = -100;   // Canvas内Y位置（-200 ~ 200程度）
 skeleton.scaleX = skeleton.scaleY = 0.55; // スケール（0.1 ~ 2.0程度）
 ```
 
-### 4.2 クリック判定範囲の調整
+### 4.2 クリック判定範囲の調整（設定可能範囲システム）
 ```javascript
 // キャラクター画像の範囲を定義
-const charCenterX = 0.5;  // 中心X（0.0-1.0）
-const charCenterY = 0.6;  // 中心Y（0.0-1.0）
-const charWidth = 0.4;    // 幅（0.0-1.0）
-const charHeight = 0.5;   // 高さ（0.0-1.0）
+const charCenterX = 0.5;  // 中心X（0.0-1.0）左端=0.0, 右端=1.0
+const charCenterY = 0.6;  // 中心Y（0.0-1.0）上端=0.0, 下端=1.0
+const charWidth = 0.4;    // 幅（0.0-1.0）Canvas幅に対する割合
+const charHeight = 0.5;   // 高さ（0.0-1.0）Canvas高さに対する割合
+
+// 調整例：キャラクターが左寄りにいる場合
+// const charCenterX = 0.3;  // 左に30%の位置
+// const charWidth = 0.3;    // 幅を狭く
+
+// 調整例：キャラクターが大きい場合
+// const charWidth = 0.6;    // 幅を広く
+// const charHeight = 0.7;   // 高さも広く
+```
+
+### 4.3 編集システム統合時の設定
+```html
+<!-- 編集機能を追加する場合に必要な設定要素 -->
+<div id="purattokun-config" style="display: none;"
+     data-x="35"            <!-- Canvas位置と同期 -->
+     data-y="75"            <!-- Canvas位置と同期 -->
+     data-scale="0.55"      <!-- Skeleton scaleと同期 -->
+     data-fade-delay="1500" <!-- アニメーション設定 -->
+     data-fade-duration="2000"> <!-- アニメーション設定 -->
+</div>
 ```
 
 ### 4.3 Canvas要素のサイズ調整
@@ -417,21 +499,74 @@ const charHeight = 0.5;   // 高さ（0.0-1.0）
 
 ## 🚨 よくある問題と対策
 
-### 問題1: キャラクターが潰れる
+### 問題1: Spine WebGL CDNエラー
+**症状**: `Failed to load script` または `spine is not defined`  
+**原因**: CDNバージョン4.1.00が存在しない  
+**解決策**: 正しいバージョン4.1.24を使用
+```html
+<script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+```
+
+### 問題2: キャラクターが潰れる
+**症状**: 縦または横に伸縮して見える  
 **原因**: CSS `aspect-ratio` と Canvas内部解像度の比率が異なる  
 **解決策**: `aspect-ratio: 3/2` と `width="300" height="200"` を一致させる
 
-### 問題2: ウィンドウリサイズで位置がずれる
+### 問題3: ウィンドウリサイズで位置がずれる
+**症状**: 画面サイズ変更時に背景画像と位置が合わない  
 **原因**: viewport units（vw/vh）使用や親要素マージン設定  
 **解決策**: パーセンテージ（%）使用と `margin: 0 auto` 設定
 
-### 問題3: クリック判定が大雑把
-**原因**: Canvas全体でのクリック判定  
-**解決策**: 座標計算による精密範囲判定の実装
+### 問題4: 編集システム統合時のエラー
+**症状**: `Cannot read property 'data-x' of null`  
+**原因**: `#purattokun-config`要素が存在しない  
+**解決策**: 設定要素を追加（Step 1.6参照）
 
-### 問題4: 背景画像と同期しない
-**原因**: 異なる座標基準の混在  
-**解決策**: 全てを親要素（背景画像コンテナ）基準に統一
+### 問題5: クリック判定が効かない
+**症状**: キャラクターをクリックしてもリアクションしない  
+**原因**: 範囲設定がキャラクター位置と合っていない  
+**解決策**: デバッグログでクリック座標を確認し、範囲パラメータを調整
+```javascript
+// F12コンソールで座標を確認
+console.log(`🔍 クリック座標: (${normalizedX.toFixed(3)}, ${normalizedY.toFixed(3)})`);
+```
+
+### 問題6: readPixels座標変換エラー（ピクセルベース判定）
+**症状**: 座標がずれて正しく判定されない  
+**原因**: Canvas座標とWebGL座標の変換が複雑  
+**解決策**: 設定可能範囲システムの使用を推奨（より実用的）
+
+## 🔍 デバッグ・トラブルシューティング
+
+### デバッグログの活用
+```javascript
+// F12コンソールで以下の情報を確認
+
+// 1. Spine WebGL読み込み状況
+console.log(typeof spine !== "undefined" ? "✅ Spine読み込み成功" : "❌ Spine読み込み失敗");
+
+// 2. アニメーション一覧
+if (skeleton && skeleton.data) {
+    console.log("📋 利用可能なアニメーション:");
+    skeleton.data.animations.forEach(anim => console.log(`  - ${anim.name}`));
+}
+
+// 3. クリック判定テスト
+// キャラクターをクリックして座標を確認
+// "🔍 クリック座標: (0.523, 0.642)" のような出力
+
+// 4. Canvas状態確認
+const canvas = document.getElementById("character-canvas");
+console.log("Canvas表示状態:", canvas.style.display);
+console.log("Canvas位置:", {left: canvas.style.left, top: canvas.style.top});
+```
+
+### 段階的テスト手順
+1. **Spine WebGL読み込み確認**: コンソールで `typeof spine` をチェック
+2. **アセット読み込み確認**: 「✅ アセット読み込み完了」ログを確認
+3. **Canvas表示確認**: キャラクターが見えるかチェック
+4. **アニメーション動作確認**: 登場→待機の流れをチェック
+5. **クリック判定確認**: デバッグログで座標を確認しながらテスト
 
 ## 📈 応用・拡張方法
 
