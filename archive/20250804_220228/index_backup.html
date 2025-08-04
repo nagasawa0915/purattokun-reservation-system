@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ぷらっとくん｜クラウドパートナー - LINE予約システム・給与システム・教育機関システム</title>
+    <meta name="description" content="LINEで簡単に使える予約販売システム「ぷらっとくん」。給与管理、教育機関向けPTAシステム、猫ファーストの住環境アドバイスまで。あなたのビジネスをサポートします。">
+    <meta name="keywords" content="ぷらっとくん,LINE予約システム,給与システム,教育機関システム,PTA,猫,住環境,クラウドパートナー">
+    <meta name="author" content="ネコヤ">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://necooya.com/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://necooya.com/">
+    <meta property="og:title" content="ぷらっとくん｜クラウドパートナー - LINE予約システム・給与システム・教育機関システム">
+    <meta property="og:description" content="LINEで簡単に使える予約販売システム「ぷらっとくん」。給与管理、教育機関向けPTAシステム、猫ファーストの住環境アドバイスまで。">
+    <meta property="og:image" content="https://necooya.com/assets/images/クラウドパートナーTOP.png">
+    <meta property="og:locale" content="ja_JP">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://necooya.com/">
+    <meta property="twitter:title" content="ぷらっとくん｜クラウドパートナー - LINE予約システム・給与システム・教育機関システム">
+    <meta property="twitter:description" content="LINEで簡単に使える予約販売システム「ぷらっとくん」。給与管理、教育機関向けPTAシステム、猫ファーストの住環境アドバイスまで。">
+    <meta property="twitter:image" content="https://necooya.com/assets/images/クラウドパートナーTOP.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='90' font-size='90'>🐱</text></svg>" type="image/svg+xml">
+    
+    <style>
+        /* リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            overflow-x: hidden;
+        }
+        
+        body {
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #fafafa;
+        }
+        
+        /* ナビゲーション */
+        .navbar {
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+        }
+        
+        .site-title {
+            color: #ff6b6b;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        .nav-menu a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-menu a:hover {
+            color: #ff6b6b;
+        }
+        
+        /* ヒーローセクション */
+        .hero {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 120px 20px 40px;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 背景コンテナ */
+        .background-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: visible;
+        }
+        
+        /* 背景画像 */
+        .background-image {
+            width: 100%;
+            height: auto;     /* ✅ 自然な高さ */
+            display: block;
+        }
+        
+        /* 雲の共通スタイル */
+        .cloud {
+            position: absolute;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        /* 各雲の位置とアニメーション */
+        .cloud1 { left: -5%; top: 10%; width: 8vw; animation: moveCloud1 25s linear infinite; }
+        .cloud2 { left: -5%; top: 15%; width: 8vw; animation: moveCloud2 30s linear infinite; }
+        .cloud3 { left: -5%; top: 8%; width: 8vw; animation: moveCloud3 35s linear infinite; }
+        .cloud4 { left: -5%; top: 20%; width: 8vw; animation: moveCloud1 28s linear infinite; animation-delay: -5s; }
+        .cloud5 { left: -5%; top: 12%; width: 8vw; animation: moveCloud2 32s linear infinite; animation-delay: -8s; }
+        .cloud6 { left: -5%; top: 18%; width: 8vw; animation: moveCloud3 26s linear infinite; animation-delay: -12s; }
+        
+        /* 雲のアニメーション */
+        @keyframes moveCloud1 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud2 { from { left: -10%; } to { left: 110%; } }
+        @keyframes moveCloud3 { from { left: -10%; } to { left: 110%; } }
+        
+        /* 🎯 ぷらっとくんCanvas - 基本スタイルのみ（座標統一管理） */
+        #purattokun-canvas {
+            position: absolute;
+            /* 📍 デフォルト位置（data属性で上書き可能） */
+            left: 18%;      /* デスクトップ版デフォルト */
+            top: 49%;       /* デスクトップ版デフォルト */
+            width:30%;     /* デスクトップ版サイズ（モバイル版は30%） */
+            height: auto;   /* アスペクト比維持 */
+            transform: translate(-50%, -50%); /* 中心点基準配置 */
+            pointer-events: auto;
+            cursor: pointer;
+            z-index: 10;    /* レイヤー順序 */
+        }
+        
+        /* ヒーローコンテンツ */
+        .hero-content {
+            position: absolute;
+            z-index: 20;
+            max-width: 280px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8px);
+            left: 40px;
+            top: 130px;
+        }
+        
+        .hero-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.8rem;
+            line-height: 1.2;
+            font-weight: 600;
+        }
+        
+        .series-text {
+            display: block;
+            font-size: 0.9em;
+            margin-top: 0.2rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        
+        .cta-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .cta-button:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        /* コンテナ */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        
+        /* セクション共通 */
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .section-title {
+            font-size: 2.2rem;
+            color: #333;
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* サービスセクション */
+        .services {
+            padding: 80px 0;
+            background: #fff;
+        }
+        
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        
+        .service-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .service-title {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .service-description {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .service-link {
+            color: #ff6b6b;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .service-link:hover {
+            text-decoration: underline;
+        }
+        
+        /* コンセプトセクション */
+        .concept {
+            padding: 80px 0;
+            background: linear-gradient(45deg, #f8f9fa 0%, #fff5f5 50%, #f8f9fa 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease-in-out infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .concept-content {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+        }
+        
+        .concept-text {
+            flex: 1;
+        }
+        
+        .concept-title {
+            color: #ff6b6b;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .concept-text p {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+        
+        .concept-features {
+            list-style: none;
+            margin-top: 2rem;
+        }
+        
+        .concept-features li {
+            padding: 0.5rem 0;
+            color: #555;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+        
+        .concept-features li:before {
+            content: "🐾";
+            position: absolute;
+            left: 0;
+        }
+        
+        .concept-image {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .cat-house-illustration {
+            text-align: center;
+        }
+        
+        .house {
+            font-size: 6rem;
+            margin-bottom: 1rem;
+        }
+        
+        .cats {
+            font-size: 2rem;
+            letter-spacing: 1rem;
+        }
+        
+        /* お問い合わせセクション */
+        .contact {
+            padding: 80px 0;
+            background: #fff;
+        }
+        
+        .contact-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+        
+        .contact-subtitle {
+            color: #ff6b6b;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .contact-info p {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .contact-details {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            font-style: normal;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #555;
+        }
+        
+        .contact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .contact-form input,
+        .contact-form select,
+        .contact-form textarea {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .contact-form input:focus,
+        .contact-form select:focus,
+        .contact-form textarea:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+        
+        .contact-form button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .contact-form button:hover {
+            background: #ff5252;
+        }
+        
+        /* フッター */
+        footer {
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 2rem 0;
+        }
+        
+        /* レスポンシブデザイン */
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+            
+            .hero {
+                flex-direction: column;
+                text-align: center;
+                padding: 100px 20px 60px;
+            }
+            
+            .hero-content {
+                position: relative;
+                left: auto;
+                top: auto;
+                margin-bottom: 2rem;
+            }
+            
+            .concept-content {
+                flex-direction: column;
+            }
+            
+            .contact-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .service-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* モバイル版雲のサイズ調整 */
+            .cloud1, .cloud2, .cloud3, .cloud4, .cloud5, .cloud6 {
+                width: 8vw; /* デスクトップ版と統一 */
+            }
+            
+            /* モバイル版キャラクター位置（調整容易） */
+            #purattokun-canvas {
+                left: 50%;   /* モバイル中央 */
+                top: 65%;    /* モバイル調整 */
+                width: 30%;     /* レスポンシブ対応 - サイズ調整 */
+            }
+            
+            #purattokun-fallback {
+                left: 50% !important;
+                top: 65% !important;
+                width: 80px !important;
+                height: 80px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header role="banner">
+        <nav class="navbar" role="navigation" aria-label="メインナビゲーション">
+            <div class="nav-container">
+                <div class="logo">
+                    <h1 class="site-title">🐱 クラウドパートナー</h1>
+                </div>
+                <ul class="nav-menu" role="menubar">
+                    <li role="none"><a href="#home" role="menuitem" aria-label="ホームセクションへ移動">ホーム</a></li>
+                    <li role="none"><a href="#services" role="menuitem" aria-label="サービス紹介セクションへ移動">サービス</a></li>
+                    <li role="none"><a href="#concept" role="menuitem" aria-label="コンセプト紹介セクションへ移動">コンセプト</a></li>
+                    <li role="none"><a href="#contact" role="menuitem" aria-label="お問い合わせフォームへ移動">お問い合わせ</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main">
+        <section id="home" class="hero">
+            <!-- 背景コンテナ -->
+            <div class="background-container">
+                <!-- 背景画像 -->
+                <img src="assets/images/クラウドパートナーTOP.png" alt="クラウドパートナー背景画像" class="background-image">
+                
+                <!-- 雲（6個） -->
+                <img src="assets/images/kumo1.png" alt="ふわふわ浮かぶ白い雲" class="cloud cloud1" loading="lazy">
+                <img src="assets/images/kumo2.png" alt="ゆったり流れる雲" class="cloud cloud2" loading="lazy">
+                <img src="assets/images/kumo3.png" alt="青空に漂う雲" class="cloud cloud3" loading="lazy">
+                <img src="assets/images/kumo1.png" alt="穏やかに移動する雲" class="cloud cloud4" loading="lazy">
+                <img src="assets/images/kumo2.png" alt="空を舞う雲" class="cloud cloud5" loading="lazy">
+                <img src="assets/images/kumo3.png" alt="優雅に流れる雲" class="cloud cloud6" loading="lazy">
+                
+                <!-- ぷらっとくんCanvas - 座標・サイズはdata属性とCSSから設定 -->
+                <canvas id="purattokun-canvas">
+                </canvas>
+                
+                <!-- フォールバック画像（Spine読み込み失敗時用） - 座標はdata属性から動的設定 -->
+                <img src="assets/images/purattokunn.png" 
+                     alt="ぷらっとくん画像" 
+                     id="purattokun-fallback"
+                     style="position: absolute; transform: translate(-50%, -50%); width: 35%; aspect-ratio: 3/2; z-index: 10; display: block; object-fit: contain;">
+                     
+                <!-- 🎯 ぷらっとくん座標設定（統一管理） -->
+                <!-- 📍 座標変更はここのdata属性のみ編集してください -->
+                <div id="purattokun-config" style="display: none;"
+                     data-x="18"            <!-- 横位置：18% (お店付近推奨値) -->
+                     data-y="49"            <!-- 縦位置：49% (地面レベル推奨値) -->
+                     data-scale="0.55"      <!-- サイズ：0.55倍 (推奨値) -->
+                     data-fade-delay="1500" <!-- 出現遅延：1500ms -->
+                     data-fade-duration="2000"> <!-- フェード時間：2000ms -->
+                </div>
+            </div>
+            
+            <!-- UI要素 -->
+            <header class="hero-content">
+                <h1 class="hero-title">ぷらっとくん<br><span class="series-text">シリーズ</span></h1>
+                <p class="hero-subtitle">あなたのビジネスをサポート</p>
+                <a href="#services" class="cta-button" aria-label="サービス詳細を見る">詳しく見る</a>
+            </header>
+        </section>
+
+        <section id="services" class="services">
+            <div class="container">
+                <header class="section-header">
+                    <h2 class="section-title">サービス内容</h2>
+                </header>
+                <div class="service-grid" role="list">
+                    <article class="service-card" role="listitem">
+                        <div class="service-icon" aria-hidden="true">📅</div>
+                        <h3 class="service-title">予約販売システム</h3>
+                        <p class="service-description">お客様からの来店予約を管理する「<strong>LINE予約機能</strong>」が実質0円、
+                            かわいいリッチメニューで注目を集めよう。
+                            <strong>ハンドメイド販売</strong>の小物、もっと気軽に売ってみよう。
+                あなたの「好き」を、カンタンに<strong>販売システム</strong>できるお手伝いをします。<br><a href="#contact" class="service-link">予約システムでお問い合わせ</a></p>
+                    </article>
+                    <article class="service-card" role="listitem">
+                        <div class="service-icon" aria-hidden="true">💰</div>
+                        <h3 class="service-title">給与システム</h3>
+                        <p class="service-description">「おはよう」と「おつかれ」で<strong>給料管理</strong>！
+                            <strong>LINE給与システム</strong>で出勤・退勤をポチッとするだけで、<strong>給与明細</strong>まで自動でできちゃう！
+                            小さな会社やお店でもすぐに使える、かんたん便利な<strong>勤怠管理システム</strong>です。<br><a href="#contact" class="service-link">給与システムでお問い合わせ</a></p>
+                    </article>
+                    <article class="service-card" role="listitem">
+                        <div class="service-icon" aria-hidden="true">🎓</div>
+                        <h3 class="service-title">教育機関システム</h3>
+                        <p class="service-description">小中学校の<strong>PTA活動</strong>や<strong>学校行事</strong>をLINEで楽にしよう！
+                            出欠確認から連絡網まで、<strong>学校コミュニケーション</strong>を現代的に。
+                            保護者の負担を減らし、子どもたちにもっと時間を。<br><a href="#contact" class="service-link">教育機関システムでお問い合わせ</a></p>
+                    </article>
+                    <article class="service-card" role="listitem">
+                        <div class="service-icon" aria-hidden="true">🐱</div>
+                        <h3 class="service-title">ネコヤ</h3>
+                        <p class="service-description">猫との理想の暮らしを実現する<strong>住環境アドバイス</strong>。
+                            5匹の保護猫との生活経験から、<strong>猫ファースト</strong>の住まいづくりをサポート。
+                            人も猫も快適に過ごせる空間設計をご提案します。<br><a href="#contact" class="service-link">ネコヤでお問い合わせ</a></p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="concept" class="concept">
+            <div class="container">
+                <header class="section-header">
+                    <h2 class="section-title">私たちのコンセプト</h2>
+                </header>
+                <div class="concept-content">
+                    <article class="concept-text">
+                        <h3 class="concept-title">猫ファーストの住まいづくり</h3>
+                        <p>5匹の子猫を保護した経験から、一般的な住宅が<strong>猫にとって必ずしも快適ではない</strong>ことに気づきました。</p>
+                        <p><strong>猫の習性と行動</strong>を深く理解し、人間の生活にも配慮した<strong>住空間設計</strong>を行うことで、<strong>猫と飼い主の両方が幸せに暮らせる環境</strong>を実現します。</p>
+                        <ul class="concept-features">
+                            <li>キャットウォーク・キャットタワーの設置</li>
+                            <li>脱走防止扉の設置</li>
+                            <li>猫専用スペースの確保</li>
+                            <li>安全性を重視した素材選び</li>
+                            <li>お手入れしやすい設計</li>
+                        </ul>
+                    </article>
+                    <aside class="concept-image">
+                        <div class="cat-house-illustration">
+                            <div class="house">🏠</div>
+                            <div class="cats">🐱🐱🐱</div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="contact">
+            <div class="container">
+                <header class="section-header">
+                    <h2 class="section-title">お問い合わせ</h2>
+                </header>
+                <div class="contact-content">
+                    <div class="contact-info">
+                        <h3 class="contact-subtitle">ご相談・お見積りは無料です</h3>
+                        <p>あなたのビジネスや猫との理想の暮らしについて、お気軽にご相談ください。</p>
+                        <address class="contact-details">
+                            <div class="contact-item">
+                                <span class="icon" aria-hidden="true">📞</span>
+                                <span>03-1234-5678</span>
+                            </div>
+                            <div class="contact-item">
+                                <span class="icon" aria-hidden="true">✉️</span>
+                                <span>info@necooya.com</span>
+                            </div>
+                            <div class="contact-item">
+                                <span class="icon" aria-hidden="true">🕒</span>
+                                <span>平日 9:00-18:00</span>
+                            </div>
+                        </address>
+                    </div>
+                    <form class="contact-form" role="form" aria-label="お問い合わせフォーム">
+                        <input type="text" placeholder="お名前" required aria-label="お名前">
+                        <input type="email" placeholder="メールアドレス" required aria-label="メールアドレス">
+                        <select required aria-label="お問い合わせ内容">
+                            <option value="">お問い合わせ内容を選択</option>
+                            <option value="reservation">予約販売システム</option>
+                            <option value="payroll">給与システム</option>
+                            <option value="education">教育機関システム</option>
+                            <option value="necooya">ネコヤ（住環境アドバイス）</option>
+                            <option value="other">その他</option>
+                        </select>
+                        <textarea placeholder="詳しい内容をお聞かせください" rows="5" required aria-label="お問い合わせ詳細"></textarea>
+                        <button type="submit">送信する</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer role="contentinfo">
+        <div class="container">
+            <p>&copy; 2024 クラウドパートナー（ネコヤ）. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js"></script>
+    
+    <!-- メインJavaScript（シンプル版） -->
+    <script src="assets/js/script.js"></script>
+    
+    <!-- シンプルなSpine初期化 -->
+    <script>
+        // Spine初期化を待つ（改良版）
+        let spineWaitCount = 0;
+        const maxSpineWaitCount = 50; // 10秒で諦める
+        
+        function waitForSpine() {
+            spineWaitCount++;
+            
+            if (typeof spine !== 'undefined' && spine.AssetManager) {
+                console.log('✅ Spine読み込み完了');
+                initSpineCharacter();
+            } else if (spineWaitCount > maxSpineWaitCount) {
+                console.error('❌ Spine読み込みタイムアウト');
+                console.log('📸 フォールバック画像に切り替えます');
+                // フォールバック画像は既に表示中なので何もしない
+            } else {
+                console.log('⏳ Spine読み込み中... (spine:', typeof spine, ') 試行:', spineWaitCount);
+                setTimeout(waitForSpine, 200);
+            }
+        }
+        
+        // Spineキャラクター初期化（デバッグ強化版）
+        async function initSpineCharacter() {
+            try {
+                console.log('🎯 Spine初期化開始');
+                
+                // 事前診断
+                console.log('🔍 事前診断:');
+                console.log('  - spine定義:', typeof spine);
+                console.log('  - AssetManager存在:', !!spine?.AssetManager);
+                console.log('  - Shader存在:', !!spine?.Shader);
+                console.log('  - SceneRenderer存在:', !!spine?.SceneRenderer);
+                
+                const canvas = document.getElementById('purattokun-canvas');
+                console.log('📊 Canvas要素:', canvas);
+                console.log('📊 Canvas親要素:', canvas?.parentElement?.className);
+                
+                const gl = canvas.getContext('webgl', { alpha: true });
+                console.log('📊 WebGL Context:', gl);
+                
+                if (!gl) {
+                    throw new Error('WebGLサポートなし');
+                }
+                
+                // Canvasサイズ設定（キャラクター切れ問題解決）
+                canvas.width = 200;   // 十分な描画領域確保
+                canvas.height = 200;
+                console.log('Canvas内部解像度設定:', canvas.width + 'x' + canvas.height);
+                console.log('Canvas表示サイズ(CSS):', getComputedStyle(canvas).width, getComputedStyle(canvas).height);
+                
+                // リサイズ処理は解決策1では無効化
+                
+                console.log('📁 Spineファイル読み込み中...');
+                
+                // アセットマネージャー
+                const basePath = 'assets/spine/characters/purattokun/';
+                console.log('📁 ベースパス:', basePath);
+                const assetManager = new spine.AssetManager(gl, basePath);
+                
+                console.log('📥 Atlas読み込み開始: purattokun.atlas');
+                assetManager.loadTextureAtlas('purattokun.atlas');
+                
+                console.log('📥 JSON読み込み開始: purattokun.json');
+                assetManager.loadJson('purattokun.json');
+                
+                // アセット読み込み完了待ち
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const maxChecks = 100;
+                    
+                    const checkAssets = () => {
+                        checkCount++;
+                        
+                        if (assetManager.isLoadingComplete()) {
+                            console.log('✅ アセット読み込み完了');
+                            resolve();
+                        } else if (checkCount > maxChecks) {
+                            const errors = assetManager.getErrors();
+                            console.error('❌ 読み込みタイムアウト:', errors);
+                            reject(new Error('アセット読み込みタイムアウト'));
+                        } else {
+                            if (checkCount % 10 === 0) {
+                                console.log(`⏳ 読み込み中... (${checkCount}/100)`);
+                            }
+                            setTimeout(checkAssets, 100);
+                        }
+                    };
+                    checkAssets();
+                });
+                
+                console.log('🎬 アニメーション開始...');
+                
+                // Spine初期化成功時はフォールバック画像を非表示
+                const fallback = document.getElementById('purattokun-fallback');
+                if (fallback) {
+                    fallback.style.display = 'none';
+                    console.log('📸 フォールバック画像を非表示にしました');
+                }
+                
+                // Atlas取得
+                const atlas = assetManager.get('purattokun.atlas');
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                
+                // SkeletonData読み込み
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.get('purattokun.json'));
+                
+                // Skeleton作成（キャラクター切れ問題完全解決）
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 50; // Canvas中央（400x400の中心）
+                skeleton.y = -100; // 地面基準配置（足元を確実に表示・頭部余白確保）
+                skeleton.scaleX = skeleton.scaleY = 0.55; // CLAUDE.mdの推奨値
+                
+                // AnimationState
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                // アニメーション設定（登場→待機）
+                if (skeleton.data.findAnimation('syutugen') && skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'syutugen', false);
+                    
+                    const listener = {
+                        complete: (entry) => {
+                            if (entry.animation.name === 'syutugen') {
+                                animationState.setAnimation(0, 'taiki', true);
+                                animationState.removeListener(listener);
+                            }
+                        }
+                    };
+                    animationState.addListener(listener);
+                } else if (skeleton.data.findAnimation('taiki')) {
+                    animationState.setAnimation(0, 'taiki', true);
+                } else if (skeleton.data.animations.length > 0) {
+                    animationState.setAnimation(0, skeleton.data.animations[0].name, true);
+                }
+                
+                // レンダラー
+                const shader = spine.Shader.newTwoColoredTextured(gl);
+                const renderer = new spine.SceneRenderer(canvas, gl);
+                
+                // レンダリングループ
+                let lastTime = Date.now() / 1000;
+                
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+                    
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+                    
+                    requestAnimationFrame(render);
+                }
+                
+                render();
+                console.log('✅ Spineキャラクター動作中');
+                
+                // クリック機能（やられ→待機）
+                canvas.addEventListener('click', function() {
+                    console.log('🖱️ ぷらっとくんクリック - やられアニメーション再生');
+                    
+                    if (skeleton.data.findAnimation('yarare') && skeleton.data.findAnimation('taiki')) {
+                        animationState.setAnimation(0, 'yarare', false);
+                        
+                        const clickListener = {
+                            complete: (entry) => {
+                                if (entry.animation.name === 'yarare') {
+                                    animationState.setAnimation(0, 'taiki', true);
+                                    animationState.removeListener(clickListener);
+                                }
+                            }
+                        };
+                        animationState.addListener(clickListener);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('❌ Spine初期化エラー:', error);
+                console.log('🔧 ブラウザキャッシュクリア（Ctrl+Shift+R）を試してください');
+                
+                // 詳細な診断情報
+                console.log('🔍 詳細診断:');
+                console.log('  - spine定義:', typeof spine);
+                console.log('  - AssetManager:', typeof spine?.AssetManager);
+                console.log('  - WebGL対応:', !!canvas.getContext('webgl'));
+                console.log('  - Canvas要素:', !!canvas);
+                console.log('  - エラー内容:', error.message);
+                
+                // フォールバック画像を表示
+                const fallback = document.getElementById('purattokun-fallback');
+                if (fallback) {
+                    fallback.style.display = 'block';
+                    if (canvas) canvas.style.display = 'none';
+                    console.log('📸 フォールバック画像を表示しました');
+                } else {
+                    console.error('❌ フォールバック画像要素が見つかりません');
+                }
+            }
+        }
+        
+        // 🚨 緊急診断ツール（CLAUDE.md準拠）
+        function emergencyDiagnosis() {
+            console.log('🔧 緊急診断開始...');
+            
+            // Canvas要素の確認
+            const canvas = document.querySelector('#purattokun-canvas');
+            const fallback = document.querySelector('#purattokun-fallback');
+            
+            if (!canvas) {
+                console.log('❌ Canvas要素が見つかりません！');
+                return;
+            }
+            
+            // 基本情報表示
+            console.log('📊 Canvas状態:');
+            console.log('  - 要素存在:', !!canvas);
+            console.log('  - 表示状態:', canvas.style.display !== 'none');
+            console.log('  - 親要素:', canvas.parentElement?.tagName);
+            console.log('  - サイズ:', canvas.getBoundingClientRect());
+            
+            console.log('📊 Fallback状態:');
+            console.log('  - 要素存在:', !!fallback);
+            console.log('  - 表示状態:', fallback.style.display !== 'none');
+            
+            console.log('📊 Spine状態:');
+            console.log('  - Spine定義:', typeof spine);
+            console.log('  - WebGL対応:', !!canvas.getContext('webgl'));
+            
+            // 🚨 【重要修正】localStorageが存在する場合はdata属性設定をスキップ
+            const savedData = localStorage.getItem('spine-positioning-state');
+            if (savedData) {
+                console.log('✅ localStorage保存データが存在するため、data属性設定をスキップします');
+                console.log('💾 保存されている位置:', JSON.parse(savedData));
+                console.log('📍 現在の位置:', {
+                    left: canvas.style.left,
+                    top: canvas.style.top,
+                    width: canvas.style.width
+                });
+                console.log('🎯 緊急診断完了（localStorage優先）');
+                return; // localStorage優先のため処理を終了
+            }
+            
+            // data属性から座標を読み取って設定（localStorageが無い場合のみ）
+            const config = document.getElementById('purattokun-config');
+            if (config) {
+                const x = config.getAttribute('data-x') || '18';
+                const y = config.getAttribute('data-y') || '49';
+                
+                console.log('🔧 data属性から座標設定:', x + '%', y + '%');
+                
+                canvas.style.position = 'absolute';
+                canvas.style.left = x + '%';  // 親要素基準の%単位（解決策1準拠）
+                canvas.style.top = y + '%';   // 親要素基準の%単位（解決策1準拠）
+                canvas.style.transform = 'translate(-50%, -50%)';
+                // widthとaspect-ratioはCSSで設定済み
+                canvas.style.zIndex = '10';
+                
+                // フォールバック画像も同期
+                const fallback = document.getElementById('purattokun-fallback');
+                if (fallback) {
+                    fallback.style.left = x + '%';  // %単位に戻す
+                    fallback.style.top = y + '%';   // %単位に戻す
+                    console.log('🔧 フォールバック画像座標も同期設定');
+                }
+            } else {
+                console.error('❌ purattokun-config要素が見つかりません');
+            }
+            
+            console.log('🎯 緊急修正完了');
+        }
+        
+        // 🚨 【緊急修正】通常ページ読み込み時のlocalStorage復元システム
+        function restorePositionFromLocalStorage() {
+            try {
+                const savedData = localStorage.getItem('spine-positioning-state');
+                if (savedData) {
+                    const parsed = JSON.parse(savedData);
+                    console.log('🔍 通常モード：保存データ発見', parsed);
+                    
+                    // レスポンシブ判定（768px以下はモバイル版）
+                    const isMobile = window.innerWidth <= 768;
+                    console.log(`📱 画面サイズ: ${window.innerWidth}px (${isMobile ? 'モバイル' : 'デスクトップ'})`);
+                    
+                    // モバイル版の場合はCSS優先のため復元をスキップ
+                    if (isMobile) {
+                        console.log('📱 モバイル版のためlocalStorage復元をスキップ（CSS優先）');
+                        return false;
+                    }
+                    
+                    if (parsed.character && parsed.character.left && parsed.character.top && parsed.character.width) {
+                        const canvas = document.getElementById('purattokun-canvas');
+                        const fallback = document.getElementById('purattokun-fallback');
+                        
+                        // 保存された位置を適用（!important削除でCSS優先可能に）
+                        if (canvas) {
+                            canvas.style.left = parsed.character.left;
+                            canvas.style.top = parsed.character.top;
+                            canvas.style.width = parsed.character.width;
+                            console.log('✅ Canvas位置復元完了:', parsed.character);
+                        }
+                        
+                        if (fallback) {
+                            fallback.style.left = parsed.character.left;
+                            fallback.style.top = parsed.character.top;
+                            fallback.style.width = parsed.character.width;
+                            console.log('✅ Fallback位置復元完了:', parsed.character);
+                        }
+                        
+                        console.log('🎯 localStorage復元成功 - 編集した位置が反映されました');
+                        return true; // 復元成功
+                    }
+                }
+                return false; // 復元不要または失敗
+            } catch (error) {
+                console.error('❌ localStorage復元エラー:', error);
+                return false;
+            }
+        }
+
+        // 🎯 ページ読み込み時の初期座標設定（localStorage優先、data属性フォールバック）
+        function setInitialPositionFromData() {
+            // 🚨 最優先：localStorage復元を試行
+            if (restorePositionFromLocalStorage()) {
+                console.log('✅ localStorage復元完了 - data属性設定をスキップ');
+                return; // localStorage復元成功時はdata属性設定をスキップ
+            }
+            
+            // localStorage復元失敗時のみdata属性から設定
+            const canvas = document.getElementById('purattokun-canvas');
+            const fallback = document.getElementById('purattokun-fallback');
+            const config = document.getElementById('purattokun-config');
+            
+            if (config && (canvas || fallback)) {
+                // 📍 #purattokun-configのdata属性から座標を読み取り
+                const x = config.getAttribute('data-x') || '18'; // デフォルト：18%
+                const y = config.getAttribute('data-y') || '49'; // デフォルト：49%
+                
+                console.log('🎯 初期座標設定 (data属性統一管理):', x + '%', y + '%');
+                
+                // Canvas要素に座標適用（%単位で親要素基準）
+                if (canvas) {
+                    canvas.style.left = x + '%';
+                    canvas.style.top = y + '%';
+                }
+                
+                // フォールバック画像にも同じ座標適用
+                if (fallback) {
+                    fallback.style.left = x + '%';
+                    fallback.style.top = y + '%';
+                }
+                
+                console.log('✅ 座標統一設定完了 - Canvas & Fallback同期済み');
+            }
+        }
+        
+        // 🚨 【緊急修正】遅延復元処理を追加（CSS初期値上書き対策）
+        function delayedRestoreCheck() {
+            setTimeout(() => {
+                // モバイル版の場合は遅延チェックもスキップ
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    console.log('📱 モバイル版のため遅延復元チェックをスキップ');
+                    return;
+                }
+                
+                const canvas = document.getElementById('purattokun-canvas');
+                const fallback = document.getElementById('purattokun-fallback');
+                const savedData = localStorage.getItem('spine-positioning-state');
+                
+                if (savedData && (canvas || fallback)) {
+                    const parsed = JSON.parse(savedData);
+                    if (parsed.character) {
+                        console.log('🕐 遅延復元チェック:', {
+                            saved: parsed.character,
+                            current_canvas: canvas ? {
+                                left: canvas.style.left,
+                                top: canvas.style.top,
+                                width: canvas.style.width
+                            } : null,
+                            current_fallback: fallback ? {
+                                left: fallback.style.left,
+                                top: fallback.style.top,
+                                width: fallback.style.width
+                            } : null
+                        });
+                        
+                        // 位置が保存値と異なる場合は再適用
+                        const needsReapply = canvas && (
+                            canvas.style.left !== parsed.character.left ||
+                            canvas.style.top !== parsed.character.top ||
+                            canvas.style.width !== parsed.character.width
+                        );
+                        
+                        if (needsReapply) {
+                            console.warn('⚠️ CSS競合を検出。保存位置を再適用します。');
+                            restorePositionFromLocalStorage();
+                        } else {
+                            console.log('✅ 位置復元が正常に維持されています');
+                        }
+                    }
+                }
+            }, 1000); // 1秒後にチェック
+        }
+        
+        // 開始処理
+        setInitialPositionFromData(); // 座標設定を最優先実行
+        delayedRestoreCheck(); // CSS競合対策の遅延チェック
+        
+        setTimeout(() => {
+            emergencyDiagnosis();
+        }, 2000);
+        
+        // 🚨 【緊急修正】デバッグ用グローバル関数を追加
+        window.debugPositionRestore = function() {
+            console.log('🔍 位置復元システム詳細診断:');
+            const savedData = localStorage.getItem('spine-positioning-state');
+            const canvas = document.getElementById('purattokun-canvas');
+            const fallback = document.getElementById('purattokun-fallback');
+            
+            console.log('📊 診断結果:', {
+                localStorage_exists: !!savedData,
+                localStorage_data: savedData ? JSON.parse(savedData) : null,
+                canvas_exists: !!canvas,
+                canvas_position: canvas ? {
+                    left: canvas.style.left,
+                    top: canvas.style.top,  
+                    width: canvas.style.width,
+                    computed_left: getComputedStyle(canvas).left,
+                    computed_top: getComputedStyle(canvas).top
+                } : null,
+                fallback_exists: !!fallback,
+                fallback_position: fallback ? {
+                    left: fallback.style.left,
+                    top: fallback.style.top,
+                    width: fallback.style.width
+                } : null
+            });
+            
+            if (savedData) {
+                console.log('🔧 強制復元を実行...');
+                restorePositionFromLocalStorage();
+            }
+        };
+        
+        window.clearPositionData = function() {
+            localStorage.removeItem('spine-positioning-state');
+            console.log('🗑️ 位置データを削除しました。ページをリロードしてください。');
+        };
+        
+        waitForSpine();
+        
+        // 🎯 編集モード対応（URLパラメータ） - v2.0システム対応
+        const urlParams = new URLSearchParams(window.location.search);
+        const editParam = urlParams.get('edit');
+        const versionParam = urlParams.get('version');
+        
+        if (editParam === 'true') {
+            console.log('🎯 編集モードが有効化されました');
+            console.log('🔍 バージョンパラメータ:', versionParam);
+            loadEditingSystem(versionParam);
+        } else {
+            // 通常モード時のみ位置復元システムを読み込み
+            loadPositionSystem();
+        }
+        
+        // 位置復元システム読み込み（通常モード時のみ）
+        function loadPositionSystem() {
+            console.log('📥 位置復元システムを読み込み中...');
+            
+            const positionJS = document.createElement('script');
+            positionJS.src = 'spine-positioning-system-minimal.js';
+            positionJS.onload = function() {
+                console.log('✅ 位置復元システム読み込み完了');
+            };
+            positionJS.onerror = function() {
+                console.error('❌ 位置復元システム読み込み失敗');
+            };
+            document.head.appendChild(positionJS);
+        }
+        
+        // 編集システム動的読み込み（編集モード時のみ） - v2.0システム対応
+        function loadEditingSystem(version) {
+            console.log("📥 編集システムを読み込み中...", version ? `(version: ${version})` : "(標準版)");
+            
+            // v2.0システムの場合
+            if (version === "v2") {
+                console.log("🚀 v2.0システムを読み込みます");
+                const v2JS = document.createElement("script");
+                v2JS.src = "spine-positioning-v2.js";
+                v2JS.onload = function() {
+                    console.log("✅ v2.0システム読み込み完了");
+                    // v2.0システムは自動初期化される
+                };
+                v2JS.onerror = function() {
+                    console.error("❌ v2.0システム読み込み失敗");
+                    alert("v2.0システムの読み込みに失敗しました。spine-positioning-v2.js を確認してください。");
+                };
+                document.head.appendChild(v2JS);
+                return;
+            }
+            
+            // 標準システム（従来版）
+            console.log("📥 標準編集システムを読み込みます");
+            
+            // 編集システムのCSS読み込み
+            const editCSS = document.createElement("link");
+            editCSS.rel = "stylesheet";
+            editCSS.href = "spine-positioning-system-explanation.css";
+            document.head.appendChild(editCSS);
+            
+            // 編集システムのJS読み込み
+            const editJS = document.createElement("script");
+            editJS.src = "spine-positioning-system-minimal.js";
+            editJS.onload = function() {
+                console.log("✅ 標準編集システム読み込み完了");
+                
+                // 🚨 重要: 動的読み込み時は明示的に初期化実行
+                setTimeout(() => {
+                    if (typeof initializeMinimalEditSystem === "function") {
+                        console.log("🔧 編集システム明示的初期化実行");
+                        initializeMinimalEditSystem();
+                        
+                        // 初期化確認
+                        setTimeout(() => {
+                            const editButton = document.getElementById("minimal-edit-button");
+                            if (editButton) {
+                                console.log("✅ 編集ボタン確認成功:", editButton.textContent);
+                                alert("編集モード有効\n\n編集ボタンが右上に表示されました。\nクリックして編集を開始してください。");
+                            } else {
+                                console.error("❌ 編集ボタンが見つかりません");
+                                alert("編集システム初期化エラー\n\nF12コンソールで詳細を確認してください。");
+                            }
+                        }, 100);
+                    } else {
+                        console.error("❌ initializeMinimalEditSystem関数が見つかりません");
+                        alert("編集システム関数エラー\n\nファイル読み込みが不完全です。");
+                    }
+                }, 100);
+            };
+            editJS.onerror = function() {
+                console.error("❌ 標準編集システム読み込み失敗");
+                alert("編集システムの読み込みに失敗しました。spine-positioning-system-explanation.html から必要なファイルを確認してください。");
+            };
+            document.head.appendChild(editJS);
+        }
+        
+        // 編集モード初期化（最小限実装版では不要）
+        /*
+        function initEditingMode() {
+            // 編集UIを表示
+            showEditingInterface();
+            
+            // 背景透明化（編集しやすくするため）
+            document.body.style.background = 'rgba(250, 250, 250, 0.9)';
+            
+            console.log('🎯 編集モード開始！index.html?edit=false で通常モードに戻れます');
+        }
+        */
+        
+        // 編集インターフェース表示
+        function showEditingInterface() {
+            // 既存のパネルが存在する場合は削除
+            const existingPanel = document.getElementById('edit-control-panel');
+            if (existingPanel) {
+                existingPanel.remove();
+                console.log('🔄 既存の編集パネルを削除');
+            }
+            
+            // 編集用パネルを動的作成
+            const editPanel = document.createElement('div');
+            editPanel.id = 'edit-control-panel';
+            editPanel.innerHTML = `
+                <div id="edit-panel-container" style="position: fixed; top: 80px; right: 20px; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,0.15); z-index: 1001; font-family: sans-serif; min-width: 120px; cursor: move;">
+                    <div id="edit-panel-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; cursor: move;">
+                        <span style="font-size: 11px; font-weight: bold; color: #ff6b6b;">🎯 ぷらっとくん編集</span>
+                        <button id="panel-minimize-btn" style="background: none; border: none; font-size: 10px; cursor: pointer; color: #666; padding: 0;">−</button>
+                    </div>
+                    <div id="edit-panel-content" style="display: flex; flex-direction: column; gap: 4px;">
+                        <button id="edit-character-btn" style="padding: 4px 8px; background: #ff6b6b; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">キャラクター編集</button>
+                        <button id="edit-canvas-btn" style="padding: 4px 8px; background: #4ECDC4; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">表示範囲編集</button>
+                        <button id="exit-edit-btn" style="padding: 4px 8px; background: #95A5A6; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">編集終了</button>
+                        <div id="coordinate-display" style="margin-top: 4px; padding: 4px; background: #f8f9fa; border-radius: 3px; font-size: 8px; color: #666; line-height: 1.1;">
+                            編集モード待機中...
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(editPanel);
+            
+            // ボタンイベント設定
+            setupEditingEvents();
+            
+            // パネルドラッグ機能を設定
+            setupPanelDragging();
+        }
+        
+        // パネルドラッグ機能設定
+        function setupPanelDragging() {
+            const panelContainer = document.getElementById('edit-panel-container');
+            const panelHeader = document.getElementById('edit-panel-header');
+            const minimizeBtn = document.getElementById('panel-minimize-btn');
+            const panelContent = document.getElementById('edit-panel-content');
+            
+            if (!panelContainer || !panelHeader) return;
+            
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+            let isMinimized = false;
+            
+            // ドラッグ開始
+            panelHeader.addEventListener('mousedown', (e) => {
+                // 最小化ボタンクリック時はドラッグしない
+                if (e.target === minimizeBtn) return;
+                
+                isDragging = true;
+                const rect = panelContainer.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                
+                panelContainer.style.transition = 'none';
+                document.addEventListener('mousemove', handleDrag);
+                document.addEventListener('mouseup', handleDragEnd);
+                e.preventDefault();
+            });
+            
+            // ドラッグ中
+            function handleDrag(e) {
+                if (!isDragging) return;
+                
+                const newX = e.clientX - dragOffset.x;
+                const newY = e.clientY - dragOffset.y;
+                
+                // 画面端からはみ出さないよう制限
+                const maxX = window.innerWidth - panelContainer.offsetWidth;
+                const maxY = window.innerHeight - panelContainer.offsetHeight;
+                
+                const boundedX = Math.max(0, Math.min(newX, maxX));
+                const boundedY = Math.max(0, Math.min(newY, maxY));
+                
+                panelContainer.style.left = boundedX + 'px';
+                panelContainer.style.top = boundedY + 'px';
+                panelContainer.style.right = 'auto'; // rightプロパティを無効化
+            }
+            
+            // ドラッグ終了
+            function handleDragEnd() {
+                isDragging = false;
+                panelContainer.style.transition = '';
+                document.removeEventListener('mousemove', handleDrag);
+                document.removeEventListener('mouseup', handleDragEnd);
+                
+                // 位置を記憶（localStorage）
+                const rect = panelContainer.getBoundingClientRect();
+                localStorage.setItem('editPanelPosition', JSON.stringify({
+                    x: rect.left,
+                    y: rect.top
+                }));
+            }
+            
+            // 最小化/復元機能
+            minimizeBtn.addEventListener('click', () => {
+                isMinimized = !isMinimized;
+                
+                if (isMinimized) {
+                    panelContent.style.display = 'none';
+                    minimizeBtn.textContent = '+';
+                    panelContainer.style.minWidth = '90px';
+                } else {
+                    panelContent.style.display = 'flex';
+                    minimizeBtn.textContent = '−';
+                    panelContainer.style.minWidth = '120px';
+                }
+                
+                // 最小化状態を記憶
+                localStorage.setItem('editPanelMinimized', isMinimized);
+            });
+            
+            // 保存された位置と状態を復元
+            const savedPosition = localStorage.getItem('editPanelPosition');
+            const savedMinimized = localStorage.getItem('editPanelMinimized');
+            
+            if (savedPosition) {
+                const pos = JSON.parse(savedPosition);
+                panelContainer.style.left = pos.x + 'px';
+                panelContainer.style.top = pos.y + 'px';
+                panelContainer.style.right = 'auto';
+            }
+            
+            if (savedMinimized === 'true') {
+                panelContent.style.display = 'none';
+                minimizeBtn.textContent = '+';
+                panelContainer.style.minWidth = '90px';
+                isMinimized = true;
+            }
+        }
+
+        // 編集イベント設定
+        function setupEditingEvents() {
+            document.getElementById('edit-character-btn').addEventListener('click', () => {
+                console.log('🎯 キャラクター編集モード開始');
+                // spine-positioning-system-explanation.js の関数を呼び出し
+                if (typeof startCharacterEdit === 'function') {
+                    startCharacterEdit();
+                } else {
+                    console.error('❌ キャラクター編集機能が見つかりません');
+                }
+            });
+            
+            document.getElementById('edit-canvas-btn').addEventListener('click', () => {
+                console.log('🎯 Canvas編集モード開始');
+                // spine-positioning-system-explanation.js の関数を呼び出し
+                if (typeof startCanvasEdit === 'function') {
+                    startCanvasEdit();
+                } else {
+                    console.error('❌ Canvas編集機能が見つかりません');
+                }
+            });
+            
+            document.getElementById('exit-edit-btn').addEventListener('click', () => {
+                if (confirm('編集モードを終了しますか？')) {
+                    window.location.href = window.location.pathname; // ?edit=true を削除
+                }
+            });
+        }
+    </script>
+    
+    <!-- 構造化データ（SEO最適化） -->
+    <script>
+        fetch('./structured-data.json')
+            .then(response => response.json())
+            .then(data => {
+                const script = document.createElement('script');
+                script.type = 'application/ld+json';
+                script.textContent = JSON.stringify(data);
+                document.head.appendChild(script);
+            })
+            .catch(err => console.log('構造化データの読み込みをスキップ:', err));
+    </script>
+    
+    <!-- 🔌 Spine配置システム拡張プラグイン -->
+    <!-- <script src="assets/spine/spine-positioning-enhancement.js" defer></script> -->
+    
+    <!-- 🎯 統一座標システム関数 -->
+    <script>
+        // ResponsiveCoordinateSystemの自動リサイズを無効化
+        // 最小限編集システムとの競合を防ぐため
+        window.addEventListener('DOMContentLoaded', () => {
+            // 既存のリサイズイベントリスナーを削除
+            const oldResize = window.onresize;
+            window.onresize = null;
+            
+            // ResponsiveCoordinateSystemの無効化を試行
+            setTimeout(() => {
+                if (window.spinePositioningSystem) {
+                    window.spinePositioningSystem.config.enableResize = false;
+                    if (window.spinePositioningSystem.coordinateSystem) {
+                        window.spinePositioningSystem.coordinateSystem.config.autoResize = false;
+                    }
+                    console.log('🔧 SpinePositioningSystemの自動リサイズを無効化しました');
+                }
+                
+                // ResponsiveCoordinateSystemの直接アクセス
+                if (window.ResponsiveCoordinateSystem) {
+                    const instances = document.querySelectorAll('[data-responsive-coord]');
+                    instances.forEach(el => {
+                        if (el._coordinateSystem) {
+                            el._coordinateSystem.config.autoResize = false;
+                        }
+                    });
+                }
+            }, 1000);
+            
+            // リサイズイベントの監視（デバッグ用）
+            let resizeCount = 0;
+            window.addEventListener('resize', (e) => {
+                resizeCount++;
+                console.log(`🔍 [${resizeCount}] ウィンドウリサイズイベント検出`);
+                
+                // 現在のCanvas状態を記録
+                const canvas = document.getElementById('purattokun-canvas');
+                if (canvas) {
+                    const currentState = {
+                        left: canvas.style.left,
+                        top: canvas.style.top,
+                        width: canvas.style.width,
+                        height: canvas.style.height,
+                        computedLeft: window.getComputedStyle(canvas).left,
+                        computedTop: window.getComputedStyle(canvas).top
+                    };
+                    console.log('📍 現在のCanvas状態:', currentState);
+                }
+            }, true); // キャプチャフェーズで監視
+        });
+        
+        // CSS側とSpine側の制御を分離した統一座標システム
+        window.adjustCanvasUnified = function(leftPercent, topPercent, scale) {
+            const canvas = document.getElementById('purattokun-canvas');
+            if (!canvas) {
+                console.error('❌ Canvas要素が見つかりません');
+                return;
+            }
+            
+            // 位置制御（CSS側）
+            if (leftPercent !== undefined && topPercent !== undefined) {
+                canvas.style.left = leftPercent + '%';
+                canvas.style.top = topPercent + '%';
+                console.log(`📍 位置調整: left=${leftPercent}%, top=${topPercent}%`);
+            }
+            
+            // スケール制御（Spine側）
+            if (scale !== undefined && window.adjustPurattokun) {
+                // Canvasの中心座標を維持したままスケールを変更
+                const canvasWidth = 120;  // spine-character-manager.js の固定値
+                const canvasHeight = 120;
+                window.adjustPurattokun(canvasWidth / 2, canvasHeight / 2, scale);
+                console.log(`📏 スケール調整: ${scale}`);
+            }
+            
+            console.log('✅ 統一座標システムで調整完了');
+        };
+        
+        // デバッグ用：現在の設定を確認
+        window.getCanvasSettings = function() {
+            const canvas = document.getElementById('purattokun-canvas');
+            if (!canvas) return null;
+            
+            const computedStyle = window.getComputedStyle(canvas);
+            const settings = {
+                position: {
+                    left: canvas.style.left || computedStyle.left,
+                    top: canvas.style.top || computedStyle.top
+                },
+                size: {
+                    width: canvas.style.width || computedStyle.width,
+                    height: canvas.style.height || computedStyle.height
+                },
+                transform: computedStyle.transform
+            };
+            
+            // Spineの内部設定も取得
+            if (window.getCurrentPosition) {
+                settings.spine = window.getCurrentPosition();
+            }
+            
+            return settings;
+        };
+    </script>
+</body>
+</html>
