@@ -714,12 +714,18 @@ function createControlPanel() {
             </div>
             
             <!-- CSS出力機能 -->
-            <div>
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
                 <button id="v2-css-export" 
-                        style="width: 100%; padding: 8px; font-size: 12px; 
+                        style="flex: 1; padding: 8px; font-size: 12px; 
                                background: #4CAF50; color: white; border: none; border-radius: 4px;
                                cursor: pointer; font-weight: bold;">
                     📋 CSS出力
+                </button>
+                <button id="v2-package-export" 
+                        style="flex: 1; padding: 8px; font-size: 12px; 
+                               background: #FF9800; color: white; border: none; border-radius: 4px;
+                               cursor: pointer; font-weight: bold;">
+                    📦 パッケージ出力
                 </button>
             </div>
         </div>
@@ -834,6 +840,14 @@ function setupControlPanelEvents() {
     if (cssExportBtn) {
         cssExportBtn.addEventListener('click', () => {
             exportCSS();
+        });
+    }
+    
+    // パッケージ出力ボタン
+    const packageExportBtn = document.getElementById('v2-package-export');
+    if (packageExportBtn) {
+        packageExportBtn.addEventListener('click', () => {
+            exportPackage();
         });
     }
 }
@@ -1176,8 +1190,8 @@ function checkURLParams() {
     return 'legacy';
 }
 
-// DOMContentLoaded時の自動初期化
-document.addEventListener('DOMContentLoaded', () => {
+// DOMContentLoaded時の自動初期化（動的読み込み対応版）
+function initializeV2System() {
     const mode = checkURLParams();
     
     if (mode === 'v2' || mode === 'test') {
@@ -1196,7 +1210,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 1000);
     }
-});
+}
+
+// DOMContentLoaded状態をチェックして適切に初期化
+if (document.readyState === 'loading') {
+    // まだDOMが読み込み中の場合
+    document.addEventListener('DOMContentLoaded', initializeV2System);
+} else {
+    // 既にDOMが読み込み完了している場合（動的読み込み時）
+    console.log('🚀 v2.0: DOM読み込み完了済み、即座に初期化開始');
+    initializeV2System();
+}
 
 // デバッグ用グローバル関数
 window.SpinePositioningV2 = SpinePositioningV2;
@@ -1453,6 +1477,491 @@ function exportCSS() {
 // 外部API追加
 SpinePositioningV2.exportCSS = exportCSS;
 
+// ========== 📦 完全パッケージ出力システム（Spineファイル・画像含む） ========== //
+
+/**
+ * 必要なファイルを収集してZIPパッケージを生成
+ * Stage 1改良: Spineファイル・画像ファイル含む完全パッケージ
+ */
+async function generateCompletePackage() {
+    console.log('📦 v2.0: 完全パッケージ生成開始');
+    
+    // JSZipライブラリが利用可能かチェック
+    if (typeof JSZip === 'undefined') {
+        console.warn('⚠️ JSZipライブラリが見つかりません。HTMLのみ出力します。');
+        console.warn('💡 完全パッケージにはJSZipライブラリが必要です: https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+        return await generateDeliveryHTML();
+    }
+    
+    const zip = new JSZip();
+    
+    try {
+        // 1. 固定化HTMLを生成
+        const fixedHTML = await generateDeliveryHTML();
+        zip.file('index.html', fixedHTML);
+        console.log('✅ HTMLファイル追加完了');
+        
+        // 2. Spineファイル一式を収集
+        const spineFiles = [
+            '/assets/spine/characters/purattokun/purattokun.atlas',
+            '/assets/spine/characters/purattokun/purattokun.json', 
+            '/assets/spine/characters/purattokun/purattokun.png'
+        ];
+        
+        const spineFolder = zip.folder('assets/spine/characters/purattokun');
+        
+        for (const filePath of spineFiles) {
+            try {
+                const response = await fetch(filePath);
+                if (response.ok) {
+                    const filename = filePath.split('/').pop();
+                    const content = await response.arrayBuffer();
+                    spineFolder.file(filename, content);
+                    console.log(`✅ Spineファイル追加: ${filename}`);
+                } else {
+                    console.warn(`⚠️ Spineファイル取得失敗: ${filePath} (${response.status})`);
+                }
+            } catch (error) {
+                console.error(`❌ Spineファイル処理エラー: ${filePath}`, error);
+            }
+        }
+        
+        // 3. 画像ファイルを収集
+        const imageFiles = [
+            '/assets/images/クラウドパートナーTOP.png',
+            '/assets/images/kumo1.png',
+            '/assets/images/kumo2.png', 
+            '/assets/images/kumo3.png',
+            '/assets/images/nezumi.png'
+        ];
+        
+        const imageFolder = zip.folder('assets/images');
+        
+        for (const filePath of imageFiles) {
+            try {
+                const response = await fetch(filePath);
+                if (response.ok) {
+                    const filename = filePath.split('/').pop();
+                    const content = await response.arrayBuffer();
+                    imageFolder.file(filename, content);
+                    console.log(`✅ 画像ファイル追加: ${filename}`);
+                } else {
+                    console.warn(`⚠️ 画像ファイル取得失敗: ${filePath} (${response.status})`);
+                }
+            } catch (error) {
+                console.error(`❌ 画像ファイル処理エラー: ${filePath}`, error);
+            }
+        }
+
+        // 3.5. JavaScript ライブラリを収集 (CDN依存排除)
+        const libFiles = [
+            "/assets/js/libs/spine-webgl.js"
+        ];
+        
+        const libFolder = zip.folder("assets/js/libs");
+        
+        for (const filePath of libFiles) {
+            try {
+                const response = await fetch(filePath);
+                if (response.ok) {
+                    const filename = filePath.split("/").pop();
+                    const content = await response.arrayBuffer();
+                    libFolder.file(filename, content);
+                    console.log(`✅ JSライブラリ追加: ${filename}`);
+                } else {
+                    console.warn(`⚠️ JSライブラリ取得失敗: ${filePath} (${response.status})`);
+                }
+            } catch (error) {
+                console.error(`❌ JSライブラリ処理エラー: ${filePath}`, error);
+            }
+        }
+        
+        // 4. ZIPファイルを生成
+        const zipBlob = await zip.generateAsync({
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: {
+                level: 6
+            }
+        });
+        
+        console.log('✅ v2.0: 完全パッケージ生成完了');
+        return zipBlob;
+        
+    } catch (error) {
+        console.error('❌ v2.0: 完全パッケージ生成エラー:', error);
+        // フォールバック: HTMLのみ
+        console.log('🔄 フォールバック: HTMLのみ出力');
+        return await generateDeliveryHTML();
+    }
+}
+
+/**
+ * 現在のindex.htmlを読み込んで編集システムを除去した軽量版を生成
+ * Stage 1: HTML固定化システム構築
+ */
+async function generateDeliveryHTML() {
+    console.log('📦 v2.0: HTML固定化処理開始');
+    
+    try {
+        // 現在のindex.htmlを読み込み
+        const response = await fetch(window.location.origin + '/index.html');
+        if (!response.ok) {
+            throw new Error(`HTMLファイルの読み込みに失敗: ${response.status}`);
+        }
+        
+        let htmlContent = await response.text();
+        console.log('✅ v2.0: index.html読み込み完了');
+        
+        // アクティブキャラクターの現在位置・設定を取得
+        const activeChar = SpinePositioningV2.characters[SpinePositioningV2.activeIndex];
+        if (!activeChar) {
+            throw new Error('アクティブキャラクターが見つかりません');
+        }
+        
+        const element = activeChar.element;
+        const currentLeft = element.style.left || '0%';
+        const currentTop = element.style.top || '0%';
+        const currentScale = activeChar.scale || 1.0;
+        
+        console.log('📊 v2.0: 現在の位置データを取得:', {
+            left: currentLeft,
+            top: currentTop,
+            scale: currentScale
+        });
+        
+        // Step 1: 編集システム関連のスクリプトタグを除去
+        htmlContent = htmlContent.replace(
+            /<script[^>]*src=["']spine-positioning-v2\.js["'][^>]*>[\s\S]*?<\/script>/gi, 
+            '<!-- spine-positioning-v2.js removed for delivery -->'
+        );
+        
+        htmlContent = htmlContent.replace(
+            /<script[^>]*src=["']spine-positioning-system-explanation\.js["'][^>]*>[\s\S]*?<\/script>/gi, 
+            '<!-- spine-positioning-system-explanation.js removed for delivery -->'
+        );
+        
+        // Step 2: 編集システム関連のCSSファイルを除去
+        htmlContent = htmlContent.replace(
+            /<link[^>]*href=["']spine-positioning-system-explanation\.css["'][^>]*>/gi, 
+            '<!-- spine-positioning-system-explanation.css removed for delivery -->'
+        );
+        
+        // Step 3: #purattokun-configのdata属性を現在の値で更新
+        const configPattern = /<div[^>]*id=['"]purattokun-config['"][^>]*data-x=['"][^'"]*['"][^>]*data-y=['"][^'"]*['"][^>]*data-scale=['"][^'"]*['"][^>]*>/i;
+        
+        if (configPattern.test(htmlContent)) {
+            htmlContent = htmlContent.replace(configPattern, (match) => {
+                // data-x, data-y, data-scaleの値を現在の設定で置換
+                let newMatch = match
+                    .replace(/data-x=['"][^'"]*['"]/, `data-x="${currentLeft.replace('%', '')}"`)
+                    .replace(/data-y=['"][^'"]*['"]/, `data-y="${currentTop.replace('%', '')}"`)
+                    .replace(/data-scale=['"][^'"]*['"]/, `data-scale="${currentScale.toFixed(3)}"`);
+                
+                console.log('📊 v2.0: #purattokun-config更新:', {
+                    x: currentLeft.replace('%', ''),
+                    y: currentTop.replace('%', ''),
+                    scale: currentScale.toFixed(3)
+                });
+                
+                return newMatch;
+            });
+        } else {
+            console.warn('⚠️ v2.0: #purattokun-configが見つかりません');
+        }
+        
+        // Step 4: URLパラメータのedit=true処理部分を無効化
+        htmlContent = htmlContent.replace(
+            /if\s*\(\s*editParam\s*===\s*['"]true['"]\s*\)/g,
+            'if (false /* edit mode disabled for delivery */)'
+        );
+        
+        // Step 5: 編集モード関連の関数を除去またはコメントアウト
+        htmlContent = htmlContent.replace(
+            /function\s+loadEditingSystem\s*\([^)]*\)\s*\{[^}]*\}/gs,
+            '/* loadEditingSystem function removed for delivery */'
+        );
+
+        // Step 5.5: CDN依存を解決してローカル化 (重要修正)
+        console.log("📦 v2.0: CDN依存解決処理開始");
+        
+        // Spine WebGL CDNを相対パスに変更
+        htmlContent = htmlContent.replace(
+            /https:\/\/unpkg\.com\/@esotericsoftware\/spine-webgl@[^\/]*\/dist\/iife\/spine-webgl\.js/g,
+            "assets/js/libs/spine-webgl.js"
+        );
+        
+        // JSZip CDNを削除 (パッケージ生成後は不要)
+        htmlContent = htmlContent.replace(
+            /<script[^>]*src=["']https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/jszip\/[^"']*["'][^>]*><\/script>/gi,
+            "<!-- JSZip CDN removed (not needed in delivery package) -->"
+        );
+        
+        console.log("✅ v2.0: CDN依存解決完了");
+        
+        // Step 6: デリバリー用のコメントを追加
+        const timestamp = new Date().toLocaleString('ja-JP');
+        const deliveryComment = `
+<!-- 
+====================================================================
+🎯 SPINE POSITIONING SYSTEM v2.0 - DELIVERY PACKAGE
+====================================================================
+生成日時: ${timestamp}
+生成元: ${window.location.href}
+キャラクター: ${activeChar.name}
+位置設定: X=${currentLeft}, Y=${currentTop}, Scale=${currentScale.toFixed(3)}
+
+このファイルは編集システムを除去したお客様納品用の軽量版HTMLです。
+- 編集機能: 除去済み
+- Spineアニメーション: 保持
+- 位置データ: 固定済み（#purattokun-config）
+- ファイルサイズ: 軽量化済み
+
+📋 お客様への適用手順:
+1. このHTMLファイルをお客様のサーバーにアップロード
+2. assets/spine/フォルダもコピー
+3. 動作確認を実施
+
+⚠️ 注意事項:
+- 編集機能は含まれていません
+- 位置調整が必要な場合は制作元にご連絡ください
+==================================================================== 
+-->`;
+        
+        // ヘッダー部分にコメントを挿入
+        htmlContent = htmlContent.replace(
+            /<\/title>/,
+            '</title>' + deliveryComment
+        );
+        
+        console.log('✅ v2.0: HTML固定化処理完了');
+        return htmlContent;
+        
+    } catch (error) {
+        console.error('❌ v2.0: HTML固定化エラー:', error);
+        throw error;
+    }
+}
+
+/**
+ * パッケージ出力ダイアログを表示
+ * 生成されたHTMLのプレビューとダウンロード機能を提供
+ */
+function showPackageDialog(packageContent, isZip = false) {
+    console.log('📦 v2.0: パッケージ出力ダイアログ表示');
+    console.log('📦 ファイル形式:', isZip ? 'ZIP (完全パッケージ)' : 'HTML (単体ファイル)');
+    
+    // 既存ダイアログがある場合は除去
+    const existingDialog = document.getElementById('v2-package-dialog');
+    if (existingDialog) {
+        existingDialog.remove();
+    }
+    
+    // プレビュー用コンテンツ準備
+    let previewContent = '';
+    if (isZip) {
+        previewContent = `ZIPファイル (約${Math.round(packageContent.size / 1024)}KB)
+        
+📁 含まれるファイル:
+• index.html (固定化済み)
+• assets/spine/characters/purattokun/
+  - purattokun.atlas
+  - purattokun.json  
+  - purattokun.png
+• assets/images/
+  - クラウドパートナーTOP.png
+  - kumo1.png, kumo2.png, kumo3.png
+  - nezumi.png`;
+    } else {
+        previewContent = `${packageContent.substring(0, 1000)}${packageContent.length > 1000 ? '\n\n... (省略) ...\n\n' + packageContent.substring(packageContent.length - 500) : ''}`;
+    }
+    
+    // ダイアログ要素作成
+    const dialog = document.createElement('div');
+    dialog.id = 'v2-package-dialog';
+    dialog.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0,0,0,0.5); z-index: 99999; display: flex; 
+                    align-items: center; justify-content: center;">
+            <div style="background: white; border-radius: 8px; padding: 20px; 
+                        max-width: 90%; max-height: 90%; overflow: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                <div style="display: flex; align-items: center; justify-content: space-between; 
+                            margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+                    <h3 style="margin: 0; color: #333; font-size: 18px;">📦 パッケージ出力結果</h3>
+                    <button id="v2-package-dialog-close" 
+                            style="background: none; border: none; font-size: 20px; cursor: pointer; 
+                                   color: #666; padding: 0; width: 30px; height: 30px;">×</button>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">
+                        お客様納品用の${isZip ? '完全パッケージ (ZIP)' : '軽量HTMLファイル'}を生成しました：
+                    </p>
+                    <div style="background: #f0f8ff; border: 1px solid #d0e8ff; border-radius: 4px; 
+                                padding: 10px; margin-bottom: 10px; font-size: 13px;">
+                        <strong>📊 生成内容:</strong><br>
+                        • 編集システム除去済み<br>
+                        • 位置データ固定済み<br>
+                        • Spineアニメーション保持<br>
+                        ${isZip ? '• Spineファイル・画像ファイル含む<br>' : ''}
+                        • ファイルサイズ軽量化
+                    </div>
+                    <div style="max-height: 200px; overflow: auto; background: #f9f9f9; 
+                                border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+                        <pre style="margin: 0; font-size: 11px; white-space: pre-wrap; word-break: break-word;">${previewContent}</pre>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="v2-package-download" 
+                            style="padding: 8px 16px; background: #FF9800; color: white; 
+                                   border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        💾 ${isZip ? 'パッケージ.zip' : 'index-delivery.html'} をダウンロード
+                    </button>
+                    <button id="v2-package-close" 
+                            style="padding: 8px 16px; background: #666; color: white; 
+                                   border: none; border-radius: 4px; cursor: pointer;">
+                        閉じる
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    
+    // イベントハンドラー設定
+    const closeDialog = () => {
+        dialog.remove();
+        console.log('📦 v2.0: パッケージ出力ダイアログ閉じました');
+    };
+    
+    // 閉じるボタン
+    document.getElementById('v2-package-dialog-close').addEventListener('click', closeDialog);
+    document.getElementById('v2-package-close').addEventListener('click', closeDialog);
+    
+    // 背景クリックで閉じる
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) {
+            closeDialog();
+        }
+    });
+    
+    // ESCキーで閉じる
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeDialog();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+    
+    // ダウンロードボタン
+    document.getElementById('v2-package-download').addEventListener('click', () => {
+        try {
+            const activeChar = SpinePositioningV2.characters[SpinePositioningV2.activeIndex];
+            const timestamp = new Date().toISOString().split('T')[0];
+            
+            let filename, blob, url;
+            
+            if (isZip) {
+                // ZIPファイルダウンロード
+                filename = `purattokun-package-${timestamp}.zip`;
+                blob = packageContent; // 既にBlobオブジェクト
+                url = URL.createObjectURL(blob);
+            } else {
+                // HTMLファイルダウンロード
+                filename = `index-delivery-${timestamp}.html`;
+                blob = new Blob([packageContent], { type: 'text/html' });
+                url = URL.createObjectURL(blob);
+            }
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            
+            console.log('💾 v2.0: パッケージHTMLをダウンロードしました:', filename);
+            
+        } catch (error) {
+            console.error('❌ v2.0: パッケージダウンロードエラー:', error);
+            alert('ダウンロードエラーが発生しました。ブラウザの設定を確認してください。');
+        }
+    });
+}
+
+/**
+ * パッケージ出力メイン機能
+ * HTML固定化システムの統合関数
+ */
+async function exportPackage() {
+    console.log('📦 v2.0: パッケージ出力機能実行');
+    
+    try {
+        // 基本チェック
+        if (!SpinePositioningV2.initialized) {
+            throw new Error('システムが初期化されていません');
+        }
+        
+        if (!SpinePositioningV2.editMode) {
+            throw new Error('編集モードではありません');
+        }
+        
+        if (SpinePositioningV2.characters.length === 0) {
+            throw new Error('キャラクターが検出されていません');
+        }
+        
+        // JSZipライブラリ有無を確認
+        const hasJSZip = typeof JSZip !== 'undefined';
+        
+        // 処理中インジケーター表示
+        const loadingMsg = document.createElement('div');
+        loadingMsg.id = 'v2-package-loading';
+        loadingMsg.innerHTML = `
+            <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                        background: white; border: 2px solid #ddd; border-radius: 8px; 
+                        padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 99998;
+                        text-align: center;">
+                <div style="font-size: 16px; margin-bottom: 10px;">📦 パッケージ生成中...</div>
+                <div style="font-size: 14px; color: #666;">
+                    ${hasJSZip ? 'Spineファイル・画像含む完全パッケージを生成しています' : 'HTML固定化処理を実行しています'}
+                </div>
+                ${!hasJSZip ? '<div style="font-size: 12px; color: #999; margin-top: 5px;">完全パッケージにはJSZipライブラリが必要です</div>' : ''}
+            </div>
+        `;
+        document.body.appendChild(loadingMsg);
+        
+        // パッケージ生成（JSZipの有無で切り替え）
+        let packageContent;
+        if (hasJSZip) {
+            packageContent = await generateCompletePackage();
+        } else {
+            packageContent = await generateDeliveryHTML();
+        }
+        
+        // ローディング除去
+        loadingMsg.remove();
+        
+        // ダイアログ表示
+        showPackageDialog(packageContent, hasJSZip);
+        
+        console.log('✅ v2.0: パッケージ出力機能完了');
+        
+    } catch (error) {
+        // ローディング除去
+        const loadingMsg = document.getElementById('v2-package-loading');
+        if (loadingMsg) loadingMsg.remove();
+        
+        console.error('❌ v2.0: パッケージ出力機能エラー:', error);
+        alert(`パッケージ出力エラー: ${error.message}`);
+    }
+}
+
+// 外部API追加
+SpinePositioningV2.exportPackage = exportPackage;
+
 console.log('✅ Spine Positioning System v2.0 読み込み完了');
 console.log('💡 使用方法:');
 console.log('  URL: ?edit=true&version=v2 (v2.0使用)');
@@ -1460,3 +1969,14 @@ console.log('  URL: ?edit=true&version=test (テストモード)');
 console.log('  URL: ?edit=true (既存システム使用)');
 console.log('  コンソール: SpinePositioningV2.* または v2Debug()');
 console.log('📋 新機能: CSS出力機能（📋 CSS出力ボタン または SpinePositioningV2.exportCSS()）');
+
+// JSZipライブラリの有無チェック
+if (typeof JSZip !== 'undefined') {
+    console.log('📦 新機能: 完全パッケージ出力機能（Spineファイル・画像含むZIPファイル生成）');
+    console.log('  📦 パッケージ出力ボタン または SpinePositioningV2.exportPackage()');
+} else {
+    console.log('📦 新機能: パッケージ出力機能（HTML固定化のみ）');
+    console.log('  📦 パッケージ出力ボタン または SpinePositioningV2.exportPackage()');
+    console.log('💡 完全パッケージ（ZIP）にはJSZipライブラリが必要:');
+    console.log('  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>');
+}
