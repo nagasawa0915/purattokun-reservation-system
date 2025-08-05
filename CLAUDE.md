@@ -436,6 +436,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **🤖 エージェント統合運用ガイド** | [🤖 docs/subagents/エージェント統合運用ガイド.md](./docs/subagents/エージェント統合運用ガイド.md) |
 | **🎯 Spine座標制御理想構成** | [🎯 docs/SPINE_BEST_PRACTICES.md](./docs/SPINE_BEST_PRACTICES.md) |
 
+### 🎯 システム設計原則
+- **座標レイヤー管理**: [📋 docs/ARCHITECTURE_NOTES.md](./docs/ARCHITECTURE_NOTES.md#座標レイヤー管理アーキテクチャ) - 2レイヤー + モジュール化による座標競合防止
+
 ---
 
 ## 🏢 プロジェクト概要・業務背景
