@@ -99,59 +99,19 @@
             editJS.src = 'spine-positioning-system-explanation.js';
             editJS.onload = () => {
                 console.log('✅ 編集システム読み込み完了');
-                // 編集システム初期化
-                if (typeof initializeDOMElements === 'function') {
-                    console.log('🚀 initializeDOMElements を実行中...');
-                    initializeDOMElements();
-                    
-                    // 編集開始ボタンを作成
-                    setTimeout(() => {
-                        console.log('🚀 編集開始ボタンを作成中...');
-                        createEditStartButton();
-                    }, 1000);
+                console.log('🔍 関数確認:', {
+                    initializeSpineEditSystem: typeof initializeSpineEditSystem,
+                    createEditStartUI: typeof createEditStartUI
+                });
+                
+                // v3.0編集システム初期化
+                if (typeof initializeSpineEditSystem === 'function') {
+                    console.log('🚀 v3.0編集システム初期化中...');
+                    initializeSpineEditSystem();
+                } else {
+                    console.warn('⚠️ initializeSpineEditSystem関数が見つかりません');
                 }
             };
-            
-            // 編集開始ボタン作成関数
-            function createEditStartButton() {
-                // 既存のボタンがある場合は削除
-                const existingBtn = document.getElementById('edit-start-button');
-                if (existingBtn) existingBtn.remove();
-                
-                // 編集開始ボタンを作成
-                const editButton = document.createElement('button');
-                editButton.id = 'edit-start-button';
-                editButton.textContent = '🎯 編集開始';
-                editButton.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 1000;
-                    padding: 10px 20px;
-                    background: #4caf50;
-                    color: white;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    font-weight: bold;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                `;
-                
-                editButton.onclick = () => {
-                    console.log('🎯 編集開始ボタンがクリックされました');
-                    if (typeof startCharacterEdit === 'function') {
-                        startCharacterEdit();
-                        editButton.textContent = '✅ 編集中';
-                        editButton.style.background = '#ff9800';
-                    } else {
-                        console.error('❌ startCharacterEdit 関数が見つかりません');
-                    }
-                };
-                
-                document.body.appendChild(editButton);
-                console.log('✅ 編集開始ボタンを作成しました');
-            }
             
             document.head.appendChild(editJS);
         }

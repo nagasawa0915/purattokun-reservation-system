@@ -364,6 +364,13 @@ const ModuleManager = {
 function createEditStartUI() {
     console.log('🎨 編集開始UI作成');
     
+    // 既存のパネルを削除
+    const existingPanel = document.getElementById('spine-start-panel-v3');
+    if (existingPanel) {
+        existingPanel.remove();
+        console.log('📝 既存パネル削除');
+    }
+    
     // 編集開始ボタンのみのシンプルUI
     const startPanel = document.createElement('div');
     startPanel.id = 'spine-start-panel-v3';
@@ -400,15 +407,21 @@ function createEditStartUI() {
     `;
     
     document.body.appendChild(startPanel);
+    console.log('📦 パネルをDOMに追加完了');
     
     // 編集開始ボタンイベント
     const startBtn = document.getElementById('start-edit-btn');
     if (startBtn) {
+        console.log('🔘 編集開始ボタン取得成功 - イベントリスナー設定中...');
         startBtn.addEventListener('click', () => {
+            console.log('🎯 編集開始ボタンがクリックされました！');
             removeEditStartUI();
             startEditMode();
             createEditingUI();
         });
+        console.log('✅ イベントリスナー設定完了');
+    } else {
+        console.error('❌ 編集開始ボタンが見つかりません！');
     }
     
     console.log('✅ 編集開始UI作成完了');
@@ -455,6 +468,35 @@ function createEditingUI() {
             • キャラクターをクリックで表示
         </div>
         
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button id="save-edit-btn" style="
+                flex: 1;
+                padding: 10px;
+                background: #28a745;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: bold;
+            ">
+                💾 保存
+            </button>
+            <button id="cancel-edit-btn" style="
+                flex: 1;
+                padding: 10px;
+                background: #ffc107;
+                color: #212529;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: bold;
+            ">
+                ↶ キャンセル
+            </button>
+        </div>
+        
         <button id="end-edit-btn" style="
             width: 100%;
             padding: 10px;
@@ -481,6 +523,22 @@ function createEditingUI() {
 }
 
 function setupEditingUIEvents() {
+    // 保存ボタン
+    const saveBtn = document.getElementById('save-edit-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            saveCurrentState();
+        });
+    }
+    
+    // キャンセルボタン
+    const cancelBtn = document.getElementById('cancel-edit-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            cancelEdit();
+        });
+    }
+    
     // 編集終了ボタン（バウンディングボックスボタンは削除）
     const endBtn = document.getElementById('end-edit-btn');
     if (endBtn) {
@@ -1293,6 +1351,152 @@ function stopEditMode() {
     console.log('✅ 編集モード終了完了 - 座標系復元・クリーンな状態に復帰');
 }
 
+// ========== 状態管理・永続化システム ========== //
+
+// 状態管理オブジェクト
+let savedState = {
+    character: {
+        left: null,
+        top: null,
+        width: null,
+        height: null,
+        transform: null
+    },
+    timestamp: null
+};
+
+// 現在の状態を保存
+function saveCurrentState() {
+    console.log('💾 現在の状態を保存開始');
+    
+    const targetElement = SpineEditSystem.baseLayer.targetElement;
+    if (!targetElement) {
+        console.error('❌ 対象要素が見つかりません');
+        return false;
+    }
+    
+    // 🔧 座標系を一時的に元に戻して正確な値を取得
+    SpineEditSystem.coordinateSwap.exitEditMode(targetElement);
+    
+    // 現在の状態を記録
+    savedState.character = {
+        left: targetElement.style.left,
+        top: targetElement.style.top,
+        width: targetElement.style.width,
+        height: targetElement.style.height,
+        transform: targetElement.style.transform
+    };
+    savedState.timestamp = new Date().toISOString();
+    
+    // localStorageに保存
+    try {
+        localStorage.setItem('spine-positioning-state', JSON.stringify(savedState));
+        console.log('✅ localStorage保存完了:', savedState);
+        
+        // 保存成功のフィードバック
+        const coordDisplay = document.getElementById('coord-display');
+        if (coordDisplay) {
+            const originalText = coordDisplay.textContent;
+            coordDisplay.textContent = '💾 保存完了！';
+            coordDisplay.style.background = '#d4edda';
+            coordDisplay.style.color = '#155724';
+            
+            setTimeout(() => {
+                coordDisplay.textContent = originalText;
+                coordDisplay.style.background = '#f5f5f5';
+                coordDisplay.style.color = '';
+            }, 2000);
+        }
+        
+        // 🔧 座標系を編集モードに戻す
+        SpineEditSystem.coordinateSwap.enterEditMode(targetElement);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ localStorage保存失敗:', error);
+        
+        // 🔧 エラー時も座標系を編集モードに戻す
+        SpineEditSystem.coordinateSwap.enterEditMode(targetElement);
+        
+        return false;
+    }
+}
+
+// キャンセル（ページリロード方式）
+function cancelEdit() {
+    console.log('↶ 編集をキャンセル（ページリロード方式）');
+    
+    const coordDisplay = document.getElementById('coord-display');
+    if (coordDisplay) {
+        coordDisplay.textContent = '🔄 前回保存した状態に戻しています...';
+        coordDisplay.style.background = '#fff3cd';
+        coordDisplay.style.color = '#856404';
+    }
+    
+    // 500ms後にページリロード（ユーザーがメッセージを読めるように）
+    setTimeout(() => {
+        location.reload();
+    }, 500);
+}
+
+// 初期化時の状態復元
+function restoreCharacterState() {
+    console.log('🔄 保存された状態の復元開始');
+    
+    try {
+        const saved = localStorage.getItem('spine-positioning-state');
+        if (!saved) {
+            console.log('💡 保存された状態なし - 初期状態を維持');
+            return false;
+        }
+        
+        const loadedState = JSON.parse(saved);
+        console.log('📋 localStorage状態:', loadedState);
+        
+        // 対象要素を取得（複数の候補から検索）
+        const selectors = [
+            '#character-canvas',
+            '#purattokun-canvas', 
+            '.demo-character',
+            '.spine-character'
+        ];
+        
+        let targetElement = null;
+        for (const selector of selectors) {
+            targetElement = document.querySelector(selector);
+            if (targetElement) {
+                console.log(`✅ 対象要素見つかった: ${selector}`);
+                break;
+            }
+        }
+        
+        if (!targetElement) {
+            console.warn('⚠️ 対象要素が見つかりません - 状態復元をスキップ');
+            return false;
+        }
+        
+        // 保存された状態を適用
+        if (loadedState.character) {
+            if (loadedState.character.left) targetElement.style.left = loadedState.character.left;
+            if (loadedState.character.top) targetElement.style.top = loadedState.character.top;
+            if (loadedState.character.width) targetElement.style.width = loadedState.character.width;
+            if (loadedState.character.height) targetElement.style.height = loadedState.character.height;
+            if (loadedState.character.transform) targetElement.style.transform = loadedState.character.transform;
+        }
+        
+        // savedStateも更新
+        savedState = loadedState;
+        
+        console.log('✅ 状態復元完了');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ 状態復元失敗:', error);
+        return false;
+    }
+}
+
 // ========== 初期化・起動システム ========== //
 
 function initializeSpineEditSystem() {
@@ -1301,11 +1505,24 @@ function initializeSpineEditSystem() {
     // URLパラメータ確認
     const urlParams = new URLSearchParams(window.location.search);
     const editMode = urlParams.get('edit') === 'true';
+    console.log('📋 URLパラメータ確認:', { 
+        url: window.location.href,
+        search: window.location.search,
+        editMode: editMode 
+    });
     
     if (editMode) {
+        console.log('✅ 編集モード検出 - UI作成開始');
         // 編集開始UIを表示
         createEditStartUI();
+    } else {
+        console.log('ℹ️ 編集モードではありません');
     }
+    
+    // 保存された状態の復元（編集モード以外でも実行）
+    setTimeout(() => {
+        restoreCharacterState();
+    }, 1000); // DOM構築完了を待つ
     
     console.log('✅ Spine編集システム v3.0 初期化完了');
 }

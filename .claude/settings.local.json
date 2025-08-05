@@ -25,7 +25,8 @@
       "Bash(echo:*)",
       "Bash(# 4195行目以前を保存\nsed -n ''1,4194p'' /mnt/d/クラウドパートナーHP/spine-positioning-system-minimal.js > /tmp/before.js\n\n# 修正版のsetupCharacterTabEvents関数を作成\ncat << ''EOF'' > /tmp/new_function.js\nfunction setupCharacterTabEvents() {\n    const contentArea = document.getElementById(''slide-menu-content'');\n    if (!contentArea) return;\n    \n    // 既存のsetupCharacterPanelEventsを利用して、統合メニューでもドラッグ&ドロップを有効化\n    setupCharacterPanelEvents(contentArea);\n    \n    // 統合メニュー特有のレイヤーボタンイベントのみ設定\n    contentArea.querySelectorAll(''.layer-btn'').forEach(btn => {\n        btn.addEventListener(''click'', (e) => {\n            e.stopPropagation();\n            \n            const action = btn.dataset.action;\n            const index = parseInt(btn.dataset.index);\n            \n            if (action === ''up'') {\n                moveCharacterLayer(index, ''up'');\n            } else if (action === ''down'') {\n                moveCharacterLayer(index, ''down'');\n            }\n            \n            updateSlideMenuContent(); // レイヤー変更後にコンテンツ更新\n        });\n    });\n}\nEOF\n\n# 4370行目以降を保存\nsed -n ''4370,$p'' /mnt/d/クラウドパートナーHP/spine-positioning-system-minimal.js > /tmp/after.js\n\n# 3つのファイルを結合\ncat /tmp/before.js /tmp/new_function.js /tmp/after.js > /mnt/d/クラウドパートナーHP/spine-positioning-system-minimal.js\n\necho \"\"関数を修正しました\"\")",
       "Bash(git fetch:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }
