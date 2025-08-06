@@ -468,6 +468,21 @@ function createEditingUI() {
             • キャラクターをクリックで表示
         </div>
         
+        <button id="package-export-btn" style="
+            width: 100%;
+            padding: 12px;
+            background: #6f42c1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        ">
+            📦 パッケージ出力
+        </button>
+        
         <div style="display: flex; gap: 8px; margin-bottom: 10px;">
             <button id="save-edit-btn" style="
                 flex: 1;
@@ -523,6 +538,38 @@ function createEditingUI() {
 }
 
 function setupEditingUIEvents() {
+    // パッケージ出力ボタン
+    const packageBtn = document.getElementById('package-export-btn');
+    if (packageBtn) {
+        packageBtn.addEventListener('click', async () => {
+            if (PackageExportSystem.isProcessing) {
+                alert('パッケージ出力処理中です。しばらくお待ちください。');
+                return;
+            }
+            
+            const confirmMessage = '現在の位置データでパッケージを出力しますか？\n\n' +
+                                 '- 編集システムが除去されます\n' +
+                                 '- CDN依存が解決されます\n' + 
+                                 '- 完全な配布用パッケージが生成されます';
+                                 
+            if (confirm(confirmMessage)) {
+                // ボタンを無効化して処理中状態にする
+                packageBtn.disabled = true;
+                packageBtn.style.background = '#6c757d';
+                packageBtn.innerHTML = '📦 処理中...';
+                
+                try {
+                    await exportPackage();
+                } finally {
+                    // 処理完了後にボタンを復元
+                    packageBtn.disabled = false;
+                    packageBtn.style.background = '#6f42c1';
+                    packageBtn.innerHTML = '📦 パッケージ出力';
+                }
+            }
+        });
+    }
+    
     // 保存ボタン
     const saveBtn = document.getElementById('save-edit-btn');
     if (saveBtn) {
@@ -1562,5 +1609,727 @@ if (document.readyState === 'loading') {
 } else {
     initializeSpineEditSystem();
 }
+
+// ========== パッケージ出力システム（独立機能） ========== //
+
+/**
+ * 🎯 HTML固定化処理と依存ファイル収集を統合したパッケージ出力システム
+ * 
+ * 【機能概要】
+ * - HTML固定化：編集システム除去、localStorage位置データをCSS直接埋め込み
+ * - 依存ファイル収集：Spine一式、画像、ライブラリの自動収集
+ * - CDN依存解決：spine-webgl.jsをローカル化
+ * - ZIP生成：完全パッケージとしてダウンロード可能
+ * 
+ * 【技術要件】
+ * - 2層座標システム対応
+ * - エラーハンドリング完備
+ * - 既存システムに影響なし
+ */
+
+// パッケージ出力システムの状態管理
+const PackageExportSystem = {
+    isProcessing: false,
+    collectedFiles: new Map(),
+    htmlTemplate: null,
+    positionData: null,
+    
+    // 設定
+    config: {
+        spineWebGLCDN: 'https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js',
+        spineFiles: [
+            'assets/spine/characters/purattokun/purattokun.json',
+            'assets/spine/characters/purattokun/purattokun.atlas', 
+            'assets/spine/characters/purattokun/purattokun.png'
+        ],
+        imageFiles: [
+            'assets/images/クラウドパートナーTOP.png',
+            'assets/images/purattokunn.png'
+        ],
+        integrationFiles: [
+            'assets/spine/spine-integration-v2.js',
+            'assets/spine/spine-character-manager.js'
+        ]
+    }
+};
+
+/**
+ * メイン関数：パッケージ出力実行
+ */
+async function exportPackage() {
+    if (PackageExportSystem.isProcessing) {
+        console.warn('⚠️ パッケージ出力処理中です');
+        return;
+    }
+    
+    try {
+        PackageExportSystem.isProcessing = true;
+        console.log('📦 パッケージ出力開始');
+        
+        // ステップ1: 現在の位置データ取得
+        console.log('📋 Step 1: 位置データ収集');
+        if (!await collectPositionData()) {
+            throw new Error('位置データの収集に失敗しました');
+        }
+        
+        // ステップ2: HTML固定化処理
+        console.log('🔧 Step 2: HTML固定化処理');
+        if (!await processHTMLTemplate()) {
+            throw new Error('HTML固定化処理に失敗しました');
+        }
+        
+        // ステップ3: 依存ファイル収集
+        console.log('📁 Step 3: 依存ファイル収集');
+        if (!await collectDependencyFiles()) {
+            throw new Error('依存ファイル収集に失敗しました');
+        }
+        
+        // ステップ4: CDN依存解決
+        console.log('🌐 Step 4: CDN依存解決');
+        if (!await resolveCDNDependencies()) {
+            throw new Error('CDN依存解決に失敗しました');
+        }
+        
+        // ステップ5: ZIPパッケージ生成
+        console.log('🗜️ Step 5: ZIPパッケージ生成');
+        if (!await generateZIPPackage()) {
+            throw new Error('ZIPパッケージ生成に失敗しました');
+        }
+        
+        console.log('✅ パッケージ出力完了');
+        
+    } catch (error) {
+        console.error('❌ パッケージ出力失敗:', error);
+        alert(`パッケージ出力に失敗しました：${error.message}`);
+    } finally {
+        PackageExportSystem.isProcessing = false;
+    }
+}
+
+/**
+ * Step 1: 現在の位置データ収集（確実性向上版）
+ */
+async function collectPositionData() {
+    console.log('📊 位置データ収集開始 - 複数ソースからの確実な取得');
+    
+    try {
+        let positionData = null;
+        
+        // === 1. localStorage優先取得 ===
+        console.log('💾 Step 1.1: localStorage位置データ取得');
+        const savedStateString = localStorage.getItem('spine-positioning-state');
+        
+        if (savedStateString) {
+            try {
+                const savedState = JSON.parse(savedStateString);
+                if (savedState && savedState.character) {
+                    positionData = savedState.character;
+                    console.log('✅ localStorage位置データ取得成功:', positionData);
+                }
+            } catch (parseError) {
+                console.warn('⚠️ localStorage解析エラー:', parseError);
+            }
+        } else {
+            console.log('💡 localStorage未保存 - DOM状態から取得');
+        }
+        
+        // === 2. 現在のDOM状態から取得（詳細セレクター + 座標変換）===
+        console.log('🎯 Step 1.2: 現在のDOM位置データ取得（複数セレクター対応）');
+        const selectors = [
+            '#character-canvas',
+            '#purattokun-canvas', 
+            'canvas[data-spine-character]',
+            '.spine-character',
+            '.demo-character'
+        ];
+        
+        let targetElement = null;
+        for (const selector of selectors) {
+            targetElement = document.querySelector(selector);
+            if (targetElement) {
+                console.log(`✅ 対象要素発見: ${selector}`);
+                break;
+            }
+        }
+        
+        if (targetElement) {
+            const rect = targetElement.getBoundingClientRect();
+            const parentRect = targetElement.parentElement?.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(targetElement);
+            
+            // DOM状態から精密な位置データを構築
+            const domPosition = {
+                // インライン style 優先、なければ computed style
+                left: targetElement.style.left || 
+                      (parentRect ? SpineEditSystem.coords.pxToPercent(rect.left - parentRect.left, parentRect.width) + '%' : computedStyle.left),
+                top: targetElement.style.top || 
+                     (parentRect ? SpineEditSystem.coords.pxToPercent(rect.top - parentRect.top, parentRect.height) + '%' : computedStyle.top),
+                width: targetElement.style.width || 
+                       (parentRect ? SpineEditSystem.coords.pxToPercent(rect.width, parentRect.width) + '%' : computedStyle.width),
+                height: targetElement.style.height || computedStyle.height,
+                transform: targetElement.style.transform || computedStyle.transform
+            };
+            
+            console.log('🎯 DOM位置データ詳細:', {
+                rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+                parentRect: parentRect ? { left: parentRect.left, top: parentRect.top, width: parentRect.width, height: parentRect.height } : null,
+                domPosition
+            });
+            
+            // localStorageデータがない、または不完全な場合はDOM状態を使用
+            if (!positionData || !positionData.left || !positionData.top) {
+                positionData = domPosition;
+                console.log('📋 DOM状態をベースとして採用');
+            } else {
+                console.log('📋 localStorage状態を優先、DOM状態をフォールバック用に保持');
+            }
+        }
+        
+        // === 3. 最終フォールバック（デフォルト値）===
+        if (!positionData || !positionData.left || !positionData.top) {
+            console.warn('⚠️ 全ての位置データソースが無効 - SPINE_BEST_PRACTICES準拠デフォルト値を使用');
+            positionData = {
+                left: '35%',      // Layer 1: CSS基本配置（中心基準）
+                top: '75%',       // Layer 1: CSS基本配置（地面レベル）
+                width: '25%',     // Layer 1: CSS基本配置（レスポンシブ対応）
+                height: 'auto',   // Layer 1: CSS基本配置（縦横比保持）
+                transform: 'translate(-50%, -50%)'  // Layer 2: transform制御（中心点基準）
+            };
+        }
+        
+        // === 4. 位置データの正規化・検証 ===
+        console.log('🔧 Step 1.3: 位置データ正規化・検証');
+        positionData = normalizePositionData(positionData);
+        
+        PackageExportSystem.positionData = positionData;
+        console.log('✅ 位置データ収集完了（確実性向上版）:', positionData);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ 位置データ収集エラー:', error);
+        return false;
+    }
+}
+
+/**
+ * 位置データの正規化・検証
+ */
+function normalizePositionData(data) {
+    const normalized = { ...data };
+    
+    // %値の正規化（px値が混じっている場合の対応）
+    ['left', 'top', 'width', 'height'].forEach(prop => {
+        if (normalized[prop] && typeof normalized[prop] === 'string') {
+            // px値を%値に変換する必要があるかチェック
+            if (normalized[prop].includes('px') && !normalized[prop].includes('%')) {
+                console.log(`🔧 ${prop}: px値検出、%値への変換が必要: ${normalized[prop]}`);
+                // この場合はそのまま保持（embedPositionDataで適切に処理される）
+            }
+        }
+    });
+    
+    // transformの正規化
+    if (!normalized.transform || normalized.transform === 'none') {
+        normalized.transform = 'translate(-50%, -50%)';
+        console.log('🔧 transform正規化: translate(-50%, -50%)を設定');
+    }
+    
+    console.log('🔧 位置データ正規化完了:', normalized);
+    return normalized;
+}
+
+/**
+ * Step 2: HTML固定化処理
+ */
+async function processHTMLTemplate() {
+    console.log('🔧 HTML固定化処理開始');
+    
+    try {
+        // 現在のindex.htmlを取得
+        const response = await fetch('index.html');
+        if (!response.ok) {
+            throw new Error(`HTMLファイル取得失敗: ${response.status}`);
+        }
+        
+        let htmlContent = await response.text();
+        console.log('📋 index.html取得完了');
+        
+        // 編集システム関連のコードを除去
+        htmlContent = removeEditingSystem(htmlContent);
+        
+        // CDN依存をローカル参照に変更
+        htmlContent = localizeSpineWebGL(htmlContent);
+        
+        // 位置データをCSS値として埋め込み
+        htmlContent = embedPositionData(htmlContent);
+        
+        PackageExportSystem.htmlTemplate = htmlContent;
+        console.log('✅ HTML固定化処理完了');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ HTML固定化処理エラー:', error);
+        return false;
+    }
+}
+
+/**
+ * 編集システム関連コードの除去（精密削除）
+ */
+function removeEditingSystem(htmlContent) {
+    console.log('🚮 編集システムコード除去（精密削除）');
+    
+    // 1. URLパラメータ処理（editMode変数定義とデバッグ出力）を完全除去
+    const urlParamsPattern = /\/\/ 🎯 URLパラメータで編集モード起動[\s\S]*?const editMode = urlParams\.get\('edit'\) === 'true';[\s\S]*?editMode: editMode[\s\S]*?\}\);/;
+    htmlContent = htmlContent.replace(urlParamsPattern, '// URLパラメータ処理・editMode変数除去済み');
+    
+    // 2. 編集モード検出とCSS/JS動的読み込み処理を除去し、Spine初期化を直接実行に変更
+    const editModeDetectionPattern = /if \(editMode\) \{[\s\S]*?document\.body\.appendChild\(editJS\);[\s\S]*?\} else \{[\s\S]*?initializeSpineSystem\(\);[\s\S]*?\}/;
+    htmlContent = htmlContent.replace(editModeDetectionPattern, 'initializeSpineSystem(); // パッケージ用：Spine直接初期化');
+    
+    // 3. 編集システムの初期化関数呼び出しのみ除去
+    const editInitPattern = /\/\/ 編集システム初期化[\s\S]*?initializeSpineEditSystem\(\);/;
+    htmlContent = htmlContent.replace(editInitPattern, '// 編集システム初期化除去済み');
+    
+    // 4. 編集用CSS/JSファイル参照のみ除去（spine-positioning-system-explanation.*)
+    const editCSSPattern = /<link[^>]*spine-positioning-system-explanation\.css[^>]*>/g;
+    const editJSPattern = /<script[^>]*spine-positioning-system-explanation\.js[^>]*><\/script>/g;
+    htmlContent = htmlContent.replace(editCSSPattern, '<!-- 編集用CSS除去済み -->');
+    htmlContent = htmlContent.replace(editJSPattern, '<!-- 編集用JS除去済み -->');
+    
+    // ✅ 保持すべき重要なコード（削除してはいけない）
+    console.log('✅ 以下のコードは保持されます：');
+    console.log('  - Spine WebGL読み込み: <script src="...spine-webgl.js">');
+    console.log('  - Spine統合処理: spine-integration-v2.js読み込み');
+    console.log('  - キャラクター初期化: loadCharacter(), setupSpineCharacter()');
+    console.log('  - アニメーション開始: playAnimation()');
+    console.log('  - 基本HTML構造とSpine表示システム');
+    
+    console.log('✅ 編集システムコード精密除去完了');
+    return htmlContent;
+}
+
+/**
+ * CDN依存をローカル参照に変更
+ */
+function localizeSpineWebGL(htmlContent) {
+    console.log('🌐 Spine WebGL CDN→ローカル変更');
+    
+    const cdnPattern = /<script src="https:\/\/unpkg\.com\/@esotericsoftware\/spine-webgl@[\d\.]+\/dist\/iife\/spine-webgl\.js"><\/script>/;
+    const localReference = '<script src="assets/js/libs/spine-webgl.js"></script>';
+    
+    htmlContent = htmlContent.replace(cdnPattern, localReference);
+    
+    console.log('✅ CDN→ローカル変更完了');
+    return htmlContent;
+}
+
+/**
+ * 位置データのCSS埋め込み（確実性向上・2層座標システム対応）
+ */
+function embedPositionData(htmlContent) {
+    console.log('📐 位置データCSS埋め込み - 確実性向上版');
+    
+    const positionData = PackageExportSystem.positionData;
+    if (!positionData) {
+        console.error('❌ 位置データがありません - 埋め込み処理を中断');
+        return htmlContent;
+    }
+    
+    console.log('📋 埋め込み対象位置データ:', positionData);
+    
+    // === 1. 2層座標システム準拠CSS生成 ===
+    const coordinateCSS = generateCoordinateCSS(positionData);
+    console.log('🔧 生成されたCSS:', coordinateCSS);
+    
+    // === 2. 複数パターン対応での確実な埋め込み ===
+    let embedSuccess = false;
+    
+    // パターン1: #character-canvas スタイル定義に埋め込み
+    console.log('🎯 パターン1: #character-canvas スタイル定義検索');
+    const canvasStylePatterns = [
+        /#character-canvas\s*\{[^}]*\}/g,
+        /#purattokun-canvas\s*\{[^}]*\}/g,
+        /\.spine-character\s*\{[^}]*\}/g
+    ];
+    
+    for (const pattern of canvasStylePatterns) {
+        const matches = htmlContent.match(pattern);
+        if (matches && matches.length > 0) {
+            for (const match of matches) {
+                const originalStyle = match;
+                const enhancedStyle = originalStyle.replace(
+                    /\}$/,
+                    `    /* === 保存された位置データ（固定化済み・2層座標システム） === */\n${coordinateCSS}        }`
+                );
+                htmlContent = htmlContent.replace(originalStyle, enhancedStyle);
+                console.log(`✅ パターン1成功: ${pattern.source} - CSS埋め込み完了`);
+                embedSuccess = true;
+            }
+        }
+    }
+    
+    // パターン2: インライン style属性への直接埋め込み（フォールバック）
+    if (!embedSuccess) {
+        console.log('🎯 パターン2: インライン style属性への直接埋め込み');
+        const inlineStylePatterns = [
+            /<canvas[^>]*id=["']character-canvas["'][^>]*style=["']([^"']*)["']/g,
+            /<canvas[^>]*id=["']purattokun-canvas["'][^>]*style=["']([^"']*)["']/g,
+            /<canvas[^>]*class=["'][^"']*spine-character[^"']*["'][^>]*style=["']([^"']*)["']/g
+        ];
+        
+        for (const pattern of inlineStylePatterns) {
+            const matches = [...htmlContent.matchAll(pattern)];
+            for (const match of matches) {
+                const fullMatch = match[0];
+                const currentStyle = match[1];
+                
+                // 既存のstyleに位置データを追加
+                const enhancedInlineStyle = currentStyle + '; ' + coordinateCSS.replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim();
+                const enhancedElement = fullMatch.replace(
+                    /style=["']([^"']*)["']/,
+                    `style="${enhancedInlineStyle}"`
+                );
+                
+                htmlContent = htmlContent.replace(fullMatch, enhancedElement);
+                console.log(`✅ パターン2成功: インライン埋め込み完了`);
+                embedSuccess = true;
+            }
+        }
+    }
+    
+    // パターン3: 新規<style>ブロック追加（最終フォールバック）
+    if (!embedSuccess) {
+        console.log('🎯 パターン3: 新規<style>ブロック追加（最終フォールバック）');
+        const newStyleBlock = `
+    <style>
+        /* === Spine位置データ（パッケージ固定化・自動追加） === */
+        #character-canvas,
+        #purattokun-canvas,
+        .spine-character {
+${coordinateCSS}        }
+    </style>`;
+        
+        // </head>の直前に挿入
+        if (htmlContent.includes('</head>')) {
+            htmlContent = htmlContent.replace('</head>', newStyleBlock + '\n    </head>');
+            console.log('✅ パターン3成功: 新規<style>ブロック追加完了');
+            embedSuccess = true;
+        } else {
+            // <body>の直前に挿入
+            htmlContent = htmlContent.replace('<body', newStyleBlock + '\n    <body');
+            console.log('✅ パターン3代替: <body>前に<style>ブロック追加完了');
+            embedSuccess = true;
+        }
+    }
+    
+    if (embedSuccess) {
+        console.log('✅ 位置データCSS埋め込み完了（確実性向上版）');
+        console.log('📐 埋め込み済みCSS内容:\n', coordinateCSS);
+    } else {
+        console.error('❌ 位置データCSS埋め込み失敗 - 全パターンで失敗');
+    }
+    
+    return htmlContent;
+}
+
+/**
+ * 2層座標システム準拠のCSS生成（SPINE_BEST_PRACTICES準拠）
+ */
+function generateCoordinateCSS(positionData) {
+    console.log('🔧 CSS生成開始 - SPINE_BEST_PRACTICES 2層システム準拠');
+    console.log('📋 入力位置データ:', positionData);
+    
+    let css = '';
+    
+    // === Layer 1: CSS基本配置（静的位置制御）===
+    console.log('🎯 Layer 1: CSS基本配置生成');
+    
+    // left（必須）
+    if (positionData.left) {
+        css += `    left: ${positionData.left};\n`;
+        console.log(`  - left: ${positionData.left}`);
+    } else {
+        css += `    left: 35%; /* デフォルト値 */\n`;
+        console.log('  - left: デフォルト値35%を適用');
+    }
+    
+    // top（必須）
+    if (positionData.top) {
+        css += `    top: ${positionData.top};\n`;
+        console.log(`  - top: ${positionData.top}`);
+    } else {
+        css += `    top: 75%; /* デフォルト値 */\n`;
+        console.log('  - top: デフォルト値75%を適用');
+    }
+    
+    // width（レスポンシブ対応）
+    if (positionData.width) {
+        css += `    width: ${positionData.width};\n`;
+        console.log(`  - width: ${positionData.width}`);
+    } else {
+        css += `    width: 25%; /* デフォルト値 */\n`;
+        console.log('  - width: デフォルト値25%を適用');
+    }
+    
+    // height（縦横比保持の為、通常はautoを推奨）
+    if (positionData.height && positionData.height !== 'auto' && positionData.height !== '0px') {
+        css += `    height: ${positionData.height};\n`;
+        console.log(`  - height: ${positionData.height}`);
+    } else {
+        css += `    height: auto; /* 縦横比保持 */\n`;
+        console.log('  - height: 縦横比保持のためautoを適用');
+    }
+    
+    // === Layer 2: transform制御（動的効果・中心点基準）===
+    console.log('🎯 Layer 2: transform制御生成');
+    
+    if (positionData.transform && positionData.transform !== 'none') {
+        css += `    transform: ${positionData.transform};\n`;
+        console.log(`  - transform: ${positionData.transform}`);
+    } else {
+        css += `    transform: translate(-50%, -50%); /* 中心点基準配置 */\n`;
+        console.log('  - transform: デフォルト中心点基準を適用');
+    }
+    
+    // === Layer 2補完: 位置制御に必要な基本スタイル ===
+    css += `    position: absolute; /* Layer 1基本要件 */\n`;
+    css += `    z-index: 1000; /* 表示順序保証 */\n`;
+    
+    console.log('✅ CSS生成完了（2層システム準拠）');
+    console.log('📐 生成されたCSS:\n' + css);
+    
+    return css;
+}
+
+/**
+ * Step 3: 依存ファイル収集
+ */
+async function collectDependencyFiles() {
+    console.log('📁 依存ファイル収集開始');
+    
+    try {
+        PackageExportSystem.collectedFiles.clear();
+        
+        // Spineファイル収集
+        console.log('🎮 Spineファイル収集');
+        for (const filePath of PackageExportSystem.config.spineFiles) {
+            if (!await collectFile(filePath)) {
+                console.warn(`⚠️ Spineファイル収集失敗: ${filePath}`);
+            }
+        }
+        
+        // 画像ファイル収集
+        console.log('🖼️ 画像ファイル収集');
+        for (const filePath of PackageExportSystem.config.imageFiles) {
+            if (!await collectFile(filePath)) {
+                console.warn(`⚠️ 画像ファイル収集失敗: ${filePath}`);
+            }
+        }
+        
+        // 統合ファイル収集
+        console.log('⚙️ 統合ファイル収集');
+        for (const filePath of PackageExportSystem.config.integrationFiles) {
+            if (!await collectFile(filePath)) {
+                console.warn(`⚠️ 統合ファイル収集失敗: ${filePath}`);
+            }
+        }
+        
+        console.log(`✅ 依存ファイル収集完了: ${PackageExportSystem.collectedFiles.size}ファイル`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ 依存ファイル収集エラー:', error);
+        return false;
+    }
+}
+
+/**
+ * 個別ファイル収集
+ */
+async function collectFile(filePath) {
+    try {
+        const response = await fetch(filePath);
+        if (!response.ok) {
+            console.warn(`⚠️ ファイル取得失敗: ${filePath} (${response.status})`);
+            return false;
+        }
+        
+        let content;
+        const fileName = filePath.split('/').pop();
+        
+        // ファイル形式に応じた処理
+        if (filePath.endsWith('.json') || filePath.endsWith('.js')) {
+            content = await response.text();
+        } else if (filePath.endsWith('.atlas')) {
+            content = await response.text();
+        } else {
+            content = await response.blob();
+        }
+        
+        PackageExportSystem.collectedFiles.set(fileName, {
+            content: content,
+            originalPath: filePath,
+            type: getFileType(filePath)
+        });
+        
+        console.log(`📎 ファイル収集完了: ${fileName}`);
+        return true;
+        
+    } catch (error) {
+        console.error(`❌ ファイル収集エラー: ${filePath}`, error);
+        return false;
+    }
+}
+
+/**
+ * ファイルタイプ判定
+ */
+function getFileType(filePath) {
+    const extension = filePath.split('.').pop().toLowerCase();
+    const typeMap = {
+        'json': 'text',
+        'js': 'text', 
+        'atlas': 'text',
+        'png': 'binary',
+        'jpg': 'binary',
+        'jpeg': 'binary'
+    };
+    return typeMap[extension] || 'binary';
+}
+
+/**
+ * ファイルの配置先パス取得（適切なディレクトリ構造）
+ */
+function getTargetPath(fileName, originalPath) {
+    // spine-webgl.jsは特別処理（ルート配置）
+    if (fileName === 'spine-webgl.js') {
+        return 'assets/js/libs/spine-webgl.js';
+    }
+    
+    // 画像ファイル（assets/images/）
+    const imageFiles = ['クラウドパートナーTOP.png', 'purattokunn.png'];
+    if (imageFiles.includes(fileName)) {
+        return `assets/images/${fileName}`;
+    }
+    
+    // Spineキャラクターファイル（assets/spine/characters/purattokun/）
+    const spineFiles = ['purattokun.json', 'purattokun.atlas', 'purattokun.png'];
+    if (spineFiles.includes(fileName)) {
+        return `assets/spine/characters/purattokun/${fileName}`;
+    }
+    
+    // Spine統合ファイル（assets/spine/）
+    const integrationFiles = ['spine-integration-v2.js', 'spine-character-manager.js'];
+    if (integrationFiles.includes(fileName)) {
+        return `assets/spine/${fileName}`;
+    }
+    
+    // その他のファイルはルート配置
+    return fileName;
+}
+
+/**
+ * Step 4: CDN依存解決
+ */
+async function resolveCDNDependencies() {
+    console.log('🌐 CDN依存解決開始');
+    
+    try {
+        // spine-webgl.jsをダウンロード
+        console.log('📥 spine-webgl.js ダウンロード');
+        const response = await fetch(PackageExportSystem.config.spineWebGLCDN);
+        if (!response.ok) {
+            throw new Error(`spine-webgl.js取得失敗: ${response.status}`);
+        }
+        
+        const spineWebGLContent = await response.text();
+        PackageExportSystem.collectedFiles.set('spine-webgl.js', {
+            content: spineWebGLContent,
+            originalPath: PackageExportSystem.config.spineWebGLCDN,
+            type: 'text'
+        });
+        
+        console.log('✅ spine-webgl.js ダウンロード完了');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ CDN依存解決エラー:', error);
+        return false;
+    }
+}
+
+/**
+ * Step 5: ZIPパッケージ生成
+ */
+async function generateZIPPackage() {
+    console.log('🗜️ ZIPパッケージ生成開始');
+    
+    try {
+        // JSZipが利用可能か確認
+        if (typeof JSZip === 'undefined') {
+            // JSZipを動的読み込み
+            await loadJSZip();
+        }
+        
+        const zip = new JSZip();
+        
+        // HTMLテンプレート追加
+        zip.file('index.html', PackageExportSystem.htmlTemplate);
+        console.log('📄 index.html追加');
+        
+        // 適切なディレクトリ構造でファイルを配置
+        for (const [fileName, fileData] of PackageExportSystem.collectedFiles) {
+            const targetPath = getTargetPath(fileName, fileData.originalPath);
+            
+            if (fileData.type === 'text') {
+                zip.file(targetPath, fileData.content);
+            } else {
+                zip.file(targetPath, fileData.content);
+            }
+            console.log(`📎 ${fileName} → ${targetPath} 追加`);
+        }
+        
+        // ZIPファイル生成
+        console.log('🗜️ ZIP圧縮中...');
+        const zipBlob = await zip.generateAsync({type: 'blob'});
+        
+        // ダウンロード実行
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(zipBlob);
+        downloadLink.download = `spine-package-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.zip`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        console.log('✅ ZIPパッケージ生成・ダウンロード完了');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ ZIPパッケージ生成エラー:', error);
+        return false;
+    }
+}
+
+/**
+ * JSZipライブラリ動的読み込み
+ */
+function loadJSZip() {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js';
+        script.onload = () => {
+            console.log('📚 JSZip読み込み完了');
+            resolve();
+        };
+        script.onerror = () => {
+            console.error('❌ JSZip読み込み失敗');
+            reject(new Error('JSZip読み込み失敗'));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+// パッケージ出力機能は既にcreateEditingUI関数とsetupEditingUIEvents関数に統合済み
 
 console.log('🎯 Spine編集システム v3.0 - シンプル版読み込み完了');
