@@ -504,6 +504,19 @@ class SpineCharacterManager {
                 console.log('⚠️ DEBUG: Placeholder not found for removal');
             }
 
+            // SkeletonBounds システム初期化
+            if (window.spineSkeletonBounds) {
+                const boundsInitialized = window.spineSkeletonBounds.initializeCharacterBounds(name, character);
+                if (boundsInitialized) {
+                    log(LogLevel.INFO, 'bounds', `SkeletonBounds initialized for ${name}`);
+                    
+                    // クリックイベント設定
+                    this.setupBoundsClickHandler(name, canvas);
+                } else {
+                    log(LogLevel.WARN, 'bounds', `Failed to initialize SkeletonBounds for ${name}`);
+                }
+            }
+
             // アニメーションループ開始
             this.startRenderLoop(name);
 
@@ -652,6 +665,11 @@ class SpineCharacterManager {
                 animationState.update(0.016); // 60fps
                 animationState.apply(skeleton);
                 skeleton.updateWorldTransform();
+                
+                // SkeletonBounds更新
+                if (window.spineSkeletonBounds) {
+                    window.spineSkeletonBounds.updateBounds(name);
+                }
 
                 // 透明背景で自然な表示
                 gl.clearColor(0, 0, 0, 0);
@@ -735,6 +753,53 @@ class SpineCharacterManager {
             // Spine WebGL character position setting
             // Implementation pending
         }
+    }
+
+    /**
+     * SkeletonBounds用クリックハンドラー設定
+     * @param {string} name - キャラクター名
+     * @param {HTMLCanvasElement} canvas - Canvas要素
+     */
+    setupBoundsClickHandler(name, canvas) {
+        const clickHandler = (event) => {
+            event.preventDefault();
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX;
+            const y = event.clientY;
+            
+            log(LogLevel.DEBUG, 'bounds', `Click event on ${name} at (${x}, ${y})`);
+            
+            // SkeletonBounds判定
+            if (window.spineSkeletonBounds) {
+                const hitResult = window.spineSkeletonBounds.checkBoundsHit(name, x, y);
+                
+                if (hitResult) {
+                    log(LogLevel.INFO, 'bounds', `Bounds hit detected for ${name}:`, hitResult);
+                    
+                    // 部位別アニメーション実行
+                    window.spineSkeletonBounds.executePartAnimation(name, hitResult);
+                    
+                    // デバッグ表示更新
+                    if (window.spineSkeletonBounds.debugMode) {
+                        window.spineSkeletonBounds.debugDrawBounds(name);
+                    }
+                } else {
+                    log(LogLevel.DEBUG, 'bounds', `No bounds hit for ${name}`);
+                    
+                    // デフォルトクリック処理（既存の動作を維持）
+                    if (window.spineManager) {
+                        window.spineManager.handleCharacterClick(name);
+                    }
+                }
+            }
+        };
+        
+        // Canvas要素にクリックイベントを設定
+        canvas.addEventListener('click', clickHandler);
+        canvas.style.pointerEvents = 'auto'; // クリック有効化
+        
+        log(LogLevel.INFO, 'bounds', `Click handler setup completed for ${name}`);
     }
 
     /**

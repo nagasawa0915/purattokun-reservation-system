@@ -490,3 +490,258 @@
         padding: 1px 3px;
     }
 }
+
+/* ========== ドラッグ可能タイトルバー ========== */
+
+.spine-draggable-title-bar {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10001;
+    user-select: none;
+    overflow: hidden;
+}
+
+.title-bar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+    padding: 0 8px;
+    color: white;
+}
+
+.title-bar-drag-handle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: move;
+    flex: 1;
+    height: 100%;
+    padding: 0 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.title-bar-drag-handle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar-drag-handle.dragging,
+.spine-draggable-title-bar.dragging .title-bar-drag-handle {
+    background: rgba(255, 255, 255, 0.2);
+    cursor: grabbing;
+}
+
+.drag-icon {
+    font-size: 14px;
+    opacity: 0.8;
+    line-height: 1;
+}
+
+.title-text {
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.title-bar-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.title-bar-btn {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.title-bar-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.minimize-btn:hover {
+    background: rgba(255, 193, 7, 0.8);
+}
+
+.close-btn:hover {
+    background: rgba(244, 67, 54, 0.8);
+}
+
+.btn-icon {
+    line-height: 1;
+    display: block;
+}
+
+/* 編集UIコンテナ - ドラッグ可能にするための基本設定 */
+.editing-ui {
+    position: fixed;
+    z-index: 10000;
+    /* 初期位置は右上に設定 */
+    top: 50px;
+    right: 20px;
+    min-width: 280px;
+    max-width: 350px;
+    background: white;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 最小化状態 */
+.editing-ui.minimized {
+    height: 32px !important;
+    padding: 0 !important;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.editing-ui.minimized > *:not(.spine-draggable-title-bar) {
+    display: none !important;
+}
+
+.minimized .spine-draggable-title-bar {
+    border-radius: 8px;
+    position: relative !important;
+    top: 0 !important;
+}
+
+/* ドラッグ中のスタイル */
+.spine-draggable-title-bar.dragging {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    z-index: 10002;
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+    .spine-draggable-title-bar {
+        height: 28px;
+        top: -35px;
+    }
+    
+    .title-text {
+        font-size: 11px;
+    }
+    
+    .drag-icon {
+        font-size: 12px;
+    }
+    
+    .title-bar-btn {
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+    }
+    
+    .title-bar-content {
+        padding: 0 6px;
+    }
+    
+    .title-bar-controls {
+        gap: 3px;
+    }
+}
+
+/* ========== レイヤー編集パネル用スタイル ========== */
+
+#layer-management-panel {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.character-item {
+    transition: all 0.2s ease;
+}
+
+.character-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.character-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.drag-handle:hover {
+    color: #667eea !important;
+    cursor: grab;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.layer-btn:hover {
+    transform: scale(1.1);
+}
+
+.front-btn:hover {
+    background: #66bb6a !important;
+}
+
+.back-btn:hover {
+    background: #ef5350 !important;
+}
+
+.character-selected {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        box-shadow: 0 0 10px rgba(255, 107, 107, 0.6);
+    }
+    50% { 
+        box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+    }
+}
+
+/* レスポンシブ対応 - レイヤー管理パネル */
+@media (max-width: 768px) {
+    #layer-management-panel {
+        width: 250px;
+        right: 5px;
+        top: 100px;
+        font-size: 11px;
+    }
+    
+    .character-item {
+        padding: 6px;
+        gap: 6px;
+    }
+    
+    .drag-handle {
+        font-size: 14px !important;
+    }
+    
+    .character-status {
+        font-size: 14px !important;
+    }
+    
+    .layer-btn {
+        width: 18px !important;
+        height: 18px !important;
+        font-size: 9px !important;
+    }
+    
+    .z-index-display {
+        font-size: 9px !important;
+    }
+}

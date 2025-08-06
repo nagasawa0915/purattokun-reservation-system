@@ -27,6 +27,7 @@ const DEBUG_CONFIG = {
         performance: true,      // パフォーマンス監視
         position: true,         // 位置計算
         cache: true,           // キャッシュ処理
+        bounds: true,          // SkeletonBounds境界ボックス
         debug_ui: false        // デバッグUI（本番では無効）
     }
 };
@@ -222,6 +223,32 @@ class SpineIntegrationManager {
     }
 
     /**
+     * SkeletonBounds デバッグモード切り替え
+     */
+    toggleBoundsDebug() {
+        if (window.spineSkeletonBounds) {
+            const currentMode = window.spineSkeletonBounds.debugMode;
+            window.spineSkeletonBounds.setDebugMode(!currentMode);
+            log(LogLevel.INFO, 'bounds', `SkeletonBounds debug mode: ${!currentMode ? 'enabled' : 'disabled'}`);
+            return !currentMode;
+        } else {
+            log(LogLevel.WARN, 'bounds', 'SkeletonBounds not available');
+            return false;
+        }
+    }
+
+    /**
+     * 指定キャラクターの境界ボックス情報を表示
+     */
+    showBoundsInfo(characterName) {
+        if (window.spineSkeletonBounds) {
+            window.spineSkeletonBounds.debugInfo(characterName);
+        } else {
+            console.log('❌ SkeletonBounds not available');
+        }
+    }
+
+    /**
      * パフォーマンス情報取得
      */
     getPerformanceInfo() {
@@ -282,6 +309,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (window.spineManager.debugWindow) {
                 window.spineDebug = window.spineManager.debugWindow;
             }
+            
+            // SkeletonBounds グローバル関数設定
+            window.toggleBoundsDebug = () => window.spineManager.toggleBoundsDebug();
+            window.showBoundsInfo = (name) => window.spineManager.showBoundsInfo(name);
+            window.updateAllBounds = () => {
+                if (window.spineSkeletonBounds) {
+                    window.spineSkeletonBounds.updateAllBounds();
+                    log(LogLevel.INFO, 'bounds', 'All bounds updated');
+                }
+            };
 
             // パフォーマンス情報をコンソールに出力
             const perfInfo = window.spineManager.getPerformanceInfo();

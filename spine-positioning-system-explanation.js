@@ -311,6 +311,16 @@ function handleKeyDown(event) {
 // ========== モジュール管理システム ========== //
 
 const ModuleManager = {
+    // モジュール存在確認
+    hasModule: function(name) {
+        return SpineEditSystem.modules.has(name);
+    },
+    
+    // モジュール取得
+    getModule: function(name) {
+        return SpineEditSystem.modules.get(name);
+    },
+    
     // モジュール追加（動的）
     addModule: function(name, moduleInstance) {
         if (SpineEditSystem.modules.has(name)) {
@@ -433,9 +443,10 @@ function createEditingUI() {
     // 編集中のUIパネル作成
     const editPanel = document.createElement('div');
     editPanel.id = 'spine-edit-panel-v3';
+    editPanel.className = 'editing-ui'; // タイトルバー用クラス追加
     editPanel.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: 60px;
         right: 20px;
         background: rgba(255, 255, 255, 0.95);
         border: 2px solid #007acc;
@@ -481,6 +492,21 @@ function createEditingUI() {
             margin-bottom: 10px;
         ">
             📦 パッケージ出力
+        </button>
+        
+        <button id="layer-edit-btn" style="
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        ">
+            🎭 レイヤー編集
         </button>
         
         <div style="display: flex; gap: 8px; margin-bottom: 10px;">
@@ -534,6 +560,39 @@ function createEditingUI() {
     // 座標表示開始
     startCoordinateDisplay();
     
+    // ドラッグ可能タイトルバーモジュール追加
+    setTimeout(() => {
+        const editingUI = document.querySelector('.editing-ui');
+        if (editingUI && typeof createDraggableTitleBarModule === 'function') {
+            console.log('🎨 ドラッグ可能タイトルバー追加中...');
+            try {
+                // グローバルスコープでModuleManagerを確認
+                if (window.ModuleManager || (typeof ModuleManager !== 'undefined' && ModuleManager)) {
+                    const manager = window.ModuleManager || ModuleManager;
+                    manager.addModule('titleBar', createDraggableTitleBarModule());
+                    const titleBarModule = manager.getModule('titleBar');
+                    if (titleBarModule) {
+                        titleBarModule.initialize(editingUI);
+                        console.log('✅ ドラッグ可能タイトルバー初期化完了');
+                    }
+                } else {
+                    console.warn('⚠️ ModuleManager が見つかりません');
+                    // 代替手段：直接モジュールを作成・初期化
+                    console.log('🔄 代替手段：直接初期化を実行');
+                    const titleBarModule = createDraggableTitleBarModule();
+                    titleBarModule.initialize(editingUI);
+                    console.log('✅ 代替手段による初期化完了');
+                }
+            } catch (error) {
+                console.error('❌ ドラッグ可能タイトルバー初期化エラー:', error);
+                console.log('🔄 詳細なエラー情報:');
+                console.log('- ModuleManager存在:', typeof ModuleManager !== 'undefined');
+                console.log('- window.ModuleManager存在:', typeof window.ModuleManager !== 'undefined');
+                console.log('- createDraggableTitleBarModule存在:', typeof createDraggableTitleBarModule !== 'undefined');
+            }
+        }
+    }, 100); // UI構築完了を待つ
+    
     console.log('✅ 編集中UI作成完了');
 }
 
@@ -566,6 +625,33 @@ function setupEditingUIEvents() {
                     packageBtn.style.background = '#6f42c1';
                     packageBtn.innerHTML = '📦 パッケージ出力';
                 }
+            }
+        });
+    }
+    
+    // レイヤー編集ボタン
+    const layerEditBtn = document.getElementById('layer-edit-btn');
+    if (layerEditBtn) {
+        layerEditBtn.addEventListener('click', () => {
+            // 既にレイヤー編集モジュールが起動している場合
+            if (ModuleManager.hasModule('layerEdit')) {
+                // 既存のモジュールを削除
+                ModuleManager.removeModule('layerEdit');
+                layerEditBtn.innerHTML = '🎭 レイヤー編集';
+                layerEditBtn.style.background = '#667eea';
+                return;
+            }
+            
+            // レイヤー編集モジュールを起動
+            const layerEditModule = createLayerEditModule();
+            const success = ModuleManager.addModule('layerEdit', layerEditModule);
+            
+            if (success) {
+                console.log('🎭 レイヤー編集システム起動');
+                layerEditBtn.innerHTML = '🎭 レイヤー編集 (起動中)';
+                layerEditBtn.style.background = '#5a67d8';
+            } else {
+                alert('レイヤー編集システムの起動に失敗しました');
             }
         });
     }
@@ -1357,6 +1443,9 @@ function startEditMode() {
         return false;
     }
     
+    // バウンディングボックス外クリック選択解除ハンドラーを追加
+    setupGlobalClickHandler();
+    
     SpineEditSystem.controlLayer.isEditMode = true;
     
     // 🔧 座標系を編集モードに切り替え（競合回避の核心）
@@ -1370,6 +1459,16 @@ function startEditMode() {
     // キャラクタークリック→バウンディングボックス機能設定
     setupCharacterClickForBoundingBox();
     
+    // タイトルバーモジュール追加
+    const editingUI = document.querySelector('.editing-ui');
+    if (editingUI) {
+        ModuleManager.addModule('titleBar', createDraggableTitleBarModule());
+        const titleBarModule = ModuleManager.getModule('titleBar');
+        if (titleBarModule) {
+            titleBarModule.initialize(editingUI);
+        }
+    }
+    
     console.log('✅ 編集モード開始完了（座標系スワップ済み）');
     return true;
 }
@@ -1378,6 +1477,9 @@ function stopEditMode() {
     console.log('🔚 編集モード終了');
     
     SpineEditSystem.controlLayer.isEditMode = false;
+    
+    // グローバルクリックハンドラーを削除
+    cleanupGlobalClickHandler();
     
     // 🔧 座標系を元に戻す（編集結果を保存）
     const targetElement = SpineEditSystem.baseLayer.targetElement;
@@ -1559,8 +1661,8 @@ function initializeSpineEditSystem() {
     });
     
     if (editMode) {
-        console.log('✅ 編集モード検出 - UI作成開始');
-        // 編集開始UIを表示
+        console.log('✅ 編集モード検出 - 編集開始UI表示');
+        // 編集開始UIを表示（自動開始はしない）
         createEditStartUI();
     } else {
         console.log('ℹ️ 編集モードではありません');
@@ -1573,6 +1675,925 @@ function initializeSpineEditSystem() {
     
     console.log('✅ Spine編集システム v3.0 初期化完了');
 }
+
+// ========== ドラッグ可能タイトルバーモジュール ========== //
+
+function createDraggableTitleBarModule() {
+    console.log('📋 ドラッグ可能タイトルバーモジュール作成開始');
+    
+    const module = {
+        titleBar: null,
+        isActive: false,
+        dragState: {
+            isDragging: false,
+            startPos: { x: 0, y: 0 },
+            startWindowPos: { x: 0, y: 0 }
+        },
+        
+        // モジュール初期化
+        initialize: function(parentContainer) {
+            console.log('🔧 ドラッグ可能タイトルバー初期化');
+            
+            // 親コンテナの位置設定を確保
+            this.ensureContainerPositioning(parentContainer);
+            
+            this.createTitleBar(parentContainer);
+            this.setupEventListeners();
+            this.isActive = true;
+            
+            console.log('✅ ドラッグ可能タイトルバー初期化完了');
+        },
+        
+        // モジュールクリーンアップ
+        cleanup: function() {
+            console.log('🧹 ドラッグ可能タイトルバークリーンアップ');
+            this.removeTitleBar();
+            this.removeEventListeners();
+            this.isActive = false;
+        },
+        
+        // 親コンテナの位置設定確保
+        ensureContainerPositioning: function(parentContainer) {
+            // 既にpositionが設定されていない場合のみ設定
+            const computedStyle = window.getComputedStyle(parentContainer);
+            if (computedStyle.position === 'static') {
+                parentContainer.style.position = 'fixed';
+                
+                // 初期位置の設定（右上）
+                if (!parentContainer.style.top) {
+                    parentContainer.style.top = '50px';
+                }
+                if (!parentContainer.style.right) {
+                    parentContainer.style.right = '20px';
+                }
+                
+                console.log('🎯 親コンテナの位置設定を確保:', {
+                    position: parentContainer.style.position,
+                    top: parentContainer.style.top,
+                    right: parentContainer.style.right
+                });
+            }
+        },
+
+        // タイトルバー作成
+        createTitleBar: function(parentContainer) {
+            this.titleBar = document.createElement('div');
+            this.titleBar.id = 'spine-edit-title-bar';
+            this.titleBar.className = 'spine-draggable-title-bar';
+            
+            // タイトルバー内容構築
+            this.titleBar.innerHTML = `
+                <div class="title-bar-content">
+                    <div class="title-bar-drag-handle">
+                        <span class="drag-icon">≡</span>
+                        <span class="title-text">編集モード</span>
+                    </div>
+                    <div class="title-bar-controls">
+                        <button class="title-bar-btn minimize-btn" type="button" title="最小化">
+                            <span class="btn-icon">−</span>
+                        </button>
+                        <button class="title-bar-btn close-btn" type="button" title="閉じる">
+                            <span class="btn-icon">×</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // 親コンテナに追加（最上位）
+            parentContainer.appendChild(this.titleBar);
+            
+            console.log('📋 タイトルバー作成完了');
+        },
+        
+        // イベントリスナー設定
+        setupEventListeners: function() {
+            if (!this.titleBar) return;
+            
+            const dragHandle = this.titleBar.querySelector('.title-bar-drag-handle');
+            const minimizeBtn = this.titleBar.querySelector('.minimize-btn');
+            const closeBtn = this.titleBar.querySelector('.close-btn');
+            
+            // ドラッグ開始（マウス・タッチ両対応）
+            dragHandle.addEventListener('mousedown', this.handleDragStart.bind(this));
+            dragHandle.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+            
+            // ボタンイベント
+            minimizeBtn.addEventListener('click', this.handleMinimize.bind(this));
+            closeBtn.addEventListener('click', this.handleClose.bind(this));
+            
+            // グローバルイベントハンドラー
+            this.mouseMoveHandler = this.handleDragMove.bind(this);
+            this.mouseUpHandler = this.handleDragEnd.bind(this);
+            this.touchMoveHandler = this.handleTouchMove.bind(this);
+            this.touchEndHandler = this.handleTouchEnd.bind(this);
+            
+            console.log('🎯 タイトルバーイベントリスナー設定完了');
+        },
+        
+        // イベントリスナー削除
+        removeEventListeners: function() {
+            // グローバルイベント削除
+            document.removeEventListener('mousemove', this.mouseMoveHandler);
+            document.removeEventListener('mouseup', this.mouseUpHandler);
+            document.removeEventListener('touchmove', this.touchMoveHandler);
+            document.removeEventListener('touchend', this.touchEndHandler);
+            
+            console.log('🧹 タイトルバーイベントリスナー削除完了');
+        },
+        
+        // ドラッグ開始処理
+        handleDragStart: function(event) {
+            console.log('🎯 タイトルバードラッグ開始');
+            
+            this.dragState.isDragging = true;
+            this.dragState.startPos = {
+                x: event.clientX,
+                y: event.clientY
+            };
+            
+            // 現在のウィンドウ位置を記録
+            const parentContainer = this.titleBar.parentElement;
+            const rect = parentContainer.getBoundingClientRect();
+            this.dragState.startWindowPos = {
+                x: rect.left,
+                y: rect.top
+            };
+            
+            // グローバルイベント追加（マウス・タッチ両方）
+            document.addEventListener('mousemove', this.mouseMoveHandler);
+            document.addEventListener('mouseup', this.mouseUpHandler);
+            document.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
+            document.addEventListener('touchend', this.touchEndHandler);
+            
+            // ドラッグ中スタイル
+            this.titleBar.classList.add('dragging');
+            
+            event.preventDefault();
+        },
+        
+        // ドラッグ移動処理
+        handleDragMove: function(event) {
+            if (!this.dragState.isDragging) return;
+            
+            const deltaX = event.clientX - this.dragState.startPos.x;
+            const deltaY = event.clientY - this.dragState.startPos.y;
+            
+            const parentContainer = this.titleBar.parentElement;
+            const newX = this.dragState.startWindowPos.x + deltaX;
+            const newY = this.dragState.startWindowPos.y + deltaY;
+            
+            // 画面外制限
+            const screenBounds = this.getScreenBounds();
+            const containerRect = parentContainer.getBoundingClientRect();
+            
+            const limitedX = Math.max(
+                screenBounds.minX,
+                Math.min(newX, screenBounds.maxX - containerRect.width)
+            );
+            const limitedY = Math.max(
+                screenBounds.minY,
+                Math.min(newY, screenBounds.maxY - containerRect.height)
+            );
+            
+            // ウィンドウ位置更新
+            parentContainer.style.left = `${limitedX}px`;
+            parentContainer.style.top = `${limitedY}px`;
+            
+            event.preventDefault();
+        },
+        
+        // ドラッグ終了処理
+        handleDragEnd: function(event) {
+            if (!this.dragState.isDragging) return;
+            
+            console.log('🏁 タイトルバードラッグ終了');
+            
+            this.dragState.isDragging = false;
+            
+            // イベント削除（マウス・タッチ両方）
+            document.removeEventListener('mousemove', this.mouseMoveHandler);
+            document.removeEventListener('mouseup', this.mouseUpHandler);
+            document.removeEventListener('touchmove', this.touchMoveHandler);
+            document.removeEventListener('touchend', this.touchEndHandler);
+            
+            // ドラッグ中スタイル解除
+            this.titleBar.classList.remove('dragging');
+            
+            event.preventDefault();
+        },
+        
+        // 画面境界取得
+        getScreenBounds: function() {
+            const margin = 20; // 画面端からのマージン
+            
+            return {
+                minX: margin,
+                minY: margin,
+                maxX: window.innerWidth - margin,
+                maxY: window.innerHeight - margin
+            };
+        },
+        
+        // 最小化処理
+        handleMinimize: function(event) {
+            console.log('📉 タイトルバー最小化');
+            
+            const parentContainer = this.titleBar.parentElement;
+            parentContainer.classList.toggle('minimized');
+            
+            const minimizeBtn = this.titleBar.querySelector('.minimize-btn .btn-icon');
+            if (parentContainer.classList.contains('minimized')) {
+                minimizeBtn.textContent = '+';
+                minimizeBtn.parentElement.title = '最大化';
+            } else {
+                minimizeBtn.textContent = '−';
+                minimizeBtn.parentElement.title = '最小化';
+            }
+            
+            event.preventDefault();
+        },
+        
+        // 閉じる処理
+        handleClose: function(event) {
+            console.log('❌ タイトルバー閉じる');
+            
+            // 編集モード終了
+            if (typeof stopEditMode === 'function') {
+                stopEditMode();
+            } else if (typeof endEditMode === 'function') {
+                endEditMode();
+            }
+            
+            event.preventDefault();
+        },
+        
+        // タッチ開始処理
+        handleTouchStart: function(event) {
+            if (event.touches.length !== 1) return;
+            
+            const touch = event.touches[0];
+            this.handleDragStart({
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                preventDefault: () => event.preventDefault()
+            });
+        },
+        
+        // タッチ移動処理
+        handleTouchMove: function(event) {
+            if (event.touches.length !== 1) return;
+            
+            const touch = event.touches[0];
+            this.handleDragMove({
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                preventDefault: () => event.preventDefault()
+            });
+        },
+        
+        // タッチ終了処理
+        handleTouchEnd: function(event) {
+            this.handleDragEnd({
+                preventDefault: () => event.preventDefault()
+            });
+        },
+
+        // タイトルバー削除
+        removeTitleBar: function() {
+            if (this.titleBar && this.titleBar.parentElement) {
+                this.titleBar.parentElement.removeChild(this.titleBar);
+                this.titleBar = null;
+                console.log('🗑️ タイトルバー削除完了');
+            }
+        }
+    };
+    
+    return module;
+}
+
+// ========== レイヤー編集モジュール ========== //
+function createLayerEditModule() {
+    console.log('🎭 レイヤー編集モジュール作成開始');
+    
+    const module = {
+        characters: [],
+        activeCharacterIndex: 0,
+        layerPanel: null,
+        draggedIndex: null,
+        
+        // モジュール初期化
+        initialize: function(targetElement) {
+            console.log('🎭 レイヤー編集モジュール初期化開始');
+            
+            // キャラクター検出
+            this.detectCharacters();
+            
+            // 初期レイヤー設定
+            this.updateCharacterLayers();
+            
+            // UI作成
+            this.createLayerUI();
+            
+            console.log('✅ レイヤー編集モジュール初期化完了');
+            return true;
+        },
+        
+        // モジュール終了処理
+        cleanup: function() {
+            console.log('🗑️ レイヤー編集モジュール終了処理');
+            
+            // キャラクター選択状態をリセット
+            this.characters.forEach(char => {
+                if (char.element) {
+                    char.element.classList.remove('character-selected');
+                    this.removeCharacterHighlight(char.element);
+                }
+            });
+            
+            // UI削除
+            if (this.layerPanel && this.layerPanel.parentNode) {
+                this.layerPanel.parentNode.removeChild(this.layerPanel);
+                this.layerPanel = null;
+            }
+            
+            // データリセット
+            this.characters = [];
+            this.activeCharacterIndex = 0;
+            this.draggedIndex = null;
+            
+            console.log('✅ レイヤー編集モジュール終了処理完了');
+        },
+        
+        // キャラクター検出システム
+        detectCharacters: function() {
+            console.log('🔍 キャラクター検出開始');
+            
+            const selectors = [
+                '#purattokun-canvas',
+                '#purattokun-fallback', 
+                'canvas[data-spine-character]',
+                '.spine-character',
+                '[data-character-name]'
+            ];
+            
+            this.characters = [];
+            
+            selectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    // より厳密な重複チェック
+                    if (!this.isElementAlreadyRegistered(element)) {
+                        const characterName = this.getCharacterName(element);
+                        
+                        this.characters.push({
+                            element: element,
+                            id: element.id || this.generateCharacterId(),
+                            name: characterName,
+                            selector: selector,
+                            scale: 1.0,
+                            isActive: false
+                        });
+                        
+                        console.log(`  ➕ 新規登録: ${characterName} (${selector})`);
+                    } else {
+                        console.log(`  ⚠️ 重複回避: ${element.id || element.tagName} (${selector})`);
+                    }
+                });
+            });
+            
+            console.log(`🎯 検出されたキャラクター数: ${this.characters.length}`);
+            this.characters.forEach((char, index) => {
+                console.log(`  ${index + 1}. ${char.name} (${char.selector})`);
+            });
+            
+            return this.characters.length > 0;
+        },
+        
+        // 要素の重複登録チェック
+        isElementAlreadyRegistered: function(element) {
+            // 同じ要素のポインタが既に存在するかチェック
+            const alreadyExists = this.characters.some(char => char.element === element);
+            
+            if (alreadyExists) {
+                return true;
+            }
+            
+            // フォールバック画像とCanvas要素の重複を特別処理
+            if (element.id === 'purattokun-fallback') {
+                const canvasExists = this.characters.some(char => char.element.id === 'purattokun-canvas');
+                if (canvasExists) {
+                    console.log('  🔄 Canvas優先: フォールバック画像をスキップ');
+                    return true;
+                }
+            }
+            
+            if (element.id === 'purattokun-canvas') {
+                // Canvas要素が登録される場合、フォールバック画像を削除
+                const fallbackIndex = this.characters.findIndex(char => char.element.id === 'purattokun-fallback');
+                if (fallbackIndex !== -1) {
+                    console.log('  🔄 Canvas発見: フォールバック画像を削除');
+                    this.characters.splice(fallbackIndex, 1);
+                }
+            }
+            
+            return false;
+        },
+
+        // キャラクターID生成
+        generateCharacterId: function() {
+            return 'char-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        },
+        
+        // キャラクター名取得
+        getCharacterName: function(element) {
+            // data-character-name属性から取得
+            if (element.dataset.characterName) {
+                return element.dataset.characterName;
+            }
+            
+            // id属性から推測
+            if (element.id) {
+                if (element.id.includes('purattokun')) return 'ぷらっとくん';
+                return element.id.replace(/[-_]canvas$|[-_]fallback$/, '');
+            }
+            
+            // class属性から推測
+            if (element.className) {
+                const classes = element.className.split(' ');
+                for (const cls of classes) {
+                    if (cls.includes('character') || cls.includes('spine')) {
+                        return cls;
+                    }
+                }
+            }
+            
+            return 'キャラクター' + (this.characters.length + 1);
+        },
+        
+        // z-index動的管理システム
+        updateCharacterLayers: function() {
+            console.log('🎭 レイヤー順序更新');
+            
+            this.characters.forEach((char, index) => {
+                if (char.element) {
+                    const zIndex = 1000 + index; // 配列の後方ほど前面
+                    char.element.style.zIndex = zIndex;
+                    console.log(`  ${char.name}: z-index ${zIndex}`);
+                }
+            });
+        },
+        
+        // アクティブキャラクター設定
+        setActiveCharacter: function(index) {
+            if (index < 0 || index >= this.characters.length) return;
+            
+            console.log(`🎯 アクティブキャラクター変更: ${this.characters[index].name}`);
+            
+            // 全キャラクターのハイライトを解除
+            this.characters.forEach(char => {
+                if (char.element) {
+                    char.element.classList.remove('character-selected');
+                    this.removeCharacterHighlight(char.element);
+                    char.isActive = false;
+                }
+            });
+            
+            // 新しいアクティブキャラクターを設定
+            this.activeCharacterIndex = index;
+            const activeChar = this.characters[index];
+            
+            if (activeChar && activeChar.element) {
+                activeChar.element.classList.add('character-selected');
+                this.addCharacterHighlight(activeChar.element);
+                activeChar.isActive = true;
+                
+                // 既存システムとの互換性のため、グローバル変数を更新
+                if (window.SpineEditAPI && window.SpineEditAPI.setTargetElement) {
+                    window.SpineEditAPI.setTargetElement(activeChar.element);
+                }
+            }
+            
+            // UIを更新
+            this.updateLayerUI();
+        },
+        
+        // ハイライト表示
+        addCharacterHighlight: function(element) {
+            element.style.outline = '3px solid #ff6b6b';
+            element.style.boxShadow = '0 0 10px rgba(255, 107, 107, 0.6)';
+        },
+        
+        // ハイライト非表示
+        removeCharacterHighlight: function(element) {
+            element.style.outline = '';
+            element.style.boxShadow = '';
+        },
+        
+        // レイヤー制御UI作成
+        createLayerUI: function() {
+            console.log('🎨 レイヤー制御UI作成');
+            
+            // 既存のパネルを削除
+            if (this.layerPanel && this.layerPanel.parentNode) {
+                this.layerPanel.parentNode.removeChild(this.layerPanel);
+            }
+            
+            // レイヤーパネル作成
+            this.layerPanel = document.createElement('div');
+            this.layerPanel.id = 'layer-management-panel';
+            this.layerPanel.style.cssText = `
+                position: fixed;
+                right: 10px;
+                top: 120px;
+                width: 280px;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10001;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-size: 12px;
+            `;
+            
+            this.layerPanel.innerHTML = `
+                <div class="layer-panel-header" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 10px;
+                    border-radius: 8px 8px 0 0;
+                    font-weight: bold;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                ">
+                    <span>🎭</span>
+                    <span>レイヤー管理</span>
+                    <button id="layer-close-btn" style="
+                        background: none;
+                        border: none;
+                        color: white;
+                        margin-left: auto;
+                        cursor: pointer;
+                        font-size: 16px;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">✕</button>
+                </div>
+                <div class="layer-panel-content" style="padding: 12px;">
+                    <div class="instruction" style="
+                        color: #666;
+                        font-size: 11px;
+                        margin-bottom: 10px;
+                        padding: 8px;
+                        background: #f8f9fa;
+                        border-radius: 4px;
+                    ">
+                        ドラッグで並び替え：下ほど前面に表示
+                    </div>
+                    <div id="character-list" style="
+                        max-height: 300px;
+                        overflow-y: auto;
+                    ">
+                        <!-- 動的生成 -->
+                    </div>
+                    <div class="character-stats" style="
+                        margin-top: 10px;
+                        padding-top: 8px;
+                        border-top: 1px solid #eee;
+                        font-size: 11px;
+                        color: #666;
+                        text-align: center;
+                    ">
+                        検出キャラクター数: <span id="character-count">${this.characters.length}</span>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(this.layerPanel);
+            
+            // イベントリスナー設定
+            const closeBtn = document.getElementById('layer-close-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    ModuleManager.removeModule('layerEdit');
+                });
+            }
+            
+            // キャラクターリストを構築
+            this.rebuildCharacterList();
+            
+            console.log('✅ レイヤー制御UI作成完了');
+        },
+        
+        // キャラクターリスト再構築
+        rebuildCharacterList: function() {
+            const listContainer = document.getElementById('character-list');
+            if (!listContainer) return;
+            
+            listContainer.innerHTML = '';
+            
+            this.characters.forEach((char, index) => {
+                const item = this.createCharacterItem(char, index);
+                listContainer.appendChild(item);
+            });
+        },
+        
+        // キャラクターアイテム作成
+        createCharacterItem: function(char, index) {
+            const isActive = index === this.activeCharacterIndex;
+            const item = document.createElement('div');
+            
+            item.className = 'character-item';
+            item.style.cssText = `
+                padding: 8px;
+                margin: 4px 0;
+                background: ${isActive ? '#e3f2fd' : '#ffffff'};
+                border: 1px solid ${isActive ? '#2196f3' : '#ddd'};
+                border-radius: 6px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s;
+                user-select: none;
+            `;
+            
+            item.innerHTML = `
+                <span class="drag-handle" style="
+                    color: #999;
+                    cursor: grab;
+                    font-size: 16px;
+                    line-height: 1;
+                ">≡</span>
+                <span class="character-status" style="
+                    font-size: 16px;
+                    line-height: 1;
+                ">${isActive ? '🎯' : '⚪'}</span>
+                <span class="character-name" style="
+                    flex: 1;
+                    font-weight: ${isActive ? 'bold' : 'normal'};
+                    color: ${isActive ? '#1976d2' : '#333'};
+                ">${char.name}</span>
+                <span class="z-index-display" style="
+                    font-size: 10px;
+                    color: #666;
+                    background: #f5f5f5;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                ">z:${1000 + index}</span>
+                <div class="layer-controls" style="
+                    display: flex;
+                    gap: 2px;
+                ">
+                    <button class="layer-btn front-btn" title="最前面" style="
+                        background: #4caf50;
+                        color: white;
+                        border: none;
+                        border-radius: 3px;
+                        width: 20px;
+                        height: 20px;
+                        font-size: 10px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">⬆</button>
+                    <button class="layer-btn back-btn" title="最背面" style="
+                        background: #f44336;
+                        color: white;
+                        border: none;
+                        border-radius: 3px;
+                        width: 20px;
+                        height: 20px;
+                        font-size: 10px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">⬇</button>
+                </div>
+            `;
+            
+            // イベントリスナー設定
+            this.setupCharacterItemEvents(item, index);
+            
+            return item;
+        },
+        
+        // キャラクターアイテムのイベント設定
+        setupCharacterItemEvents: function(item, index) {
+            const char = this.characters[index];
+            
+            // キャラクター選択
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.layer-controls')) return;
+                this.setActiveCharacter(index);
+            });
+            
+            // ドラッグ&ドロップ設定
+            this.makeDraggable(item, index);
+            
+            // レイヤー制御ボタン
+            const frontBtn = item.querySelector('.front-btn');
+            const backBtn = item.querySelector('.back-btn');
+            
+            if (frontBtn) {
+                frontBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.moveToFront(index);
+                });
+            }
+            
+            if (backBtn) {
+                backBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.moveToBack(index);
+                });
+            }
+        },
+        
+        // ドラッグ&ドロップ機能
+        makeDraggable: function(item, index) {
+            item.draggable = true;
+            
+            item.addEventListener('dragstart', (e) => {
+                this.draggedIndex = index;
+                item.style.opacity = '0.5';
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', index.toString());
+            });
+            
+            item.addEventListener('dragend', () => {
+                item.style.opacity = '1';
+                this.draggedIndex = null;
+            });
+            
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.style.backgroundColor = 'rgba(255, 107, 107, 0.1)';
+            });
+            
+            item.addEventListener('dragleave', () => {
+                const isActive = index === this.activeCharacterIndex;
+                item.style.backgroundColor = isActive ? '#e3f2fd' : '#ffffff';
+            });
+            
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const isActive = index === this.activeCharacterIndex;
+                item.style.backgroundColor = isActive ? '#e3f2fd' : '#ffffff';
+                
+                if (this.draggedIndex !== null && this.draggedIndex !== index) {
+                    this.reorderCharacters(this.draggedIndex, index);
+                }
+            });
+        },
+        
+        // キャラクターの並び替え
+        reorderCharacters: function(fromIndex, toIndex) {
+            console.log(`🔄 キャラクター並び替え: ${fromIndex} → ${toIndex}`);
+            
+            // 配列の並び替え実行
+            const draggedChar = this.characters.splice(fromIndex, 1)[0];
+            this.characters.splice(toIndex, 0, draggedChar);
+            
+            // アクティブインデックスの調整
+            if (this.activeCharacterIndex === fromIndex) {
+                this.activeCharacterIndex = toIndex;
+            } else if (fromIndex < this.activeCharacterIndex && toIndex >= this.activeCharacterIndex) {
+                this.activeCharacterIndex--;
+            } else if (fromIndex > this.activeCharacterIndex && toIndex <= this.activeCharacterIndex) {
+                this.activeCharacterIndex++;
+            }
+            
+            // z-indexを更新
+            this.updateCharacterLayers();
+            
+            // UIを再構築
+            this.rebuildCharacterList();
+            
+            console.log('✅ 並び替え完了');
+        },
+        
+        // 最前面に移動
+        moveToFront: function(index) {
+            console.log(`⬆ キャラクターを最前面に移動: ${this.characters[index].name}`);
+            
+            const char = this.characters.splice(index, 1)[0];
+            this.characters.push(char); // 配列の最後（最前面）に移動
+            
+            // アクティブインデックス調整
+            if (this.activeCharacterIndex === index) {
+                this.activeCharacterIndex = this.characters.length - 1;
+            } else if (this.activeCharacterIndex > index) {
+                this.activeCharacterIndex--;
+            }
+            
+            this.updateCharacterLayers();
+            this.rebuildCharacterList();
+        },
+        
+        // 最背面に移動
+        moveToBack: function(index) {
+            console.log(`⬇ キャラクターを最背面に移動: ${this.characters[index].name}`);
+            
+            const char = this.characters.splice(index, 1)[0];
+            this.characters.unshift(char); // 配列の最初（最背面）に移動
+            
+            // アクティブインデックス調整
+            if (this.activeCharacterIndex === index) {
+                this.activeCharacterIndex = 0;
+            } else if (this.activeCharacterIndex >= index) {
+                this.activeCharacterIndex++;
+            }
+            
+            this.updateCharacterLayers();
+            this.rebuildCharacterList();
+        },
+        
+        // UIの更新
+        updateLayerUI: function() {
+            const countElement = document.getElementById('character-count');
+            if (countElement) {
+                countElement.textContent = this.characters.length;
+            }
+            
+            this.rebuildCharacterList();
+        }
+    };
+    
+    console.log('✅ レイヤー編集モジュール作成完了');
+    return module;
+}
+
+// ========== デバッグ・テスト機能 ========== //
+
+// レイヤー編集システムのテスト関数
+window.testLayerEditSystem = function() {
+    console.log('🧪 レイヤー編集システムテスト開始');
+    
+    // 1. 編集モードが起動しているか確認
+    if (!SpineEditSystem.controlLayer.isEditMode) {
+        console.log('⚠️ 編集モードを先に起動してください');
+        return;
+    }
+    
+    // 2. レイヤー編集モジュールを起動
+    const layerEditModule = createLayerEditModule();
+    const success = ModuleManager.addModule('layerEditTest', layerEditModule);
+    
+    if (success) {
+        console.log('✅ レイヤー編集モジュールテスト成功');
+        
+        // 3. 検出されたキャラクター数を表示
+        const module = SpineEditSystem.modules.get('layerEditTest');
+        if (module && module.characters) {
+            console.log(`🎯 検出キャラクター数: ${module.characters.length}`);
+            module.characters.forEach((char, index) => {
+                console.log(`  ${index + 1}. ${char.name} (z-index: ${1000 + index})`);
+            });
+        }
+        
+        // 5秒後に自動でテストを終了
+        setTimeout(() => {
+            ModuleManager.removeModule('layerEditTest');
+            console.log('✅ レイヤー編集テスト終了');
+        }, 5000);
+    } else {
+        console.error('❌ レイヤー編集モジュールテスト失敗');
+    }
+};
+
+// システム統合テスト関数
+window.testSystemIntegration = function() {
+    console.log('🔧 システム統合テスト開始');
+    
+    // 1. 基本システム状態確認
+    console.log('📊 システム状態:');
+    console.log(`  - 編集モード: ${SpineEditSystem.controlLayer.isEditMode ? '起動中' : '停止中'}`);
+    console.log(`  - 登録モジュール数: ${SpineEditSystem.modules.size}`);
+    console.log(`  - 対象要素: ${SpineEditSystem.baseLayer.targetElement ? '設定済み' : '未設定'}`);
+    
+    // 2. 各モジュールの互換性テスト
+    SpineEditSystem.modules.forEach((module, name) => {
+        console.log(`  🧩 モジュール '${name}': ${typeof module.initialize === 'function' ? '正常' : '異常'}`);
+    });
+    
+    // 3. パフォーマンステスト
+    const startTime = performance.now();
+    for (let i = 0; i < 100; i++) {
+        ModuleManager.hasModule('testModule');
+    }
+    const endTime = performance.now();
+    console.log(`⚡ パフォーマンス: hasModule 100回実行に ${(endTime - startTime).toFixed(2)}ms`);
+    
+    console.log('✅ システム統合テスト完了');
+};
 
 // ========== 外部インターフェース（モジュール用） ========== //
 
@@ -2333,3 +3354,289 @@ function loadJSZip() {
 // パッケージ出力機能は既にcreateEditingUI関数とsetupEditingUIEvents関数に統合済み
 
 console.log('🎯 Spine編集システム v3.0 - シンプル版読み込み完了');
+
+// ========== 診断機能システム ========== //
+/**
+ * 🔍 ドラッグハンドル診断機能
+ * ユーザーが実行できる診断コマンド群
+ */
+
+// ドラッグハンドルの状態診断
+function diagnoseDragHandles() {
+    console.log('🔍 ドラッグハンドル診断開始');
+    
+    // 編集モード確認
+    if (!SpineEditSystem || !SpineEditSystem.controlLayer.isEditMode) {
+        console.log('❌ 編集モードが起動していません');
+        console.log('💡 解決策: 編集モードでこのコマンドを実行してください');
+        return false;
+    }
+    
+    // ハンドル要素の存在確認
+    const handles = document.querySelectorAll('.spine-edit-handle');
+    console.log('📍 ハンドル数: ' + handles.length);
+    
+    if (handles.length === 0) {
+        console.log('❌ ドラッグハンドルが見つかりません');
+        return false;
+    }
+    
+    // 各ハンドルの状態確認
+    handles.forEach((handle, index) => {
+        const rect = handle.getBoundingClientRect();
+        const style = window.getComputedStyle(handle);
+        
+        console.log('🎯 ハンドル ' + (index + 1) + ':', {
+            position: handle.dataset.position,
+            visible: style.display !== 'none',
+            size: rect.width + 'x' + rect.height,
+            location: rect.left.toFixed(1) + ', ' + rect.top.toFixed(1),
+            zIndex: style.zIndex,
+            cursor: style.cursor
+        });
+    });
+    
+    // ドラッグ状態確認
+    const dragModule = SpineEditSystem.controlLayer.dragHandler;
+    if (dragModule && dragModule.dragState) {
+        console.log('🖱️ ドラッグ状態:', {
+            isDragging: dragModule.dragState.isDragging,
+            operation: dragModule.dragState.operation,
+            activeHandle: dragModule.dragState.activeHandle ? 'あり' : 'なし'
+        });
+    }
+    
+    console.log('✅ ドラッグハンドル診断完了');
+    return true;
+}
+
+// 編集モード状態確認
+function isEditMode() {
+    const editMode = SpineEditSystem && SpineEditSystem.controlLayer.isEditMode;
+    console.log('🎮 編集モード状態:', editMode ? '起動中' : '停止中');
+    
+    if (!editMode) {
+        console.log('💡 編集モードを起動するには:');
+        console.log('   1. URL末尾に?edit=trueを追加');
+        console.log('   2. ページをリロード');
+        console.log('   3. 編集開始ボタンをクリック');
+    }
+    
+    return editMode;
+}
+
+// ドラッグハンドルクリックテスト
+function testDragHandleClick(position = 'center') {
+    console.log('🧪 ハンドルクリックテスト開始 (' + position + ')');
+    
+    if (!isEditMode()) {
+        console.log('❌ 編集モードが必要です');
+        return false;
+    }
+    
+    const handle = document.querySelector('[data-position="' + position + '"]');
+    if (!handle) {
+        console.log('❌ ' + position + 'ハンドルが見つかりません');
+        return false;
+    }
+    
+    // クリックイベントをシミュレート
+    const rect = handle.getBoundingClientRect();
+    const clickEvent = new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2
+    });
+    
+    console.log('🖱️ ' + position + 'ハンドルをクリック');
+    handle.dispatchEvent(clickEvent);
+    
+    // 状態確認
+    setTimeout(() => {
+        const dragModule = SpineEditSystem.controlLayer.dragHandler;
+        if (dragModule && dragModule.dragState && dragModule.dragState.isDragging) {
+            console.log('✅ ドラッグ開始が検出されました');
+        } else {
+            console.log('❌ ドラッグが開始されませんでした');
+        }
+    }, 100);
+    
+    return true;
+}
+
+// 編集システム全体診断
+function diagnoseEditSystem() {
+    console.log('🔍 編集システム全体診断開始');
+    console.log('=====================================');
+    
+    // 基本システム確認
+    console.log('📋 基本システム状態:');
+    console.log('   - SpineEditSystem: ' + (typeof SpineEditSystem !== 'undefined' ? '✅' : '❌'));
+    console.log('   - 編集モード: ' + (isEditMode() ? '✅' : '❌'));
+    
+    // UI要素確認
+    console.log('🎨 UI要素状態:');
+    const editingPanel = document.querySelector('.spine-editing-panel');
+    console.log('   - 編集パネル: ' + (editingPanel ? '✅' : '❌'));
+    
+    const titleBar = document.querySelector('.draggable-titlebar');
+    console.log('   - ドラッグタイトルバー: ' + (titleBar ? '✅' : '❌'));
+    
+    // ハンドル診断実行
+    console.log('🎯 ハンドル診断:');
+    diagnoseDragHandles();
+    
+    // 対象要素確認
+    if (SpineEditSystem && SpineEditSystem.baseLayer) {
+        const target = SpineEditSystem.baseLayer.targetElement;
+        console.log('🎯 対象要素:', target ? target.id : '未設定');
+    }
+    
+    console.log('=====================================');
+    console.log('✅ 編集システム全体診断完了');
+}
+
+// グローバルスコープに関数を公開
+window.diagnoseDragHandles = diagnoseDragHandles;
+window.isEditMode = isEditMode;
+window.testDragHandleClick = testDragHandleClick;
+window.diagnoseEditSystem = diagnoseEditSystem;
+
+console.log('🔍 診断機能システム追加完了');
+console.log('💡 利用可能な診断コマンド:');
+console.log('   - diagnoseDragHandles() - ハンドル状態診断');
+console.log('   - isEditMode() - 編集モード確認');
+console.log('   - testDragHandleClick() - ハンドルクリックテスト');
+console.log('   - diagnoseEditSystem() - 全体診断');
+
+// ========== バウンディングボックス外クリック選択解除システム ========== //
+
+let globalClickHandler = null;
+
+/**
+ * グローバルクリックハンドラーのセットアップ
+ * バウンディングボックス外クリックで選択解除する機能
+ */
+function setupGlobalClickHandler() {
+    // 既存のハンドラーがある場合は削除
+    cleanupGlobalClickHandler();
+    
+    globalClickHandler = function(event) {
+        // 編集モードでない場合は何もしない
+        if (!SpineEditSystem.controlLayer.isEditMode) {
+            return;
+        }
+        
+        // 編集UIクリックは無視
+        if (event.target.closest('.spine-editing-panel') || 
+            event.target.closest('.editing-ui') ||
+            event.target.closest('.character-selected')) {
+            return;
+        }
+        
+        // 各キャラクターのバウンディングボックス判定
+        let hitCharacter = false;
+        
+        // spineSkeletonBoundsが利用可能な場合の判定
+        if (window.spineSkeletonBounds) {
+            const characters = ['purattokun', 'nezumi'];
+            
+            for (const characterName of characters) {
+                const hitResult = window.spineSkeletonBounds.checkBoundsHit(characterName, event.clientX, event.clientY);
+                if (hitResult && hitResult.hit) {
+                    hitCharacter = true;
+                    console.log(`🎯 ${characterName}のバウンディングボックス内クリック検出`);
+                    break;
+                }
+            }
+        } else {
+            // spineSkeletonBoundsが利用できない場合のフォールバック判定
+            // キャラクター要素の範囲内かどうかで判定
+            const characterElements = document.querySelectorAll('[data-character-name]');
+            
+            for (const element of characterElements) {
+                const rect = element.getBoundingClientRect();
+                if (event.clientX >= rect.left && 
+                    event.clientX <= rect.right && 
+                    event.clientY >= rect.top && 
+                    event.clientY <= rect.bottom) {
+                    hitCharacter = true;
+                    console.log(`🎯 ${element.dataset.characterName}の要素範囲内クリック検出`);
+                    break;
+                }
+            }
+        }
+        
+        // バウンディングボックス外の場合、選択解除
+        if (!hitCharacter) {
+            console.log('🔄 バウンディングボックス外クリック - 選択解除');
+            clearCharacterSelection();
+        }
+    };
+    
+    // documentにイベントリスナーを追加
+    document.addEventListener('click', globalClickHandler, true); // キャプチャフェーズで処理
+    console.log('✅ グローバルクリックハンドラー設定完了');
+}
+
+/**
+ * グローバルクリックハンドラーのクリーンアップ
+ */
+function cleanupGlobalClickHandler() {
+    if (globalClickHandler) {
+        document.removeEventListener('click', globalClickHandler, true);
+        globalClickHandler = null;
+        console.log('✅ グローバルクリックハンドラー削除完了');
+    }
+}
+
+/**
+ * キャラクター選択状態をクリア
+ */
+function clearCharacterSelection() {
+    // レイヤー編集モジュールが利用可能な場合
+    if (ModuleManager.hasModule('layerEdit')) {
+        const layerModule = ModuleManager.getModule('layerEdit');
+        if (layerModule && layerModule.characters) {
+            // 全キャラクターのハイライトを解除
+            layerModule.characters.forEach(char => {
+                if (char.element) {
+                    char.element.classList.remove('character-selected');
+                    layerModule.removeCharacterHighlight(char.element);
+                    char.isActive = false;
+                }
+            });
+            
+            // アクティブキャラクターをクリア
+            layerModule.activeCharacterIndex = -1;
+            
+            // UIを更新
+            if (layerModule.updateLayerUI) {
+                layerModule.updateLayerUI();
+            }
+            
+            console.log('✅ レイヤー編集モジュール: キャラクター選択解除');
+        }
+    }
+    
+    // SpineEditAPIとの互換性のため
+    if (window.SpineEditAPI && window.SpineEditAPI.clearTargetElement) {
+        window.SpineEditAPI.clearTargetElement();
+    }
+    
+    // 既存の選択状態をクリア
+    const selectedElements = document.querySelectorAll('.character-selected');
+    selectedElements.forEach(element => {
+        element.classList.remove('character-selected');
+        element.style.outline = '';
+        element.style.boxShadow = '';
+    });
+    
+    console.log('🔄 全キャラクター選択状態クリア完了');
+}
+
+// グローバルスコープに関数を公開
+window.setupGlobalClickHandler = setupGlobalClickHandler;
+window.cleanupGlobalClickHandler = cleanupGlobalClickHandler;
+window.clearCharacterSelection = clearCharacterSelection;
