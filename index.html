@@ -156,8 +156,10 @@
             editCSS.href = 'spine-positioning-system-explanation.css';
             document.head.appendChild(editCSS);
             
-            // 🎯 分割された編集システム用JS動的読み込み
+            // 🎯 分割された編集システム用JS動的読み込み（新中央制御システム統合版）
             const moduleFiles = [
+                'spine-edit-controller.js',     // 🆕 新中央制御システム（Phase 1: 基盤構築）
+                'spine-edit-integration.js',    // 🆕 統合システム（既存との互換性確保）
                 'spine-ui-manager.js',
                 'spine-multi-character-manager.js',
                 'spine-bounding-box-module.js',
@@ -180,15 +182,24 @@
                     
                     // 全モジュール読み込み完了時
                     if (loadedModules === totalModules) {
-                        console.log('🎯 全編集システムモジュール読み込み完了');
-                        console.log('🔍 関数確認:', {
+                        console.log('🎯 全編集システムモジュール読み込み完了（新中央制御統合版）');
+                        console.log('🔍 システム確認:', {
+                            // 新システム
+                            SpineEditController: typeof SpineEditController,
+                            SpineEditIntegration: typeof SpineEditIntegration,
+                            spineEditController: !!window.spineEditController,
+                            spineEditIntegration: !!window.spineEditIntegration,
+                            // 統合API
+                            spineEditUnified: !!window.spineEditUnified,
+                            // 既存システム
                             initializeSpineEditSystem: typeof initializeSpineEditSystem,
                             createEditStartUI: typeof createEditStartUI,
                             SpineEditingSystem: typeof SpineEditingSystem
                         });
                         
-                        // メイン統合システムは自動初期化されるため、ここでは何もしない
-                        console.log('🚀 分割されたv3.0編集システム準備完了');
+                        // 統合システムの初期化待機（自動初期化される）
+                        console.log('🚀 v2.0中央制御システム統合版 準備完了');
+                        console.log('🔗 統合完了後は window.spineEditUnified でアクセス可能');
                     }
                 };
                 script.onerror = () => {
