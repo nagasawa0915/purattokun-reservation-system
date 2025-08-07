@@ -750,6 +750,75 @@ Phase 3: 本格統合検討 (将来的選択肢)
         </div>
     </div>
 
+    <!-- 🎮 編集システムテスト用キャラクター要素 -->
+    
+    <!-- ぷらっとくん（既存システムテスト用） -->
+    <canvas id="purattokun-canvas" width="300" height="200" data-spine-character="true" data-character-name="purattokun" style="
+        position: absolute;
+        left: 18%;
+        top: 49%;
+        transform: translate(-50%, -50%);
+        width: 15%;
+        height: auto;
+        z-index: 10;
+        display: none;
+        cursor: pointer;
+    "></canvas>
+    
+    <img src="assets/images/purattokunn.png" alt="ぷらっとくん" id="purattokun-fallback" data-spine-character="true" data-character-name="purattokun" style="
+        position: absolute;
+        left: 18%;
+        top: 49%;
+        transform: translate(-50%, -50%);
+        width: 15%;
+        height: auto;
+        z-index: 10;
+        display: block;
+        cursor: pointer;
+    ">
+    
+    <!-- ねずみ（v3.0システムテスト用） -->
+    <canvas id="nezumi-canvas" width="300" height="200" data-spine-character="true" data-character-name="nezumi" style="
+        position: absolute;
+        left: 60%;
+        top: 45%;
+        transform: translate(-50%, -50%);
+        width: 15%;
+        height: auto;
+        z-index: 11;
+        display: none;
+        cursor: pointer;
+    "></canvas>
+    
+    <img src="assets/images/nezumi.png" alt="ねずみ" id="nezumi-fallback" data-spine-character="true" data-character-name="nezumi" style="
+        position: absolute;
+        left: 60%;
+        top: 45%;
+        transform: translate(-50%, -50%);
+        width: 15%;
+        height: auto;
+        z-index: 11;
+        display: block;
+        cursor: pointer;
+    ">
+    
+    <!-- キャラクター設定 -->
+    <div id="purattokun-config" style="display: none;"
+         data-x="18"
+         data-y="49"
+         data-scale="0.55"
+         data-fade-delay="1500"
+         data-fade-duration="2000">
+    </div>
+    
+    <div id="nezumi-config" style="display: none;"
+         data-x="60"
+         data-y="45"
+         data-scale="0.45"
+         data-fade-delay="2000"
+         data-fade-duration="2000">
+    </div>
+
     <!-- 🚀 SpineEditCore モジュール読み込み（依存関係解決） -->
     <script src="spine-edit-core.js"></script>
     <!-- 📝 メインシステム読み込み -->
