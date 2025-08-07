@@ -156,26 +156,52 @@
             editCSS.href = 'spine-positioning-system-explanation.css';
             document.head.appendChild(editCSS);
             
-            // 編集システム用JS動的読み込み
-            const editJS = document.createElement('script');
-            editJS.src = 'spine-positioning-system-explanation.js';
-            editJS.onload = () => {
-                console.log('✅ 編集システム読み込み完了');
-                console.log('🔍 関数確認:', {
-                    initializeSpineEditSystem: typeof initializeSpineEditSystem,
-                    createEditStartUI: typeof createEditStartUI
-                });
-                
-                // v3.0編集システム初期化
-                if (typeof initializeSpineEditSystem === 'function') {
-                    console.log('🚀 v3.0編集システム初期化中...');
-                    initializeSpineEditSystem();
-                } else {
-                    console.warn('⚠️ initializeSpineEditSystem関数が見つかりません');
-                }
+            // 🎯 分割された編集システム用JS動的読み込み
+            const moduleFiles = [
+                'spine-ui-manager.js',
+                'spine-multi-character-manager.js',
+                'spine-bounding-box-module.js',
+                'spine-state-manager.js',
+                'spine-layer-editor.js',
+                'spine-package-export.js',
+                'spine-debug-tools.js',
+                'spine-positioning-main.js'
+            ];
+            
+            let loadedModules = 0;
+            const totalModules = moduleFiles.length;
+            
+            const loadModule = (src, index) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    loadedModules++;
+                    console.log(`✅ モジュール読み込み完了: ${src} (${loadedModules}/${totalModules})`);
+                    
+                    // 全モジュール読み込み完了時
+                    if (loadedModules === totalModules) {
+                        console.log('🎯 全編集システムモジュール読み込み完了');
+                        console.log('🔍 関数確認:', {
+                            initializeSpineEditSystem: typeof initializeSpineEditSystem,
+                            createEditStartUI: typeof createEditStartUI,
+                            SpineEditingSystem: typeof SpineEditingSystem
+                        });
+                        
+                        // メイン統合システムは自動初期化されるため、ここでは何もしない
+                        console.log('🚀 分割されたv3.0編集システム準備完了');
+                    }
+                };
+                script.onerror = () => {
+                    console.warn(`⚠️ モジュール読み込み失敗: ${src} - 継続します`);
+                    loadedModules++;
+                };
+                document.head.appendChild(script);
             };
             
-            document.head.appendChild(editJS);
+            // 順次読み込み
+            moduleFiles.forEach((file, index) => {
+                setTimeout(() => loadModule(file, index), index * 50); // 50ms間隔で順次読み込み
+            });
         }
 
         // 🎯 メイン：複数Spineキャラクター初期化システム

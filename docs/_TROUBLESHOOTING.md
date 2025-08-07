@@ -125,6 +125,12 @@
 - **タグ**: `#成功事例` `#パッケージ出力` `#ZIP生成` `#HTML固定化` `#CDN依存排除` `#Spineアニメーション` `#商用制作ツール` `#完全実装`
 - **別名**: package output system、ZIP生成機能、HTML固定化システム、CDNローカル化、お客様納品パッケージ、商用パッケージ出力
 
+#### nezumi編集機能実装成功記録
+- **ファイル**: [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+- **症状**: nezumi編集機能の完全実装成功、v3.0 Phase 2モジュール化システムの安定稼働実証、4001行→8モジュールの大規模ファイル分割成功
+- **タグ**: `#成功事例` `#nezumi` `#複数キャラクター` `#v3.0システム` `#モジュール化` `#Phase2` `#ドラッグ移動` `#位置編集` `#キャラクター選択` `#ファイル分割`
+- **別名**: nezumi編集成功、ネズミ編集機能、nezumi character editing、v3.0 Phase2成功事例、モジュール化システム成功、4001行→8モジュール成功、大規模ファイル分割成功
+
 ### ⚙️ Spine関連の問題
 
 #### Spineライブラリ読込問題
@@ -251,6 +257,36 @@
 - [Spine編集システム完全実装記録.md](./troubleshooting/Spine編集システム完全実装記録.md)
 - [バウンディングボックス編集システム実装記録.md](./troubleshooting/バウンディングボックス編集システム実装記録.md)
 - [パッケージ出力機能完全実装記録.md](./troubleshooting/パッケージ出力機能完全実装記録.md)
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #nezumi
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #複数キャラクター
+- [複数キャラクター対応実装記録.md](./troubleshooting/複数キャラクター対応実装記録.md)
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #v3.0システム
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #モジュール化
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #Phase2
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #ドラッグ移動
+- [Canvas表示範囲編集ドラッグ問題.md](./troubleshooting/Canvas表示範囲編集ドラッグ問題.md)
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #位置編集
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #キャラクター選択
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
+
+#### #ファイル分割
+- [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
 
 #### #パッケージ出力
 - [パッケージ出力機能完全実装記録.md](./troubleshooting/パッケージ出力機能完全実装記録.md)
@@ -367,6 +403,9 @@
 
 ### 「パッケージ出力」「ZIP生成」「HTML固定化」「CDN依存排除」「お客様納品」「商用パッケージ」「editMode問題」「Spineアニメーション表示」
 → [パッケージ出力機能完全実装記録.md](./troubleshooting/パッケージ出力機能完全実装記録.md)
+
+### 「nezumi」「ネズミ」「nezumi編集」「第2キャラクター」「v3.0」「Phase2」「モジュール化」「ファイル分割」「4001行」「8モジュール」
+→ [nezumi編集機能実装成功記録.md](./troubleshooting/nezumi編集機能実装成功記録.md)
 
 ---
 
