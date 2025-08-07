@@ -9,14 +9,8 @@ console.log('💾 Spine State Manager モジュール読み込み開始');
 // 状態管理オブジェクト（重複宣言チェック）
 if (typeof window.savedState === 'undefined') {
     let savedState = {
-    character: {
-        left: null,
-        top: null,
-        width: null,
-        height: null,
-        transform: null
-    },
-    timestamp: null
+        characters: {},  // 新形式：複数キャラクター対応
+        timestamp: null
     };
     
     // Global export
@@ -27,26 +21,46 @@ if (typeof window.savedState === 'undefined') {
  * 現在の状態を保存
  */
 function saveCurrentState() {
-    console.log('💾 現在の状態を保存開始');
+    console.log('💾 編集中キャラクターの状態を保存開始');
     
     const targetElement = SpineEditSystem.baseLayer.targetElement;
     if (!targetElement) {
-        console.error('❌ 対象要素が見つかりません');
+        console.error('❌ 編集中の対象要素が見つかりません');
         return false;
+    }
+    
+    // 🔧 既存の保存データを取得（他のキャラクターデータを保持）
+    let existingData = {};
+    try {
+        const saved = localStorage.getItem('spine-positioning-state');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.characters) {
+                existingData = parsed.characters;
+            }
+        }
+    } catch (e) {
+        console.warn('既存データの読み込みに失敗、新規作成します');
     }
     
     // 🔧 座標系を一時的に元に戻して正確な値を取得
     SpineEditSystem.coordinateSwap.exitEditMode(targetElement);
     
-    // 現在の状態を記録
-    savedState.character = {
+    // 編集中キャラクターのデータのみ更新
+    existingData[targetElement.id] = {
         left: targetElement.style.left,
         top: targetElement.style.top,
         width: targetElement.style.width,
         height: targetElement.style.height,
         transform: targetElement.style.transform
     };
+    
+    // 新しい汎用データ構造で保存
+    savedState.characters = existingData;
     savedState.timestamp = new Date().toISOString();
+    
+    console.log(`✅ ${targetElement.id} の状態を更新:`, existingData[targetElement.id]);
+    console.log('📋 全保存データ:', existingData);
     
     // localStorageに保存
     try {
@@ -106,7 +120,7 @@ function cancelEdit() {
  * 初期化時の状態復元
  */
 function restoreCharacterState() {
-    console.log('🔄 保存された状態の復元開始');
+    console.log('🔄 全キャラクター状態の復元開始');
     
     try {
         const saved = localStorage.getItem('spine-positioning-state');
@@ -118,36 +132,71 @@ function restoreCharacterState() {
         const loadedState = JSON.parse(saved);
         console.log('📋 localStorage状態:', loadedState);
         
-        // 対象要素を取得（複数の候補から検索）
-        const selectors = [
-            '#character-canvas',
-            '#purattokun-canvas', 
-            '.demo-character',
-            '.spine-character'
-        ];
-        
-        let targetElement = null;
-        for (const selector of selectors) {
-            targetElement = document.querySelector(selector);
-            if (targetElement) {
-                console.log(`✅ 対象要素見つかった: ${selector}`);
-                break;
+        // 🎯 新形式（characters オブジェクト）での復元
+        if (loadedState.characters) {
+            console.log('✅ 新形式（汎用キャラクターデータ）で復元中...');
+            
+            let restoredCount = 0;
+            for (const [characterId, characterData] of Object.entries(loadedState.characters)) {
+                const element = document.getElementById(characterId);
+                if (element && characterData) {
+                    console.log(`✅ ${characterId} の状態を復元:`, characterData);
+                    
+                    if (characterData.left) element.style.left = characterData.left;
+                    if (characterData.top) element.style.top = characterData.top;
+                    if (characterData.width) element.style.width = characterData.width;
+                    if (characterData.height) element.style.height = characterData.height;
+                    if (characterData.transform) element.style.transform = characterData.transform;
+                    
+                    restoredCount++;
+                } else {
+                    console.warn(`⚠️ 要素が見つかりません: ${characterId}`);
+                }
             }
-        }
-        
-        if (!targetElement) {
-            console.warn('⚠️ 対象要素が見つかりません - 状態復元をスキップ');
-            return false;
-        }
-        
-        // 保存された状態を適用
-        if (loadedState.character) {
+            
+            console.log(`✅ ${restoredCount}個のキャラクター状態復元完了`);
+            return restoredCount > 0;
+            
+        } else if (loadedState.character) {
+            // 🔄 旧形式でのフォールバック復元（下位互換性）
+            console.log('⚠️ 旧形式データを検出 - フォールバック復元中...');
+            
+            // nezumi対応セレクターを追加
+            const selectors = [
+                '#character-canvas',
+                '#purattokun-canvas',
+                '#nezumi-canvas',        // ✅ nezumi対応追加
+                '.demo-character',
+                '.spine-character'
+            ];
+            
+            let targetElement = null;
+            for (const selector of selectors) {
+                targetElement = document.querySelector(selector);
+                if (targetElement) {
+                    console.log(`✅ 対象要素見つかった: ${selector}`);
+                    break;
+                }
+            }
+            
+            if (!targetElement) {
+                console.warn('⚠️ 対象要素が見つかりません - 状態復元をスキップ');
+                return false;
+            }
+            
+            // 保存された状態を適用
             if (loadedState.character.left) targetElement.style.left = loadedState.character.left;
             if (loadedState.character.top) targetElement.style.top = loadedState.character.top;
             if (loadedState.character.width) targetElement.style.width = loadedState.character.width;
             if (loadedState.character.height) targetElement.style.height = loadedState.character.height;
             if (loadedState.character.transform) targetElement.style.transform = loadedState.character.transform;
+            
+            console.log('✅ 旧データ構造による状態復元完了');
+            return true;
         }
+        
+        console.warn('⚠️ 復元可能なデータが見つかりません');
+        return false;
         
         // savedStateも更新
         savedState = loadedState;
