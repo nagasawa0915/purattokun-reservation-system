@@ -575,4 +575,3 @@ function createDraggableTitleBarModule() {
     
     console.log('✅ タイトルバードラッグ機能初期化完了');
 }
-EOF < /dev/null

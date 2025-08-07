@@ -30,7 +30,10 @@
       "WebFetch(domain:esotericsoftware.com)",
       "Bash(git restore:*)",
       "Bash(git clean:*)",
-      "Bash(tar:*)"
+      "Bash(tar:*)",
+      "Bash(for file in spine-ui-manager.js spine-multi-character-manager.js spine-bounding-box-module.js spine-state-manager.js spine-layer-editor.js spine-package-export.js spine-debug-tools.js spine-positioning-main.js)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)"
     ],
     "deny": []
   }
