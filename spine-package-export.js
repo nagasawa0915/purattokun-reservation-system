@@ -125,9 +125,10 @@ if (typeof window.PackageExportSystem === 'undefined') {
             
             // === 2. 現在のDOM状態から取得（詳細セレクター + 座標変換）===
             console.log('🎯 Step 1.2: 現在のDOM位置データ取得（複数セレクター対応）');
+            // 🎯 汎用的なキャラクター検出（固有名詞不要）
             const selectors = [
+                'canvas[id$="-canvas"]',      // 標準命名規則（最優先）
                 '#character-canvas',
-                '#purattokun-canvas', 
                 'canvas[data-spine-character]',
                 '.spine-character',
                 '.demo-character'

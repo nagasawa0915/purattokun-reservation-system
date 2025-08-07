@@ -26,15 +26,14 @@ if (typeof window.MultiCharacterManager === 'undefined') {
         // LayerControlエラー修正: 直接的なキャラクター検出に変更
         this.characters = [];
         
-        // 基本的なSpineキャラクター検出（nezumi追加・7種類のセレクター対応）
+        // 🎯 汎用的なSpineキャラクター検出（完全自動・固有名詞不要）
         const selectors = [
-            'canvas[id*="spine"]',
-            'canvas[id*="character"]', 
-            'canvas[id*="purattokun"]',
-            'canvas[id*="nezumi"]',      // nezumi対応追加
-            'canvas.spine-canvas',
-            'div[id*="spine"] canvas',
-            'canvas[data-spine-character="true"]'  // データ属性対応追加
+            'canvas[id$="-canvas"]',     // 最優先：標準命名規則（purattokun-canvas, nezumi-canvas等）
+            'canvas[id*="spine"]',       // spine含む名前
+            'canvas[id*="character"]',   // character含む名前
+            'canvas.spine-canvas',       // クラス指定
+            'div[id*="spine"] canvas',   // 親要素がspine
+            'canvas[data-spine-character="true"]'  // データ属性対応
         ];
         
         selectors.forEach(selector => {
@@ -124,8 +123,8 @@ if (typeof window.MultiCharacterManager === 'undefined') {
         try {
             // キャラクター固有の座標系スワップ前チェック
             const element = character.element;
-            const characterType = element.id.includes('nezumi') ? 'nezumi' : 
-                                 element.id.includes('purattokun') ? 'purattokun' : 'unknown';
+            // 🎯 汎用的なキャラクタータイプ判定（固有名詞不要）
+            const characterType = element.id.replace('-canvas', '') || 'unknown';
             
             console.log(`📍 キャラクタータイプ: ${characterType}, 要素: ${element.id}`);
             
@@ -218,10 +217,12 @@ if (typeof window.MultiCharacterManager === 'undefined') {
         `;
         
         // キャラクター名表示ラベル追加（nezumi対応）
-        if (isSelected || character.id.includes('nezumi')) {
+        if (isSelected) {
             const label = document.createElement('div');
-            const displayName = character.id.includes('purattokun') ? '🐱' : 
-                               character.id.includes('nezumi') ? '🐭' : '🎯';
+            // 🎯 汎用的な表示名生成（絵文字マップ方式）
+            const characterName = character.id.replace('-canvas', '');
+            const emojiMap = { 'purattokun': '🐱', 'nezumi': '🐭' };
+            const displayName = emojiMap[characterName] || '🎯';
             label.textContent = displayName;
             label.style.cssText = `
                 position: absolute;
