@@ -61,6 +61,105 @@ function initializeFallbackSystem() {
 
 // ========== 基本UI作成（最小限） ========== //
 
+// キャラクター選択ボタン生成関数
+function generateCharacterSelectionButtons() {
+    console.log('🎨 キャラクター選択ボタン生成開始');
+    
+    // MultiCharacterManagerが初期化されていない場合は初期化
+    if (!MultiCharacterManager.characters || MultiCharacterManager.characters.length === 0) {
+        MultiCharacterManager.detectAllCharacters();
+    }
+    
+    if (MultiCharacterManager.characters.length === 0) {
+        return '<div style="color: #888; font-size: 12px; text-align: center;">キャラクターが見つかりません</div>';
+    }
+    
+    let buttonsHtml = '<div style="margin-bottom: 10px;">';
+    
+    MultiCharacterManager.characters.forEach(character => {
+        const characterName = character.name || character.id;
+        const displayName = characterName === 'purattokun' ? '🐱 ぷらっとくん' : 
+                           characterName === 'nezumi' ? '🐭 ねずみ' : 
+                           `🎯 ${characterName}`;
+        
+        buttonsHtml += `
+            <button 
+                id="char-select-${character.id}" 
+                data-character-id="${character.id}"
+                style="
+                    width: 100%;
+                    padding: 8px;
+                    margin: 2px 0;
+                    background: #f8f9fa;
+                    border: 2px solid #dee2e6;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: bold;
+                    transition: all 0.2s;
+                "
+                onmouseover="this.style.background='#e9ecef'"
+                onmouseout="this.style.background='#f8f9fa'"
+            >
+                ${displayName}
+            </button>
+        `;
+    });
+    
+    buttonsHtml += '</div>';
+    
+    console.log(`✅ ${MultiCharacterManager.characters.length}個のキャラクターボタン生成完了`);
+    return buttonsHtml;
+}
+
+// キャラクター選択イベントリスナー設定関数
+function setupCharacterSelectionListeners() {
+    console.log('🔘 キャラクター選択イベントリスナー設定開始');
+    
+    // 選択状態管理
+    let selectedCharacter = null;
+    
+    MultiCharacterManager.characters.forEach(character => {
+        const button = document.getElementById(`char-select-${character.id}`);
+        if (button) {
+            button.addEventListener('click', () => {
+                console.log(`🎯 キャラクター選択: ${character.name || character.id}`);
+                
+                // 前の選択を解除
+                if (selectedCharacter) {
+                    const prevButton = document.getElementById(`char-select-${selectedCharacter.id}`);
+                    if (prevButton) {
+                        prevButton.style.background = '#f8f9fa';
+                        prevButton.style.border = '2px solid #dee2e6';
+                        prevButton.style.color = '#000';
+                    }
+                }
+                
+                // 新しい選択を設定
+                selectedCharacter = character;
+                button.style.background = '#007acc';
+                button.style.border = '2px solid #0056b3';
+                button.style.color = '#fff';
+                
+                // MultiCharacterManagerに選択を反映
+                MultiCharacterManager.selectCharacter(character);
+                
+                // 編集開始ボタンを有効化
+                const startBtn = document.getElementById('start-edit-btn');
+                if (startBtn) {
+                    startBtn.disabled = false;
+                    startBtn.style.background = '#28a745';
+                    startBtn.style.opacity = '1';
+                }
+                
+                console.log(`✅ キャラクター選択完了: ${character.name || character.id}`);
+            });
+        }
+    });
+    
+    console.log('✅ キャラクター選択イベントリスナー設定完了');
+}
+
 function createEditStartUI() {
     console.log('🎨 編集開始UI作成');
     
@@ -90,7 +189,14 @@ function createEditStartUI() {
         text-align: center;
     `;
     
+    // キャラクター選択ボタンを動的に生成
+    const characterButtons = generateCharacterSelectionButtons();
+    
     startPanel.innerHTML = `
+        <div style="margin-bottom: 15px; font-weight: bold; color: #28a745; text-align: center;">
+            🎯 キャラクター選択
+        </div>
+        ${characterButtons}
         <button id="start-edit-btn" style="
             width: 100%;
             padding: 12px;
@@ -101,13 +207,17 @@ function createEditStartUI() {
             cursor: pointer;
             font-size: 14px;
             font-weight: bold;
-        ">
+            margin-top: 10px;
+        " disabled>
             ✏️ 編集開始
         </button>
     `;
     
     document.body.appendChild(startPanel);
     console.log('📦 パネルをDOMに追加完了');
+    
+    // キャラクター選択ボタンイベントリスナー設定
+    setupCharacterSelectionListeners();
     
     // 編集開始ボタンイベント
     const startBtn = document.getElementById('start-edit-btn');
@@ -444,13 +554,15 @@ const MultiCharacterManager = {
         // LayerControlエラー修正: 直接的なキャラクター検出に変更
         this.characters = [];
         
-        // 基本的なSpineキャラクター検出（5種類のセレクター対応）
+        // 基本的なSpineキャラクター検出（nezumi追加・7種類のセレクター対応）
         const selectors = [
             'canvas[id*="spine"]',
             'canvas[id*="character"]', 
             'canvas[id*="purattokun"]',
+            'canvas[id*="nezumi"]',      // nezumi対応追加
             'canvas.spine-canvas',
-            'div[id*="spine"] canvas'
+            'div[id*="spine"] canvas',
+            'canvas[data-spine-character="true"]'  // データ属性対応追加
         ];
         
         selectors.forEach(selector => {
@@ -473,30 +585,48 @@ const MultiCharacterManager = {
         console.log(`🔍 検出されたキャラクター数: ${this.characters.length}`);
     },
     
-    // キャラクター選択
+    // キャラクター選択（nezumi対応・座標系管理強化版）
     selectCharacter: function(character) {
-        console.log(`🎯 キャラクター選択: ${character.name}`);
+        console.log(`🎯 キャラクター選択開始: ${character.name || character.id}`);
         
-        // 前の選択を解除
-        if (this.activeCharacter) {
-            this.exitEditMode();
+        // 複数キャラクター間切り替えの安全性確保
+        try {
+            // Step 1: 前の選択の完全解除
+            if (this.activeCharacter && this.activeCharacter.id !== character.id) {
+                console.log(`🔄 前選択解除: ${this.activeCharacter.name || this.activeCharacter.id}`);
+                this.exitEditMode(); // 座標系復元含む
+                this.activeCharacter.isActive = false;
+            }
+            
+            // Step 2: 新しいキャラクター状態設定
+            this.activeCharacter = character;
+            character.isActive = true;
+            
+            // Step 3: SpineEditSystemターゲット安全切り替え
+            const prevTarget = SpineEditSystem.baseLayer.targetElement;
+            SpineEditSystem.baseLayer.targetElement = character.element;
+            
+            console.log(`🎯 ターゲット切り替え: ${prevTarget?.id || 'none'} → ${character.element.id}`);
+            
+            // Step 4: キャラクター固有の編集モード開始
+            this.enterEditMode(character);
+            
+            // Step 5: UI更新（座標系確定後）
+            this.updatePreviewBoxes();
+            this.showEditBoundingBox();
+            
+            console.log(`✅ キャラクター選択完了: ${character.name || character.id}`);
+            
+        } catch (error) {
+            console.error(`❌ キャラクター選択エラー (${character.id}):`, error);
+            
+            // エラー時の安全な復旧
+            if (SpineEditSystem.coordinateSwap.isSwapped) {
+                SpineEditSystem.coordinateSwap.forceRestore();
+            }
+            this.activeCharacter = null;
+            character.isActive = false;
         }
-        
-        // 新しいキャラクターをアクティブに設定
-        this.activeCharacter = character;
-        character.isActive = true;
-        
-        // SpineEditSystemのターゲットを切り替え
-        SpineEditSystem.baseLayer.targetElement = character.element;
-        
-        // 編集モードに入る
-        this.enterEditMode(character);
-        
-        // プレビューボックスを更新
-        this.updatePreviewBoxes();
-        
-        // バウンディングボックス表示
-        this.showEditBoundingBox();
     },
     
     // 選択解除
@@ -515,18 +645,60 @@ const MultiCharacterManager = {
         }
     },
     
-    // 編集モードに入る
+    // 編集モードに入る（nezumi対応・座標系管理強化版）
     enterEditMode: function(character) {
-        if (!SpineEditSystem.coordinateSwap.isSwapped) {
-            SpineEditSystem.coordinateSwap.enterEditMode(character.element);
+        console.log(`🔄 編集モード開始: ${character.name || character.id}`);
+        
+        try {
+            // キャラクター固有の座標系スワップ前チェック
+            const element = character.element;
+            const characterType = element.id.includes('nezumi') ? 'nezumi' : 
+                                 element.id.includes('purattokun') ? 'purattokun' : 'unknown';
+            
+            console.log(`📍 キャラクタータイプ: ${characterType}, 要素: ${element.id}`);
+            
+            // 座標系スワップ実行（要素の現在状態を保存）
+            if (!SpineEditSystem.coordinateSwap.isSwapped) {
+                SpineEditSystem.coordinateSwap.enterEditMode(element);
+                console.log(`✅ 座標系スワップ完了: ${characterType}`);
+            } else {
+                console.log(`⚠️ 既にスワップ済み - スキップ`);
+            }
+            
+        } catch (error) {
+            console.error(`❌ 編集モード開始エラー (${character.id}):`, error);
+            throw error;
         }
     },
     
-    // 編集モードを出る
+    // 編集モードを出る（nezumi対応・安全な復元版）
     exitEditMode: function() {
-        if (SpineEditSystem.coordinateSwap.isSwapped) {
-            const targetElement = this.activeCharacter ? this.activeCharacter.element : SpineEditSystem.baseLayer.targetElement;
-            SpineEditSystem.coordinateSwap.exitEditMode(targetElement);
+        const character = this.activeCharacter;
+        if (!character) return;
+        
+        console.log(`🔙 編集モード終了: ${character.name || character.id}`);
+        
+        try {
+            if (SpineEditSystem.coordinateSwap.isSwapped) {
+                const targetElement = character.element || SpineEditSystem.baseLayer.targetElement;
+                
+                if (targetElement) {
+                    SpineEditSystem.coordinateSwap.exitEditMode(targetElement);
+                    console.log(`✅ 座標系復元完了: ${targetElement.id}`);
+                } else {
+                    console.warn('⚠️ ターゲット要素未定義 - 強制復元実行');
+                    SpineEditSystem.coordinateSwap.forceRestore();
+                }
+            } else {
+                console.log('📝 座標系未スワップ - 復元スキップ');
+            }
+            
+        } catch (error) {
+            console.error(`❌ 編集モード終了エラー (${character.id}):`, error);
+            // エラー時は強制復元
+            if (SpineEditSystem.coordinateSwap.forceRestore) {
+                SpineEditSystem.coordinateSwap.forceRestore();
+            }
         }
     },
     
@@ -541,38 +713,90 @@ const MultiCharacterManager = {
         });
     },
     
-    // プレビューボックス作成
+    // プレビューボックス作成（nezumi選択状態対応強化版）
     createPreviewBox: function(character) {
         const element = character.element;
         const rect = element.getBoundingClientRect();
         const parentRect = element.parentElement.getBoundingClientRect();
         
+        // 選択状態チェック
+        const isSelected = character.isActive || (this.activeCharacter && this.activeCharacter.id === character.id);
+        
         const previewBox = document.createElement('div');
         previewBox.className = 'spine-character-preview-box';
         previewBox.dataset.characterId = character.id;
+        
+        // 選択状態による視覚的変更（点線→実線、背景色強化）
+        const borderStyle = isSelected ? '2px solid #007acc' : '1px dotted #999';
+        const backgroundColor = isSelected ? 'rgba(0, 122, 204, 0.1)' : 'rgba(153, 153, 153, 0.05)';
+        const zIndex = isSelected ? 9999 : 8888;
+        
         previewBox.style.cssText = `
             position: absolute;
-            border: 1px dotted #999;
-            background: rgba(153, 153, 153, 0.05);
+            border: ${borderStyle};
+            background: ${backgroundColor};
             pointer-events: auto;
-            z-index: 8888;
+            z-index: ${zIndex};
             left: ${rect.left - parentRect.left}px;
             top: ${rect.top - parentRect.top}px;
             width: ${rect.width}px;
             height: ${rect.height}px;
             cursor: pointer;
+            transition: all 0.2s ease-in-out;
         `;
         
-        // クリックイベント
+        // キャラクター名表示ラベル追加（nezumi対応）
+        if (isSelected || character.id.includes('nezumi')) {
+            const label = document.createElement('div');
+            const displayName = character.id.includes('purattokun') ? '🐱' : 
+                               character.id.includes('nezumi') ? '🐭' : '🎯';
+            label.textContent = displayName;
+            label.style.cssText = `
+                position: absolute;
+                top: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${isSelected ? '#007acc' : '#666'};
+                color: white;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 12px;
+                font-weight: bold;
+                white-space: nowrap;
+                pointer-events: none;
+            `;
+            previewBox.appendChild(label);
+        }
+        
+        // クリックイベント（nezumi選択対応）
         previewBox.addEventListener('click', (event) => {
             if (!SpineEditSystem.controlLayer.isEditMode) return;
             event.preventDefault();
             event.stopPropagation();
+            
+            console.log(`🎯 プレビューボックスクリック: ${character.id}`);
             this.selectCharacter(character);
+        });
+        
+        // ホバーエフェクト追加
+        previewBox.addEventListener('mouseenter', () => {
+            if (!isSelected) {
+                previewBox.style.border = '1px solid #007acc';
+                previewBox.style.background = 'rgba(0, 122, 204, 0.08)';
+            }
+        });
+        
+        previewBox.addEventListener('mouseleave', () => {
+            if (!isSelected) {
+                previewBox.style.border = borderStyle;
+                previewBox.style.background = backgroundColor;
+            }
         });
         
         element.parentElement.appendChild(previewBox);
         this.previewBoxes.push(previewBox);
+        
+        console.log(`📦 プレビューボックス作成: ${character.id} (選択: ${isSelected})`);
     },
     
     // プレビューボックス更新
@@ -1583,6 +1807,129 @@ function initializeSpineEditSystem() {
     
     console.log('✅ Spine編集システム v3.0 初期化完了');
 }
+
+// ========== 🧪 Phase 3 nezumi統合テスト・デバッグ関数群 ========== //
+window.Phase3DebugTools = {
+    
+    // nezumi検出テスト
+    testNezumiDetection: function() {
+        console.log('🧪 nezumi検出テスト開始');
+        
+        const nezumiElements = document.querySelectorAll('[id*="nezumi"]');
+        console.log(`🔍 nezumi要素数: ${nezumiElements.length}`);
+        
+        nezumiElements.forEach(element => {
+            console.log(`📍 nezumi要素: ${element.id}, タグ: ${element.tagName}`);
+        });
+        
+        MultiCharacterManager.detectAllCharacters();
+        const nezumiCharacter = MultiCharacterManager.characters.find(c => c.id.includes('nezumi'));
+        
+        if (nezumiCharacter) {
+            console.log('✅ nezumi検出成功:', nezumiCharacter);
+        } else {
+            console.log('❌ nezumi検出失敗');
+        }
+        
+        return nezumiCharacter;
+    },
+    
+    // キャラクター選択テスト
+    testCharacterSelection: function() {
+        console.log('🧪 キャラクター選択テスト開始');
+        
+        const characters = MultiCharacterManager.characters;
+        console.log(`🎯 利用可能キャラクター: ${characters.length}個`);
+        
+        characters.forEach(character => {
+            console.log(`📝 ${character.id}: ${character.name} (active: ${character.isActive})`);
+        });
+        
+        return characters;
+    },
+    
+    // 座標系スワップテスト
+    testCoordinateSwap: function(characterId) {
+        console.log(`🧪 座標系スワップテスト: ${characterId}`);
+        
+        const character = MultiCharacterManager.characters.find(c => c.id === characterId || c.id.includes(characterId));
+        if (!character) {
+            console.log('❌ キャラクターが見つかりません');
+            return false;
+        }
+        
+        console.log('🔄 選択前の座標系:', SpineEditSystem.coordinateSwap.isSwapped);
+        
+        try {
+            MultiCharacterManager.selectCharacter(character);
+            console.log('✅ 選択完了 - 座標系状態:', SpineEditSystem.coordinateSwap.isSwapped);
+            return true;
+        } catch (error) {
+            console.error('❌ 選択テストエラー:', error);
+            return false;
+        }
+    },
+    
+    // 全機能統合テスト
+    runFullTest: function() {
+        console.log('🚀 Phase 3 完全統合テスト開始');
+        
+        const testResults = {
+            detection: false,
+            ui: false,
+            selection: false,
+            coordinate: false
+        };
+        
+        try {
+            // 検出テスト
+            const nezumiChar = this.testNezumiDetection();
+            testResults.detection = !!nezumiChar;
+            
+            // UI生成テスト
+            const characters = this.testCharacterSelection();
+            testResults.ui = characters.length > 0;
+            
+            // 選択テスト（nezumiが検出された場合）
+            if (nezumiChar) {
+                testResults.selection = this.testCoordinateSwap('nezumi');
+            }
+            
+            // 座標系テスト
+            testResults.coordinate = SpineEditSystem.coordinateSwap.isSwapped;
+            
+        } catch (error) {
+            console.error('❌ 統合テストエラー:', error);
+        }
+        
+        console.log('📊 Phase 3 テスト結果:', testResults);
+        const allPassed = Object.values(testResults).every(result => result);
+        console.log(allPassed ? '🎉 全テスト成功！' : '⚠️ 一部テスト失敗');
+        
+        return testResults;
+    },
+    
+    // 実動作確認（手動テスト支援）
+    manualTest: function() {
+        console.log('🎯 手動テスト支援開始');
+        console.log('手順:');
+        console.log('1. ページ上で編集モードを開始してください');
+        console.log('2. キャラクター選択UIでnezumi（🐭）を選択してください');  
+        console.log('3. nezumiの位置編集を確認してください');
+        console.log('4. purattokun（🐱）への切り替えを確認してください');
+        
+        // キャラクター状況の表示
+        setTimeout(() => {
+            console.log('🔍 現在の状況:');
+            console.log('- 検出キャラクター:', MultiCharacterManager.characters.map(c => c.id));
+            console.log('- アクティブキャラクター:', MultiCharacterManager.activeCharacter?.id || 'なし');
+            console.log('- 座標系スワップ:', SpineEditSystem.coordinateSwap.isSwapped);
+        }, 1000);
+    }
+};
+
+console.log('🧪 Phase 3 デバッグツール準備完了');
+console.log('使用方法: Phase3DebugTools.runFullTest() または Phase3DebugTools.manualTest()');
 
 // ========== ドラッグ可能タイトルバーモジュール ========== //
 
