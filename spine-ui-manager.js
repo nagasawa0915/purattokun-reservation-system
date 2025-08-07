@@ -482,14 +482,14 @@ function createDraggableTitleBarModule() {
     console.log('🖱️ タイトルバードラッグ機能初期化');
     
     const editPanel = document.getElementById('spine-edit-panel-v3');
-    if (\!editPanel) {
+    if (!editPanel) {
         console.warn('⚠️ 編集パネルが見つかりません - ドラッグ機能追加をスキップ');
         return;
     }
     
     // タイトルバーを作成
     const titleBar = editPanel.querySelector('div[style*="font-weight: bold"]');
-    if (\!titleBar) {
+    if (!titleBar) {
         console.warn('⚠️ タイトルバーが見つかりません');
         return;
     }
@@ -532,7 +532,7 @@ function createDraggableTitleBarModule() {
     
     // マウス移動 - ドラッグ中
     document.addEventListener('mousemove', function(e) {
-        if (\!isDragging) return;
+        if (!isDragging) return;
         
         e.preventDefault();
         
@@ -557,7 +557,7 @@ function createDraggableTitleBarModule() {
     
     // マウスアップ - ドラッグ終了
     document.addEventListener('mouseup', function(e) {
-        if (\!isDragging) return;
+        if (!isDragging) return;
         
         isDragging = false;
         
