@@ -472,3 +472,107 @@ function startCoordinateDisplay() {
 }
 
 console.log('✅ Spine UI Manager モジュール読み込み完了');
+// ========== タイトルバードラッグ機能 ========== //
+
+/**
+ * ドラッグ可能なタイトルバー機能追加
+ * メニューパネルをドラッグ移動可能にする
+ */
+function createDraggableTitleBarModule() {
+    console.log('🖱️ タイトルバードラッグ機能初期化');
+    
+    const editPanel = document.getElementById('spine-edit-panel-v3');
+    if (\!editPanel) {
+        console.warn('⚠️ 編集パネルが見つかりません - ドラッグ機能追加をスキップ');
+        return;
+    }
+    
+    // タイトルバーを作成
+    const titleBar = editPanel.querySelector('div[style*="font-weight: bold"]');
+    if (\!titleBar) {
+        console.warn('⚠️ タイトルバーが見つかりません');
+        return;
+    }
+    
+    // ドラッグ可能であることを示すスタイル設定
+    titleBar.style.cursor = 'move';
+    titleBar.style.userSelect = 'none';
+    titleBar.title = 'ドラッグして移動';
+    
+    // ドラッグ状態管理
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let panelStart = { x: 0, y: 0 };
+    
+    // マウスダウン - ドラッグ開始
+    titleBar.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isDragging = true;
+        dragStart.x = e.clientX;
+        dragStart.y = e.clientY;
+        
+        // パネルの現在位置を取得
+        const rect = editPanel.getBoundingClientRect();
+        panelStart.x = rect.left;
+        panelStart.y = rect.top;
+        
+        console.log('🖱️ ドラッグ開始', { dragStart, panelStart });
+        
+        // ドラッグ中のスタイル変更
+        titleBar.style.background = '#007acc';
+        titleBar.style.color = 'white';
+        titleBar.style.borderRadius = '4px';
+        titleBar.style.padding = '5px';
+        titleBar.style.margin = '-5px -5px 10px -5px';
+        
+        document.body.style.userSelect = 'none';
+    });
+    
+    // マウス移動 - ドラッグ中
+    document.addEventListener('mousemove', function(e) {
+        if (\!isDragging) return;
+        
+        e.preventDefault();
+        
+        const deltaX = e.clientX - dragStart.x;
+        const deltaY = e.clientY - dragStart.y;
+        
+        const newX = panelStart.x + deltaX;
+        const newY = panelStart.y + deltaY;
+        
+        // 画面境界チェック
+        const maxX = window.innerWidth - editPanel.offsetWidth;
+        const maxY = window.innerHeight - editPanel.offsetHeight;
+        
+        const constrainedX = Math.max(0, Math.min(newX, maxX));
+        const constrainedY = Math.max(0, Math.min(newY, maxY));
+        
+        editPanel.style.left = constrainedX + 'px';
+        editPanel.style.top = constrainedY + 'px';
+        editPanel.style.right = 'auto'; // rightプロパティを無効化
+        editPanel.style.bottom = 'auto'; // bottomプロパティを無効化
+    });
+    
+    // マウスアップ - ドラッグ終了
+    document.addEventListener('mouseup', function(e) {
+        if (\!isDragging) return;
+        
+        isDragging = false;
+        
+        console.log('🖱️ ドラッグ終了');
+        
+        // スタイルを元に戻す
+        titleBar.style.background = '';
+        titleBar.style.color = '#007acc';
+        titleBar.style.borderRadius = '';
+        titleBar.style.padding = '';
+        titleBar.style.margin = '';
+        
+        document.body.style.userSelect = '';
+    });
+    
+    console.log('✅ タイトルバードラッグ機能初期化完了');
+}
+EOF < /dev/null

@@ -332,14 +332,10 @@ const ModuleManager = {
     // モジュール追加（動的）
     addModule: function(name, moduleInstance) {
         if (SpineEditSystem.modules.has(name)) {
-            console.warn(`⚠️ モジュール "${name}" は既に存在します - 既存をクリーンアップして再登録`);
-            const existingModule = SpineEditSystem.modules.get(name);
-            if (existingModule && typeof existingModule.cleanup === "function") {
-                existingModule.cleanup();
-            }
-            SpineEditSystem.modules.delete(name);
-            console.log(`🧹 既存モジュール "${name}" クリーンアップ完了`);
-        }        
+            console.warn(`⚠️ モジュール '${name}' は既に存在します`);
+            return false;
+        }
+        
         SpineEditSystem.modules.set(name, moduleInstance);
         
         // モジュール初期化
