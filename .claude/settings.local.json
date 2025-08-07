@@ -29,7 +29,8 @@
       "Bash(git merge:*)",
       "WebFetch(domain:esotericsoftware.com)",
       "Bash(git restore:*)",
-      "Bash(git clean:*)"
+      "Bash(git clean:*)",
+      "Bash(tar:*)"
     ],
     "deny": []
   }

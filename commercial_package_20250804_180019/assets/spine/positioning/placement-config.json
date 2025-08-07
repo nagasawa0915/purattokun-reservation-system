@@ -1,0 +1,134 @@
+{
+  "version": "1.0.0",
+  "description": "Canvas配置システム設定ファイル - ぷらっとくんの予約システム",
+  "lastUpdated": "2024-07-24",
+  
+  "global": {
+    "debugMode": true,
+    "responsiveBreakpoint": 768,
+    "defaultContainer": ".hero",
+    "defaultZIndex": 10
+  },
+  
+  "placements": {
+    "hero-purattokun": {
+      "description": "ヒーローセクションのメインキャラクター",
+      "targetCanvas": "[data-spine-character='purattokun']",
+      "container": ".hero",
+      
+      "positioning": {
+        "strategy": "background-sync",
+        "desktop": {
+          "left": "20%",
+          "top": "70%"
+        }
+      },
+      
+      "styling": {
+        "transform": "translate(-50%, -50%)",
+        "zIndex": 10,
+        "additional": {
+          "pointerEvents": "auto",
+          "flex": "none",
+          "alignSelf": "auto",
+          "margin": "0"
+        }
+      },
+      
+      "responsive": {
+        "enabled": false
+      },
+      
+      "animations": {
+        "entrance": {
+          "type": "fadeIn",
+          "duration": 2000,
+          "delay": 1500,
+          "easing": "ease-in-out"
+        },
+        "hover": {
+          "type": "bounce",
+          "duration": 500
+        }
+      },
+      
+      "metadata": {
+        "character": "ぷらっとくん",
+        "scene": "hero",
+        "priority": 1
+      }
+    },
+    
+    "hero-purattokun-alternative": {
+      "description": "代替配置パターン（テスト用）",
+      "targetCanvas": "[data-spine-character='purattokun']",
+      "container": ".hero",
+      
+      "positioning": {
+        "strategy": "percentage",
+        "desktop": {
+          "left": "25%",
+          "top": "65%"
+        },
+        "mobile": {
+          "left": "50%",
+          "top": "70%"
+        }
+      },
+      
+      "styling": {
+        "transform": "translate(-50%, -50%)",
+        "zIndex": 10
+      },
+      
+      "responsive": {
+        "enabled": true,
+        "mobile": {
+          "left": "50%",
+          "top": "70%"
+        }
+      }
+    }
+  },
+  
+  "presets": {
+    "center": {
+      "positioning": {
+        "desktop": { "left": "50%", "top": "50%" },
+        "mobile": { "left": "50%", "top": "50%" }
+      },
+      "styling": {
+        "transform": "translate(-50%, -50%)"
+      }
+    },
+    
+    "bottom-left": {
+      "positioning": {
+        "desktop": { "left": "20%", "top": "80%" },
+        "mobile": { "left": "20%", "top": "85%" }
+      },
+      "styling": {
+        "transform": "translate(-50%, -50%)"
+      }
+    },
+    
+    "bottom-right": {
+      "positioning": {
+        "desktop": { "left": "80%", "top": "80%" },
+        "mobile": { "left": "80%", "top": "85%" }
+      },
+      "styling": {
+        "transform": "translate(-50%, -50%)"
+      }
+    }
+  },
+  
+  "development": {
+    "testPlacements": ["hero-purattokun-alternative"],
+    "debugInfo": {
+      "showBoundingBoxes": false,
+      "logPositionChanges": true,
+      "validateConfig": true
+    }
+  }
+}

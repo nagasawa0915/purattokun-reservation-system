@@ -1,373 +1,63 @@
-// 🎯 Spine編集システム v3.0 - シンプル・レイヤー管理版
-// 基本2レイヤー + 必要時のみモジュール追加による座標問題解決
+// 🎯 Spine編集システム v3.0 - Phase 2: モジュール化版
+// SpineEditCore モジュール読み込み + 拡張機能統合
 
-console.log('🚀 Spine編集システム v3.0 - シンプル版読み込み開始');
+console.log('🚀 Spine編集システム v3.0 - Phase 2 モジュール化版読み込み開始');
 
-// ========== 基本設計原則 ========== //
-/*
-レイヤー構成（座標問題防止）:
-├── レイヤー1: CSS基本配置（静的）
-├── レイヤー2: JavaScript基本制御（動的・最小限）
-└── 拡張モジュール: 必要時のみ追加（使用後削除）
+// ========== SpineEditCore モジュール読み込み ========== //
+// 抽出された核心機能: SpineEditSystem基本状態 + ModuleManager + 座標系スワップ機能
 
-座標問題対策:
-- 基本状態では常に2レイヤーのみ
-- 複雑な機能は使用時のみ追加
-- 使用後は完全にクリーンアップ
-- 座標計算は常にシンプルに保つ
-*/
-
-// ========== グローバル状態管理（最小限） ========== //
-
-// 基本状態
-const SpineEditSystem = {
-    // レイヤー1: CSS基本配置データ
-    baseLayer: {
-        targetElement: null,
-        initialPosition: { left: null, top: null, width: null, height: null }
-    },
-    
-    // レイヤー2: JavaScript基本制御
-    controlLayer: {
-        isEditMode: false,
-        isDragging: false,
-        dragStartPos: { x: 0, y: 0 },
-        elementStartPos: { left: 0, top: 0 }
-    },
-    
-    // モジュール管理（動的追加・削除）
-    modules: new Map(),
-    
-    // 🔧 座標系スワップ機能（競合回避の核心）
-    coordinateSwap: {
-        backup: {
-            left: null,
-            top: null,
-            width: null,
-            height: null,
-            transform: null
-        },
-        isSwapped: false,
-        
-        // 編集開始時：複雑な座標系をシンプルな絶対座標に変換
-        enterEditMode: function(element) {
-            console.log('🔄 座標系スワップ開始 - 複雑座標→シンプル座標');
-            
-            // 現在の描画位置を正確に取得
-            const rect = element.getBoundingClientRect();
-            
-            // 元の座標系を完全バックアップ
-            this.backup = {
-                left: element.style.left,
-                top: element.style.top,
-                width: element.style.width,
-                height: element.style.height,
-                transform: element.style.transform
-            };
-            
-            console.log('💾 元座標系をバックアップ:', this.backup);
-            
-            // シンプルな絶対座標に変換（transform除去）
-            element.style.left = rect.left + 'px';
-            element.style.top = rect.top + 'px';
-            element.style.width = rect.width + 'px';
-            element.style.height = rect.height + 'px';
-            element.style.transform = 'none'; // 重要：transform競合を完全排除
-            
-            this.isSwapped = true;
-            
-            console.log('✅ シンプル座標に変換完了:', {
-                left: rect.left + 'px',
-                top: rect.top + 'px',
-                width: rect.width + 'px',
-                height: rect.height + 'px',
-                transform: 'none'
-            });
-        },
-        
-        // 編集終了時：シンプル座標を元の複雑な座標系に変換
-        exitEditMode: function(element) {
-            if (!this.isSwapped) return;
-            
-            console.log('🔄 座標系復元開始 - シンプル座標→元座標系');
-            
-            // 編集後の絶対座標を取得
-            const editedRect = element.getBoundingClientRect();
-            const parentRect = element.parentElement.getBoundingClientRect();
-            
-            // 元の座標系形式（%値 + transform）に変換
-            const newLeftPercent = ((editedRect.left + editedRect.width/2 - parentRect.left) / parentRect.width) * 100;
-            const newTopPercent = ((editedRect.top + editedRect.height/2 - parentRect.top) / parentRect.height) * 100;
-            const newWidthPercent = (editedRect.width / parentRect.width) * 100;
-            const newHeightPercent = (editedRect.height / parentRect.height) * 100;
-            
-            // 元の形式で適用
-            element.style.left = newLeftPercent.toFixed(1) + '%';
-            element.style.top = newTopPercent.toFixed(1) + '%';
-            element.style.width = newWidthPercent.toFixed(1) + '%';
-            element.style.height = newHeightPercent.toFixed(1) + '%';
-            element.style.transform = 'translate(-50%, -50%)'; // 元のtransform復元
-            
-            console.log('✅ 元座標系に復元完了:', {
-                left: newLeftPercent.toFixed(1) + '%',
-                top: newTopPercent.toFixed(1) + '%',
-                width: newWidthPercent.toFixed(1) + '%',
-                height: newHeightPercent.toFixed(1) + '%',
-                transform: 'translate(-50%, -50%)'
-            });
-            
-            this.isSwapped = false;
-        },
-        
-        // 緊急時：元の座標系に強制復元
-        forceRestore: function(element) {
-            if (!this.backup.left) return;
-            
-            console.log('🚨 緊急復元実行');
-            element.style.left = this.backup.left;
-            element.style.top = this.backup.top;
-            element.style.width = this.backup.width;
-            element.style.height = this.backup.height;
-            element.style.transform = this.backup.transform;
-            
-            this.isSwapped = false;
+// Core モジュール読み込み
+try {
+    // spine-edit-core.js の動的読み込み
+    const coreScript = document.createElement('script');
+    coreScript.src = 'spine-edit-core.js';
+    coreScript.onload = function() {
+        console.log('✅ SpineEditCore モジュール読み込み完了');
+        // Coreモジュールの初期化が完了後に拡張機能を開始
+        if (typeof window.initializeSpineEdit === 'function') {
+            window.initializeSpineEdit();
         }
-    },
-    
-    // 座標計算ヘルパー（シンプル化）
-    coords: {
-        // 基本座標変換のみ（複雑な計算は避ける）
-        pxToPercent: (pxValue, parentSize) => ((pxValue / parentSize) * 100).toFixed(1),
-        percentToPx: (percentValue, parentSize) => (parseFloat(percentValue) / 100) * parentSize
-    }
-};
-
-console.log('✅ v3.0 基本構造準備完了');
-
-// ========== レイヤー1: CSS基本配置システム ========== //
-
-function initializeBaseLayer() {
-    console.log('🔧 レイヤー1: 基本配置初期化開始');
-    
-    // 対象要素を取得（シンプル化）
-    const targetElement = document.querySelector('#character-canvas') ||
-                         document.querySelector('#purattokun-canvas') || 
-                         document.querySelector('canvas[data-spine-character]') ||
-                         document.querySelector('.spine-character');
-    
-    if (!targetElement) {
-        console.error('❌ 対象要素が見つかりません');
-        return false;
-    }
-    
-    SpineEditSystem.baseLayer.targetElement = targetElement;
-    
-    // 初期CSS状態を記録（座標計算の基準）
-    const computedStyle = window.getComputedStyle(targetElement);
-    const parentRect = targetElement.parentElement.getBoundingClientRect();
-    
-    SpineEditSystem.baseLayer.initialPosition = {
-        left: SpineEditSystem.coords.pxToPercent(parseFloat(computedStyle.left), parentRect.width) + '%',
-        top: SpineEditSystem.coords.pxToPercent(parseFloat(computedStyle.top), parentRect.height) + '%',
-        width: SpineEditSystem.coords.pxToPercent(parseFloat(computedStyle.width), parentRect.width) + '%',
-        height: SpineEditSystem.coords.pxToPercent(parseFloat(computedStyle.height), parentRect.height) + '%'
     };
-    
-    console.log('✅ レイヤー1: 基本配置初期化完了', SpineEditSystem.baseLayer.initialPosition);
-    return true;
-}
-
-// ========== レイヤー2: JavaScript基本制御システム ========== //
-
-function initializeControlLayer() {
-    console.log('🔧 レイヤー2: 基本制御初期化開始');
-    
-    const targetElement = SpineEditSystem.baseLayer.targetElement;
-    if (!targetElement) {
-        console.error('❌ 対象要素が未初期化です');
-        return false;
-    }
-    
-    // 基本的なマウスイベント（最小限）
-    targetElement.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    
-    // キーボードイベント（矢印キー移動）
-    document.addEventListener('keydown', handleKeyDown);
-    
-    console.log('✅ レイヤー2: 基本制御初期化完了');
-    return true;
-}
-
-// ========== 基本マウス操作（シンプル版） ========== //
-
-function handleMouseDown(event) {
-    if (!SpineEditSystem.controlLayer.isEditMode) return;
-    
-    // 🔧 NEW: バウンディングボックス表示中は基本ドラッグを無効化
-    if (SpineEditSystem.modules.has('boundingBox')) {
-        console.log('⚠️ バウンディングボックス表示中 - 基本ドラッグ無効');
-        return;
-    }
-    
-    SpineEditSystem.controlLayer.isDragging = true;
-    SpineEditSystem.controlLayer.dragStartPos = {
-        x: event.clientX,
-        y: event.clientY
+    coreScript.onerror = function() {
+        console.error('❌ SpineEditCore モジュール読み込み失敗 - spine-edit-core.js が見つかりません');
+        // フォールバック: 従来システムで続行
+        console.log('🔄 フォールバックシステムで継続...');
+        initializeFallbackSystem();
     };
-    
-    // 現在位置を記録
-    const targetElement = SpineEditSystem.baseLayer.targetElement;
-    const computedStyle = window.getComputedStyle(targetElement);
-    SpineEditSystem.controlLayer.elementStartPos = {
-        left: parseFloat(computedStyle.left),
-        top: parseFloat(computedStyle.top)
+    document.head.appendChild(coreScript);
+} catch (error) {
+    console.error('❌ SpineEditCore モジュール読み込み例外:', error);
+    initializeFallbackSystem();
+}
+
+// フォールバック用の最小システム（緊急時用）
+function initializeFallbackSystem() {
+    console.log('🚨 緊急フォールバックシステム実行中');
+    // 最小限のSpineEditSystemオブジェクトを作成
+    window.SpineEditSystem = {
+        baseLayer: { targetElement: null, initialPosition: {} },
+        controlLayer: { isEditMode: false, isDragging: false, dragStartPos: {}, elementStartPos: {} },
+        modules: new Map(),
+        coordinateSwap: { 
+            backup: {}, 
+            isSwapped: false, 
+            enterEditMode: () => {}, 
+            exitEditMode: () => {}, 
+            forceRestore: () => {} 
+        },
+        coords: { 
+            pxToPercent: (px, parent) => ((px / parent) * 100).toFixed(1),
+            percentToPx: (percent, parent) => (parseFloat(percent) / 100) * parent
+        }
     };
-    
-    event.preventDefault();
+    window.ModuleManager = {
+        hasModule: () => false,
+        getModule: () => null,
+        addModule: () => false,
+        removeModule: () => false,
+        removeAllModules: () => {}
+    };
 }
-
-function handleMouseMove(event) {
-    if (!SpineEditSystem.controlLayer.isDragging) return;
-    
-    // 🔧 NEW: バウンディングボックスモジュール動作中は基本移動を停止
-    if (SpineEditSystem.modules.has('boundingBox')) {
-        const boundingBoxModule = SpineEditSystem.modules.get('boundingBox');
-        if (boundingBoxModule.dragState && boundingBoxModule.dragState.isDragging) {
-            console.log('⚠️ バウンディングボックス操作中 - 基本移動を停止');
-            return; // バウンディングボックス処理を優先
-        }
-    }
-    
-    const deltaX = event.clientX - SpineEditSystem.controlLayer.dragStartPos.x;
-    const deltaY = event.clientY - SpineEditSystem.controlLayer.dragStartPos.y;
-    
-    const targetElement = SpineEditSystem.baseLayer.targetElement;
-    const parentRect = targetElement.parentElement.getBoundingClientRect();
-    
-    // 新しい位置計算（シンプル）
-    const newLeft = SpineEditSystem.controlLayer.elementStartPos.left + deltaX;
-    const newTop = SpineEditSystem.controlLayer.elementStartPos.top + deltaY;
-    
-    // %に変換して適用
-    const newLeftPercent = SpineEditSystem.coords.pxToPercent(newLeft, parentRect.width);
-    const newTopPercent = SpineEditSystem.coords.pxToPercent(newTop, parentRect.height);
-    
-    targetElement.style.left = newLeftPercent + '%';
-    targetElement.style.top = newTopPercent + '%';
-}
-
-function handleMouseUp(event) {
-    if (!SpineEditSystem.controlLayer.isDragging) return;
-    
-    SpineEditSystem.controlLayer.isDragging = false;
-    console.log('✅ 基本移動完了');
-}
-
-// ========== キーボード操作（矢印キー） ========== //
-
-function handleKeyDown(event) {
-    if (!SpineEditSystem.controlLayer.isEditMode) return;
-    
-    // 矢印キーのみ処理
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) return;
-    
-    event.preventDefault();
-    
-    const targetElement = SpineEditSystem.baseLayer.targetElement;
-    const parentRect = targetElement.parentElement.getBoundingClientRect();
-    
-    // 移動量（0.1% または 1%）
-    const moveAmount = event.shiftKey ? 1.0 : 0.1;
-    
-    // 現在位置取得
-    const computedStyle = window.getComputedStyle(targetElement);
-    const currentLeft = parseFloat(computedStyle.left);
-    const currentTop = parseFloat(computedStyle.top);
-    
-    let newLeft = currentLeft;
-    let newTop = currentTop;
-    
-    const moveAmountPx = (moveAmount / 100) * parentRect.width; // 1%をpxに変換
-    
-    switch(event.code) {
-        case 'ArrowLeft':  newLeft -= moveAmountPx; break;
-        case 'ArrowRight': newLeft += moveAmountPx; break;
-        case 'ArrowUp':    newTop -= moveAmountPx; break;
-        case 'ArrowDown':  newTop += moveAmountPx; break;
-    }
-    
-    // %に変換して適用
-    const newLeftPercent = SpineEditSystem.coords.pxToPercent(newLeft, parentRect.width);
-    const newTopPercent = SpineEditSystem.coords.pxToPercent(newTop, parentRect.height);
-    
-    targetElement.style.left = newLeftPercent + '%';
-    targetElement.style.top = newTopPercent + '%';
-    
-    console.log(`⌨️ キーボード移動: ${event.code}, 移動量: ${moveAmount}%`);
-}
-
-// ========== モジュール管理システム ========== //
-
-const ModuleManager = {
-    // モジュール存在確認
-    hasModule: function(name) {
-        return SpineEditSystem.modules.has(name);
-    },
-    
-    // モジュール取得
-    getModule: function(name) {
-        return SpineEditSystem.modules.get(name);
-    },
-    
-    // モジュール追加（動的）
-    addModule: function(name, moduleInstance) {
-        if (SpineEditSystem.modules.has(name)) {
-            console.warn(`⚠️ モジュール '${name}' は既に存在します`);
-            return false;
-        }
-        
-        SpineEditSystem.modules.set(name, moduleInstance);
-        
-        // モジュール初期化
-        if (typeof moduleInstance.initialize === 'function') {
-            moduleInstance.initialize(SpineEditSystem.baseLayer.targetElement);
-        }
-        
-        console.log(`✅ モジュール '${name}' 追加完了`);
-        return true;
-    },
-    
-    // モジュール削除（クリーンアップ）
-    removeModule: function(name) {
-        const moduleInstance = SpineEditSystem.modules.get(name);
-        if (!moduleInstance) {
-            console.warn(`⚠️ モジュール '${name}' が見つかりません`);
-            return false;
-        }
-        
-        // モジュールクリーンアップ
-        if (typeof moduleInstance.cleanup === 'function') {
-            moduleInstance.cleanup();
-        }
-        
-        SpineEditSystem.modules.delete(name);
-        console.log(`✅ モジュール '${name}' 削除完了`);
-        return true;
-    },
-    
-    // 全モジュール削除（基本状態に戻す）
-    removeAllModules: function() {
-        for (const [name, moduleInstance] of SpineEditSystem.modules) {
-            if (typeof moduleInstance.cleanup === 'function') {
-                moduleInstance.cleanup();
-            }
-        }
-        SpineEditSystem.modules.clear();
-        console.log('✅ 全モジュール削除完了 - 基本状態に復帰');
-    }
-};
 
 // ========== 基本UI作成（最小限） ========== //
 
@@ -735,37 +425,222 @@ function startCoordinateDisplay() {
 }
 
 // キャラクター選択時のバウンディングボックス自動表示
-function setupCharacterClickForBoundingBox() {
-    const targetElement = SpineEditSystem.baseLayer.targetElement;
-    if (!targetElement) return;
+// 複数キャラクター管理システム
+const MultiCharacterManager = {
+    characters: [],
+    activeCharacter: null,
+    previewBoxes: [],
     
-    // キャラクタークリックイベント
-    targetElement.addEventListener('click', (event) => {
-        if (!SpineEditSystem.controlLayer.isEditMode) return;
+    // 初期化
+    initialize: function() {
+        console.log('🎯 複数キャラクターマネージャー初期化');
+        this.detectAllCharacters();
+        this.setupEventListeners();
+        this.showPreviewBoxes();
+    },
+    
+    // 全キャラクター検出
+    detectAllCharacters: function() {
+        // LayerControlエラー修正: 直接的なキャラクター検出に変更
+        this.characters = [];
         
-        event.preventDefault();
-        event.stopPropagation();
+        // 基本的なSpineキャラクター検出（5種類のセレクター対応）
+        const selectors = [
+            'canvas[id*="spine"]',
+            'canvas[id*="character"]', 
+            'canvas[id*="purattokun"]',
+            'canvas.spine-canvas',
+            'div[id*="spine"] canvas'
+        ];
         
-        const hasModule = SpineEditSystem.modules.has('boundingBox');
+        selectors.forEach(selector => {
+            try {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    if (element && element.id && !this.characters.find(c => c.id === element.id)) {
+                        this.characters.push({
+                            id: element.id,
+                            element: element,
+                            name: element.id.replace(/[^a-zA-Z]/g, '') || 'character'
+                        });
+                    }
+                });
+            } catch (error) {
+                console.warn(`キャラクター検出エラー (${selector}):`, error);
+            }
+        });
         
-        if (hasModule) {
-            // 既に表示中なら削除
+        console.log(`🔍 検出されたキャラクター数: ${this.characters.length}`);
+    },
+    
+    // キャラクター選択
+    selectCharacter: function(character) {
+        console.log(`🎯 キャラクター選択: ${character.name}`);
+        
+        // 前の選択を解除
+        if (this.activeCharacter) {
+            this.exitEditMode();
+        }
+        
+        // 新しいキャラクターをアクティブに設定
+        this.activeCharacter = character;
+        character.isActive = true;
+        
+        // SpineEditSystemのターゲットを切り替え
+        SpineEditSystem.baseLayer.targetElement = character.element;
+        
+        // 編集モードに入る
+        this.enterEditMode(character);
+        
+        // プレビューボックスを更新
+        this.updatePreviewBoxes();
+        
+        // バウンディングボックス表示
+        this.showEditBoundingBox();
+    },
+    
+    // 選択解除
+    deselectCharacter: function() {
+        if (this.activeCharacter) {
+            console.log(`🚫 選択解除: ${this.activeCharacter.name}`);
+            this.activeCharacter.isActive = false;
+            this.exitEditMode();
+            this.activeCharacter = null;
+            
+            // バウンディングボックス削除
             ModuleManager.removeModule('boundingBox');
-            console.log('📦 バウンディングボックス非表示');
-        } else {
-            // バウンディングボックス表示
+            
+            // プレビューボックスを更新
+            this.updatePreviewBoxes();
+        }
+    },
+    
+    // 編集モードに入る
+    enterEditMode: function(character) {
+        if (!SpineEditSystem.coordinateSwap.isSwapped) {
+            SpineEditSystem.coordinateSwap.enterEditMode(character.element);
+        }
+    },
+    
+    // 編集モードを出る
+    exitEditMode: function() {
+        if (SpineEditSystem.coordinateSwap.isSwapped) {
+            const targetElement = this.activeCharacter ? this.activeCharacter.element : SpineEditSystem.baseLayer.targetElement;
+            SpineEditSystem.coordinateSwap.exitEditMode(targetElement);
+        }
+    },
+    
+    // プレビューボックス表示
+    showPreviewBoxes: function() {
+        this.clearPreviewBoxes();
+        
+        this.characters.forEach(character => {
+            if (!character.isActive) {
+                this.createPreviewBox(character);
+            }
+        });
+    },
+    
+    // プレビューボックス作成
+    createPreviewBox: function(character) {
+        const element = character.element;
+        const rect = element.getBoundingClientRect();
+        const parentRect = element.parentElement.getBoundingClientRect();
+        
+        const previewBox = document.createElement('div');
+        previewBox.className = 'spine-character-preview-box';
+        previewBox.dataset.characterId = character.id;
+        previewBox.style.cssText = `
+            position: absolute;
+            border: 1px dotted #999;
+            background: rgba(153, 153, 153, 0.05);
+            pointer-events: auto;
+            z-index: 8888;
+            left: ${rect.left - parentRect.left}px;
+            top: ${rect.top - parentRect.top}px;
+            width: ${rect.width}px;
+            height: ${rect.height}px;
+            cursor: pointer;
+        `;
+        
+        // クリックイベント
+        previewBox.addEventListener('click', (event) => {
+            if (!SpineEditSystem.controlLayer.isEditMode) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.selectCharacter(character);
+        });
+        
+        element.parentElement.appendChild(previewBox);
+        this.previewBoxes.push(previewBox);
+    },
+    
+    // プレビューボックス更新
+    updatePreviewBoxes: function() {
+        this.showPreviewBoxes();
+    },
+    
+    // プレビューボックス削除
+    clearPreviewBoxes: function() {
+        this.previewBoxes.forEach(box => {
+            if (box.parentElement) {
+                box.parentElement.removeChild(box);
+            }
+        });
+        this.previewBoxes = [];
+    },
+    
+    // 編集バウンディングボックス表示
+    showEditBoundingBox: function() {
+        if (this.activeCharacter) {
             const boundingBoxModule = createBoundingBoxModule();
             const success = ModuleManager.addModule('boundingBox', boundingBoxModule);
             
             if (success) {
-                console.log('📦 バウンディングボックス表示');
+                console.log('📦 編集バウンディングボックス表示');
             } else {
-                console.error('❌ バウンディングボックス表示失敗');
+                console.error('❌ 編集バウンディングボックス表示失敗');
             }
         }
-    });
+    },
     
-    console.log('✅ キャラクタークリック→バウンディングボックス設定完了');
+    // イベントリスナー設定
+    setupEventListeners: function() {
+        // 空白クリックで選択解除
+        document.addEventListener('click', (event) => {
+            if (!SpineEditSystem.controlLayer.isEditMode) return;
+            
+            // キャラクターやプレビューボックス、バウンディングボックス以外をクリック
+            const isCharacterClick = this.characters.some(char => 
+                char.element.contains(event.target)
+            );
+            const isPreviewClick = event.target.classList.contains('spine-character-preview-box');
+            const isBoundingBoxClick = event.target.closest('#spine-bounding-box') || 
+                                     event.target.closest('.spine-handle') || 
+                                     event.target.closest('.spine-center-area');
+            
+            if (!isCharacterClick && !isPreviewClick && !isBoundingBoxClick) {
+                this.deselectCharacter();
+            }
+        });
+        
+        console.log('✅ 複数キャラクター イベントリスナー設定完了');
+    },
+    
+    // クリーンアップ
+    cleanup: function() {
+        this.clearPreviewBoxes();
+        this.deselectCharacter();
+        this.characters = [];
+        console.log('🧹 複数キャラクターマネージャー クリーンアップ完了');
+    }
+};
+
+function setupCharacterClickForBoundingBox() {
+    // 複数キャラクター対応の初期化
+    MultiCharacterManager.initialize();
+    
+    console.log('✅ 複数キャラクター対応バウンディングボックス設定完了');
 }
 
 // ========== バウンディングボックスモジュール ========== //
@@ -806,27 +681,53 @@ function createBoundingBoxModule() {
             this.removeBoundingBox();
             this.removeEventListeners();
             this.isActive = false;
+            
+            // プレビューボックス再表示
+            if (MultiCharacterManager && MultiCharacterManager.updatePreviewBoxes) {
+                MultiCharacterManager.updatePreviewBoxes();
+            }
         },
         
-        // バウンディングボックス作成
+        // バウンディングボックス作成（複数キャラクター対応）
         createBoundingBox: function(targetElement) {
             const rect = targetElement.getBoundingClientRect();
             const parentRect = targetElement.parentElement.getBoundingClientRect();
             
-            // バウンディングボックス本体
+            // 選択中キャラクターの名前を取得
+            const characterName = MultiCharacterManager.activeCharacter ? 
+                MultiCharacterManager.activeCharacter.name : 'Unknown';
+            
+            // バウンディングボックス本体（選択中は実線、より目立つ色）
             this.boundingBox = document.createElement('div');
             this.boundingBox.id = 'spine-bounding-box';
             this.boundingBox.style.cssText = `
                 position: absolute;
-                border: 2px dashed #007acc;
-                background: rgba(0, 122, 204, 0.1);
+                border: 2px solid #007acc;
+                background: rgba(0, 122, 204, 0.15);
                 pointer-events: none;
                 z-index: 9999;
                 left: ${rect.left - parentRect.left}px;
                 top: ${rect.top - parentRect.top}px;
                 width: ${rect.width}px;
                 height: ${rect.height}px;
+                box-shadow: 0 0 8px rgba(0, 122, 204, 0.3);
             `;
+            
+            // キャラクター名表示ラベル追加
+            const label = document.createElement('div');
+            label.style.cssText = `
+                position: absolute;
+                top: -25px;
+                left: 0;
+                background: #007acc;
+                color: white;
+                padding: 2px 8px;
+                font-size: 12px;
+                border-radius: 3px;
+                white-space: nowrap;
+            `;
+            label.textContent = characterName;
+            this.boundingBox.appendChild(label);
             
             targetElement.parentElement.appendChild(this.boundingBox);
             
@@ -835,6 +736,8 @@ function createBoundingBoxModule() {
             
             // 中央移動エリア作成
             this.createCenterArea();
+            
+            console.log(`📦 ${characterName} 用バウンディングボックス作成完了`);
         },
         
         // ハンドル作成
@@ -1478,6 +1381,11 @@ function stopEditMode() {
     
     SpineEditSystem.controlLayer.isEditMode = false;
     
+    // 複数キャラクターマネージャーのクリーンアップ
+    if (MultiCharacterManager && MultiCharacterManager.cleanup) {
+        MultiCharacterManager.cleanup();
+    }
+    
     // グローバルクリックハンドラーを削除
     cleanupGlobalClickHandler();
     
@@ -1497,7 +1405,7 @@ function stopEditMode() {
     // 全モジュール削除（クリーンな状態に戻す）
     ModuleManager.removeAllModules();
     
-    console.log('✅ 編集モード終了完了 - 座標系復元・クリーンな状態に復帰');
+    console.log('✅ 編集モード終了完了 - 複数キャラクター対応・座標系復元・クリーンな状態に復帰');
 }
 
 // ========== 状態管理・永続化システム ========== //

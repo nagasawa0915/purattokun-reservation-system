@@ -1,5 +1,5 @@
 // DELETED: This was a duplicate file (11,880 lines)
-// Master file location: /assets/js/libs/spine-webgl.js
+// Master file location: ../spine-webgl.js (within this package)
 // Deleted on: 2025-08-07 for Phase 1 duplicate elimination
 // Original size: 446KB
 // This file contained a complete duplicate of the Spine WebGL library

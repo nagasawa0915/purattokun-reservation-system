@@ -1,0 +1,874 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    overflow-x: hidden;  /* 水平スクロールを完全に無効化 */
+}
+
+body {
+    font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    font-display: swap;
+    line-height: 1.6;
+    color: #333;
+    background-color: #fafafa;
+}
+
+/* 新しいセマンティック要素用のスタイル */
+.site-title {
+    color: #ff6b6b;
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+.hero-title {
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 0.8rem;
+    line-height: 1.2;
+    font-weight: 600;
+}
+
+.series-text {
+    display: block;
+    font-size: 0.9em;
+    margin-top: 0.2rem;
+}
+
+.hero-subtitle {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.section-title {
+    font-size: 2.2rem;
+    color: #333;
+    position: relative;
+    z-index: 10;
+}
+
+.service-title {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.service-description {
+    color: #666;
+    line-height: 1.6;
+}
+
+.concept-title {
+    color: #ff6b6b;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.contact-subtitle {
+    color: #ff6b6b;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.footer-nav {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.footer-nav a {
+    color: #fff;
+    text-decoration: none;
+    margin: 0 1rem;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.footer-nav a:hover {
+    color: #ff6b6b;
+}
+
+/* サービス内部リンクスタイル */
+.service-link {
+    color: #ff6b6b;
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1px solid transparent;
+    transition: border-bottom-color 0.3s ease;
+}
+
+.service-link:hover {
+    border-bottom-color: #ff6b6b;
+}
+
+/* Header & Navigation */
+.navbar {
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+}
+
+.logo h1 {
+    color: #ff6b6b;
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+}
+
+.nav-menu a {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-menu a:hover {
+    color: #ff6b6b;
+}
+
+/* Hero Section - シンプルな構造（成功パターン適用） */
+.hero {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 120px 20px 40px;
+    overflow: hidden;  /* 雲のはみ出しを防ぐ */
+}
+
+/* 背景コンテナ（背景画像・雲・キャラクターの親） */
+.background-container {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    overflow: visible;  /* Spineキャラクターが切れないように変更 */
+}
+
+/* 背景画像（<img>タグで配置） */
+.background-image {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Spine Canvas - シンプル版の成功設定を適用 */
+#purattokun-canvas {
+    position: absolute;
+    left: 40%;   /* 位置調整テスト：少し右に移動 */
+    top: 70%;    /* 位置調整テスト：少し上に移動 */
+    transform: translate(-50%, -50%);
+    width: 80%;  /* test-simple-spine.htmlと同じ大きなサイズ */
+    height: 80%; /* test-simple-spine.htmlと同じ大きなサイズ */
+    pointer-events: auto;
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* フォールバック：data-spine-character属性用 */
+canvas[data-spine-character] {
+    position: absolute;
+    left: 40%;   /* 位置調整テスト：少し右に移動 */
+    top: 70%;    /* 位置調整テスト：少し上に移動 */
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 80%;
+    pointer-events: auto;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+    animation: rotate 20s linear infinite;
+    z-index: 0;
+}
+
+.hero-content,
+.hero-image {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ================================
+   雲のアニメーション設定
+   ================================ */
+
+/* 雲の共通スタイル（背景画像基準配置） */
+.background-container .cloud {
+    position: absolute !important;  /* 背景コンテナ基準の絶対配置 */
+    opacity: 0.7;                   /* 透明度 */
+    z-index: 5;                     /* 背景画像より上、キャラクターより下 */
+    pointer-events: none;           /* マウスイベントを無効化 */
+}
+
+/* ================================
+   個別の雲設定
+   調整可能な項目:
+   - top: 垂直位置（%で指定、0%=最上部、100%=最下部）
+   - width: 雲のサイズ（px指定、50px〜200px推奨）
+   - animation: アニメーション名 時間 動作 繰り返し
+   - animation-delay: 開始遅延（負の値で途中から開始）
+   ================================ */
+
+/* 雲1: 中位置、標準サイズ、中速 */
+.cloud1 {
+    top: 10%;                           /* 垂直位置: 上から10%の位置 */
+    width: 100px;                       /* サイズ: 100px（標準） */
+    height: auto;                       /* 高さ: 幅に比例して自動調整 */
+    animation: cloudFloat1 25s linear infinite;  /* 25秒で1周、等速、無限ループ */
+    animation-delay: -1s;               /* 1秒経過した状態で開始（初期位置調整） */
+}
+
+/* 雲2: やや下、標準サイズ、遅め */
+.cloud2 {
+    top: 15%;                           /* 垂直位置: 上から15%の位置 */
+    width: 100px;                       /* サイズ: 100px（標準） */
+    height: auto;
+    animation: cloudFloat2 30s linear infinite;  /* 30秒で1周（遅め） */
+    animation-delay: -15s;              /* 15秒経過した状態で開始 */
+}
+
+/* 雲3: 高位置、標準サイズ、最遅 */
+.cloud3 {
+    top: 8%;                            /* 垂直位置: 上から8%の位置（高め） */
+    width: 100px;                       /* サイズ: 100px（標準） */
+    height: auto;
+    animation: cloudFloat3 35s linear infinite;  /* 35秒で1周（最も遅い） */
+    animation-delay: -32s;              /* 32秒経過した状態で開始 */
+}
+
+/* 雲4: 中位置、大きめ、中速 */
+.cloud4 {
+    top: 12%;                           /* 垂直位置: 上から12%の位置 */
+    width: 150px;                       /* サイズ: 150px（大きめ） */
+    height: auto;
+    animation: cloudFloat4 28s linear infinite;  /* 28秒で1周 */
+    animation-delay: -5s;               /* 5秒経過した状態で開始 */
+}
+
+/* 雲5: 低位置、標準サイズ、やや遅め */
+.cloud5 {
+    top: 18%;                           /* 垂直位置: 上から18%の位置（低め） */
+    width: 100px;                       /* サイズ: 100px（標準） */
+    height: auto;
+    animation: cloudFloat5 33s linear infinite;  /* 33秒で1周（やや遅め） */
+    animation-delay: -20s;              /* 20秒経過した状態で開始 */
+}
+
+/* 雲6: 最高位置、標準サイズ、やや速め */
+.cloud6 {
+    top: 6%;                            /* 垂直位置: 上から6%の位置（最も高い） */
+    width: 100px;                       /* サイズ: 100px（標準） */
+    height: auto;
+    animation: cloudFloat6 27s linear infinite;  /* 27秒で1周（やや速め） */
+    animation-delay: -42s;              /* 42秒経過した状態で開始 */
+}
+
+/* ================================
+   アニメーション定義
+   各雲の動きパターンを定義
+   
+   調整可能な項目:
+   - left開始位置: -80px〜-120px（雲のサイズに応じて調整）
+   - left終了位置: calc(100% + 100px)（画面幅 + 余裕分）
+   - translateY: 上下の揺らぎ（-20px〜20px推奨）
+   - %の位置: アニメーション途中での変化タイミング
+   ================================ */
+
+/* 雲1のアニメーション: 中央で少し上に */
+@keyframes cloudFloat1 {
+    0% {
+        left: -80px;                    /* 開始位置: 画面左外 */
+        transform: translateY(0px);     /* 垂直位置: 基準位置 */
+    }
+    50% {                              /* アニメーション中央で */
+        transform: translateY(-10px);   /* 少し上に移動 */
+    }
+    100% {
+        left: calc(100% + 100px);       /* 終了位置: 画面右外 */
+        transform: translateY(0px);     /* 垂直位置: 基準に戻る */
+    }
+}
+
+/* 雲2のアニメーション: 早めに下、後半で上 */
+@keyframes cloudFloat2 {
+    0% {
+        left: -80px;                    /* 開始位置: 画面左外 */
+        transform: translateY(0px);     /* 垂直位置: 基準位置 */
+    }
+    30% {                              /* 早めのタイミングで */
+        transform: translateY(8px);     /* 下に移動 */
+    }
+    70% {                              /* 後半で */
+        transform: translateY(-8px);    /* 上に移動 */
+    }
+    100% {
+        left: calc(100% + 80px);        /* 終了位置: 画面右外 */
+        transform: translateY(0px);     /* 垂直位置: 基準に戻る */
+    }
+}
+
+/* 雲3のアニメーション: 中盤で大きく上、終盤で少し下 */
+@keyframes cloudFloat3 {
+    0% {
+        left: -90px;                    /* 開始位置: 画面左外 */
+        transform: translateY(0px);     /* 垂直位置: 基準位置 */
+    }
+    40% {                              /* 中盤で */
+        transform: translateY(-12px);   /* 大きく上に移動 */
+    }
+    80% {                              /* 終盤で */
+        transform: translateY(5px);     /* 少し下に移動 */
+    }
+    100% {
+        left: calc(100% + 90px);        /* 終了位置: 画面右外 */
+        transform: translateY(0px);     /* 垂直位置: 基準に戻る */
+    }
+}
+
+/* 雲4のアニメーション: 前半で下、後半で上（大きめの雲用） */
+@keyframes cloudFloat4 {
+    0% {
+        left: -80px;                    /* 開始位置: 画面左外 */
+        transform: translateY(0px);     /* 垂直位置: 基準位置 */
+    }
+    35% {                              /* 前半で */
+        transform: translateY(10px);    /* 下に移動 */
+    }
+    75% {                              /* 後半で */
+        transform: translateY(-8px);    /* 上に移動 */
+    }
+    100% {
+        left: calc(100% + 120px);       /* 終了位置: 画面右外（大きめなので余裕を持たせる） */
+        transform: translateY(0px);     /* 垂直位置: 基準に戻る */
+    }
+}
+
+/* 雲5のアニメーション: 中盤で大きく上、終盤で下 */
+@keyframes cloudFloat5 {
+    0% {
+        left: -80px;                    /* 開始位置: 画面左外 */
+        transform: translateY(0px);     /* 垂直位置: 基準位置 */
+    }
+    45% {                              /* 中盤で */
+        transform: translateY(-15px);   /* 大きく上に移動 */
+    }
+    85% {                              /* 終盤で */
+        transform: translateY(8px);     /* 下に移動 */
+    }
+    100% {
+        left: calc(100% + 100px);       /* 終了位置: 画面右外 */
+        transform: translateY(0px);     /* 垂直位置: 基準に戻る */
+    }
+}
+
+/* 雲6のアニメーション: 複雑な上下動（3段階の変化） */
+@keyframes cloudFloat6 {
+    0% {
+        left: -80px;                    /* 開始位置: 画面左外 */
+        transform: translateY(0px);     /* 垂直位置: 基準位置 */
+    }
+    30% {                              /* 序盤で */
+        transform: translateY(6px);     /* 少し下に */
+    }
+    60% {                              /* 中盤で */
+        transform: translateY(-10px);   /* 上に移動 */
+    }
+    90% {                              /* 終盤直前で */
+        transform: translateY(3px);     /* 再び少し下に */
+    }
+    100% {
+        left: calc(100% + 110px);       /* 終了位置: 画面右外 */
+        transform: translateY(0px);     /* 垂直位置: 基準に戻る */
+    }
+}
+
+/* ================================
+   調整方法まとめ
+   ================================
+   
+   【雲のサイズ変更】
+   各.cloudクラスのwidthを変更
+   推奨値: 50px（小） ～ 200px（大）
+   
+   【雲の速度変更】
+   各.cloudクラスのanimationの秒数を変更
+   推奨値: 20s（速い） ～ 40s（遅い）
+   
+   【雲の位置変更】
+   各.cloudクラスのtopを変更
+   推奨値: 5%（高い） ～ 20%（低い）
+   
+   【初期配置変更】
+   各.cloudクラスのanimation-delayを変更
+   負の値で進んだ状態から開始
+   例: -10s = 10秒経過した状態でスタート
+   
+   【上下の動き変更】
+   各@keyframesのtranslateYを変更
+   推奨値: -20px（上） ～ 20px（下）
+   
+   【雲の数を変更】
+   HTMLの<img>タグの追加/削除
+   CSSの.cloudクラスと@keyframesの追加/削除
+   ================================ */
+
+.hero-content {
+    position: absolute;
+    z-index: 20;                    /* 背景要素より上に配置 */
+    max-width: 280px;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(8px);
+    left: 40px;
+    top: 130px;
+}
+
+.hero-content h2 {
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 0.8rem;
+    line-height: 1.2;
+    font-weight: 600;
+}
+
+.hero-content p {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+.cta-button {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.cta-button:hover {
+    background: #ff5252;
+}
+
+.hero-image {
+    display: none;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Services Section */
+.services {
+    padding: 80px 0;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+    contain: layout;  /* レイアウトシフトを防ぐ */
+}
+
+.services::before {
+    content: '🐾';
+    position: absolute;
+    font-size: 15rem;
+    opacity: 0.03;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.services .container {
+    position: relative;
+    z-index: 1;
+}
+
+.services h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    margin-bottom: 3rem;
+    color: #333;
+    position: relative;
+    z-index: 10;
+}
+
+.services h2::before {
+    content: '☁️';
+    position: absolute;
+    top: -190px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 15rem;
+    opacity: 0.4;
+    z-index: -1;
+    animation: cloudFloat 4s ease-in-out infinite;
+}
+
+@keyframes cloudFloat {
+    0%, 100% { 
+        transform: translateX(-50%) translateY(0px);
+        opacity: 0.4;
+    }
+    50% { 
+        transform: translateX(-50%) translateY(-3px);
+        opacity: 0.5;
+    }
+}
+
+.service-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.service-card {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    text-align: center;
+    transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);  /* 移動距離を縮小 */
+}
+
+.service-card.animate {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.service-card:hover {
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 20px 40px rgba(255, 107, 107, 0.2);
+    background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+}
+
+.service-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.service-card h3 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.service-card p {
+    color: #666;
+    line-height: 1.6;
+}
+
+/* Concept Section */
+.concept {
+    padding: 80px 0;
+    background: linear-gradient(45deg, #f8f9fa 0%, #fff5f5 50%, #f8f9fa 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.concept::after {
+    content: '🏠🐱';
+    position: absolute;
+    font-size: 8rem;
+    opacity: 0.05;
+    top: 20%;
+    right: 10%;
+    pointer-events: none;
+    animation: float 4s ease-in-out infinite;
+}
+
+.concept h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    margin-bottom: 3rem;
+    color: #333;
+}
+
+.concept-content {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    position: relative;
+    z-index: 1;
+}
+
+.concept-text {
+    opacity: 0;
+    transform: translateX(-50px);
+    transition: all 0.8s ease-out;
+}
+
+.concept-text.animate {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.concept-image {
+    opacity: 0;
+    transform: translateX(50px) scale(0.8);
+    transition: all 0.8s ease-out 0.3s;
+}
+
+.concept-image.animate {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+}
+
+.concept-text {
+    flex: 1;
+}
+
+.concept-text h3 {
+    color: #ff6b6b;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.concept-text p {
+    color: #666;
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+}
+
+.concept-features {
+    list-style: none;
+    margin-top: 2rem;
+}
+
+.concept-features li {
+    padding: 0.5rem 0;
+    color: #555;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.concept-features li:before {
+    content: "🐾";
+    position: absolute;
+    left: 0;
+}
+
+.concept-image {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.cat-house-illustration {
+    text-align: center;
+}
+
+.house {
+    font-size: 6rem;
+    margin-bottom: 1rem;
+}
+
+.cats {
+    font-size: 2rem;
+    letter-spacing: 1rem;
+}
+
+/* Contact Section */
+.contact {
+    padding: 80px 0;
+    background: #fff;
+}
+
+.contact h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    margin-bottom: 3rem;
+    color: #333;
+}
+
+.contact-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+.contact-info h3 {
+    color: #ff6b6b;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.contact-info p {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #555;
+}
+
+.contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.contact-form input,
+.contact-form textarea {
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.contact-form input:focus,
+.contact-form textarea:focus {
+    outline: none;
+    border-color: #ff6b6b;
+}
+
+.contact-form button {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.contact-form button:hover {
+    background: #ff5252;
+}
+
+/* Footer */
+footer {
+    background: #333;
+    color: #fff;
+    text-align: center;
+    padding: 2rem 0;
+}
+
+/* Spine Character Positioning - ヒーローセクション基準の相対位置システム */
+#purattokun-canvas {
+    position: absolute;
+    pointer-events: none;
+    z-index: 2;
+    /* 位置は JavaScript で設定 */
+    transform-origin: center center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .nav-menu {
+        flex-direction: column;
+        position: absolute;
+        top: 70px;
+        left: 0;
+        width: 100%;
+        background: #fff;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: none;
+    }
+
+    .hero {
+        flex-direction: column;
+        text-align: center;
+        padding: 100px 20px 60px;
+    }
+
+
+    .hero-content h2 {
+        font-size: 2rem;
+    }
+
+    /* Spine Canvas - モバイル版もシンプル設定 */
+    #purattokun-canvas,
+    canvas[data-spine-character] {
+        left: 40%;   /* 位置調整テスト：少し右に移動 */
+        top: 70%;    /* 位置調整テスト：少し上に移動 */
+        width: 80%;
+        height: 80%;
+        pointer-events: auto;
+        cursor: pointer;
+    }
+
+    .concept-content {
+        flex-direction: column;
+    }
+
+    .contact-content {
+        grid-template-columns: 1fr;
+    }
+
+    .service-grid {
+        grid-template-columns: 1fr;
+    }
+}

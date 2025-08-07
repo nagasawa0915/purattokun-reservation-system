@@ -1,8 +1,13 @@
-// DELETED: This was a duplicate file (11,880 lines)
-// Master file location: /assets/js/libs/spine-webgl.js
-// Deleted on: 2025-08-07 for Phase 1 duplicate elimination
-// Original size: 446KB
-// This file contained a complete duplicate of the Spine WebGL library
+var spine = (() => {
+  var __defProp = Object.defineProperty;
+  var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
+  var __export = (target, all) => {
+    __markAsModule(target);
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+
+  // spine-webgl/src/index.ts
   var src_exports = {};
   __export(src_exports, {
     AlphaTimeline: () => AlphaTimeline,
