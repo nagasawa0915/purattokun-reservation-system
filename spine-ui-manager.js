@@ -348,7 +348,8 @@ function setupEditingUIEvents() {
         layerBtn.addEventListener('click', () => {
             console.log('🎭 レイヤー編集ボタンクリック');
             if (typeof createLayerEditModule === 'function') {
-                createLayerEditModule();
+                const layerModule = createLayerEditModule();
+                layerModule.initialize();  // 🔧 初期化を追加
             } else {
                 console.error('❌ createLayerEditModule関数が見つかりません');
             }

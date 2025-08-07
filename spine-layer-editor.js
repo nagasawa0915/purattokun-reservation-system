@@ -131,7 +131,9 @@ function createLayerEditModule() {
             console.log('🎭 レイヤー編集モジュール初期化開始');
             
             // キャラクター検出
+            console.log('🔍 detectCharacters()を呼び出します');
             this.detectCharacters();
+            console.log('🔍 detectCharacters()完了、キャラクター数:', this.characters.length);
             
             // 初期レイヤー設定
             this.updateCharacterLayers();
@@ -173,9 +175,9 @@ function createLayerEditModule() {
         detectCharacters: function() {
             console.log('🔍 キャラクター検出開始');
             
+            // 🎯 汎用的なキャラクター検出（完全自動・固有名詞不要）
             const selectors = [
-                '#purattokun-canvas',
-                '#purattokun-fallback', 
+                'canvas[id$="-canvas"]',     // 標準命名規則（最優先）
                 'canvas[data-spine-character]',
                 '.spine-character',
                 '[data-character-name]'
@@ -223,18 +225,20 @@ function createLayerEditModule() {
                 return true;
             }
             
-            // フォールバック画像とCanvas要素の重複を特別処理
-            if (element.id === 'purattokun-fallback') {
-                const canvasExists = this.characters.some(char => char.element.id === 'purattokun-canvas');
+            // 🎯 汎用的なフォールバック・Canvas重複処理
+            const baseId = element.id.replace(/-(canvas|fallback)$/, '');
+            
+            if (element.id.endsWith('-fallback')) {
+                const canvasExists = this.characters.some(char => char.element.id === `${baseId}-canvas`);
                 if (canvasExists) {
                     console.log('  🔄 Canvas優先: フォールバック画像をスキップ');
                     return true;
                 }
             }
             
-            if (element.id === 'purattokun-canvas') {
-                // Canvas要素が登録される場合、フォールバック画像を削除
-                const fallbackIndex = this.characters.findIndex(char => char.element.id === 'purattokun-fallback');
+            if (element.id.endsWith('-canvas')) {
+                // Canvas要素が登録される場合、対応するフォールバック画像を削除
+                const fallbackIndex = this.characters.findIndex(char => char.element.id === `${baseId}-fallback`);
                 if (fallbackIndex !== -1) {
                     console.log('  🔄 Canvas発見: フォールバック画像を削除');
                     this.characters.splice(fallbackIndex, 1);
@@ -256,10 +260,15 @@ function createLayerEditModule() {
                 return element.dataset.characterName;
             }
             
-            // id属性から推測
+            // 🎯 汎用的なキャラクター名推測（固有名詞不要）
             if (element.id) {
-                if (element.id.includes('purattokun')) return 'ぷらっとくん';
-                return element.id.replace(/[-_]canvas$|[-_]fallback$/, '');
+                const baseName = element.id.replace(/[-_](canvas|fallback)$/, '');
+                // 表示名マップ（拡張可能）
+                const displayNames = { 
+                    'purattokun': 'ぷらっとくん',
+                    'nezumi': 'ねずみ'
+                };
+                return displayNames[baseName] || baseName;
             }
             
             // class属性から推測
