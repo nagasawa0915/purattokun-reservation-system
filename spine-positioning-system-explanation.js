@@ -1,26 +1,55 @@
-// 🎯 Spine編集システム v3.0 - Phase 2: モジュール化版
+// 🎯 Spine編集システム v3.0 - Phase 2: モジュール化版（修正版）
 // SpineEditCore モジュール読み込み + 拡張機能統合
+// 修正日: 2025-08-07 - 統合エラー包括修正
 
-console.log('🚀 Spine編集システム v3.0 - Phase 2 モジュール化版読み込み開始');
+console.log('🚀 Spine編集システム v3.0 - Phase 2 モジュール化版読み込み開始（修正版）');
 
-// ========== SpineEditCore モジュール読み込み ========== //
+// ========== 重要な変数の事前宣言 ========== //
+// Temporal Dead Zone回避のため、使用前に宣言
+let globalClickHandler = null;
+let spineEditCoreLoaded = false;
+let systemInitialized = false;
+
+// ========== SpineEditCore モジュール読み込み（強化版） ========== //
 // 抽出された核心機能: SpineEditSystem基本状態 + ModuleManager + 座標系スワップ機能
 
-// Core モジュール読み込み
+/**
+ * spine-edit-core.js読み込み完了待機システム
+ */
+function waitForSpineEditCore(callback, maxRetries = 50) {
+    let retries = 0;
+    const checkInterval = setInterval(() => {
+        // SpineEditSystemが完全に読み込まれているかチェック
+        if (window.SpineEditSystem && 
+            window.SpineEditSystem.coords && 
+            typeof window.SpineEditSystem.coords.pxToPercent === 'function' &&
+            window.SpineEditSystem.coordinateSwap &&
+            typeof window.SpineEditSystem.coordinateSwap.enterEditMode === 'function') {
+            
+            clearInterval(checkInterval);
+            spineEditCoreLoaded = true;
+            console.log('✅ spine-edit-core.js読み込み完了確認');
+            callback();
+        } else if (retries++ > maxRetries) {
+            clearInterval(checkInterval);
+            console.warn('⚠️ spine-edit-core.js読み込みタイムアウト - フォールバックモード');
+            initializeFallbackSystem();
+            callback();
+        }
+    }, 100);
+}
+
+// Core モジュール読み込み（改良版）
 try {
     // spine-edit-core.js の動的読み込み
     const coreScript = document.createElement('script');
     coreScript.src = 'spine-edit-core.js';
     coreScript.onload = function() {
-        console.log('✅ SpineEditCore モジュール読み込み完了');
-        // Coreモジュールの初期化が完了後に拡張機能を開始
-        if (typeof window.initializeSpineEdit === 'function') {
-            window.initializeSpineEdit();
-        }
+        console.log('📦 spine-edit-core.jsファイル読み込み完了');
+        spineEditCoreLoaded = true;
     };
     coreScript.onerror = function() {
         console.error('❌ SpineEditCore モジュール読み込み失敗 - spine-edit-core.js が見つかりません');
-        // フォールバック: 従来システムで続行
         console.log('🔄 フォールバックシステムで継続...');
         initializeFallbackSystem();
     };
@@ -46,8 +75,14 @@ function initializeFallbackSystem() {
             forceRestore: () => {} 
         },
         coords: { 
-            pxToPercent: (px, parent) => ((px / parent) * 100).toFixed(1),
-            percentToPx: (percent, parent) => (parseFloat(percent) / 100) * parent
+            pxToPercent: (px, parent) => {
+                if (!parent || parent === 0) return 0;
+                return parseFloat(((px / parent) * 100).toFixed(1));
+            },
+            percentToPx: (percent, parent) => {
+                if (!parent || parent === 0) return 0;
+                return (parseFloat(percent) / 100) * parent;
+            }
         }
     };
     window.ModuleManager = {
@@ -1798,7 +1833,13 @@ function restoreCharacterState() {
 // ========== 初期化・起動システム ========== //
 
 function initializeSpineEditSystem() {
-    console.log('🚀 Spine編集システム v3.0 初期化開始');
+    if (systemInitialized) {
+        console.log('⚠️ システム既に初期化済み');
+        return;
+    }
+    
+    console.log('🚀 Spine編集システム v3.0 初期化開始（spine-edit-core連携版）');
+    systemInitialized = true;
     
     // URLパラメータ確認
     const urlParams = new URLSearchParams(window.location.search);
@@ -1823,7 +1864,47 @@ function initializeSpineEditSystem() {
     }, 1000); // DOM構築完了を待つ
     
     console.log('✅ Spine編集システム v3.0 初期化完了');
+    
+    // 🧪 初期化後の状況診断（デバッグ用）
+    setTimeout(() => {
+        diagnoseSystemStatus();
+    }, 500);
 }
+
+// ========== システム診断機能（デバッグ用） ========== //
+
+/**
+ * システム状況の包括診断
+ */
+function diagnoseSystemStatus() {
+    console.group('🔍 v3.0 Phase 2 システム診断');
+    
+    console.log('📋 コアシステム状況:');
+    console.log(`  - spineEditCoreLoaded: ${spineEditCoreLoaded}`);
+    console.log(`  - systemInitialized: ${systemInitialized}`);
+    console.log(`  - globalClickHandler: ${globalClickHandler !== null ? '設定済み' : '未設定'}`);
+    
+    console.log('📋 SpineEditSystem状況:');
+    console.log(`  - SpineEditSystem存在: ${!!window.SpineEditSystem}`);
+    if (window.SpineEditSystem) {
+        console.log(`  - baseLayer: ${!!window.SpineEditSystem.baseLayer}`);
+        console.log(`  - controlLayer: ${!!window.SpineEditSystem.controlLayer}`);
+        console.log(`  - coordinateSwap: ${!!window.SpineEditSystem.coordinateSwap}`);
+        console.log(`  - coords: ${!!window.SpineEditSystem.coords}`);
+        console.log(`  - 編集モード: ${window.SpineEditSystem.controlLayer?.isEditMode || false}`);
+    }
+    
+    console.log('📋 モジュール管理状況:');
+    console.log(`  - ModuleManager存在: ${!!window.ModuleManager}`);
+    if (window.SpineEditSystem?.modules) {
+        console.log(`  - 登録モジュール数: ${window.SpineEditSystem.modules.size}`);
+    }
+    
+    console.groupEnd();
+}
+
+// デバッグ用のグローバル診断関数
+window.diagnoseV3System = diagnoseSystemStatus;
 
 // ========== 🧪 Phase 3 nezumi統合テスト・デバッグ関数群 ========== //
 window.Phase3DebugTools = {
@@ -2890,17 +2971,22 @@ window.SpineEditAPI = {
     removeModule: window.ModuleManager ? window.ModuleManager.removeModule : () => false,
     removeAllModules: window.ModuleManager ? window.ModuleManager.removeAllModules : () => {},
     
-    // 座標ヘルパー
-    coords: SpineEditSystem.coords
+    // 座標ヘルパー（spine-edit-core.js読み込み状況に依存しない安全な参照）
+    coords: window.SpineEditSystem && window.SpineEditSystem.coords ? window.SpineEditSystem.coords : {
+        pxToPercent: (px, containerSize) => (px / containerSize) * 100,
+        percentToPx: (percent, containerSize) => (percent / 100) * containerSize
+    }
 };
 
 // ========== システム起動 ========== //
 
-// DOM読み込み完了後に初期化
+// DOM読み込み完了後に初期化（非同期読み込み対応版）
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeSpineEditSystem);
+    document.addEventListener('DOMContentLoaded', () => {
+        waitForSpineEditCore(initializeSpineEditSystem);
+    });
 } else {
-    initializeSpineEditSystem();
+    waitForSpineEditCore(initializeSpineEditSystem);
 }
 
 // ========== パッケージ出力システム（独立機能） ========== //
@@ -3851,8 +3937,7 @@ function setupGlobalClickHandler() {
     console.log('✅ グローバルクリックハンドラー設定完了');
 }
 
-// グローバルクリックハンドラー
-let globalClickHandler = null;
+// globalClickHandlerは既にファイル上部で宣言済み
 
 /**
  * グローバルクリックハンドラーのクリーンアップ
