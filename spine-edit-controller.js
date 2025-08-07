@@ -326,7 +326,7 @@ class SpineEditController {
      */
     async _initializeUI() {
         // UI要素の作成・有効化
-        this._createControlPanel();
+        // this._createControlPanel(); // 🚫 v2.0パネル機能無効化
         this._enableCharacterSelection();
         this._bindEventHandlers();
         
@@ -338,6 +338,13 @@ class SpineEditController {
      * @private
      */
     _createControlPanel() {
+        // 🚫 v2.0パネル機能を無効化（ユーザー要求により削除）
+        console.log('⚠️ Spine編集システム v2.0 パネル機能は無効化されました');
+        console.log('💡 既存の編集機能（?edit=true）をご利用ください');
+        return;
+        
+        // 以下のコードは無効化されています
+        /*
         // 既存の全ての編集パネルを削除
         const existingPanels = document.querySelectorAll('#spine-edit-control-panel, [id*="edit-control"], [id*="spine-control"]');
         existingPanels.forEach(panel => {
@@ -350,6 +357,7 @@ class SpineEditController {
             console.log('⚠️ パネル作成中 - 重複作成をスキップ');
             return;
         }
+        */
         window._spineControlPanelCreating = true;
         
         const panel = document.createElement('div');
