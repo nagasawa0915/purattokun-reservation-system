@@ -434,7 +434,7 @@ function setupEditingUIEvents() {
     if (layerEditBtn) {
         layerEditBtn.addEventListener('click', () => {
             // 既にレイヤー編集モジュールが起動している場合
-            if (ModuleManager.hasModule('layerEdit')) {
+            if (window.ModuleManager && ModuleManager.hasModule('layerEdit')) {
                 // 既存のモジュールを削除
                 ModuleManager.removeModule('layerEdit');
                 layerEditBtn.innerHTML = '🎭 レイヤー編集';
@@ -444,7 +444,7 @@ function setupEditingUIEvents() {
             
             // レイヤー編集モジュールを起動
             const layerEditModule = createLayerEditModule();
-            const success = ModuleManager.addModule('layerEdit', layerEditModule);
+            const success = window.ModuleManager ? ModuleManager.addModule('layerEdit', layerEditModule) : false;
             
             if (success) {
                 console.log('🎭 レイヤー編集システム起動');
@@ -476,8 +476,23 @@ function setupEditingUIEvents() {
     const endBtn = document.getElementById('end-edit-btn');
     if (endBtn) {
         endBtn.addEventListener('click', () => {
-            stopEditMode();
-            createEditStartUI(); // 編集開始UIに戻る
+            console.log('🗑️ 編集終了処理開始');
+            try {
+                // 1. 編集モード停止
+                stopEditMode();
+                
+                // 2. 編集中UIを削除
+                removeEditingUI();
+                
+                // 3. 編集開始UIを再作成
+                setTimeout(() => {
+                    createEditStartUI();
+                    console.log('✅ 編集終了処理完了 - メニューが復元されました');
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ 編集終了処理エラー:', error);
+            }
         });
     }
 }
@@ -638,7 +653,7 @@ const MultiCharacterManager = {
             this.activeCharacter = null;
             
             // バウンディングボックス削除
-            ModuleManager.removeModule('boundingBox');
+            if (window.ModuleManager) ModuleManager.removeModule('boundingBox');
             
             // プレビューボックスを更新
             this.updatePreviewBoxes();
@@ -818,7 +833,7 @@ const MultiCharacterManager = {
     showEditBoundingBox: function() {
         if (this.activeCharacter) {
             const boundingBoxModule = createBoundingBoxModule();
-            const success = ModuleManager.addModule('boundingBox', boundingBoxModule);
+            const success = window.ModuleManager ? ModuleManager.addModule('boundingBox', boundingBoxModule) : false;
             
             if (success) {
                 console.log('📦 編集バウンディングボックス表示');
@@ -1589,8 +1604,10 @@ function startEditMode() {
     // タイトルバーモジュール追加
     const editingUI = document.querySelector('.editing-ui');
     if (editingUI) {
-        ModuleManager.addModule('titleBar', createDraggableTitleBarModule());
-        const titleBarModule = ModuleManager.getModule('titleBar');
+        if (window.ModuleManager) {
+            ModuleManager.addModule('titleBar', createDraggableTitleBarModule());
+            const titleBarModule = ModuleManager.getModule('titleBar');
+        }
         if (titleBarModule) {
             titleBarModule.initialize(editingUI);
         }
@@ -2534,7 +2551,7 @@ function createLayerEditModule() {
             const closeBtn = document.getElementById('layer-close-btn');
             if (closeBtn) {
                 closeBtn.addEventListener('click', () => {
-                    ModuleManager.removeModule('layerEdit');
+                    if (window.ModuleManager) ModuleManager.removeModule('layerEdit');
                 });
             }
             
@@ -2800,7 +2817,7 @@ window.testLayerEditSystem = function() {
     
     // 2. レイヤー編集モジュールを起動
     const layerEditModule = createLayerEditModule();
-    const success = ModuleManager.addModule('layerEditTest', layerEditModule);
+    const success = window.ModuleManager ? ModuleManager.addModule('layerEditTest', layerEditModule) : false;
     
     if (success) {
         console.log('✅ レイヤー編集モジュールテスト成功');
@@ -2816,7 +2833,7 @@ window.testLayerEditSystem = function() {
         
         // 5秒後に自動でテストを終了
         setTimeout(() => {
-            ModuleManager.removeModule('layerEditTest');
+            if (window.ModuleManager) ModuleManager.removeModule('layerEditTest');
             console.log('✅ レイヤー編集テスト終了');
         }, 5000);
     } else {
@@ -2842,7 +2859,7 @@ window.testSystemIntegration = function() {
     // 3. パフォーマンステスト
     const startTime = performance.now();
     for (let i = 0; i < 100; i++) {
-        ModuleManager.hasModule('testModule');
+        return window.ModuleManager ? ModuleManager.hasModule('testModule') : false;
     }
     const endTime = performance.now();
     console.log(`⚡ パフォーマンス: hasModule 100回実行に ${(endTime - startTime).toFixed(2)}ms`);
@@ -2868,10 +2885,10 @@ window.SpineEditAPI = {
         }
     },
     
-    // モジュール管理
-    addModule: window.ModuleManager.addModule,
-    removeModule: window.ModuleManager.removeModule,
-    removeAllModules: window.ModuleManager.removeAllModules,
+    // モジュール管理（安全チェック付き）
+    addModule: window.ModuleManager ? window.ModuleManager.addModule : () => false,
+    removeModule: window.ModuleManager ? window.ModuleManager.removeModule : () => false,
+    removeAllModules: window.ModuleManager ? window.ModuleManager.removeAllModules : () => {},
     
     // 座標ヘルパー
     coords: SpineEditSystem.coords
@@ -3853,7 +3870,7 @@ function cleanupGlobalClickHandler() {
  */
 function clearCharacterSelection() {
     // レイヤー編集モジュールが利用可能な場合
-    if (ModuleManager.hasModule('layerEdit')) {
+    if (window.ModuleManager && ModuleManager.hasModule('layerEdit')) {
         const layerModule = ModuleManager.getModule('layerEdit');
         if (layerModule && layerModule.characters) {
             // 全キャラクターのハイライトを解除
