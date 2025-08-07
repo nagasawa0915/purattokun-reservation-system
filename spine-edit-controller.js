@@ -12,7 +12,7 @@
  * 【バージョン】: 1.0.0
  */
 
-console.log('🏗️ SpineEditController v1.0.0 - 中央制御システム読み込み開始');
+// console.log('🏗️ SpineEditController v1.0.0 - 中央制御システム読み込み開始'); // デバッグ出力無効化
 
 /**
  * SpineEditController クラス - システム全体の中央制御
@@ -120,24 +120,37 @@ class SpineEditController {
      */
     async _initializeSpineSystem() {
         return new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 50; // 最大5秒間（100ms × 50回）
+            let timeoutHandled = false;
+            
             // Spine関連ファイルの読み込み確認
             const checkSpineSystem = () => {
+                if (timeoutHandled) return; // タイムアウト済みの場合は処理しない
+                
+                attempts++;
+                
                 if (window.spine && window.SpineWebGL) {
                     console.log('✅ Spine WebGL システム検出');
+                    timeoutHandled = true;
                     resolve();
+                } else if (attempts >= maxAttempts) {
+                    console.warn('⚠️ Spine WebGL システム初期化タイムアウト (5秒)');
+                    timeoutHandled = true;
+                    resolve(); // タイムアウトでも続行（フォールバック）
                 } else {
-                    console.log('⏳ Spine WebGL システム待機中...');
                     setTimeout(checkSpineSystem, 100);
                 }
             };
             
-            // タイムアウト処理（10秒）
+            // 安全なタイムアウト処理
             setTimeout(() => {
-                if (!this.initStates.spine) {
-                    console.warn('⚠️ Spine WebGL システム初期化タイムアウト');
-                    resolve(); // タイムアウトでも続行（フォールバック）
+                if (!timeoutHandled) {
+                    console.warn('⚠️ 強制タイムアウト - Spine システム初期化停止');
+                    timeoutHandled = true;
+                    resolve();
                 }
-            }, 10000);
+            }, 6000); // 6秒で強制終了
             
             checkSpineSystem();
         });
@@ -325,10 +338,19 @@ class SpineEditController {
      * @private
      */
     _createControlPanel() {
-        const existingPanel = document.getElementById('spine-edit-control-panel');
-        if (existingPanel) {
-            existingPanel.remove();
+        // 既存の全ての編集パネルを削除
+        const existingPanels = document.querySelectorAll('#spine-edit-control-panel, [id*="edit-control"], [id*="spine-control"]');
+        existingPanels.forEach(panel => {
+            console.log('🗑️ 既存パネル削除:', panel.id);
+            panel.remove();
+        });
+        
+        // 重複作成防止フラグ
+        if (window._spineControlPanelCreating) {
+            console.log('⚠️ パネル作成中 - 重複作成をスキップ');
+            return;
         }
+        window._spineControlPanelCreating = true;
         
         const panel = document.createElement('div');
         panel.id = 'spine-edit-control-panel';
@@ -369,7 +391,12 @@ class SpineEditController {
         
         document.body.appendChild(panel);
         
-        // 文字リスト更新
+        // 作成完了フラグ解除
+        setTimeout(() => {
+            window._spineControlPanelCreating = false;
+        }, 100);
+        
+        // キャラクターリスト更新
         this._updateCharacterList();
     }
     

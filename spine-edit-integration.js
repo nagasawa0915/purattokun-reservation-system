@@ -10,7 +10,7 @@
  * 【バージョン】: 1.0.0
  */
 
-console.log('🔗 Spine Edit Integration v1.0.0 - 統合システム読み込み開始');
+// console.log('🔗 Spine Edit Integration v1.0.0 - 統合システム読み込み開始'); // デバッグ出力無効化
 
 /**
  * SpineEditIntegration クラス - 既存システムとの統合
@@ -31,7 +31,7 @@ class SpineEditIntegration {
             compatibility: false
         };
         
-        console.log('✅ SpineEditIntegration インスタンス作成完了');
+        // console.log('✅ SpineEditIntegration インスタンス作成完了'); // デバッグ出力無効化
     }
     
     /**
@@ -39,7 +39,7 @@ class SpineEditIntegration {
      */
     async initialize() {
         try {
-            console.log('🚀 Spine Edit Integration 初期化開始');
+            // console.log('🚀 Spine Edit Integration 初期化開始'); // デバッグ出力無効化
             
             // Phase 1: 既存システム検出
             await this._detectLegacySystems();
@@ -58,7 +58,7 @@ class SpineEditIntegration {
             this.integrationStates.ui = true;
             
             this.integrated = true;
-            console.log('🎉 Spine Edit Integration 統合完了');
+            console.log('✅ Spine Edit Integration 統合完了'); // 簡略化
             
             // 統合完了イベント発火
             this._emitIntegrationComplete();
@@ -104,9 +104,11 @@ class SpineEditIntegration {
     async _waitForLegacySystemReady() {
         return new Promise((resolve) => {
             let attempts = 0;
-            const maxAttempts = 50; // 5秒間待機
+            const maxAttempts = 30; // 3秒間待機（短縮）
             
             const checkLegacyReady = () => {
+                attempts++;
+                
                 // 既存システムが準備完了か確認
                 const isReady = (
                     window.spinePositioningSystem || 
@@ -118,7 +120,6 @@ class SpineEditIntegration {
                     console.log(`🔄 既存システム待機結果: ${isReady ? '準備完了' : 'タイムアウト'}`);
                     resolve();
                 } else {
-                    attempts++;
                     setTimeout(checkLegacyReady, 100);
                 }
             };
@@ -498,6 +499,17 @@ class SpineEditIntegration {
      * @private
      */
     _createStatusIndicator() {
+        // 既存のステータスインジケーターを全て削除
+        const existingIndicators = document.querySelectorAll('#spine-integration-status, [id*="integration-status"], [id*="spine-status"]');
+        existingIndicators.forEach(indicator => {
+            console.log('🗑️ 既存ステータスインジケーター削除:', indicator.id);
+            indicator.remove();
+        });
+        
+        // ステータスインジケーター無効化（ウィンドウ被り防止）
+        console.log('🙅‍♀️ ステータスインジケーター作成をスキップ - ウィンドウ被り防止');
+        return;
+        
         const indicator = document.createElement('div');
         indicator.id = 'spine-integration-status';
         indicator.innerHTML = `
@@ -547,14 +559,14 @@ class SpineEditIntegration {
         
         document.body.appendChild(indicator);
         
-        // 10秒後に自動最小化
+        // 3秒後に自動最小化（短縮）
         setTimeout(() => {
             if (indicator.parentElement) {
                 indicator.style.opacity = '0.3';
                 indicator.style.transform = 'scale(0.8)';
                 indicator.style.transition = 'all 0.3s ease';
             }
-        }, 10000);
+        }, 3000);
         
         console.log('✅ 統合ステータスインジケーター作成完了');
     }
@@ -698,4 +710,4 @@ if (document.readyState === 'loading') {
     setTimeout(initializeSpineEditIntegration, 200);
 }
 
-console.log('✅ SpineEditIntegration モジュール読み込み完了 - 統合初期化待機中...');
+// console.log('✅ SpineEditIntegration モジュール読み込み完了 - 統合初期化待機中...'); // デバッグ出力無効化
