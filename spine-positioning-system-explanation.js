@@ -2869,9 +2869,9 @@ window.SpineEditAPI = {
     },
     
     // モジュール管理
-    addModule: ModuleManager.addModule,
-    removeModule: ModuleManager.removeModule,
-    removeAllModules: ModuleManager.removeAllModules,
+    addModule: window.ModuleManager.addModule,
+    removeModule: window.ModuleManager.removeModule,
+    removeAllModules: window.ModuleManager.removeAllModules,
     
     // 座標ヘルパー
     coords: SpineEditSystem.coords
@@ -3767,7 +3767,6 @@ console.log('   - diagnoseEditSystem() - 全体診断');
 
 // ========== バウンディングボックス外クリック選択解除システム ========== //
 
-let globalClickHandler = null;
 
 /**
  * グローバルクリックハンドラーのセットアップ
@@ -3834,6 +3833,9 @@ function setupGlobalClickHandler() {
     document.addEventListener('click', globalClickHandler, true); // キャプチャフェーズで処理
     console.log('✅ グローバルクリックハンドラー設定完了');
 }
+
+// グローバルクリックハンドラー
+let globalClickHandler = null;
 
 /**
  * グローバルクリックハンドラーのクリーンアップ
