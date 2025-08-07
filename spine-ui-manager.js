@@ -144,13 +144,9 @@ function createEditStartUI() {
     `;
     
     // キャラクター選択ボタンを動的に生成
-    const characterButtons = generateCharacterSelectionButtons();
+    // const characterButtons = generateCharacterSelectionButtons(); // 🚫 キャラクター選択機能無効化
     
     startPanel.innerHTML = `
-        <div style="margin-bottom: 15px; font-weight: bold; color: #28a745; text-align: center;">
-            🎯 キャラクター選択
-        </div>
-        ${characterButtons}
         <button id="start-edit-btn" style="
             width: 100%;
             padding: 12px;
@@ -162,7 +158,7 @@ function createEditStartUI() {
             font-size: 14px;
             font-weight: bold;
             margin-top: 10px;
-        " disabled>
+        ">
             ✏️ 編集開始
         </button>
     `;
@@ -171,7 +167,7 @@ function createEditStartUI() {
     console.log('📦 パネルをDOMに追加完了');
     
     // キャラクター選択ボタンイベントリスナー設定
-    setupCharacterSelectionListeners();
+    // setupCharacterSelectionListeners(); // 🚫 キャラクター選択機能無効化
     
     // 編集開始ボタンイベント
     const startBtn = document.getElementById('start-edit-btn');
