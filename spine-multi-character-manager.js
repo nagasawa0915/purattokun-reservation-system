@@ -6,7 +6,9 @@ console.log('🎯 Spine Multi Character Manager モジュール読み込み開�
 
 // ========== 複数キャラクター管理システム ========== //
 
-const MultiCharacterManager = {
+// 重複宣言チェック
+if (typeof window.MultiCharacterManager === 'undefined') {
+    const MultiCharacterManager = {
     characters: [],
     activeCharacter: null,
     previewBoxes: [],
@@ -328,7 +330,11 @@ const MultiCharacterManager = {
         this.characters = [];
         console.log('🧹 複数キャラクターマネージャー クリーンアップ完了');
     }
-};
+    };
+
+    // Global export
+    window.MultiCharacterManager = MultiCharacterManager;
+}
 
 // ========== 外部インターフェース ========== //
 
@@ -344,6 +350,7 @@ function setupCharacterClickForBoundingBox() {
 
 console.log('✅ Spine Multi Character Manager モジュール読み込み完了');
 
-// Global export
-window.MultiCharacterManager = MultiCharacterManager;
-window.setupCharacterClickForBoundingBox = setupCharacterClickForBoundingBox;
+// 外部インターフェースの重複チェック
+if (typeof window.setupCharacterClickForBoundingBox === 'undefined') {
+    window.setupCharacterClickForBoundingBox = setupCharacterClickForBoundingBox;
+}

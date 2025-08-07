@@ -6,8 +6,9 @@ console.log('💾 Spine State Manager モジュール読み込み開始');
 
 // ========== 状態管理・永続化システム ========== //
 
-// 状態管理オブジェクト
-let savedState = {
+// 状態管理オブジェクト（重複宣言チェック）
+if (typeof window.savedState === 'undefined') {
+    let savedState = {
     character: {
         left: null,
         top: null,
@@ -16,7 +17,11 @@ let savedState = {
         transform: null
     },
     timestamp: null
-};
+    };
+    
+    // Global export
+    window.savedState = savedState;
+}
 
 /**
  * 現在の状態を保存

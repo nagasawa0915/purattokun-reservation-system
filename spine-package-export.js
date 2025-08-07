@@ -21,8 +21,9 @@ console.log('📦 Spine Package Export System モジュール読み込み開始'
  * - 既存システムに影響なし
  */
 
-// パッケージ出力システムの状態管理
-const PackageExportSystem = {
+// パッケージ出力システムの状態管理（重複宣言チェック）
+if (typeof window.PackageExportSystem === 'undefined') {
+    const PackageExportSystem = {
     isProcessing: false,
     collectedFiles: new Map(),
     htmlTemplate: null,
@@ -572,7 +573,11 @@ ${coordinateCSS}        }
             document.head.appendChild(script);
         });
     }
-};
+    };
+
+    // Global export
+    window.PackageExportSystem = PackageExportSystem;
+}
 
 // ========== 外部インターフェース ========== //
 
@@ -585,6 +590,7 @@ async function exportPackage() {
 
 console.log('✅ Spine Package Export System モジュール読み込み完了');
 
-// Global exports
-window.PackageExportSystem = PackageExportSystem;
-window.exportPackage = exportPackage;
+// Global exports（重複チェック）
+if (typeof window.exportPackage === 'undefined') {
+    window.exportPackage = exportPackage;
+}

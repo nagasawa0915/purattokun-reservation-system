@@ -181,7 +181,9 @@ function diagnoseSystemStatus() {
 
 // ========== 🧪 Phase 3 nezumi統合テスト・デバッグ関数群 ========== //
 
-const Phase3DebugTools = {
+// 重複宣言チェック
+if (typeof window.Phase3DebugTools === 'undefined') {
+    const Phase3DebugTools = {
     
     // nezumi検出テスト
     testNezumiDetection: function() {
@@ -310,7 +312,11 @@ const Phase3DebugTools = {
             return testResults;
         }
     }
-};
+    };
+
+    // Global export for Phase3DebugTools
+    window.Phase3DebugTools = Phase3DebugTools;
+}
 
 // ========== グローバルクリックハンドラー管理 ========== //
 
