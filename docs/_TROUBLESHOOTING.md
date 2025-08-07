@@ -137,6 +137,12 @@
 - **タグ**: `#成功事例` `#nezumi` `#複数キャラクター` `#v3.0システム` `#モジュール化` `#Phase2` `#ドラッグ移動` `#位置編集` `#キャラクター選択` `#ファイル分割`
 - **別名**: nezumi編集成功、ネズミ編集機能、nezumi character editing、v3.0 Phase2成功事例、モジュール化システム成功、4001行→8モジュール成功、大規模ファイル分割成功
 
+#### PackageExportSystem読み込み問題
+- **ファイル**: [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
+- **症状**: 編集モードで「📦 パッケージ出力」ボタンクリック時に「PackageExportSystemが見つかりません」エラー
+- **タグ**: `#未解決問題` `#パッケージ出力` `#読み込み` `#初期化` `#モジュール依存` `#スコープ問題` `#継続調査必要`
+- **別名**: PackageExportSystem undefined、パッケージ出力エラー、モジュール読み込み失敗、package export system not found、継続調査中問題
+
 ### ⚙️ Spine関連の問題
 
 #### Spineライブラリ読込問題
@@ -303,6 +309,7 @@
 
 #### #パッケージ出力
 - [パッケージ出力機能完全実装記録.md](./troubleshooting/パッケージ出力機能完全実装記録.md)
+- [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
 
 #### #ZIP生成
 - [パッケージ出力機能完全実装記録.md](./troubleshooting/パッケージ出力機能完全実装記録.md)
@@ -315,6 +322,24 @@
 
 #### #商用制作ツール
 - [パッケージ出力機能完全実装記録.md](./troubleshooting/パッケージ出力機能完全実装記録.md)
+
+#### #未解決問題
+- [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
+
+#### #読み込み
+- [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
+
+#### #初期化
+- [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
+
+#### #モジュール依存
+- [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
+
+#### #スコープ問題
+- [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
+
+#### #継続調査必要
+- [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
 
 ### 症状別
 
@@ -355,6 +380,14 @@
 - **最終更新**: 2025-01-29
 - **試行回数**: 4回（全て失敗）
 - **緊急度**: 高（編集システムの基本機能が使用不可）
+
+#### PackageExportSystem読み込み問題
+- **ファイル**: [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
+- **症状**: 「📦 パッケージ出力」ボタンクリック時に「PackageExportSystemが見つかりません」エラー
+- **最終更新**: 2025-08-07
+- **試行回数**: 3回（全て失敗）
+- **緊急度**: 中（商用パッケージ出力機能が使用不可）
+- **関連**: 過去に成功実装済みだが、何らかの変更により動作停止
 
 ---
 
@@ -422,6 +455,9 @@
 
 ### 「赤い枠」「赤い境界」「編集前に表示」「バウンディングボックス自動表示」「境界表示」「編集開始前」「bounds integration」「updateBoundingBoxVisual」
 → [編集前バウンディングボックス表示問題.md](./troubleshooting/編集前バウンディングボックス表示問題.md)
+
+### 「PackageExportSystem」「見つかりません」「undefined」「読み込み失敗」「モジュール読み込み」「パッケージボタンエラー」「継続調査中」
+→ [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
 
 ---
 

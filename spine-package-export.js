@@ -3,6 +3,10 @@
 // 複雑度: 高（HTML処理・ファイル収集・CDN解決）
 
 console.log('📦 Spine Package Export System モジュール読み込み開始');
+console.log('🔍 読み込み状況:', {
+    windowExists: typeof window !== 'undefined',
+    documentExists: typeof document !== 'undefined'
+});
 
 // ========== パッケージ出力システム（独立機能） ========== //
 
@@ -29,22 +33,90 @@ if (typeof window.PackageExportSystem === 'undefined') {
     htmlTemplate: null,
     positionData: null,
     
-    // 設定
+    // 設定（汎用化済み - 動的キャラクター検出対応）
     config: {
         spineWebGLCDN: 'https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js',
-        spineFiles: [
-            'assets/spine/characters/purattokun/purattokun.json',
-            'assets/spine/characters/purattokun/purattokun.atlas', 
-            'assets/spine/characters/purattokun/purattokun.png'
-        ],
-        imageFiles: [
-            'assets/images/クラウドパートナーTOP.png',
-            'assets/images/purattokunn.png'
-        ],
-        integrationFiles: [
-            'assets/spine/spine-integration-v2.js',
-            'assets/spine/spine-character-manager.js'
-        ]
+        // 🎯 汎用設定: キャラクター固有ファイルは動的生成
+        staticFiles: {
+            imageFiles: [
+                'assets/images/クラウドパートナーTOP.png'  // 背景画像（共通）
+            ],
+            integrationFiles: [
+                'assets/spine/spine-integration-v2.js',
+                'assets/spine/spine-character-manager.js'
+            ]
+        }
+    },
+    
+    // 🎯 全キャラクター検出（完全パッケージ版）
+    async detectAllCharacters() {
+        console.log('🔍 全キャラクター検出開始（お客様納品用）');
+        
+        const detectedCharacters = [];
+        
+        // 1. MultiCharacterManagerから全キャラクター取得（最優先）
+        if (typeof MultiCharacterManager !== 'undefined' && MultiCharacterManager.characters) {
+            console.log('🐈 MultiCharacterManagerから全キャラクター取得');
+            MultiCharacterManager.characters.forEach(char => {
+                const characterName = char.id.replace('-canvas', '') || char.name;
+                if (characterName && !detectedCharacters.includes(characterName)) {
+                    detectedCharacters.push(characterName);
+                    console.log(`  ✅ 登録: ${characterName} (ID: ${char.id})`);
+                }
+            });
+        }
+        
+        // 2. DOMから直接検索（フォールバック）
+        if (detectedCharacters.length === 0) {
+            console.log('🔍 DOMから直接キャラクター検索');
+            const selectors = [
+                'canvas[id$="-canvas"]',      // 標準命名規則
+                'canvas[data-spine-character]',
+                '.spine-character'
+            ];
+            
+            selectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    if (element.id) {
+                        const characterName = element.id.replace('-canvas', '');
+                        if (characterName && !detectedCharacters.includes(characterName)) {
+                            detectedCharacters.push(characterName);
+                            console.log(`  ✅ DOM検出: ${characterName}`);
+                        }
+                    }
+                });
+            });
+        }
+        
+        // 3. 最終フォールバック
+        if (detectedCharacters.length === 0) {
+            console.warn('⚠️ キャラクター未検出 - デフォルトを追加');
+            detectedCharacters.push('purattokun');  // 既存プロジェクト互換性
+        }
+        
+        console.log(`✅ 全キャラクター検出完了: [${detectedCharacters.join(', ')}]`);
+        return detectedCharacters;
+    },
+    
+    // 🎯 動的キャラクターファイル生成
+    async generateCharacterFiles(characterName) {
+        console.log(`📁 ${characterName}用ファイルパス生成`);
+        
+        const characterFiles = {
+            spineFiles: [
+                `assets/spine/characters/${characterName}/${characterName}.json`,
+                `assets/spine/characters/${characterName}/${characterName}.atlas`,
+                `assets/spine/characters/${characterName}/${characterName}.png`
+            ],
+            characterImageFiles: [
+                `assets/images/${characterName}.png`,      // 標準命名
+                `assets/images/${characterName}n.png`      // purattokunnパターン対応
+            ]
+        };
+        
+        console.log('📋 生成されたファイルパス:', characterFiles);
+        return characterFiles;
     },
 
     // メイン関数：パッケージ出力実行
@@ -56,7 +128,15 @@ if (typeof window.PackageExportSystem === 'undefined') {
         
         try {
             this.isProcessing = true;
-            console.log('📦 パッケージ出力開始');
+            console.log('📦 パッケージ出力開始（汎用化版）');
+            
+            // 🎯 Step 0: 全キャラクター検出（完全パッケージ版）
+            console.log('🔍 Step 0: 全キャラクター検出（お客様納品用完全版）');
+            this.allCharacters = await this.detectAllCharacters();
+            if (!this.allCharacters || this.allCharacters.length === 0) {
+                throw new Error('キャラクターの検出に失敗しました');
+            }
+            console.log(`✅ 検出した全キャラクター: [${this.allCharacters.join(', ')}]`);
             
             // ステップ1: 現在の位置データ取得
             console.log('📋 Step 1: 位置データ収集');
@@ -98,106 +178,108 @@ if (typeof window.PackageExportSystem === 'undefined') {
         }
     },
 
-    // Step 1: 現在の位置データ収集（確実性向上版）
+    // Step 1: 全キャラクター位置データ収集（完全パッケージ版）
     async collectPositionData() {
-        console.log('📊 位置データ収集開始 - 複数ソースからの確実な取得');
+        console.log('📊 全キャラクター位置データ収集開始（完全パッケージ版）');
         
         try {
-            let positionData = null;
+            // ✅ 前提条件確認: allCharactersが設定されていない場合は事前検出
+            if (!this.allCharacters || this.allCharacters.length === 0) {
+                console.log('🔍 allCharacters未設定 - 事前検出実行');
+                this.allCharacters = await this.detectAllCharacters();
+            }
             
-            // === 1. localStorage優先取得 ===
-            console.log('💾 Step 1.1: localStorage位置データ取得');
+            this.allPositionData = {};
+            
+            // === 1. localStorage v3.0全キャラクター位置データ取得 ===
+            console.log('💾 Step 1.1: localStorage v3.0全キャラクター位置データ取得');
             const savedStateString = localStorage.getItem('spine-positioning-state');
             
             if (savedStateString) {
                 try {
                     const savedState = JSON.parse(savedStateString);
-                    if (savedState && savedState.character) {
-                        positionData = savedState.character;
-                        console.log('✅ localStorage位置データ取得成功:', positionData);
+                    
+                    // v3.0形式: { characters: { "nezumi-canvas": {...}, "purattokun-canvas": {...} } }
+                    if (savedState && savedState.characters) {
+                        console.log('💾 localStorage v3.0形式検出 - 全キャラクター位置データあり');
+                        
+                        for (const [characterId, positionData] of Object.entries(savedState.characters)) {
+                            const characterName = characterId.replace('-canvas', '');
+                            // ✅ 安全チェック: allCharactersが配列であることを確認
+                            if (Array.isArray(this.allCharacters) && this.allCharacters.includes(characterName)) {
+                                this.allPositionData[characterName] = positionData;
+                                console.log(`  ✅ ${characterName}: localStorage位置データ取得成功`);
+                            }
+                        }
+                    }
+                    // v2.0形式互換性: { character: {...} }
+                    else if (savedState && savedState.character) {
+                        console.log('💾 localStorage v2.0形式検出 - 単一キャラクター位置データ');
+                        // 現在編集中のキャラクターに適用（互換性）
+                        if (MultiCharacterManager.activeCharacter) {
+                            const activeCharName = MultiCharacterManager.activeCharacter.id.replace('-canvas', '');
+                            if (this.allCharacters.includes(activeCharName)) {
+                                this.allPositionData[activeCharName] = savedState.character;
+                                console.log(`  ✅ ${activeCharName}: v2.0互換性データ適用`);
+                            }
+                        }
                     }
                 } catch (parseError) {
                     console.warn('⚠️ localStorage解析エラー:', parseError);
                 }
             } else {
-                console.log('💡 localStorage未保存 - DOM状態から取得');
+                console.log('💡 localStorage未保存 - DOM状態から全キャラクター位置を取得');
             }
             
-            // === 2. 現在のDOM状態から取得（詳細セレクター + 座標変換）===
-            console.log('🎯 Step 1.2: 現在のDOM位置データ取得（複数セレクター対応）');
-            // 🎯 汎用的なキャラクター検出（固有名詞不要）
-            const selectors = [
-                'canvas[id$="-canvas"]',      // 標準命名規則（最優先）
-                '#character-canvas',
-                'canvas[data-spine-character]',
-                '.spine-character',
-                '.demo-character'
-            ];
+            // === 2. localStorageデータがないキャラクターのDOM状態から取得 ===
+            console.log('🎯 Step 1.2: 未保存キャラクターのDOM位置データ取得');
             
-            let targetElement = null;
-            for (const selector of selectors) {
-                targetElement = document.querySelector(selector);
-                if (targetElement) {
-                    console.log(`✅ 対象要素発見: ${selector}`);
-                    break;
+            // ✅ 安全チェック: allCharactersが配列であることを確認
+            if (Array.isArray(this.allCharacters)) {
+                for (const characterName of this.allCharacters) {
+                    if (!this.allPositionData[characterName]) {
+                    console.log(`🔍 ${characterName}: localStorageデータなし - DOMから取得`);
+                    
+                    const element = document.getElementById(`${characterName}-canvas`);
+                    if (element) {
+                        const rect = element.getBoundingClientRect();
+                        const parentRect = element.parentElement?.getBoundingClientRect();
+                        const computedStyle = window.getComputedStyle(element);
+                        
+                        const domPosition = {
+                            left: element.style.left || computedStyle.left || '35%',
+                            top: element.style.top || computedStyle.top || '75%',
+                            width: element.style.width || computedStyle.width || '25%',
+                            height: element.style.height || computedStyle.height || 'auto',
+                            transform: element.style.transform || computedStyle.transform || 'translate(-50%, -50%)'
+                        };
+                        
+                        this.allPositionData[characterName] = domPosition;
+                        console.log(`  ✅ ${characterName}: DOM位置データ取得成功`);
+                    } else {
+                        console.warn(`  ⚠️ ${characterName}: DOM要素が見つからない - デフォルト値使用`);
+                        this.allPositionData[characterName] = {
+                            left: '35%', top: '75%', width: '25%', height: 'auto',
+                            transform: 'translate(-50%, -50%)'
+                        };
+                    }
                 }
+            } else {
+                console.warn('⚠️ allCharactersが配列ではありません:', this.allCharacters);
             }
             
-            if (targetElement) {
-                const rect = targetElement.getBoundingClientRect();
-                const parentRect = targetElement.parentElement?.getBoundingClientRect();
-                const computedStyle = window.getComputedStyle(targetElement);
-                
-                // DOM状態から精密な位置データを構築
-                const domPosition = {
-                    // インライン style 優先、なければ computed style
-                    left: targetElement.style.left || 
-                          (parentRect ? SpineEditSystem.coords.pxToPercent(rect.left - parentRect.left, parentRect.width) + '%' : computedStyle.left),
-                    top: targetElement.style.top || 
-                         (parentRect ? SpineEditSystem.coords.pxToPercent(rect.top - parentRect.top, parentRect.height) + '%' : computedStyle.top),
-                    width: targetElement.style.width || 
-                           (parentRect ? SpineEditSystem.coords.pxToPercent(rect.width, parentRect.width) + '%' : computedStyle.width),
-                    height: targetElement.style.height || computedStyle.height,
-                    transform: targetElement.style.transform || computedStyle.transform
-                };
-                
-                console.log('🎯 DOM位置データ詳細:', {
-                    rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
-                    parentRect: parentRect ? { left: parentRect.left, top: parentRect.top, width: parentRect.width, height: parentRect.height } : null,
-                    domPosition
-                });
-                
-                // localStorageデータがない、または不完全な場合はDOM状態を使用
-                if (!positionData || !positionData.left || !positionData.top) {
-                    positionData = domPosition;
-                    console.log('📋 DOM状態をベースとして採用');
-                } else {
-                    console.log('📋 localStorage状態を優先、DOM状態をフォールバック用に保持');
-                }
+            // === 3. 全キャラクター位置データ正規化 ===
+            console.log('🔧 Step 1.3: 全キャラクター位置データ正規化');
+            
+            for (const [characterName, positionData] of Object.entries(this.allPositionData)) {
+                this.allPositionData[characterName] = this.normalizePositionData(positionData);
             }
             
-            // === 3. 最終フォールバック（デフォルト値）===
-            if (!positionData || !positionData.left || !positionData.top) {
-                console.warn('⚠️ 全ての位置データソースが無効 - SPINE_BEST_PRACTICES準拠デフォルト値を使用');
-                positionData = {
-                    left: '35%',      // Layer 1: CSS基本配置（中心基準）
-                    top: '75%',       // Layer 1: CSS基本配置（地面レベル）
-                    width: '25%',     // Layer 1: CSS基本配置（レスポンシブ対応）
-                    height: 'auto',   // Layer 1: CSS基本配置（縦横比保持）
-                    transform: 'translate(-50%, -50%)'  // Layer 2: transform制御（中心点基準）
-                };
-            }
-            
-            // === 4. 位置データの正規化・検証 ===
-            console.log('🔧 Step 1.3: 位置データ正規化・検証');
-            positionData = this.normalizePositionData(positionData);
-            
-            this.positionData = positionData;
-            console.log('✅ 位置データ収集完了（確実性向上版）:', positionData);
+            console.log('✅ 全キャラクター位置データ収集完了:', this.allPositionData);
             return true;
             
         } catch (error) {
-            console.error('❌ 位置データ収集エラー:', error);
+            console.error('❌ 全キャラクター位置データ収集エラー:', error);
             return false;
         }
     },
@@ -307,75 +389,39 @@ if (typeof window.PackageExportSystem === 'undefined') {
         return htmlContent;
     },
 
-    // 位置データのCSS埋め込み（確実性向上・2層座標システム対応）
+    // 位置データのCSS埋め込み（全キャラクター対応版）
     embedPositionData(htmlContent) {
-        console.log('📐 位置データCSS埋め込み - 確実性向上版');
+        console.log('📐 全キャラクター位置データCSS埋め込み開始');
         
-        const positionData = this.positionData;
-        if (!positionData) {
-            console.error('❌ 位置データがありません - 埋め込み処理を中断');
+        if (!this.allPositionData || Object.keys(this.allPositionData).length === 0) {
+            console.error('❌ 全キャラクター位置データがありません - 埋め込み処理を中断');
             return htmlContent;
         }
         
-        console.log('📋 埋め込み対象位置データ:', positionData);
+        console.log('📋 埋め込み対象位置データ:', this.allPositionData);
         
-        // === 1. 2層座標システム準拠CSS生成 ===
-        const coordinateCSS = this.generateCoordinateCSS(positionData);
-        console.log('🔧 生成されたCSS:', coordinateCSS);
+        // === 1. 全キャラクター用CSS生成 ===
+        const allCharactersCSS = this.generateAllCharactersCSS(this.allPositionData);
+        console.log('🔧 生成されたCSS:', allCharactersCSS);
         
-        // === 2. 複数パターン対応での確実な埋め込み ===
-        let embedSuccess = false;
+        // === 2. <style>ブロック作成・埋め込み ===
+        const newStyleBlock = `    <style>
+        /* 📦 パッケージ固定化: localStorage位置データより生成（全キャラクター対応） */
+${allCharactersCSS}    </style>`;
         
-        // パターン1: #character-canvas スタイル定義に埋め込み
-        console.log('🎯 パターン1: #character-canvas スタイル定義検索');
-        const canvasStylePatterns = [
-            /#character-canvas\s*\{[^}]*\}/g,
-            /#purattokun-canvas\s*\{[^}]*\}/g,
-            /\.spine-character\s*\{[^}]*\}/g
-        ];
+        console.log('📦 生成されたスタイルブロック:', newStyleBlock);
         
-        for (const pattern of canvasStylePatterns) {
-            const matches = htmlContent.match(pattern);
-            if (matches && matches.length > 0) {
-                for (const match of matches) {
-                    const originalStyle = match;
-                    const enhancedStyle = originalStyle.replace(
-                        /\}$/,
-                        `    /* === 保存された位置データ（固定化済み・2層座標システム） === */\n${coordinateCSS}        }`
-                    );
-                    htmlContent = htmlContent.replace(originalStyle, enhancedStyle);
-                    console.log(`✅ パターン1成功: ${pattern.source} - CSS埋め込み完了`);
-                    embedSuccess = true;
-                }
-            }
-        }
-        
-        // パターン3: 新規<style>ブロック追加（最終フォールバック）
-        if (!embedSuccess) {
-            console.log('🎯 パターン3: 新規<style>ブロック追加（最終フォールバック）');
-            const newStyleBlock = `
-    <style>
-        /* === Spine位置データ（パッケージ固定化・自動追加） === */
-        #character-canvas,
-        #purattokun-canvas,
-        .spine-character {
-${coordinateCSS}        }
-    </style>`;
-            
-            const headCloseIndex = htmlContent.lastIndexOf('</head>');
-            if (headCloseIndex !== -1) {
-                htmlContent = htmlContent.slice(0, headCloseIndex) + newStyleBlock + '\n' + htmlContent.slice(headCloseIndex);
-                console.log('✅ パターン3成功: 新規<style>ブロック追加完了');
-                embedSuccess = true;
-            }
-        }
-        
-        if (embedSuccess) {
-            console.log('✅ 位置データCSS埋め込み成功（確実性向上版）');
+        // === 3. </head>の直前に埋め込み ===
+        const headCloseIndex = htmlContent.lastIndexOf('</head>');
+        if (headCloseIndex !== -1) {
+            htmlContent = htmlContent.slice(0, headCloseIndex) + newStyleBlock + '\n' + htmlContent.slice(headCloseIndex);
+            console.log('✅ 全キャラクター対応<style>ブロック追加完了');
         } else {
-            console.error('❌ 位置データCSS埋め込み失敗');
+            console.warn('⚠️ </head>タグが見つからない - 埋め込み失敗');
+            return htmlContent;
         }
         
+        console.log('✅ 全キャラクター位置データCSS埋め込み成功（完全パッケージ版）');
         return htmlContent;
     },
 
@@ -405,40 +451,117 @@ ${coordinateCSS}        }
         
         return coordinateCSS;
     },
+    
+    // 🎯 全キャラクター用CSS生成（完全パッケージ版）
+    generateAllCharactersCSS(allPositionData) {
+        console.log('🎨 全キャラクター用CSS生成開始', Object.keys(allPositionData));
+        
+        let allCSS = '';
+        
+        for (const [characterName, positionData] of Object.entries(allPositionData)) {
+            console.log(`🎨 ${characterName}用CSS生成`);
+            
+            const cssLines = [];
+            
+            // Layer 1: CSS基本配置
+            if (positionData.left) cssLines.push(`            left: ${positionData.left};`);
+            if (positionData.top) cssLines.push(`            top: ${positionData.top};`);
+            if (positionData.width) cssLines.push(`            width: ${positionData.width};`);
+            if (positionData.height && positionData.height !== 'auto') cssLines.push(`            height: ${positionData.height};`);
+            
+            // Layer 2: transform制御
+            if (positionData.transform) {
+                cssLines.push(`            transform: ${positionData.transform};`);
+            }
+            
+            // 品質保証：重要なCSS属性も含める
+            cssLines.push(`            position: absolute;`);
+            cssLines.push(`            /* ${characterName}位置データ（パッケージ固定化） */`);
+            
+            const characterCSS = cssLines.join('\n') + '\n';
+            
+            // キャラクター固有セレクターでスタイルを定義
+            allCSS += `        #${characterName}-canvas {\n${characterCSS}        }\n\n`;
+            
+            console.log(`  ✅ ${characterName}: CSS生成完了`);
+        }
+        
+        console.log('✅ 全キャラクター用CSS生成完了');
+        return allCSS;
+    },
 
-    // Step 3: 依存ファイル収集
+    // Step 3: 依存ファイル収集（完全パッケージ版）
     async collectDependencyFiles() {
-        console.log('📁 依存ファイル収集開始');
+        console.log('📁 依存ファイル収集開始（完全パッケージ版）');
         
         try {
             this.collectedFiles.clear();
             
-            // Spineファイル収集
-            for (const filePath of this.config.spineFiles) {
-                if (!await this.collectFile(filePath)) {
-                    console.warn(`⚠️ Spineファイル収集失敗（継続）: ${filePath}`);
+            // 🎯 全キャラクター用ファイル収集
+            console.log(`🐈 全キャラクターファイル収集: [${this.allCharacters.join(', ')}]`);
+            
+            for (const characterName of this.allCharacters) {
+                console.log(`\n🎯 === ${characterName}キャラクターファイル収集開始 ===`);
+                
+                const characterFiles = await this.generateCharacterFiles(characterName);
+                
+                // 1. キャラクター固有Spineファイル収集
+                console.log(`🎨 ${characterName} Spineファイル収集`);
+                for (const filePath of characterFiles.spineFiles) {
+                    if (!await this.collectFileWithFallback(filePath)) {
+                        console.warn(`⚠️ ${characterName} Spineファイル収集失敗（継続）: ${filePath}`);
+                    }
+                }
+                
+                // 2. キャラクター固有画像ファイル収集
+                console.log(`🖼️ ${characterName} 画像ファイル収集`);
+                for (const filePath of characterFiles.characterImageFiles) {
+                    if (!await this.collectFileWithFallback(filePath)) {
+                        console.log(`ℹ️ ${characterName} 画像ファイルスキップ: ${filePath}`);
+                    }
+                }
+                
+                console.log(`✅ ${characterName}ファイル収集完了`);
+            }
+            
+            // 3. 共通画像ファイル収集（背景等）
+            console.log('🖼️ 共通画像ファイル収集');
+            for (const filePath of this.config.staticFiles.imageFiles) {
+                if (!await this.collectFileWithFallback(filePath)) {
+                    console.warn(`⚠️ 共通画像ファイル収集失敗（継続）: ${filePath}`);
                 }
             }
             
-            // 画像ファイル収集
-            for (const filePath of this.config.imageFiles) {
-                if (!await this.collectFile(filePath)) {
-                    console.warn(`⚠️ 画像ファイル収集失敗（継続）: ${filePath}`);
-                }
-            }
-            
-            // 統合ファイル収集
-            for (const filePath of this.config.integrationFiles) {
-                if (!await this.collectFile(filePath)) {
+            // 4. 統合ファイル収集
+            console.log('📚 統合ファイル収集');
+            for (const filePath of this.config.staticFiles.integrationFiles) {
+                if (!await this.collectFileWithFallback(filePath)) {
                     console.warn(`⚠️ 統合ファイル収集失敗（継続）: ${filePath}`);
                 }
             }
             
-            console.log(`✅ 依存ファイル収集完了: ${this.collectedFiles.size}個`);
+            console.log(`✅ 依存ファイル収集完了（汎用化版）: ${this.collectedFiles.size}個`);
             return true;
             
         } catch (error) {
             console.error('❌ 依存ファイル収集エラー:', error);
+            return false;
+        }
+    },
+    
+    // 🛡️ フォールバック付きファイル収集（存在確認付き）
+    async collectFileWithFallback(filePath) {
+        try {
+            const success = await this.collectFile(filePath);
+            if (success) {
+                console.log(`✅ ファイル収集成功: ${filePath}`);
+                return true;
+            } else {
+                console.log(`🔄 ファイルが見つからないためスキップ: ${filePath}`);
+                return false;
+            }
+        } catch (error) {
+            console.log(`🔄 ファイル収集エラー、継続: ${filePath}`, error.message);
             return false;
         }
     },
@@ -590,8 +713,21 @@ async function exportPackage() {
 }
 
 console.log('✅ Spine Package Export System モジュール読み込み完了');
+console.log('🔍 Global exports確認:', {
+    PackageExportSystem: typeof window.PackageExportSystem,
+    exportPackage: typeof window.exportPackage
+});
 
 // Global exports（重複チェック）
 if (typeof window.exportPackage === 'undefined') {
     window.exportPackage = exportPackage;
+    console.log('✅ window.exportPackage関数をexport');
+}
+
+// 読み込み完了のイベント発火
+if (typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('PackageExportSystemLoaded', {
+        detail: { PackageExportSystem, exportPackage }
+    }));
+    console.log('✅ PackageExportSystemLoadedイベント発火');
 }

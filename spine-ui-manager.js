@@ -334,10 +334,28 @@ function setupEditingUIEvents() {
     if (packageBtn) {
         packageBtn.addEventListener('click', () => {
             console.log('📦 パッケージ出力ボタンクリック');
+            
+            // デバッグ情報を表示
+            console.log('🔍 PackageExportSystem存在チェック:', {
+                PackageExportSystem: typeof PackageExportSystem,
+                windowPackageExportSystem: typeof window.PackageExportSystem,
+                exportPackage: typeof window.exportPackage
+            });
+            
+            // 複数の方法でPackageExportSystemを試行
             if (typeof PackageExportSystem !== 'undefined') {
+                console.log('✅ PackageExportSystem（グローバル）使用');
                 PackageExportSystem.exportPackage();
+            } else if (typeof window.PackageExportSystem !== 'undefined') {
+                console.log('✅ window.PackageExportSystem使用');
+                window.PackageExportSystem.exportPackage();
+            } else if (typeof window.exportPackage === 'function') {
+                console.log('✅ window.exportPackage関数使用');
+                window.exportPackage();
             } else {
                 console.error('❌ PackageExportSystemが見つかりません');
+                console.log('🔍 利用可能なwindow関数:', Object.keys(window).filter(k => k.toLowerCase().includes('package')));
+                alert('パッケージ出力機能の読み込みに失敗しました。ページをリロードして再試行してください。');
             }
         });
     }
