@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 タイムライン制御システム - 実験環境</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 20px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .experiment-area {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .spine-display {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            min-height: 600px;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        .timeline-controls {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .timeline-controls h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .control-section:last-child {
+            border-bottom: none;
+        }
+
+        .control-section h4 {
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 3px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #e53e3e;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
+        }
+
+        .timeline-display {
+            background: #f8f9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .status-info {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 10px;
+        }
+
+        .status-item .label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .status-item .value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        @media (max-width: 1024px) {
+            .experiment-area {
+                grid-template-columns: 1fr;
+            }
+            
+            .timeline-controls {
+                order: -1;
+            }
+        }
+
+        /* Spineキャラクター表示エリア */
+        #spine-character-area {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: url('assets/images/hero-bg.jpg') center/cover;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* デバッグ情報 */
+        .debug-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <h1>🎬 タイムライン制御システム実験環境</h1>
+            <p class="subtitle">Phase 1: 基本タイムライン制御エンジン開発・テスト環境</p>
+        </div>
+
+        <!-- ステータス情報 -->
+        <div class="status-info">
+            <div class="status-item">
+                <div class="label">システム状態</div>
+                <div class="value" id="system-status">初期化中...</div>
+            </div>
+            <div class="status-item">
+                <div class="label">アクティブキャラクター</div>
+                <div class="value" id="active-characters">0</div>
+            </div>
+            <div class="status-item">
+                <div class="label">実行中タイムライン</div>
+                <div class="value" id="running-timelines">0</div>
+            </div>
+            <div class="status-item">
+                <div class="label">現在フレーム</div>
+                <div class="value" id="current-frame">0</div>
+            </div>
+        </div>
+
+        <!-- 実験エリア -->
+        <div class="experiment-area">
+            <!-- Spine表示エリア -->
+            <div class="spine-display">
+                <h3>🎭 キャラクター表示エリア</h3>
+                <div id="spine-character-area">
+                    <!-- デバッグ情報オーバーレイ -->
+                    <div class="debug-overlay" id="debug-info">
+                        <div>Time: <span id="debug-time">0.00s</span></div>
+                        <div>Timeline: <span id="debug-timeline">未実行</span></div>
+                        <div>Animation: <span id="debug-animation">未設定</span></div>
+                    </div>
+                    
+                    <!-- Spineキャラクターがここに表示される -->
+                </div>
+            </div>
+
+            <!-- タイムライン制御パネル -->
+            <div class="timeline-controls">
+                <h3>⏱️ タイムライン制御</h3>
+                
+                <!-- 基本制御 -->
+                <div class="control-section">
+                    <h4>基本制御</h4>
+                    <button class="btn" id="play-timeline">▶️ 再生</button>
+                    <button class="btn" id="pause-timeline">⏸️ 一時停止</button>
+                    <button class="btn" id="stop-timeline">⏹️ 停止</button>
+                    <button class="btn btn-secondary" id="reset-timeline">🔄 リセット</button>
+                </div>
+
+                <!-- サンプルタイムライン -->
+                <div class="control-section">
+                    <h4>サンプル実行</h4>
+                    <button class="btn btn-secondary" id="sample-basic">基本演出</button>
+                    <button class="btn btn-secondary" id="sample-complex">複雑演出</button>
+                    <button class="btn btn-secondary" id="sample-sync">同期演出</button>
+                </div>
+
+                <!-- キャラクター制御 -->
+                <div class="control-section">
+                    <h4>キャラクター</h4>
+                    <button class="btn" id="load-purattokun">🐱 ぷらっとくん</button>
+                    <button class="btn" id="load-nezumi">🐭 ねずみ</button>
+                    <button class="btn btn-danger" id="clear-characters">❌ 全削除</button>
+                </div>
+
+                <!-- タイムライン表示 -->
+                <div class="control-section">
+                    <h4>タイムライン詳細</h4>
+                    <div class="timeline-display" id="timeline-display">
+                        タイムライン情報がここに表示されます
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- タイムライン設定データ（HTML設定制御システム） -->
+    <div id="timeline-config" style="display: none;">
+        <!-- サンプル設定 -->
+        <div class="sample-basic" 
+             data-timeline="0:appear,2:idle,5:wave,8:idle"
+             data-character="purattokun">
+        </div>
+        
+        <div class="sample-complex" 
+             data-timeline="0:appear,1:walk,3:jump,4:wave,6:dance,8:bow,10:idle"
+             data-character="purattokun">
+        </div>
+        
+        <div class="sample-sync"
+             data-timeline="0:appear,2:walk,4:wave"
+             data-character="purattokun,nezumi"
+             data-sync="true">
+        </div>
+    </div>
+
+    <!-- 既存Spineシステム読み込み -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.*/dist/iife/spine-webgl.js"></script>
+    
+    <!-- 既存システムファイル -->
+    <script src="assets/spine/spine-integration-v2.js"></script>
+    <script src="assets/spine/spine-character-manager.js"></script>
+    
+    <!-- タイムライン制御システム（新規） -->
+    <script src="assets/spine/timeline-data-manager.js"></script>
+    <script src="assets/spine/timeline-error-handler.js"></script>
+    
+    <!-- 実験環境制御スクリプト -->
+    <script>
+        // 実験環境初期化
+        class TimelineExperimentEnvironment {
+            constructor() {
+                this.isInitialized = false;
+                this.activeTimelines = new Map();
+                this.frameCount = 0;
+                this.startTime = Date.now();
+                
+                this.init();
+            }
+            
+            async init() {
+                try {
+                    // 既存システム初期化待機
+                    await this.waitForSpineSystem();
+                    
+                    // UI初期化
+                    this.setupUI();
+                    
+                    // フレーム更新開始
+                    this.startFrameUpdate();
+                    
+                    this.updateStatus('システム準備完了', 'success');
+                    this.isInitialized = true;
+                    
+                } catch (error) {
+                    console.error('❌ Timeline実験環境初期化エラー:', error);
+                    this.updateStatus('初期化エラー', 'error');
+                }
+            }
+            
+            async waitForSpineSystem() {
+                // 既存Spineシステムの初期化待機
+                return new Promise((resolve, reject) => {
+                    let attempts = 0;
+                    const maxAttempts = 50;
+                    
+                    const checkSystem = () => {
+                        if (window.spine && window.SpineCharacterManager) {
+                            console.log('✅ 既存Spineシステム確認完了');
+                            resolve();
+                        } else if (attempts >= maxAttempts) {
+                            reject(new Error('Spineシステム初期化タイムアウト'));
+                        } else {
+                            attempts++;
+                            setTimeout(checkSystem, 100);
+                        }
+                    };
+                    
+                    checkSystem();
+                });
+            }
+            
+            setupUI() {
+                // 基本制御ボタン
+                document.getElementById('play-timeline').addEventListener('click', () => {
+                    console.log('⏵️ タイムライン再生');
+                    this.updateTimelineDisplay('再生開始');
+                });
+                
+                document.getElementById('pause-timeline').addEventListener('click', () => {
+                    console.log('⏸️ タイムライン一時停止');
+                    this.updateTimelineDisplay('一時停止');
+                });
+                
+                document.getElementById('stop-timeline').addEventListener('click', () => {
+                    console.log('⏹️ タイムライン停止');
+                    this.frameCount = 0;
+                    this.updateTimelineDisplay('停止');
+                });
+                
+                document.getElementById('reset-timeline').addEventListener('click', () => {
+                    console.log('🔄 タイムラインリセット');
+                    this.frameCount = 0;
+                    this.startTime = Date.now();
+                    this.updateTimelineDisplay('リセット完了');
+                });
+                
+                // サンプル実行ボタン
+                document.getElementById('sample-basic').addEventListener('click', () => {
+                    this.runSampleTimeline('basic');
+                });
+                
+                document.getElementById('sample-complex').addEventListener('click', () => {
+                    this.runSampleTimeline('complex');
+                });
+                
+                document.getElementById('sample-sync').addEventListener('click', () => {
+                    this.runSampleTimeline('sync');
+                });
+                
+                // キャラクター制御
+                document.getElementById('load-purattokun').addEventListener('click', () => {
+                    console.log('🐱 ぷらっとくん読み込み');
+                    this.updateTimelineDisplay('ぷらっとくん読み込み実行');
+                });
+                
+                document.getElementById('load-nezumi').addEventListener('click', () => {
+                    console.log('🐭 ねずみ読み込み');
+                    this.updateTimelineDisplay('ねずみ読み込み実行');
+                });
+                
+                document.getElementById('clear-characters').addEventListener('click', () => {
+                    console.log('❌ 全キャラクター削除');
+                    this.updateTimelineDisplay('全キャラクター削除');
+                });
+            }
+            
+            startFrameUpdate() {
+                const updateFrame = () => {
+                    this.frameCount++;
+                    const currentTime = (Date.now() - this.startTime) / 1000;
+                    
+                    // デバッグ情報更新
+                    document.getElementById('current-frame').textContent = this.frameCount;
+                    document.getElementById('debug-time').textContent = currentTime.toFixed(2) + 's';
+                    document.getElementById('debug-frame').textContent = this.frameCount;
+                    
+                    requestAnimationFrame(updateFrame);
+                };
+                
+                updateFrame();
+            }
+            
+            runSampleTimeline(type) {
+                const sampleData = {
+                    'basic': '基本演出: 出現→待機→手振り→待機',
+                    'complex': '複雑演出: 出現→歩行→ジャンプ→手振り→ダンス→お辞儀→待機',
+                    'sync': '同期演出: 複数キャラクターの連携動作'
+                };
+                
+                console.log(`🎬 ${sampleData[type]} 実行`);
+                this.updateTimelineDisplay(`実行: ${sampleData[type]}`);
+                
+                // 実際のタイムライン実行はPhase 1完了後に実装
+            }
+            
+            updateStatus(message, type = 'info') {
+                document.getElementById('system-status').textContent = message;
+                
+                // 色分け
+                const statusElement = document.getElementById('system-status');
+                statusElement.style.color = {
+                    'success': '#48bb78',
+                    'error': '#e53e3e',
+                    'warning': '#ed8936',
+                    'info': '#667eea'
+                }[type] || '#667eea';
+            }
+            
+            updateTimelineDisplay(message) {
+                const display = document.getElementById('timeline-display');
+                const timestamp = new Date().toLocaleTimeString();
+                display.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+                display.scrollTop = display.scrollHeight;
+            }
+        }
+        
+        // 実験環境初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎬 タイムライン制御システム実験環境 初期化開始');
+            window.timelineExperiment = new TimelineExperimentEnvironment();
+        });
+    </script>
+</body>
+</html>
