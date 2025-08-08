@@ -441,11 +441,11 @@ class IndexSkeletonBoundsManager {
       } else {
         logBounds(
           "DEBUG",
-          `No bounds hit for ${characterId} - executing default click`
+          `No bounds hit for ${characterId} - ignoring click outside bounds`
         );
 
-        // デフォルトクリック処理（既存のindex.html動作を維持）
-        this.executeDefaultClick(characterId);
+        // 境界外クリック時は完全に無反応（フォールバック処理を実行しない）
+        // this.executeDefaultClick(characterId); // 無効化
       }
     };
 
@@ -795,7 +795,7 @@ class IndexSkeletonBoundsManager {
   }
 
   /**
-   * 個別のバウンディングボックスを描画
+   * 個別のバウンディングボックスを描画（統一座標システム準拠）
    * @param {HTMLElement} overlay - オーバーレイ要素
    * @param {Object} boundingBox - バウンディングボックス情報
    * @param {string} characterId - キャラクターID
@@ -823,17 +823,26 @@ class IndexSkeletonBoundsManager {
             box-sizing: border-box;
         `;
 
-    // 位置とサイズを設定（パーセンテージベース）
-    const leftPercent = ((bounds.centerX - bounds.width / 2 + 150) / 300) * 100;
-    const topPercent =
-      ((150 - (bounds.centerY + bounds.height / 2)) / 200) * 100;
-    const widthPercent = (bounds.width / 300) * 100;
-    const heightPercent = (bounds.height / 200) * 100;
+    // 🎯 統一座標システム（120x120px, 中心：60,60）に基づく位置計算
+    // 可変サイズキャンバスに対しても汎用性を保つ
+    const canvasSize = 120; // 統一Canvas解像度
+    const canvasCenter = 60; // 統一中心位置
+    
+    const leftPercent = ((bounds.centerX - bounds.width / 2 + canvasCenter) / canvasSize) * 100;
+    const topPercent = ((canvasCenter - (bounds.centerY + bounds.height / 2)) / canvasSize) * 100;
+    const widthPercent = (bounds.width / canvasSize) * 100;
+    const heightPercent = (bounds.height / canvasSize) * 100;
 
     boxElement.style.left = `${leftPercent}%`;
     boxElement.style.top = `${topPercent}%`;
     boxElement.style.width = `${widthPercent}%`;
     boxElement.style.height = `${heightPercent}%`;
+    
+    logBounds("DEBUG", `統一座標系でバウンディングボックス配置: ${characterId}-${index}`, {
+      bounds,
+      calculated: { leftPercent, topPercent, widthPercent, heightPercent },
+      system: '120x120px_unified'
+    });
 
     // ラベル要素を作成
     const labelElement = document.createElement("div");
@@ -860,7 +869,7 @@ class IndexSkeletonBoundsManager {
 
     logBounds(
       "DEBUG",
-      `Drew bounding box "${boundingBox.name}" for ${characterId}:`,
+      `統一座標システムでバウンディングボックス"${boundingBox.name}"を描画: ${characterId}`,
       {
         bounds,
         position: {
@@ -869,6 +878,7 @@ class IndexSkeletonBoundsManager {
           width: widthPercent,
           height: heightPercent,
         },
+        system: '120x120px_unified'
       }
     );
   }

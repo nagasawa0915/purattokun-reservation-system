@@ -326,7 +326,7 @@ class SpineSkeletonBounds {
     }
 
     /**
-     * Canvas座標をSpine内部座標に変換
+     * Canvas座標をSpine内部座標に変換（統一座標システム準拠）
      * @param {string} name - キャラクター名
      * @param {number} canvasX - Canvas上のX座標
      * @param {number} canvasY - Canvas上のY座標
@@ -337,37 +337,39 @@ class SpineSkeletonBounds {
         if (!boundsInfo) return null;
 
         const { character } = boundsInfo;
-        const { canvas, skeleton } = character;
+        const { canvas } = character;
+        const skeleton = character.spine ? character.spine.skeleton : character.skeleton;
         
         if (!canvas || !skeleton) return null;
 
         try {
-            // Canvas要素の境界を取得
+            // 🎯 統一座標システム適用: 既存の座標計算ロジックを完全再現
             const canvasRect = canvas.getBoundingClientRect();
             
             // Canvas相対座標を計算
             const relativeX = canvasX - canvasRect.left;
             const relativeY = canvasY - canvasRect.top;
             
-            // Canvas内部座標系に正規化（0-canvas.width, 0-canvas.height）
-            const normalizedX = (relativeX / canvasRect.width) * canvas.width;
-            const normalizedY = (relativeY / canvasRect.height) * canvas.height;
+            // 統一Canvas解像度（120x120px）に正規化
+            const normalizedX = (relativeX / canvasRect.width) * 120; // 統一解像度適用
+            const normalizedY = (relativeY / canvasRect.height) * 120; // 統一解像度適用
             
-            // Spine座標系に変換（Skeletonの位置とスケールを考慮）
-            const spineX = (normalizedX - skeleton.x) / skeleton.scaleX;
-            const spineY = (canvas.height - normalizedY - skeleton.y) / skeleton.scaleY; // Y軸反転
+            // 統一Skeleton位置（中心固定：60,60）を考慮したSpine座標系変換
+            const spineX = (normalizedX - 60) / skeleton.scaleX; // 統一中心位置適用
+            const spineY = (120 - normalizedY - 60) / skeleton.scaleY; // Y軸反転 + 統一中心位置
             
-            log(LogLevel.DEBUG, 'coords', `Coordinate conversion for ${name}:`, {
+            log(LogLevel.DEBUG, 'coords', `統一座標システム変換 for ${name}:`, {
                 canvas: { x: canvasX, y: canvasY },
                 relative: { x: relativeX, y: relativeY },
                 normalized: { x: normalizedX, y: normalizedY },
-                spine: { x: spineX, y: spineY }
+                spine: { x: spineX, y: spineY },
+                system: '120x120px_unified'
             });
             
             return { x: spineX, y: spineY };
             
         } catch (error) {
-            log(LogLevel.ERROR, 'coords', `Coordinate conversion failed for ${name}:`, error);
+            log(LogLevel.ERROR, 'coords', `統一座標変換失敗 for ${name}:`, error);
             return null;
         }
     }
@@ -675,7 +677,41 @@ class SpineSkeletonBounds {
     }
 
     /**
-     * 境界ボックスのデバッグ表示
+     * 境界ボックスの描画座標変換（統一座標システム準拠）
+     * @param {Object} character - キャラクターオブジェクト
+     * @param {number} spineX - Spine内部X座標
+     * @param {number} spineY - Spine内部Y座標
+     * @return {Object} HTML描画座標 {x, y}
+     */
+    convertToScreenCoordinates(character, spineX, spineY) {
+        const { canvas } = character;
+        if (!canvas) return null;
+
+        const skeleton = character.spine ? character.spine.skeleton : character.skeleton;
+        if (!skeleton) return null;
+
+        try {
+            // 🎯 統一座標システムに基づく座標変換
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // Spine座標→統一Canvas座標（120x120px系）
+            const canvasX = (spineX * skeleton.scaleX) + 60; // 統一中心位置（60,60）適用
+            const canvasY = 120 - ((spineY * skeleton.scaleY) + 60); // Y軸反転 + 統一中心位置
+            
+            // 統一Canvas座標→HTML描画座標
+            const screenX = canvasRect.left + (canvasX / 120) * canvasRect.width;
+            const screenY = canvasRect.top + (canvasY / 120) * canvasRect.height;
+            
+            return { x: screenX, y: screenY };
+            
+        } catch (error) {
+            log(LogLevel.ERROR, 'coords', 'Screen coordinate conversion failed:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 境界ボックスのデバッグ表示（統一座標システム準拠）
      * @param {string} name - キャラクター名
      */
     debugDrawBounds(name) {
@@ -690,17 +726,22 @@ class SpineSkeletonBounds {
         
         if (!canvas) return;
         
-        // Canvas位置を取得
-        const canvasRect = canvas.getBoundingClientRect();
-        
         // Canvas全体をクリア
         ctx.clearRect(0, 0, this.debugCanvas.width, this.debugCanvas.height);
+        
+        // skeleton オブジェクトを他の関数と同じパターンで取得
+        const skeleton = character.spine ? character.spine.skeleton : character.skeleton;
+        
+        if (!skeleton) {
+            log(LogLevel.ERROR, "debug", `No skeleton found for character: ${name}`);
+            return;
+        }
         
         // 境界ボックスを描画
         ctx.strokeStyle = this.debugColors.bounds;
         ctx.lineWidth = 2;
         
-        log(LogLevel.DEBUG, 'debug', `Drawing ${boundsInfo.boundingBoxes.length} bounding boxes for ${name}`);
+        log(LogLevel.DEBUG, 'debug', `統一座標系で${boundsInfo.boundingBoxes.length}個の境界ボックスを描画: ${name}`);
         
         boundsInfo.boundingBoxes.forEach((boundingBox, index) => {
             const { vertices, bounds } = boundingBox;
@@ -708,29 +749,32 @@ class SpineSkeletonBounds {
             if (vertices.length >= 6) {
                 ctx.beginPath();
                 
-                // 多角形描画
+                // 🎯 統一座標システムによる多角形描画
                 for (let i = 0; i < vertices.length; i += 2) {
-                    const x = canvasRect.left + (vertices[i] + character.skeleton.x) * canvasRect.width / canvas.width;
-                    const y = canvasRect.top + canvasRect.height - (vertices[i + 1] + character.skeleton.y) * canvasRect.height / canvas.height;
+                    // 既存の統一座標システムと同じ変換を適用
+                    const screenCoord = this.convertToScreenCoordinates(character, vertices[i], vertices[i + 1]);
                     
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
+                    if (screenCoord) {
+                        if (i === 0) {
+                            ctx.moveTo(screenCoord.x, screenCoord.y);
+                        } else {
+                            ctx.lineTo(screenCoord.x, screenCoord.y);
+                        }
                     }
                 }
                 
                 ctx.closePath();
                 ctx.stroke();
                 
-                // 境界ボックス名を表示
+                // 境界ボックス名を表示（統一座標系）
                 if (bounds) {
-                    const textX = canvasRect.left + (bounds.centerX + character.skeleton.x) * canvasRect.width / canvas.width;
-                    const textY = canvasRect.top + canvasRect.height - (bounds.centerY + character.skeleton.y) * canvasRect.height / canvas.height;
+                    const centerScreenCoord = this.convertToScreenCoordinates(character, bounds.centerX, bounds.centerY);
                     
-                    ctx.fillStyle = this.debugColors.text;
-                    ctx.font = '12px Arial';
-                    ctx.fillText(boundingBox.name, textX, textY);
+                    if (centerScreenCoord) {
+                        ctx.fillStyle = this.debugColors.text;
+                        ctx.font = '12px Arial';
+                        ctx.fillText(boundingBox.name, centerScreenCoord.x, centerScreenCoord.y);
+                    }
                 }
             }
         });
@@ -743,6 +787,8 @@ class SpineSkeletonBounds {
             ctx.arc(clickPoint.x, clickPoint.y, 5, 0, 2 * Math.PI);
             ctx.fill();
         }
+        
+        log(LogLevel.INFO, 'debug', `統一座標システムによる境界ボックス描画完了: ${name}`);
     }
 
     /**

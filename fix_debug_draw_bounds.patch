@@ -1,0 +1,40 @@
+--- a/assets/spine/spine-skeleton-bounds.js
++++ b/assets/spine/spine-skeleton-bounds.js
+@@ -688,6 +688,12 @@
+         const ctx = this.debugCanvas.getContext('2d');
+         const { character } = boundsInfo;
+         const { canvas } = character;
++        
++        // skeleton オブジェクトを他の関数と同じパターンで取得
++        const skeleton = character.spine ? character.spine.skeleton : character.skeleton;
++        
++        if (\!skeleton) {
++            log(LogLevel.ERROR, 'debug', `No skeleton found for character: ${name}`);
++            return;
++        }
+         
+         if (\!canvas) return;
+         
+@@ -711,8 +717,8 @@
+                 
+                 // 多角形描画
+                 for (let i = 0; i < vertices.length; i += 2) {
+-                    const x = canvasRect.left + (vertices[i] + character.skeleton.x) * canvasRect.width / canvas.width;
+-                    const y = canvasRect.top + canvasRect.height - (vertices[i + 1] + character.skeleton.y) * canvasRect.height / canvas.height;
++                    const x = canvasRect.left + (vertices[i] + skeleton.x) * canvasRect.width / canvas.width;
++                    const y = canvasRect.top + canvasRect.height - (vertices[i + 1] + skeleton.y) * canvasRect.height / canvas.height;
+                     
+                     if (i === 0) {
+                         ctx.moveTo(x, y);
+@@ -726,8 +732,8 @@
+                 
+                 // 境界ボックス名を表示
+                 if (bounds) {
+-                    const textX = canvasRect.left + (bounds.centerX + character.skeleton.x) * canvasRect.width / canvas.width;
+-                    const textY = canvasRect.top + canvasRect.height - (bounds.centerY + character.skeleton.y) * canvasRect.height / canvas.height;
++                    const textX = canvasRect.left + (bounds.centerX + skeleton.x) * canvasRect.width / canvas.width;
++                    const textY = canvasRect.top + canvasRect.height - (bounds.centerY + skeleton.y) * canvasRect.height / canvas.height;
+                     
+                     ctx.fillStyle = this.debugColors.text;
+                     ctx.font = '12px Arial';
+EOF < /dev/null
