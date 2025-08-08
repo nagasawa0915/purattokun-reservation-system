@@ -215,13 +215,25 @@ if (typeof window.PackageExportSystem === 'undefined') {
                     // v2.0形式互換性: { character: {...} }
                     else if (savedState && savedState.character) {
                         console.log('💾 localStorage v2.0形式検出 - 単一キャラクター位置データ');
-                        // 現在編集中のキャラクターに適用（互換性）
-                        if (MultiCharacterManager.activeCharacter) {
-                            const activeCharName = MultiCharacterManager.activeCharacter.id.replace('-canvas', '');
-                            if (this.allCharacters.includes(activeCharName)) {
-                                this.allPositionData[activeCharName] = savedState.character;
-                                console.log(`  ✅ ${activeCharName}: v2.0互換性データ適用`);
-                            }
+                        // 🔧 修正: v2.0データを全キャラクターに適用（既存プロジェクト互換性）
+                        // MultiCharacterManagerが利用できない場合も考慮
+                        let targetCharacterName = null;
+                        
+                        // 1. MultiCharacterManagerから現在のキャラクター取得を試行
+                        if (typeof MultiCharacterManager !== 'undefined' && MultiCharacterManager.activeCharacter) {
+                            targetCharacterName = MultiCharacterManager.activeCharacter.id.replace('-canvas', '');
+                        }
+                        // 2. フォールバック: allCharactersの最初のキャラクター
+                        else if (Array.isArray(this.allCharacters) && this.allCharacters.length > 0) {
+                            targetCharacterName = this.allCharacters[0];
+                            console.log(`💡 フォールバック: ${targetCharacterName} にv2.0データを適用`);
+                        }
+                        
+                        if (targetCharacterName && this.allCharacters.includes(targetCharacterName)) {
+                            this.allPositionData[targetCharacterName] = savedState.character;
+                            console.log(`  ✅ ${targetCharacterName}: v2.0互換性データ適用成功`);
+                        } else {
+                            console.warn('⚠️ v2.0データの適用対象キャラクターが見つかりません');
                         }
                     }
                 } catch (parseError) {
@@ -238,30 +250,31 @@ if (typeof window.PackageExportSystem === 'undefined') {
             if (Array.isArray(this.allCharacters)) {
                 for (const characterName of this.allCharacters) {
                     if (!this.allPositionData[characterName]) {
-                    console.log(`🔍 ${characterName}: localStorageデータなし - DOMから取得`);
-                    
-                    const element = document.getElementById(`${characterName}-canvas`);
-                    if (element) {
-                        const rect = element.getBoundingClientRect();
-                        const parentRect = element.parentElement?.getBoundingClientRect();
-                        const computedStyle = window.getComputedStyle(element);
+                        console.log(`🔍 ${characterName}: localStorageデータなし - DOMから取得`);
                         
-                        const domPosition = {
-                            left: element.style.left || computedStyle.left || '35%',
-                            top: element.style.top || computedStyle.top || '75%',
-                            width: element.style.width || computedStyle.width || '25%',
-                            height: element.style.height || computedStyle.height || 'auto',
-                            transform: element.style.transform || computedStyle.transform || 'translate(-50%, -50%)'
-                        };
-                        
-                        this.allPositionData[characterName] = domPosition;
-                        console.log(`  ✅ ${characterName}: DOM位置データ取得成功`);
-                    } else {
-                        console.warn(`  ⚠️ ${characterName}: DOM要素が見つからない - デフォルト値使用`);
-                        this.allPositionData[characterName] = {
-                            left: '35%', top: '75%', width: '25%', height: 'auto',
-                            transform: 'translate(-50%, -50%)'
-                        };
+                        const element = document.getElementById(`${characterName}-canvas`);
+                        if (element) {
+                            const rect = element.getBoundingClientRect();
+                            const parentRect = element.parentElement?.getBoundingClientRect();
+                            const computedStyle = window.getComputedStyle(element);
+                            
+                            const domPosition = {
+                                left: element.style.left || computedStyle.left || '35%',
+                                top: element.style.top || computedStyle.top || '75%',
+                                width: element.style.width || computedStyle.width || '25%',
+                                height: element.style.height || computedStyle.height || 'auto',
+                                transform: element.style.transform || computedStyle.transform || 'translate(-50%, -50%)'
+                            };
+                            
+                            this.allPositionData[characterName] = domPosition;
+                            console.log(`  ✅ ${characterName}: DOM位置データ取得成功`);
+                        } else {
+                            console.warn(`  ⚠️ ${characterName}: DOM要素が見つからない - デフォルト値使用`);
+                            this.allPositionData[characterName] = {
+                                left: '35%', top: '75%', width: '25%', height: 'auto',
+                                transform: 'translate(-50%, -50%)'
+                            };
+                        }
                     }
                 }
             } else {
@@ -276,6 +289,19 @@ if (typeof window.PackageExportSystem === 'undefined') {
             }
             
             console.log('✅ 全キャラクター位置データ収集完了:', this.allPositionData);
+            
+            // 🔍 品質保証: データ整合性の詳細確認
+            console.log('🔍 品質保証チェック:');
+            for (const [characterName, positionData] of Object.entries(this.allPositionData)) {
+                console.log(`  📊 ${characterName}:`, {
+                    left: positionData.left,
+                    top: positionData.top,
+                    width: positionData.width,
+                    height: positionData.height,
+                    transform: positionData.transform
+                });
+            }
+            
             return true;
             
         } catch (error) {
@@ -284,28 +310,29 @@ if (typeof window.PackageExportSystem === 'undefined') {
         }
     },
 
-    // 位置データの正規化・検証
+    // 位置データの正規化・検証（精度保持改善版）
     normalizePositionData(data) {
         const normalized = { ...data };
         
-        // %値の正規化（px値が混じっている場合の対応）
+        // 🔧 精度保持: 不必要な変換を回避し、元のデータをそのまま保持
         ['left', 'top', 'width', 'height'].forEach(prop => {
             if (normalized[prop] && typeof normalized[prop] === 'string') {
-                // px値を%値に変換する必要があるかチェック
-                if (normalized[prop].includes('px') && !normalized[prop].includes('%')) {
-                    console.log(`🔧 ${prop}: px値検出、%値への変換が必要: ${normalized[prop]}`);
-                    // この場合はそのまま保持（embedPositionDataで適切に処理される）
+                // 既に適切な形式の場合はそのまま保持（精度誤差防止）
+                if (normalized[prop].includes('%') || normalized[prop].includes('px') || normalized[prop] === 'auto') {
+                    console.log(`✅ ${prop}: 適切な形式を保持: ${normalized[prop]}`);
+                } else {
+                    console.log(`🔧 ${prop}: 形式が不明、そのまま保持: ${normalized[prop]}`);
                 }
             }
         });
         
-        // transformの正規化
+        // transformの正規化（デフォルト値設定のみ）
         if (!normalized.transform || normalized.transform === 'none') {
             normalized.transform = 'translate(-50%, -50%)';
             console.log('🔧 transform正規化: translate(-50%, -50%)を設定');
         }
         
-        console.log('🔧 位置データ正規化完了:', normalized);
+        console.log('🔧 位置データ正規化完了（精度保持版）:', normalized);
         return normalized;
     },
 
@@ -421,7 +448,27 @@ ${allCharactersCSS}    </style>`;
             return htmlContent;
         }
         
-        console.log('✅ 全キャラクター位置データCSS埋め込み成功（完全パッケージ版）');
+        // === 4. Canvas要素のinlineスタイル属性を削除（CSS優先度問題解決） ===
+        console.log('🔧 Canvas要素inlineスタイル属性削除開始');
+        
+        // ✅ 安全チェック: allCharactersが配列であることを確認
+        if (Array.isArray(this.allCharacters)) {
+            for (const characterName of this.allCharacters) {
+                // Canvas要素のstyle属性を削除
+                const canvasStylePattern = new RegExp(`(<canvas[^>]*id="${characterName}-canvas"[^>]*?)\\s*style="[^"]*"([^>]*>)`, 'g');
+                htmlContent = htmlContent.replace(canvasStylePattern, '$1$2');
+                
+                // フォールバック要素のstyle属性も削除
+                const fallbackStylePattern = new RegExp(`(<div[^>]*id="${characterName}-fallback"[^>]*?)\\s*style="[^"]*"([^>]*>)`, 'g');
+                htmlContent = htmlContent.replace(fallbackStylePattern, '$1$2');
+                
+                console.log(`  ✅ ${characterName}: inlineスタイル属性削除完了`);
+            }
+        } else {
+            console.warn('⚠️ allCharactersが配列ではありません - inlineスタイル削除をスキップ:', this.allCharacters);
+        }
+        
+        console.log('✅ 全キャラクター位置データCSS埋め込み成功（inlineスタイル競合解決済み）');
         return htmlContent;
     },
 

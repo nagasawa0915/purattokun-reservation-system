@@ -459,6 +459,9 @@
 ### 「PackageExportSystem」「見つかりません」「undefined」「読み込み失敗」「モジュール読み込み」「パッケージボタンエラー」「継続調査中」
 → [PackageExportSystem読み込み問題.md](./troubleshooting/PackageExportSystem読み込み問題.md)
 
+### 「パッケージ出力」「位置情報反映されない」「編集位置が出力されない」「デフォルト位置になる」「v3.0データ形式」「CSS優先度競合」「inlineスタイル削除」
+→ [パッケージ出力機能完全実装記録.md](./troubleshooting/パッケージ出力機能完全実装記録.md#-編集システム位置情報反映されない場合2025-08-08追加)
+
 ---
 
 ## 📝 新しい問題の記録方法
