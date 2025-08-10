@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎭 Timeline Studio Demo - Theater UI Timeline System</title>
+    
+    <!-- Timeline Studio CSS -->
+    <link rel="stylesheet" href="theater-studio.css">
+    
+    <style>
+        /* デモ用追加スタイル */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f29 100%);
+            color: #e8e8e8;
+        }
+        
+        .demo-header {
+            padding: 20px;
+            text-align: center;
+            background: rgba(26, 37, 51, 0.8);
+            border-bottom: 2px solid #3a5f7a;
+        }
+        
+        .demo-title {
+            font-size: 32px;
+            color: #d4af37;
+            margin-bottom: 10px;
+        }
+        
+        .demo-subtitle {
+            font-size: 16px;
+            color: #8fa4b8;
+            margin-bottom: 20px;
+        }
+        
+        .demo-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .btn-demo {
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #3a5f7a, #4a6f8a);
+            color: #ffffff;
+            border: 1px solid #5a7f9a;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .btn-demo:hover {
+            background: linear-gradient(45deg, #4a6f8a, #5a7f9a);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(74, 111, 138, 0.4);
+        }
+        
+        .status-panel {
+            background: rgba(36, 52, 71, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            background: rgba(74, 111, 138, 0.2);
+        }
+        
+        .status-label {
+            color: #8fa4b8;
+        }
+        
+        .status-value {
+            color: #d4af37;
+            font-weight: 600;
+        }
+        
+        .error-panel {
+            background: rgba(139, 69, 19, 0.3);
+            border: 1px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 20px;
+            display: none;
+        }
+        
+        .error-title {
+            color: #ff6b6b;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .error-message {
+            color: #ffcccc;
+            font-size: 14px;
+        }
+        
+        #timeline-studio-container {
+            min-height: 80vh;
+        }
+        
+        .console-output {
+            background: rgba(15, 20, 25, 0.8);
+            border: 1px solid #3a5f7a;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .log-info { background: rgba(74, 111, 138, 0.2); color: #8fa4b8; }
+        .log-success { background: rgba(46, 125, 50, 0.2); color: #81c784; }
+        .log-warning { background: rgba(245, 124, 0, 0.2); color: #ffb74d; }
+        .log-error { background: rgba(211, 47, 47, 0.2); color: #e57373; }
+    </style>
+</head>
+<body>
+    <!-- デモヘッダー -->
+    <div class="demo-header">
+        <h1 class="demo-title">🎭 Timeline Studio Demo</h1>
+        <p class="demo-subtitle">Theater UI Concept - Spine用ノンリニアタイムライン編集システム</p>
+        
+        <div class="demo-controls">
+            <button class="btn-demo" onclick="initializeDemo()">🚀 Initialize Systems</button>
+            <button class="btn-demo" onclick="createSampleClip()">🎪 Add Sample Clip</button>
+            <button class="btn-demo" onclick="testPlayback()">▶️ Test Playback</button>
+            <button class="btn-demo" onclick="testBake()">📦 Test Bake</button>
+            <button class="btn-demo" onclick="showSystemStatus()">📊 System Status</button>
+        </div>
+        
+        <div class="status-panel" id="status-panel">
+            <div class="status-item">
+                <span class="status-label">Theater Studio:</span>
+                <span class="status-value" id="status-theater">未初期化</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Timeline Engine:</span>
+                <span class="status-value" id="status-timeline">未初期化</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Spine Integration:</span>
+                <span class="status-value" id="status-spine">未初期化</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Bake System:</span>
+                <span class="status-value" id="status-bake">未初期化</span>
+            </div>
+        </div>
+        
+        <div class="error-panel" id="error-panel">
+            <div class="error-title">❌ システムエラー</div>
+            <div class="error-message" id="error-message"></div>
+        </div>
+    </div>
+    
+    <!-- Timeline Studio コンテナ -->
+    <div id="timeline-studio-container"></div>
+    
+    <!-- コンソール出力 -->
+    <div class="console-output" id="console-output">
+        <div class="log-entry log-info">[INFO] Timeline Studio Demo 準備中...</div>
+    </div>
+    
+    <!-- Timeline Studio Scripts -->
+    <script src="timeline-studio-core.js"></script>
+    <script src="timeline-control-engine.js"></script>
+    <script src="spine-integration-api.js"></script>
+    <script src="bake-output-system.js"></script>
+    
+    <script>
+        // ========== デモ制御スクリプト ========== //
+        
+        let demoState = {
+            initialized: false,
+            systems: {
+                theater: false,
+                timeline: false,
+                spine: false,
+                bake: false
+            }
+        };
+        
+        // ログ出力システム
+        function logToConsole(level, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logClass = `log-${level}`;
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${logClass}`;
+            logEntry.textContent = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+            
+            const consoleOutput = document.getElementById('console-output');
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // 100エントリー制限
+            if (consoleOutput.children.length > 100) {
+                consoleOutput.removeChild(consoleOutput.firstChild);
+            }
+        }
+        
+        // エラー表示
+        function showError(message) {
+            const errorPanel = document.getElementById('error-panel');
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = message;
+            errorPanel.style.display = 'block';
+            
+            logToConsole('error', message);
+        }
+        
+        // エラー非表示
+        function hideError() {
+            document.getElementById('error-panel').style.display = 'none';
+        }
+        
+        // ステータス更新
+        function updateStatus(system, status) {
+            const statusElement = document.getElementById(`status-${system}`);
+            if (statusElement) {
+                statusElement.textContent = status;
+                statusElement.style.color = status.includes('✅') ? '#81c784' : 
+                                          status.includes('❌') ? '#e57373' : 
+                                          status.includes('⚠️') ? '#ffb74d' : '#d4af37';
+            }
+            
+            logToConsole('info', `${system} status: ${status}`);
+        }
+        
+        // システム初期化
+        async function initializeDemo() {
+            hideError();
+            logToConsole('info', 'システム初期化開始...');
+            
+            try {
+                // 1. Theater Studio 初期化
+                updateStatus('theater', '初期化中...');
+                if (typeof window.initTheaterStudio === 'function') {
+                    await window.initTheaterStudio('timeline-studio-container');
+                    demoState.systems.theater = true;
+                    updateStatus('theater', '✅ 初期化完了');
+                } else {
+                    throw new Error('Theater Studio 初期化関数が見つかりません');
+                }
+                
+                // 2. Timeline Engine 初期化
+                updateStatus('timeline', '初期化中...');
+                if (window.timelineEngine) {
+                    const success = window.timelineEngine.initialize(window.TheaterStudio);
+                    if (success) {
+                        demoState.systems.timeline = true;
+                        updateStatus('timeline', '✅ 初期化完了');
+                    } else {
+                        throw new Error('Timeline Engine 初期化失敗');
+                    }
+                } else {
+                    throw new Error('Timeline Engine が見つかりません');
+                }
+                
+                // 3. Spine Integration 初期化
+                updateStatus('spine', '初期化中...');
+                if (typeof window.initSpineIntegration === 'function') {
+                    const integrationStatus = await window.initSpineIntegration();
+                    if (integrationStatus && integrationStatus.ready) {
+                        demoState.systems.spine = true;
+                        updateStatus('spine', '✅ 統合完了');
+                    } else {
+                        demoState.systems.spine = false;
+                        updateStatus('spine', '⚠️ 統合制限（Spineシステム未検出）');
+                    }
+                } else {
+                    throw new Error('Spine Integration 初期化関数が見つかりません');
+                }
+                
+                // 4. Bake System 初期化
+                updateStatus('bake', '初期化中...');
+                if (window.bakeSystem) {
+                    await window.bakeSystem.initialize(window.timelineEngine, window.spineIntegration);
+                    demoState.systems.bake = true;
+                    updateStatus('bake', '✅ 初期化完了');
+                } else {
+                    throw new Error('Bake System が見つかりません');
+                }
+                
+                demoState.initialized = true;
+                logToConsole('success', '🎭 Timeline Studio Demo 初期化完了');
+                
+            } catch (error) {
+                showError(`初期化エラー: ${error.message}`);
+                logToConsole('error', `初期化失敗: ${error.message}`);
+            }
+        }
+        
+        // サンプルクリップ作成
+        function createSampleClip() {
+            if (!demoState.initialized) {
+                showError('先にシステムを初期化してください');
+                return;
+            }
+            
+            try {
+                // キャラクタークリップ作成
+                const clip = window.timelineEngine.createCharacterClip(
+                    'character-1',      // トラックID
+                    'purattokun',       // キャラクターID
+                    'idle',             // アニメーション名
+                    1000,               // 開始時間（1秒）
+                    3000                // 継続時間（3秒）
+                );
+                
+                if (clip) {
+                    logToConsole('success', `サンプルクリップ作成: ${clip.name}`);
+                } else {
+                    throw new Error('クリップ作成失敗');
+                }
+                
+            } catch (error) {
+                showError(`クリップ作成エラー: ${error.message}`);
+            }
+        }
+        
+        // 再生テスト
+        function testPlayback() {
+            if (!demoState.initialized) {
+                showError('先にシステムを初期化してください');
+                return;
+            }
+            
+            try {
+                window.timelineEngine.play();
+                logToConsole('info', 'タイムライン再生開始');
+                
+                // 5秒後に自動停止
+                setTimeout(() => {
+                    window.timelineEngine.stop();
+                    logToConsole('info', 'タイムライン再生停止');
+                }, 5000);
+                
+            } catch (error) {
+                showError(`再生エラー: ${error.message}`);
+            }
+        }
+        
+        // ベイクテスト
+        async function testBake() {
+            if (!demoState.initialized) {
+                showError('先にシステムを初期化してください');
+                return;
+            }
+            
+            try {
+                logToConsole('info', 'ベイク処理開始...');
+                const project = await window.bakeSystem.startBake('demo-project');
+                
+                if (project && project.status === 'completed') {
+                    logToConsole('success', `ベイク完了: ${project.name} (${project.duration}ms)`);
+                    
+                    // 出力確認
+                    if (project.output && project.output.code) {
+                        logToConsole('info', `出力サイズ: ${(project.output.size / 1024).toFixed(1)}KB`);
+                    }
+                } else {
+                    throw new Error('ベイク処理が完了しませんでした');
+                }
+                
+            } catch (error) {
+                showError(`ベイクエラー: ${error.message}`);
+            }
+        }
+        
+        // システム状態表示
+        function showSystemStatus() {
+            const status = {
+                theater: window.TheaterStudio ? window.TheaterStudio.getStudioState() : null,
+                timeline: window.timelineEngine ? window.timelineEngine.getEngineState() : null,
+                spine: window.spineIntegration ? window.spineIntegration.getIntegrationState() : null,
+                bake: window.bakeSystem ? window.bakeSystem.getBakeState() : null
+            };
+            
+            console.log('🎭 Timeline Studio システム状態:', status);
+            logToConsole('info', 'システム状態をコンソールに出力しました');
+        }
+        
+        // イベントリスナー設定
+        window.addEventListener('theaterStudio:studioReady', (e) => {
+            logToConsole('success', `Theater Studio 準備完了: ${e.detail.studio} v${e.detail.version}`);
+        });
+        
+        window.addEventListener('timelineEngine:playbackStarted', (e) => {
+            logToConsole('info', `タイムライン再生開始: ${e.detail.currentTime}ms`);
+        });
+        
+        window.addEventListener('timelineEngine:clipActivated', (e) => {
+            logToConsole('info', `クリップアクティブ: ${e.detail.clip.name}`);
+        });
+        
+        window.addEventListener('bakeSystem:bakeCompleted', (e) => {
+            logToConsole('success', `ベイク完了: ${e.detail.project.name}`);
+        });
+        
+        // 初期ログ
+        logToConsole('success', 'Timeline Studio Demo 読み込み完了');
+        logToConsole('info', '🚀 Initialize Systems ボタンでシステム開始');
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+    "placeholder": "purattokun skeleton data",
+    "note": "この位置にWeb版からコピーした purattokun.json を配置",
+    "path": "/mnt/d/クラウドパートナーHP/assets/spine/characters/purattokun/",
+    "files": [
+        "purattokun.json",
+        "purattokun.atlas",
+        "purattokun.png"
+    ],
+    "status": "要実装"
+}

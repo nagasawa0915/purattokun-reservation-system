@@ -1,13 +1,13 @@
-// 🔄 Timeline Data Manager - レガシーファイル（分割済み）
-// このファイルは timeline-data-core.js + timeline-compatibility.js に分割されました
-// 互換性保持のため残存（依存関係確認用）
+// 💾 Timeline Data Manager コア機能 - 250行制限遵守
+// 分離理由: timeline-data-manager.js サイズ制限遵守
+// 機能: データ管理・localStorage統合・3段階フォールバック
 
-console.log('🔄 Timeline Data Manager レガシーファイル - 分割済み参照');
+console.log('💾 Timeline Data Core 読み込み開始');
 
 // ========== データ管理・永続化システム ========== //
 
 /**
- * タイムライン永続化ストレージクラス
+ * タイムライン永続化ストレージクラス（コア機能）
  * 仕様: 3段階フォールバック（localStorage→設定ファイル→デフォルト）
  */
 class TimelinePersistentStorage {
@@ -67,29 +67,18 @@ class TimelinePersistentStorage {
     
     /**
      * 統合データ保存
-     * 既存システムとの互換性を保ちつつタイムライン設定を統合保存
      */
     saveTimelineState(timelineData, options = {}) {
-        console.log('💾 タイムライン状態の統合保存開始');
+        console.log('💾 タイムライン状態保存開始');
         
         try {
-            // 既存データを読み込み（他システムの設定を保護）
-            const existingPositioning = this.loadExistingData(this.compatibilityKeys.positioning);
-            const existingBoundingBox = this.loadExistingData(this.compatibilityKeys.boundingBox);
-            const existingCharacters = this.loadExistingData(this.compatibilityKeys.characters);
-            
-            // 統合データ構造を作成
             const unifiedState = {
                 version: this.version,
                 timestamp: Date.now(),
                 timeline: timelineData,
-                
-                // 既存システム互換性保証
-                positioning: existingPositioning,
-                boundingBox: existingBoundingBox,
-                characters: existingCharacters,
-                
-                // メタデータ
+                positioning: this.loadExistingData(this.compatibilityKeys.positioning),
+                boundingBox: this.loadExistingData(this.compatibilityKeys.boundingBox),
+                characters: this.loadExistingData(this.compatibilityKeys.characters),
                 metadata: {
                     lastModified: new Date().toISOString(),
                     modifiedBy: 'timeline-system',
@@ -97,11 +86,9 @@ class TimelinePersistentStorage {
                 }
             };
             
-            // 統合データを保存
             localStorage.setItem(this.storageKey, JSON.stringify(unifiedState));
             console.log('✅ 統合タイムライン状態保存完了');
             
-            // 個別システム互換性のための重複保存
             if (options.maintainCompatibility !== false) {
                 this.maintainSystemCompatibility(unifiedState);
             }
@@ -160,38 +147,6 @@ class TimelinePersistentStorage {
     }
     
     /**
-     * システム互換性維持
-     * 各システムが独立して動作できるよう個別保存も維持
-     */
-    maintainSystemCompatibility(unifiedState) {
-        try {
-            // 編集システム互換性
-            if (unifiedState.positioning) {
-                localStorage.setItem(this.compatibilityKeys.positioning, 
-                                   JSON.stringify(unifiedState.positioning));
-            }
-            
-            // 境界ボックス互換性
-            if (unifiedState.boundingBox) {
-                localStorage.setItem(this.compatibilityKeys.boundingBox, 
-                                   JSON.stringify(unifiedState.boundingBox));
-            }
-            
-            // キャラクター管理互換性
-            if (unifiedState.characters) {
-                localStorage.setItem(this.compatibilityKeys.characters, 
-                                   JSON.stringify(unifiedState.characters));
-            }
-            
-            console.log('✅ システム互換性維持保存完了');
-            
-        } catch (error) {
-            console.warn('⚠️ システム互換性維持に失敗:', error);
-            // 非致命的エラーなので続行
-        }
-    }
-    
-    /**
      * データ検証・マイグレーション
      */
     validateAndMigrateData(data) {
@@ -241,33 +196,13 @@ class TimelinePersistentStorage {
         return {
             version: this.version,
             timeline: {
-                globalSettings: {
-                    frameRate: 60,
-                    syncTolerance: 16.67, // 1フレーム精度
-                    defaultDuration: 1000
-                },
+                globalSettings: { frameRate: 60, syncTolerance: 16.67, defaultDuration: 1000 },
                 characters: {
-                    purattokun: {
-                        sequences: [],
-                        syncSettings: {
-                            syncGroups: [],
-                            syncCapabilities: ['movement', 'animation']
-                        }
-                    },
-                    nezumi: {
-                        sequences: [],
-                        syncSettings: {
-                            syncGroups: [],
-                            syncCapabilities: ['movement', 'stealth']
-                        }
-                    }
+                    purattokun: { sequences: [], syncSettings: { syncGroups: [], syncCapabilities: ['movement', 'animation'] } },
+                    nezumi: { sequences: [], syncSettings: { syncGroups: [], syncCapabilities: ['movement', 'stealth'] } }
                 }
             },
-            metadata: {
-                isDefault: true,
-                created: new Date().toISOString(),
-                source: 'default-settings'
-            }
+            metadata: { isDefault: true, created: new Date().toISOString(), source: 'default-settings' }
         };
     }
     
@@ -297,10 +232,7 @@ if (!window.TimelineDataManager) {
     console.log('✅ Timeline Data Manager グローバル初期化完了');
 }
 
-// デバッグ・開発支援関数
-window.debugTimelineStorage = () => window.TimelineDataManager.diagnosisStorage();
-
-console.log('✅ Timeline Data Manager モジュール読み込み完了');
+console.log('✅ Timeline Data Core モジュール読み込み完了');
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {

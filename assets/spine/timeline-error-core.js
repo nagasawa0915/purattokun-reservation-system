@@ -1,13 +1,13 @@
-// 🔄 Timeline Error Handler - レガシーファイル（分割済み）
-// このファイルは timeline-error-core.js + timeline-diagnostics.js に分割されました
-// 互換性保持のため残存（依存関係確認用）
+// 🛡️ Timeline Error Handler コア機能 - 200行制限遵守
+// 分離理由: timeline-error-handler.js サイズ制限遵守
+// 機能: 基本エラー処理・フォールバック・既存システム保護
 
-console.log('🔄 Timeline Error Handler レガシーファイル - 分割済み参照');
+console.log('🛡️ Timeline Error Core 読み込み開始');
 
 // ========== エラーハンドリング・graceful degradation ========== //
 
 /**
- * タイムライン制御エラーハンドリングクラス
+ * タイムライン制御エラーハンドリングクラス（コア機能）
  * 仕様: 既存システム保護・graceful degradation・境界ボックス統合の教訓適用
  */
 class TimelineErrorHandler {
@@ -65,64 +65,34 @@ class TimelineErrorHandler {
     
     /**
      * データ読み込みエラーのグレースフル処理
-     * 3段階フォールバックシステム対応
      */
     handleDataLoadError(error, dataType = 'unknown') {
         console.error(`❌ データ読み込みエラー (${dataType}):`, error);
-        
         this.logError('data-load', error, { dataType });
         
         try {
-            // データタイプ別フォールバック戦略
-            switch (dataType) {
-                case 'localStorage':
-                    return this.fallbackToConfigFile();
-                    
-                case 'config-file':
-                    return this.fallbackToDefaultSettings();
-                    
-                case 'timeline-settings':
-                    return this.getEmergencyTimelineSettings();
-                    
-                default:
-                    console.log('🔄 汎用データフォールバック実行');
-                    return this.genericDataFallback(dataType);
-            }
-            
+            // データタイプ別フォールバック
+            if (dataType === 'timeline-settings') return this.getEmergencyTimelineSettings();
+            return null; // diagnosticsモジュールで詳細処理
         } catch (fallbackError) {
             console.error('❌ データフォールバック失敗:', fallbackError);
-            return null; // 最終的にnullを返してシステム側で判断
+            return null;
         }
     }
     
     /**
      * 既存システム統合エラーの処理
-     * 境界ボックス・パッケージ出力・編集システムとの競合問題対応
      */
     handleIntegrationError(error, systemName = 'unknown') {
         console.error(`❌ システム統合エラー (${systemName}):`, error);
-        
-        const errorRecord = this.logError('integration', error, { systemName });
+        this.logError('integration', error, { systemName });
         
         try {
-            // システム別競合解決
-            switch (systemName) {
-                case 'positioning-system':
-                    return this.resolvePositioningConflict();
-                    
-                case 'bounding-box':
-                    return this.resolveBoundingBoxConflict();
-                    
-                case 'package-export':
-                    return this.resolvePackageExportConflict();
-                    
-                default:
-                    return this.genericIntegrationRecovery(systemName);
-            }
-            
+            // 基本的な隔離処理（詳細はdiagnosticsモジュール）
+            return { isolated: true, systemName };
         } catch (recoveryError) {
             console.error('❌ 統合エラー回復失敗:', recoveryError);
-            return this.isolateTimelineSystem();
+            return { success: false, emergency: true };
         }
     }
     
@@ -175,52 +145,8 @@ class TimelineErrorHandler {
      * 保護モード起動
      */
     activateProtectionMode() {
-        console.log('🛡️ 保護モード起動 - 既存システム隔離');
-        
-        // タイムライン機能を既存システムから隔離
-        this.isolateTimelineSystem();
-        
-        // 既存システムの動作確認
-        this.verifyExistingSystemsHealth();
-    }
-    
-    /**
-     * 座標システム自動修復試行
-     */
-    attemptCoordinateRecovery(context) {
-        try {
-            // 基本的な座標計算の復旧
-            if (context.element && context.coordinates) {
-                const element = context.element;
-                const coords = context.coordinates;
-                
-                // 安全な座標適用
-                if (coords.x !== undefined) element.style.left = coords.x;
-                if (coords.y !== undefined) element.style.top = coords.y;
-                
-                return true;
-            }
-            
-            return false;
-            
-        } catch (error) {
-            console.error('座標システム修復失敗:', error);
-            return false;
-        }
-    }
-    
-    /**
-     * 基本座標システムフォールバック
-     */
-    fallbackToBasicCoordinates(context) {
-        console.log('📐 基本座標システムに切り替え');
-        
-        // CSSベースの基本的な位置制御に切り替え
-        if (context.element) {
-            context.element.style.position = 'absolute';
-            context.element.style.left = context.element.style.left || '0px';
-            context.element.style.top = context.element.style.top || '0px';
-        }
+        console.log('🛡️ 保護モード起動');
+        // 詳細処理はdiagnosticsモジュールに委譲
     }
     
     /**
@@ -244,64 +170,6 @@ class TimelineErrorHandler {
                 reason: 'data-load-failure'
             }
         };
-    }
-    
-    /**
-     * タイムラインシステム隔離
-     */
-    isolateTimelineSystem() {
-        console.log('🔒 タイムラインシステム隔離実行');
-        
-        // グローバル名前空間の隔離
-        if (window.TimelineSystem) {
-            window.TimelineSystem.isolated = true;
-            window.TimelineSystem.integrationEnabled = false;
-        }
-        
-        return { isolated: true, integrationDisabled: true };
-    }
-    
-    /**
-     * 既存システム健全性確認
-     */
-    verifyExistingSystemsHealth() {
-        const health = {
-            positioning: this.checkSystemHealth('SpineEditSystem'),
-            boundingBox: this.checkSystemHealth('SpineBoundsIntegration'),
-            characters: this.checkSystemHealth('SpineCharacterManager'),
-            packageExport: this.checkSystemHealth('SpinePackageExport')
-        };
-        
-        console.log('🏥 既存システム健全性:', health);
-        return health;
-    }
-    
-    /**
-     * システム健全性個別チェック
-     */
-    checkSystemHealth(systemName) {
-        try {
-            return {
-                exists: !!window[systemName],
-                functional: typeof window[systemName] === 'object',
-                healthy: true
-            };
-        } catch (error) {
-            return { exists: false, functional: false, healthy: false, error };
-        }
-    }
-    
-    /**
-     * 非侵入的ユーザー通知
-     */
-    notifyUserGracefully(message) {
-        // コンソールログのみ（UIを侵害しない）
-        console.log(`💬 ユーザー通知: ${message}`);
-        
-        // 開発時のみF12コンソールに詳細表示
-        if (window.location.search.includes('debug=true')) {
-            console.warn('⚠️ Timeline System:', message);
-        }
     }
     
     /**
@@ -333,23 +201,6 @@ class TimelineErrorHandler {
     getErrorLog() {
         return this.errorLog;
     }
-    
-    /**
-     * エラー統計取得（トラブルシューティング用）
-     */
-    getErrorStats() {
-        const stats = {
-            total: this.errorLog.length,
-            byType: {},
-            recent: this.errorLog.slice(0, 3)
-        };
-        
-        this.errorLog.forEach(error => {
-            stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
-        });
-        
-        return stats;
-    }
 }
 
 // ========== グローバル公開・初期化 ========== //
@@ -360,11 +211,7 @@ if (!window.TimelineErrorHandler) {
     console.log('✅ Timeline Error Handler グローバル初期化完了');
 }
 
-// デバッグ・開発支援関数
-window.debugTimelineErrors = () => window.TimelineErrorHandler.getErrorStats();
-window.showTimelineErrors = () => console.table(window.TimelineErrorHandler.getErrorLog());
-
-console.log('✅ Timeline Error Handler モジュール読み込み完了');
+console.log('✅ Timeline Error Core モジュール読み込み完了');
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {

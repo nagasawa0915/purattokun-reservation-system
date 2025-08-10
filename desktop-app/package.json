@@ -1,0 +1,71 @@
+{
+  "name": "spine-character-position-editor",
+  "version": "1.0.0",
+  "description": "Spine Character Position Editor Desktop - Professional Spine animation positioning tool",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron . --development",
+    "dev:nocache": "NODE_ENV=development electron . --development --nocache",
+    "test:minimal": "electron . --test",
+    "test:dev": "NODE_ENV=development electron . --test --development",
+    "test:nocache": "NODE_ENV=development electron . --test --development --nocache",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:windows": "electron-builder --win",
+    "build:all": "electron-builder --mac --win",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "echo \"Unit tests not implemented yet\"",
+    "test:integration": "echo \"Integration tests not implemented yet\""
+  },
+  "keywords": [
+    "spine",
+    "animation",
+    "positioning",
+    "editor",
+    "desktop",
+    "electron"
+  ],
+  "author": "Cloud Partner",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "fs-extra": "^11.2.0"
+  },
+  "build": {
+    "appId": "com.cloudpartner.spine-editor.desktop",
+    "productName": "Spine Character Position Editor",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "native-modules/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "icon": "assets/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    }
+  }
+}

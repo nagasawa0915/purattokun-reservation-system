@@ -1,0 +1,11 @@
+{
+    "placeholder": "nezumi skeleton data",
+    "note": "この位置にWeb版からコピーした nezumi.json を配置",
+    "path": "/mnt/d/クラウドパートナーHP/assets/spine/characters/nezumi/",
+    "files": [
+        "nezumi.json",
+        "nezumi.atlas",
+        "nezumi.png"
+    ],
+    "status": "要実装"
+}

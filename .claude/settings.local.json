@@ -34,7 +34,14 @@
       "Bash(for file in spine-ui-manager.js spine-multi-character-manager.js spine-bounding-box-module.js spine-state-manager.js spine-layer-editor.js spine-package-export.js spine-debug-tools.js spine-positioning-main.js)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
-      "Bash(true)"
+      "Bash(true)",
+      "WebFetch(domain:help.autodesk.com)",
+      "WebFetch(domain:docs.unity3d.com)",
+      "Bash(npm start)",
+      "Bash(electron --version)",
+      "Bash(./node_modules/.bin/electron:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": []
   }

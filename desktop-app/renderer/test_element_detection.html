@@ -1,0 +1,36 @@
+<\!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>HTML要素検出テスト</title>
+</head>
+<body>
+    <h1>HTML要素検出テスト</h1>
+    <div id="test-results"></div>
+    <script>
+        function testElements() {
+            const results = document.getElementById("test-results");
+            results.innerHTML = "<h2>検出テスト開始</h2>";
+            
+            fetch("index.html")
+                .then(response => response.text())
+                .then(htmlText => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, "text/html");
+                    
+                    const testIds = ["html-viewer-view", "url-preset-container"];
+                    
+                    testIds.forEach(id => {
+                        const element = doc.getElementById(id);
+                        results.innerHTML += "<p>" + id + ": " + (element ? "検出成功" : "検出失敗") + "</p>";
+                    });
+                })
+                .catch(e => {
+                    results.innerHTML += "<p>エラー: " + e.message + "</p>";
+                });
+        }
+        
+        document.addEventListener("DOMContentLoaded", testElements);
+    </script>
+</body>
+</html>

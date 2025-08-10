@@ -455,39 +455,13 @@ class TimelineSequence {
     }
 }
 
-// ========== グローバル公開・デバッグ支援 ========== //
+// ========== グローバル公開 ========== //
 
 // TimelineSequenceクラスをグローバル公開
 if (!window.TimelineSequence) {
     window.TimelineSequence = TimelineSequence;
     console.log('✅ TimelineSequence クラス グローバル公開完了');
 }
-
-// デバッグ・開発支援関数
-window.createTestTimelineSequence = function(characterId = 'purattokun') {
-    const testConfig = {
-        id: 'test_sequence',
-        name: 'テストシーケンス',
-        duration: 3000,
-        looping: false,
-        keyframes: [
-            { time: 0, animation: 'syutugen', position: { x: 35, y: 75 } },
-            { time: 1000, animation: 'taiki', position: { x: 35, y: 75 } },
-            { time: 2000, animation: 'yarare', position: { x: 30, y: 75 } }
-        ],
-        boundingBoxTriggers: [
-            {
-                id: 'click_trigger',
-                name: 'クリックトリガー',
-                area: { left: 0, top: 0, right: 1, bottom: 1 },
-                sequenceId: 'test_sequence',
-                keyframeIndex: 2
-            }
-        ]
-    };
-    
-    return new TimelineSequence(characterId, testConfig);
-};
 
 console.log('✅ Timeline Sequence Manager 読み込み完了 - Phase 1実装');
 console.log('🎯 400行制限遵守 - 境界ボックス完全統合 - フレーム精度制御');

@@ -1,0 +1,543 @@
+/* 🎯 Spine Editor Specific Styles */
+/* Spine編集系特有スタイル - 既存Web版から適応 */
+/* 作成日: 2025-08-10 */
+
+/* =========================
+   Spine Canvas 特有スタイル
+   ========================= */
+
+/* Spineキャンバスコンテナー */
+.spine-canvas-container canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* 編集モード時のスタイル */
+.spine-edit-mode {
+  position: relative;
+}
+
+.spine-edit-mode .edit-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #3498db;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1000;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+}
+
+.spine-edit-mode .edit-handle:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.spine-edit-mode .edit-handle.center {
+  background: #e74c3c;
+  cursor: move;
+}
+
+.spine-edit-mode .edit-boundary {
+  position: absolute;
+  border: 2px dashed #3498db;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.7;
+}
+
+/* キャラクター選択状態 */
+.character-selected {
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.5);
+  border-radius: 4px;
+}
+
+/* =========================
+   編集UIコンポーネント
+   ========================= */
+
+/* 位置情報表示 */
+.position-info {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(44, 62, 80, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+/* 編集コントロールパネル */
+.edit-controls-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #bdc3c7;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1002;
+  min-width: 200px;
+}
+
+.edit-controls-overlay h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #2c3e50;
+  border-bottom: 1px solid #ecf0f1;
+  padding-bottom: 8px;
+}
+
+.edit-control-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.edit-control-row:last-child {
+  margin-bottom: 0;
+}
+
+.edit-control-label {
+  min-width: 60px;
+  font-size: 12px;
+  color: #34495e;
+  font-weight: 500;
+}
+
+.edit-control-input {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid #bdc3c7;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.edit-control-input:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.3);
+}
+
+.edit-control-unit {
+  font-size: 11px;
+  color: #7f8c8d;
+  font-weight: normal;
+}
+
+/* 編集アクションボタン */
+.edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #ecf0f1;
+}
+
+.edit-action-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.edit-action-btn.save {
+  background: #27ae60;
+  color: white;
+}
+
+.edit-action-btn.save:hover {
+  background: #229954;
+}
+
+.edit-action-btn.cancel {
+  background: #95a5a6;
+  color: white;
+}
+
+.edit-action-btn.cancel:hover {
+  background: #7f8c8d;
+}
+
+.edit-action-btn.reset {
+  background: #f39c12;
+  color: white;
+}
+
+.edit-action-btn.reset:hover {
+  background: #d68910;
+}
+
+/* =========================
+   キャラクターリスト
+   ========================= */
+
+.character-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #ecf0f1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.character-item:hover {
+  background-color: #f8f9fa;
+}
+
+.character-item.active {
+  background-color: #3498db;
+  color: white;
+}
+
+.character-item:last-child {
+  border-bottom: none;
+}
+
+.character-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #95a5a6;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.character-item.active .character-icon {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.character-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.character-name {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.character-status {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.character-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.character-item:hover .character-actions {
+  opacity: 1;
+}
+
+.character-action-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.character-action-btn:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.character-item.active .character-action-btn {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.character-item.active .character-action-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* =========================
+   アセットリスト
+   ========================= */
+
+.asset-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.asset-item:last-child {
+  border-bottom: none;
+}
+
+.asset-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  opacity: 0.6;
+}
+
+.asset-name {
+  flex: 1;
+  font-size: 13px;
+  color: #34495e;
+}
+
+.asset-size {
+  font-size: 11px;
+  color: #7f8c8d;
+}
+
+/* =========================
+   ドラッグ&ドロップ
+   ========================= */
+
+.drag-over {
+  background: rgba(52, 152, 219, 0.1);
+  border: 2px dashed #3498db;
+}
+
+.drop-zone {
+  border: 2px dashed #bdc3c7;
+  border-radius: 4px;
+  padding: 32px;
+  text-align: center;
+  color: #7f8c8d;
+  transition: all 0.2s ease;
+}
+
+.drop-zone.active {
+  border-color: #3498db;
+  background: rgba(52, 152, 219, 0.05);
+  color: #3498db;
+}
+
+.drop-zone-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.drop-zone-text {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.drop-zone-hint {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* =========================
+   プログレスインジケーター
+   ========================= */
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #ecf0f1;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #3498db;
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #7f8c8d;
+  text-align: center;
+}
+
+/* =========================
+   アニメーションユーティリティ
+   ========================= */
+
+.bounce-in {
+  animation: bounceIn 0.6s ease;
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.shake {
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+  }
+}
+
+/* =========================
+   ダークモードサポート
+   ========================= */
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a1a;
+    color: #e0e0e0;
+  }
+  
+  .panel {
+    background: #2d2d2d;
+    border-color: #404040;
+  }
+  
+  .panel-header {
+    background: #333333;
+    border-color: #404040;
+  }
+  
+  .controls-panel {
+    background: #2d2d2d;
+    border-color: #404040;
+  }
+  
+  .control-input {
+    background: #333333;
+    border-color: #404040;
+    color: #e0e0e0;
+  }
+  
+  .control-input:focus {
+    border-color: #3498db;
+  }
+  
+  .asset-list,
+  .character-list {
+    background: #2d2d2d;
+    border-color: #404040;
+  }
+  
+  .list-item:hover {
+    background-color: #404040;
+  }
+  
+  .placeholder-content {
+    background: rgba(45, 45, 45, 0.9);
+    color: #b0b0b0;
+  }
+  
+  .modal-content {
+    background: #2d2d2d;
+    color: #e0e0e0;
+  }
+  
+  .modal-header,
+  .modal-footer {
+    border-color: #404040;
+  }
+}
+
+/* =========================
+   モバイル対応
+   ========================= */
+
+@media (max-width: 768px) {
+  .edit-controls-overlay {
+    position: fixed;
+    top: auto;
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    max-width: none;
+    width: auto;
+  }
+  
+  .edit-control-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .edit-control-label {
+    min-width: auto;
+    margin-bottom: 4px;
+  }
+  
+  .position-info {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    text-align: center;
+  }
+  
+  .character-item {
+    padding: 12px;
+  }
+  
+  .character-actions {
+    opacity: 1; /* モバイルでは常に表示 */
+  }
+}

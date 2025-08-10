@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Character Position Editor</title>
+    
+    <!-- 基本CSS（インライン化でパス問題回避） -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            color: #333;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+        
+        #app {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #2c3e50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+        
+        .loading-content h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            font-weight: 300;
+        }
+        
+        .loading-content p {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 24px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* タブスタイル */
+        .tab-button {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #34495e;
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .tab-button:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        /* ビューコンテンツ */
+        .view-content {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: none;  /* デフォルトで非表示 */
+        }
+        
+        .view-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* HTMLビューアー */
+        .html-viewer-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .webview-container {
+            flex: 1;
+            position: relative;
+            background: white;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+        }
+        
+        .toolbar {
+            height: 48px;
+            background: #34495e;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid #2c3e50;
+            flex-shrink: 0;
+        }
+        
+        .content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .default-view {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            background: linear-gradient(45deg, #f8f9fa 25%, transparent 25%),
+                        linear-gradient(-45deg, #f8f9fa 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #f8f9fa 75%),
+                        linear-gradient(-45deg, transparent 75%, #f8f9fa 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        
+        .welcome-message {
+            text-align: center;
+            color: #34495e;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 48px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+        }
+        
+        .welcome-message h3 {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .welcome-message p {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+        
+        .success-indicator {
+            background: #27ae60;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        
+        .status-bar {
+            height: 32px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        /* ボタンスタイル */
+        .btn {
+            padding: 6px 12px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+        
+        .btn-outline-primary {
+            color: #007acc;
+            border-color: #007acc;
+            background: white;
+        }
+        
+        .btn-outline-primary:hover {
+            background: #007acc;
+            color: white;
+        }
+        
+        .btn-outline-secondary {
+            color: #6c757d;
+            border-color: #6c757d;
+            background: white;
+        }
+        
+        .btn-outline-secondary:hover {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-outline-info {
+            color: #17a2b8;
+            border-color: #17a2b8;
+            background: white;
+        }
+        
+        .btn-outline-info:hover {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-outline-success {
+            color: #28a745;
+            border-color: #28a745;
+            background: white;
+        }
+        
+        .btn-outline-success:hover {
+            background: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- メインアプリケーションコンテナー -->
+    <div id="app">
+        <!-- ローディングスクリーン -->
+        <div id="loading-screen" class="loading-screen">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h2>Spine Character Position Editor</h2>
+                <p id="loading-message">初期化中...</p>
+            </div>
+        </div>
+        
+        <!-- メインUI -->
+        <div id="main-content" class="main-content" style="display: none;">
+            <!-- ツールバー -->
+            <div class="toolbar">
+                <strong>🎆 Spine Character Position Editor</strong>
+                
+                <!-- ビュー切り替えタブ -->
+                <div class="view-tabs" style="margin-left: auto; margin-right: 20px; display: flex; gap: 8px;">
+                    <button id="spine-editor-tab" class="tab-button active" data-view="spine-editor">
+                        🌯️ Spine編集
+                    </button>
+                    <button id="html-viewer-tab" class="tab-button" data-view="html-viewer">
+                        🌐 HTMLビュー
+                    </button>
+                </div>
+                
+                <span style="font-size: 12px; opacity: 0.8;">デスクトップ版 v1.0</span>
+            </div>
+            
+            <!-- コンテンツエリア -->
+            <div class="content-area">
+                <!-- Spine編集ビュー -->
+                <div id="spine-editor-view" class="view-content active">
+                    <div class="default-view">
+                        <div class="welcome-message">
+                            <h3>✅ Spine Character Position Editor</h3>
+                            <div class="success-indicator">
+                                🚀 基本システムが正常に初期化されました
+                            </div>
+                            <p><strong>🎯 現在の状況:</strong></p>
+                            <p>• HTMLレイアウト: 正常動作</p>
+                            <p>• CSSスタイリング: 適用済み</p>
+                            <p>• 基本JavaScript: 動作中</p>
+                            <p>• ローディングシステム: 完了</p>
+                            
+                            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 6px; text-align: left;">
+                                <strong>📋 次のステップ:</strong>
+                                <br>• Spine編集機能の統合
+                                <br>• プロジェクト管理システムの実装
+                                <br>• ファイル操作APIの連携
+                                <br>• 高度なUI機能の追加
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- HTMLビューアー -->
+                <div id="html-viewer-view" class="view-content">
+                    <!-- デバッグ情報 -->
+                    <div id="htmlviewer-debug" style="padding: 10px; background: #e3f2fd; border: 1px solid #2196f3; margin: 10px; border-radius: 4px; font-size: 12px;">
+                        <strong>🔍 HTMLビューアー デバッグ情報:</strong>
+                        <div id="debug-info">初期化中...</div>
+                    </div>
+                    
+                    <div class="html-viewer-container">
+                        <!-- HTML選択パネル -->
+                        <div class="html-controls" style="padding: 16px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
+                            <!-- URLプリセットコンテナ -->
+                            <div id="url-preset-container" style="margin-bottom: 10px;">
+                                <div style="padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                                    <strong>🔗 よく使うURL:</strong>
+                                    <div id="url-preset-buttons" style="margin-top: 5px;">
+                                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/index.html')">🌟 メインサイト</button>
+                                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/index.html?edit=true')">🔧 編集モード</button>
+                                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/timeline-experiment.html')">🎬 タイムライン</button>
+                                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/spine-positioning-system-explanation.html')">🎯 Spine編集</button>
+                                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/test-minimal.html')">🔬 デスクトップテスト</button>
+                                        <div style="width: 100%; margin-top: 10px;">
+                                            <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px;" onclick="window.htmlViewerManager?.selectLocalFile()">📁 ファイル選択</button>
+                                            <button class="btn btn-sm btn-outline-info" style="margin-right: 5px;" onclick="window.htmlViewerManager?.checkServerStatus()">🔍 サーバー状況</button>
+                                            <button class="btn btn-sm btn-outline-success" style="margin-right: 5px;" onclick="window.htmlViewerManager?.startServer()">🚀 サーバー起動</button>
+                                            <button class="btn btn-sm btn-outline-secondary" style="margin-right: 5px;" onclick="window.clearElectronCache()">🧹 キャッシュクリア</button>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="window.hardReloadApp()">🔄 ハードリロード</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- ファイル選択とURL入力 -->
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <label style="font-weight: bold; color: #555;">🌐 表示するHTML:</label>
+                                <select id="html-file-selector" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: white;">
+                                    <option value="">-- HTMLファイルを選択 --</option>
+                                </select>
+                                <input type="text" id="custom-url-input" placeholder="カスタムURL入力..." 
+                                       style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                <button id="load-html-button" style="padding: 8px 16px; background: #007acc; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                    🔄 読み込み
+                                </button>
+                                <button id="refresh-html-button" style="padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                    🔄 更新
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Webviewエリア -->
+                        <div class="webview-container" style="flex: 1; position: relative; background: white;">
+                            <webview id="html-webview" 
+                                     src="about:blank" 
+                                     style="width: 100%; height: 100%; border: none;"
+                                     webpreferences="contextIsolation=true">
+                            </webview>
+                            
+                            <!-- ローディング表示 -->
+                            <div id="webview-loading" class="webview-loading" style="
+                                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                                display: none; align-items: center; justify-content: center;
+                                background: rgba(255,255,255,0.9); z-index: 10;
+                            ">
+                                <div style="text-align: center; color: #666;">
+                                    <div class="loading-spinner" style="margin: 0 auto 12px;"></div>
+                                    <p>HTMLページを読み込んでいます...</p>
+                                </div>
+                            </div>
+                            
+                            <!-- エラー表示 -->
+                            <div id="webview-error" class="webview-error" style="
+                                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                                display: none; align-items: center; justify-content: center;
+                                background: rgba(255,255,255,0.95); z-index: 10;
+                            ">
+                                <div style="text-align: center; color: #d32f2f; max-width: 400px;">
+                                    <h3 style="margin-bottom: 12px;">⚠️ 読み込みエラー</h3>
+                                    <p id="error-message" style="margin-bottom: 20px;"></p>
+                                    <button onclick="window.htmlViewerManager?.retryLoad()" 
+                                            style="padding: 8px 16px; background: #007acc; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        🔄 再試行
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ステータスバー -->
+            <div class="status-bar">
+                <span>準備完了</span>
+                <span style="margin-left: auto;">
+                    <span id="current-time"></span> | 
+                    基本モード
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Spine編集システム統合 -->
+    <script src="js/spine-edit-core.js"></script>
+    <script src="js/spine-desktop-integration.js"></script>
+    
+    <!-- デスクトップUIマネージャー（HTMLビューアー含む） -->
+    <script src="js/desktop-ui-manager.js"></script>
+    
+    <!-- 超シンプルJavaScript - 確実動作保証 -->
+    <script>
+        console.log('🚀 超シンプル初期化システム開始');
+        
+        // 現在時刻表示
+        function updateTime() {
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                const now = new Date();
+                timeElement.textContent = now.toLocaleTimeString('ja-JP');
+            }
+        }
+        
+        // Electron API準備完了を待機
+        window.addEventListener('electron-api-ready', (event) => {
+            console.log('🔗 Electron API準備完了:', event.detail);
+        });
+        
+        // ローディング画面を隠してメインUIを表示
+        function showMainUI() {
+            console.log('✅ メインUI表示処理開始');
+            
+            const loadingScreen = document.getElementById('loading-screen');
+            const mainContent = document.getElementById('main-content');
+            
+            if (loadingScreen && mainContent) {
+                // フェード効果付きで切り替え
+                loadingScreen.style.opacity = '0';
+                loadingScreen.style.transition = 'opacity 0.5s ease';
+                
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    mainContent.style.display = 'flex';
+                    mainContent.style.opacity = '0';
+                    mainContent.style.transition = 'opacity 0.5s ease';
+                    
+                    setTimeout(() => {
+                        mainContent.style.opacity = '1';
+                        console.log('✅ メインUIの表示が完了しました');
+                        
+                        // 時刻更新開始
+                        updateTime();
+                        setInterval(updateTime, 1000);
+                        
+                    }, 50);
+                }, 500);
+            }
+        }
+        
+        // タブ切り替え機能
+        function initTabSwitcher() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const viewContents = document.querySelectorAll('.view-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetView = button.dataset.view;
+                    
+                    // すべてのタブとビューの active クラスを削除
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    viewContents.forEach(view => {
+                        view.classList.remove('active');
+                        view.style.display = 'none';
+                    });
+                    
+                    // クリックされたタブをアクティブに
+                    button.classList.add('active');
+                    
+                    // 対応するビューを表示
+                    const targetViewElement = document.getElementById(targetView + '-view');
+                    if (targetViewElement) {
+                        targetViewElement.classList.add('active');
+                        targetViewElement.style.display = 'flex';
+                        
+                        // HTMLビューアーに切り替えた場合の特別処理
+                        if (targetView === 'html-viewer') {
+                            console.log('🌐 HTMLビューアーに切り替え - デバッグ開始...');
+                            
+                            // 🚀 修正: setTimeout依存を減らして確実に実行
+                            // デバッグ情報をクリア
+                            const debugInfo = document.getElementById('debug-info');
+                            if (debugInfo) {
+                                debugInfo.innerHTML = '';
+                            }
+                            
+                            if (window.updateDebugInfo) {
+                                window.updateDebugInfo('🌐 HTMLビューアータブに切り替えました');
+                                window.updateDebugInfo(`⏰ 現在時刻: ${new Date().toLocaleTimeString()}`);
+                                
+                                // 詳細デバッグ実行（即座に実行）
+                                if (window.debugHtmlElements) {
+                                    window.debugHtmlElements();
+                                }
+                                
+                                // プリセットボタンの確認と修正（即座に実行）
+                                if (window.checkPresetButtons) {
+                                    window.checkPresetButtons();
+                                }
+                                
+                                // HTMLビューアーマネージャーの初期化確認
+                                if (!window.htmlViewerManager) {
+                                    window.updateDebugInfo('🔧 HTMLビューアーマネージャーを手動作成中...');
+                                    try {
+                                        // HtmlViewerManagerクラスが定義されているかチェック
+                                        if (typeof HtmlViewerManager !== 'undefined') {
+                                            window.htmlViewerManager = new HtmlViewerManager();
+                                            window.updateDebugInfo('✅ HTMLビューアーマネージャー作成成功');
+                                            
+                                            // 作成後に再度デバッグ（短い遅延のみ）
+                                            setTimeout(() => {
+                                                window.updateDebugInfo('🔄 初期化後の状態確認...');
+                                                if (window.debugHtmlElements) {
+                                                    window.debugHtmlElements();
+                                                }
+                                            }, 200);
+                                        } else {
+                                            window.updateDebugInfo('❌ HtmlViewerManagerクラスが未定義');
+                                            window.updateDebugInfo('💡 desktop-ui-manager.js の読み込みを確認してください');
+                                        }
+                                    } catch (error) {
+                                        window.updateDebugInfo('❌ HTMLビューアーマネージャー作成エラー: ' + error.message);
+                                        console.error('HTMLビューアーマネージャー作成エラー:', error);
+                                    }
+                                } else {
+                                    window.updateDebugInfo('✅ HTMLビューアーマネージャーは既に初期化済み');
+                                    
+                                    // 初期化済みでも状態確認（即座に実行）
+                                    window.updateDebugInfo('🔄 既存インスタンスの状態確認...');
+                                    if (window.debugHtmlElements) {
+                                        window.debugHtmlElements();
+                                    }
+                                }
+                            } else {
+                                // updateDebugInfo関数が存在しない場合の対処
+                                console.error('❌ updateDebugInfo関数が定義されていません');
+                                if (debugInfo) {
+                                    debugInfo.innerHTML = '<br>❌ デバッグ関数の初期化に失敗しました';
+                                }
+                            }
+                        }
+                    }
+                    
+                    console.log(`🔄 ビュー切り替え: ${targetView}`);
+                });
+            });
+            
+            console.log('✅ タブ切り替え機能初期化完了');
+        }
+
+        // DOM読み込み完了後の処理
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM読み込み完了 - 初期化開始');
+            
+            // ローディングメッセージ更新
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) {
+                loadingMessage.textContent = 'UI機能を初期化中...';
+            }
+            
+            // タブ切り替え機能初期化
+            initTabSwitcher();
+            
+            // Spine Desktop Integrationの初期化を待つ
+            setTimeout(() => {
+                if (window.spineDesktopManager && window.spineDesktopManager.constructor.name === 'SpineDesktopIntegration') {
+                    console.log('✅ Spine編集システム初期化完了');
+                    if (loadingMessage) {
+                        loadingMessage.textContent = 'UIを表示しています...';
+                    }
+                } else {
+                    console.log('⚠️ Spine編集システム初期化を待機中...');
+                    if (loadingMessage) {
+                        loadingMessage.textContent = '基本UIを表示しています...';
+                    }
+                }
+                
+                showMainUI();
+            }, 2000);
+        });
+        
+        // window読み込み完了時のバックアップ処理
+        window.addEventListener('load', () => {
+            console.log('🌐 Window読み込み完了');
+            
+            // DOMContentLoadedが動かなかった場合のフォールバック
+            setTimeout(() => {
+                if (document.getElementById('main-content').style.display === 'none') {
+                    console.log('⚠️ DOMContentLoadedが動作しなかったためフォールバック実行');
+                    showMainUI();
+                }
+            }, 5000);
+        });
+        
+        // 強制表示タイマー（最終手段）
+        setTimeout(() => {
+            if (document.getElementById('main-content').style.display === 'none') {
+                console.log('🚨 強制表示タイマー発動');
+                showMainUI();
+            }
+        }, 8000);
+        
+        // デバッグ情報更新関数
+        window.updateDebugInfo = function(message) {
+            const debugInfo = document.getElementById('debug-info');
+            if (debugInfo) {
+                debugInfo.innerHTML += '<br>• ' + message;
+                console.log('🔍 デバッグ:', message);
+            } else {
+                console.log('🔍 デバッグ (要素なし):', message);
+            }
+        };
+        
+        // HTML要素の詳細確認関数
+        window.debugHtmlElements = function() {
+            const elements = [
+                'html-viewer-view',
+                'html-file-selector', 
+                'custom-url-input',
+                'url-preset-container',
+                'url-preset-buttons',
+                'load-html-button',
+                'refresh-html-button',
+                'html-webview',
+                'debug-info'
+            ];
+            
+            // 🚀 重要: html-viewer-view要素の特別デバッグ
+            window.updateDebugInfo('=== html-viewer-view要素の特別診断 ===');
+            const htmlViewerViewDebug = document.getElementById('html-viewer-view');
+            if (htmlViewerViewDebug) {
+                const computedStyle = window.getComputedStyle(htmlViewerViewDebug);
+                window.updateDebugInfo(`html-viewer-view display: ${computedStyle.display}`);
+                window.updateDebugInfo(`html-viewer-view visibility: ${computedStyle.visibility}`);
+                window.updateDebugInfo(`html-viewer-view opacity: ${computedStyle.opacity}`);
+                window.updateDebugInfo(`html-viewer-view classList: ${htmlViewerViewDebug.className}`);
+                window.updateDebugInfo(`html-viewer-view childElementCount: ${htmlViewerViewDebug.childElementCount}`);
+                
+                // 子要素の詳細確認
+                if (htmlViewerViewDebug.childElementCount > 0) {
+                    window.updateDebugInfo('html-viewer-view の子要素:');
+                    Array.from(htmlViewerViewDebug.children).forEach((child, index) => {
+                        window.updateDebugInfo(`  └─ 子${index+1}: ${child.tagName}#${child.id || '(no-id)'}.${child.className || '(no-class)'}`);
+                    });
+                }
+            } else {
+                // HTML文字列内での検索
+                const htmlContent = document.documentElement.outerHTML;
+                const htmlViewerMatch = htmlContent.match(/<div[^>]*id\s*=\s*["']html-viewer-view["'][^>]*>/);
+                if (htmlViewerMatch) {
+                    window.updateDebugInfo('❌ html-viewer-viewはHTMLに存在するがJSで取得不可能');
+                    window.updateDebugInfo(`HTML内の定義: ${htmlViewerMatch[0]}`);
+                } else {
+                    window.updateDebugInfo('❌ html-viewer-viewがHTMLから完全に見つかりません');
+                }
+            }
+            
+            // 🚀 ファイル参照確認情報を追加
+            window.updateDebugInfo('=== ファイル参照状況確認 ===');
+            window.updateDebugInfo(`現在のHTMLファイルパス: ${window.location.href}`);
+            window.updateDebugInfo(`DOM要素数: ${document.all.length}個`);
+            window.updateDebugInfo(`Body内要素数: ${document.body?.children?.length || 0}個`);
+            
+            // 🚀 content-areaの正確な参照を取得
+            const contentArea = document.querySelector('.content-area');
+            if (contentArea) {
+                window.updateDebugInfo(`content-area内要素: ${contentArea.children.length}個`);
+                // 子要素の詳細情報も表示
+                for (let i = 0; i < contentArea.children.length; i++) {
+                    const child = contentArea.children[i];
+                    window.updateDebugInfo(`  └─ 子要素${i+1}: ${child.id || child.className || child.tagName}`);
+                }
+            } else {
+                window.updateDebugInfo('❌ content-area要素が見つかりません');
+            }
+            
+            window.updateDebugInfo('=== HTML要素デバッグ開始 ===');
+            elements.forEach(id => {
+                // 複数の検出方法を試行
+                const elementById = document.getElementById(id);
+                const elementByQuery = document.querySelector(`#${id}`);
+                const elementInDOM = document.documentElement.outerHTML.includes(id);
+                
+                let message = `${id}:`;
+                message += ` getElementById=${elementById ? "✅" : "❌"}`;
+                message += ` querySelector=${elementByQuery ? "✅" : "❌"}`;
+                message += ` HTML内=${elementInDOM ? "✅" : "❌"}`;
+                
+                const element = elementById || elementByQuery;
+                if (element) {
+                    // 要素が存在する場合の詳細情報
+                    const style = window.getComputedStyle(element);
+                    const isVisible = style.display !== "none" && style.visibility !== "hidden";
+                    message += ` 表示=${isVisible ? "✅" : "❌"}`;
+                    message += ` display=${style.display}`;
+                    
+                    // プリセットボタンの場合は子要素数もチェック
+                    if (id === "url-preset-buttons") {
+                        message += ` [子要素:${element.children.length}個]`;
+                    }
+                } else if (elementInDOM) {
+                    message += " ⚠️HTML内には存在するがJSで検出不可";
+                }
+                
+                window.updateDebugInfo(message);
+            });
+            
+            // 追加情報
+            window.updateDebugInfo('=== システム情報 ===');
+            window.updateDebugInfo(`HtmlViewerManagerクラス: ${typeof HtmlViewerManager !== 'undefined' ? '✅定義済み' : '❌未定義'}`);
+            window.updateDebugInfo(`htmlViewerManagerインスタンス: ${window.htmlViewerManager ? '✅存在' : '❌なし'}`);
+            
+            // HTMLビューアーの親要素の表示状態確認
+            const htmlViewerViewStatus = document.getElementById('html-viewer-view');
+            if (htmlViewerViewStatus) {
+                const style = window.getComputedStyle(htmlViewerViewStatus);
+                window.updateDebugInfo(`HTMLビューアー表示状態: ${style.display}`);
+                window.updateDebugInfo(`HTMLビューアー可視状態: ${style.visibility}`);
+            }
+            
+            // 現在のタブ状態確認
+            const activeTab = document.querySelector('.tab-button.active');
+            if (activeTab) {
+                window.updateDebugInfo(`アクティブタブ: ${activeTab.textContent.trim()}`);
+                window.updateDebugInfo(`アクティブタブのdata-view: ${activeTab.dataset.view}`);
+            }
+            
+            // 🚀 ファイルアクセス確認
+            window.updateDebugInfo('=== ファイルアクセス確認 ===');
+            const fileAccessTests = [
+                { name: 'メインサイト', url: 'http://localhost:8000/index.html' },
+                { name: '編集モード', url: 'http://localhost:8000/index.html?edit=true' },
+                { name: 'タイムライン', url: 'http://localhost:8000/timeline-experiment.html' }
+            ];
+            
+            fileAccessTests.forEach(test => {
+                // 簡単なアクセス確認（実際にはこれは非同期で実行される）
+                window.updateDebugInfo(`• ${test.name}: ${test.url}`);
+            });
+            
+            // 🚀 HTML構文検証
+            window.updateDebugInfo('=== HTML構文検証 ===');
+            const htmlContent = document.documentElement.outerHTML;
+            
+            // 基本的な構文チェック
+            const tagMatches = htmlContent.match(/<[^>]+>/g) || [];
+            const openTags = tagMatches.filter(tag => !tag.startsWith('</') && !tag.endsWith('/>')).length;
+            const closeTags = tagMatches.filter(tag => tag.startsWith('</')).length;
+            const selfClosingTags = tagMatches.filter(tag => tag.endsWith('/>')).length;
+            
+            window.updateDebugInfo(`開始タグ数: ${openTags}`);
+            window.updateDebugInfo(`終了タグ数: ${closeTags}`);
+            window.updateDebugInfo(`自己閉じタグ数: ${selfClosingTags}`);
+            
+            // 重要要素の存在確認
+            const criticalElements = [
+                'html-viewer-view',
+                'spine-editor-view',
+                'url-preset-buttons'
+            ];
+            
+            window.updateDebugInfo('重要要素のHTML内存在確認:');
+            criticalElements.forEach(id => {
+                const exists = htmlContent.includes(`id="${id}"`);
+                window.updateDebugInfo(`  └─ ${id}: ${exists ? '✅存在' : '❌なし'}`);
+            });
+            
+            window.updateDebugInfo('=== デバッグ完了 ===');
+        };
+        
+        // プリセットボタン表示確認
+        window.checkPresetButtons = function() {
+            const container = document.getElementById('url-preset-container');
+            const buttons = document.getElementById('url-preset-buttons');
+            
+            updateDebugInfo(`プリセットコンテナ: ${container ? '✅存在' : '❌なし'}`);
+            updateDebugInfo(`プリセットボタン: ${buttons ? '✅存在' : '❌なし'}`);
+            
+            if (buttons) {
+                const buttonCount = buttons.children.length;
+                updateDebugInfo(`ボタン数: ${buttonCount}個`);
+                
+                // 🚀 既存ボタンの詳細情報も表示
+                if (buttonCount > 0) {
+                    updateDebugInfo('既存ボタンリスト:');
+                    for (let i = 0; i < buttonCount; i++) {
+                        const btn = buttons.children[i];
+                        const onclick = btn.getAttribute('onclick');
+                        updateDebugInfo(`  └─ ボタン${i+1}: "${btn.textContent.trim()}" onclick="${onclick}"`);
+                    }
+                } else {
+                    updateDebugInfo('ボタンが見つからない - 手動で追加します');
+                    // 🚀 手動でプリセットボタンを追加（正しいポート設定）
+                    buttons.innerHTML = `
+                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/index.html')">🌟 メインサイト</button>
+                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/index.html?edit=true')">🔧 編集モード</button>
+                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/timeline-experiment.html')">🎬 タイムライン</button>
+                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/spine-positioning-system-explanation.html')">🎯 Spine編集</button>
+                        <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px; margin-bottom: 5px;" onclick="window.loadPresetUrl('http://localhost:8000/test-minimal.html')">🔬 デスクトップテスト</button>
+                        <div style="width: 100%; margin-top: 10px;">
+                            <button class="btn btn-sm btn-outline-primary" style="margin-right: 5px;" onclick="window.htmlViewerManager?.selectLocalFile()">📁 ファイル選択</button>
+                            <button class="btn btn-sm btn-outline-info" style="margin-right: 5px;" onclick="window.htmlViewerManager?.checkServerStatus()">🔍 サーバー状況</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="window.htmlViewerManager?.startServer()">🚀 サーバー起動</button>
+                        </div>
+                    `;
+                    updateDebugInfo('プリセットボタンを手動追加しました');
+                    
+                    // 🚀 追加後の検証
+                    setTimeout(() => {
+                        const verifyCount = buttons.children.length;
+                        updateDebugInfo(`追加検証: ボタン数は${verifyCount}個になりました`);
+                    }, 100);
+                }
+            } else {
+                updateDebugInfo('❌ プリセットボタンコンテナが見つかりません');
+                
+                // 🚀 緊急対応: html-viewer-view全体が見つからない場合の確認
+                const htmlViewerViewCheck = document.getElementById('html-viewer-view');
+                if (!htmlViewerViewCheck) {
+                    updateDebugInfo('🚨 重大: html-viewer-view要素自体が見つかりません');
+                    updateDebugInfo('💡 原因: HTMLパースエラーまたはJavaScript実行タイミングの問題');
+                    updateDebugInfo('🔧 対策: HTMLビューアータブ切り替え時に要素状態を再確認');
+                } else {
+                    updateDebugInfo('html-viewer-viewは存在するが、プリセットコンテナが見つからない');
+                }
+            }
+        };
+        
+        // プリセットURL読み込み用グローバル関数
+        window.loadPresetUrl = function(url) {
+            console.log('🔄 プリセットURL読み込み:', url);
+            
+            // デバッグ情報更新
+            if (window.updateDebugInfo) {
+                window.updateDebugInfo(`🔗 プリセットURL選択: ${url}`);
+            }
+            
+            const customUrlInput = document.getElementById('custom-url-input');
+            const fileSelector = document.getElementById('html-file-selector');
+            
+            if (customUrlInput) {
+                customUrlInput.value = url;
+                window.updateDebugInfo('✅ カスタムURL入力フィールドに設定');
+            } else {
+                window.updateDebugInfo('❌ カスタムURL入力フィールドが見つかりません');
+            }
+            
+            if (fileSelector) {
+                fileSelector.value = '';
+                window.updateDebugInfo('✅ ファイル選択をリセット');
+            } else {
+                window.updateDebugInfo('❌ ファイル選択フィールドが見つかりません');
+            }
+            
+            // HTMLビューアーマネージャーが利用できる場合は自動読み込み
+            if (window.htmlViewerManager && typeof window.htmlViewerManager.loadSelectedPage === 'function') {
+                window.updateDebugInfo('🚀 HTMLビューアーマネージャー経由で自動読み込み実行中...');
+                setTimeout(() => {
+                    try {
+                        window.htmlViewerManager.loadSelectedPage();
+                        window.updateDebugInfo('✅ 自動読み込み要求完了');
+                    } catch (error) {
+                        window.updateDebugInfo('❌ 自動読み込みエラー: ' + error.message);
+                    }
+                }, 200);
+            } else {
+                const reason = !window.htmlViewerManager ? 'HTMLビューアーマネージャーが未初期化' : 
+                              'loadSelectedPage関数が見つかりません';
+                window.updateDebugInfo(`💡 ${reason} - URLのみ設定しました`);
+                
+                if (window.htmlViewerManager && typeof window.htmlViewerManager.showStatus === 'function') {
+                    window.htmlViewerManager.showStatus(`URL設定: ${url}`, 'info');
+                }
+            }
+        };
+        
+        // 🚀 Electronキャッシュクリア機能
+        window.clearElectronCache = async function() {
+            console.log('🧹 Electronキャッシュクリア開始...');
+            
+            if (window.updateDebugInfo) {
+                window.updateDebugInfo('🧹 Electronキャッシュをクリア中...');
+            }
+            
+            try {
+                if (window.electronAPI && window.electronAPI.cache && window.electronAPI.cache.clear) {
+                    const result = await window.electronAPI.cache.clear();
+                    console.log('✅ キャッシュクリア結果:', result);
+                    
+                    if (window.updateDebugInfo) {
+                        if (result.success) {
+                            window.updateDebugInfo(`✅ ${result.message}`);
+                        } else {
+                            window.updateDebugInfo(`❌ キャッシュクリアエラー: ${result.error}`);
+                        }
+                    }
+                    
+                    if (result.success) {
+                        alert('✅ キャッシュクリアが完了しました');
+                    } else {
+                        alert('❌ キャッシュクリアに失敗しました: ' + result.error);
+                    }
+                } else {
+                    console.error('❌ electronAPI.cache.clear が利用できません');
+                    if (window.updateDebugInfo) {
+                        window.updateDebugInfo('❌ キャッシュクリアAPI が利用できません');
+                    }
+                    alert('❌ キャッシュクリア機能が利用できません');
+                }
+            } catch (error) {
+                console.error('❌ キャッシュクリア実行エラー:', error);
+                if (window.updateDebugInfo) {
+                    window.updateDebugInfo(`❌ キャッシュクリア実行エラー: ${error.message}`);
+                }
+                alert('❌ キャッシュクリア実行エラー: ' + error.message);
+            }
+        };
+        
+        // 🔄 Electronハードリロード機能
+        window.hardReloadApp = async function() {
+            console.log('🔄 Electronハードリロード開始...');
+            
+            if (window.updateDebugInfo) {
+                window.updateDebugInfo('🔄 アプリケーション全体をハードリロード中...');
+            }
+            
+            try {
+                if (window.electronAPI && window.electronAPI.app && window.electronAPI.app.hardReload) {
+                    // 確認ダイアログ
+                    const confirmed = confirm('🔄 ハードリロード（キャッシュクリア）を実行しますか？\n\n現在の作業内容は失われる可能性があります。');
+                    if (!confirmed) {
+                        console.log('ハードリロードがキャンセルされました');
+                        if (window.updateDebugInfo) {
+                            window.updateDebugInfo('⚠️ ハードリロードがキャンセルされました');
+                        }
+                        return;
+                    }
+                    
+                    if (window.updateDebugInfo) {
+                        window.updateDebugInfo('🚀 ハードリロードを実行中（少々お待ちください）...');
+                    }
+                    
+                    // ハードリロードを実行（この後はアプリが再読み込みされる）
+                    const result = await window.electronAPI.app.hardReload();
+                    console.log('✅ ハードリロード結果:', result);
+                    
+                    // 通常、この時点でアプリは再読み込みされるため、以下のコードは実行されない可能性があります
+                    if (result.success) {
+                        console.log('✅ ハードリロード完了');
+                    } else {
+                        console.error('❌ ハードリロードエラー:', result.error);
+                        alert('❌ ハードリロードに失敗しました: ' + result.error);
+                    }
+                } else {
+                    console.error('❌ electronAPI.app.hardReload が利用できません');
+                    if (window.updateDebugInfo) {
+                        window.updateDebugInfo('❌ ハードリロードAPI が利用できません');
+                    }
+                    alert('❌ ハードリロード機能が利用できません');
+                }
+            } catch (error) {
+                console.error('❌ ハードリロード実行エラー:', error);
+                if (window.updateDebugInfo) {
+                    window.updateDebugInfo(`❌ ハードリロード実行エラー: ${error.message}`);
+                }
+                alert('❌ ハードリロード実行エラー: ' + error.message);
+            }
+        };
+        
+        // 🚀 キーボードショートカット設定
+        document.addEventListener('keydown', function(event) {
+            // Ctrl+Shift+R or Cmd+Shift+R でハードリロード
+            if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'R') {
+                event.preventDefault();
+                console.log('⌨️ キーボードショートカット: ハードリロード実行');
+                
+                if (window.updateDebugInfo) {
+                    window.updateDebugInfo('⌨️ Ctrl+Shift+R: ハードリロードショートカット');
+                }
+                
+                window.hardReloadApp();
+                return false;
+            }
+            
+            // F5でWebViewのリフレッシュ（HTMLビューアーがアクティブな場合）
+            if (event.key === 'F5') {
+                const htmlViewerViewRefresh = document.getElementById('html-viewer-view');
+                const webview = document.getElementById('html-webview');
+                
+                if (htmlViewerViewRefresh && htmlViewerViewRefresh.classList.contains('active') && webview) {
+                    event.preventDefault();
+                    console.log('⌨️ F5: WebViewリフレッシュ');
+                    
+                    if (window.updateDebugInfo) {
+                        window.updateDebugInfo('⌨️ F5: WebViewリフレッシュ実行');
+                    }
+                    
+                    try {
+                        webview.reload();
+                        if (window.updateDebugInfo) {
+                            window.updateDebugInfo('✅ WebViewリフレッシュ完了');
+                        }
+                    } catch (error) {
+                        console.error('❌ WebViewリフレッシュエラー:', error);
+                        if (window.updateDebugInfo) {
+                            window.updateDebugInfo(`❌ WebViewリフレッシュエラー: ${error.message}`);
+                        }
+                    }
+                    return false;
+                }
+            }
+        });
+        
+        console.log('✅ 超シンプル初期化システム設定完了（キーボードショートカット含む）');
+    </script>
+</body>
+</html>

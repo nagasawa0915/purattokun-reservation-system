@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Minimal - Spine Editor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .status-box {
+            background: #34495e;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .success { background: #27ae60; }
+        .warning { background: #f39c12; }
+        .error { background: #e74c3c; }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        pre {
+            background: #1a1a1a;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: left;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Spine Editor - 最小テスト</h1>
+        
+        <div id="status" class="status-box">
+            初期化中...
+        </div>
+        
+        <div id="api-status" class="status-box">
+            API確認中...
+        </div>
+        
+        <div>
+            <button onclick="runAPITest()">APIテスト実行</button>
+            <button onclick="runScriptTest()">スクリプトテスト実行</button>
+            <button onclick="clearConsole()">ログクリア</button>
+        </div>
+        
+        <pre id="console-output"></pre>
+    </div>
+
+    <script>
+        let consoleOutput = document.getElementById('console-output');
+        let originalConsoleLog = console.log;
+        let originalConsoleError = console.error;
+        let originalConsoleWarn = console.warn;
+        
+        // コンソール出力を画面に表示
+        function appendToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const formattedMessage = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+            consoleOutput.textContent += formattedMessage + '\n';
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // 元のコンソールにも出力
+            if (type === 'error') originalConsoleError(message);
+            else if (type === 'warn') originalConsoleWarn(message);
+            else originalConsoleLog(message);
+        }
+        
+        // コンソールをオーバーライド
+        console.log = (message, ...args) => {
+            appendToConsole(message + (args.length > 0 ? ' ' + args.join(' ') : ''), 'log');
+        };
+        console.error = (message, ...args) => {
+            appendToConsole(message + (args.length > 0 ? ' ' + args.join(' ') : ''), 'error');
+        };
+        console.warn = (message, ...args) => {
+            appendToConsole(message + (args.length > 0 ? ' ' + args.join(' ') : ''), 'warn');
+        };
+        
+        function clearConsole() {
+            consoleOutput.textContent = '';
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-box ' + type;
+        }
+        
+        function updateAPIStatus(message, type = 'info') {
+            const apiStatusDiv = document.getElementById('api-status');
+            apiStatusDiv.textContent = message;
+            apiStatusDiv.className = 'status-box ' + type;
+        }
+        
+        // 初期化テスト
+        function initializeTest() {
+            console.log('🚀 最小テスト開始');
+            
+            // preloadスクリプト確認
+            if (window.__SPINE_EDITOR_PRELOAD_LOADED__) {
+                console.log('✅ Preload確認: ' + window.__SPINE_EDITOR_PRELOAD_VERSION__ + ' (' + window.__SPINE_EDITOR_PRELOAD_TIMESTAMP__ + ')');
+                updateStatus('Preload正常', 'success');
+            } else {
+                console.error('❌ Preloadスクリプトが読み込まれていません');
+                updateStatus('Preloadエラー', 'error');
+            }
+            
+            // API確認
+            if (window.spineEditorAPI) {
+                console.log('✅ spineEditorAPI確認');
+                console.log('  - project:', typeof window.spineEditorAPI.project);
+                console.log('  - fs:', typeof window.spineEditorAPI.fs);
+                console.log('  - system:', typeof window.spineEditorAPI.system);
+                console.log('  - menu:', typeof window.spineEditorAPI.menu);
+                console.log('  - utils:', typeof window.spineEditorAPI.utils);
+                updateAPIStatus('API正常', 'success');
+            } else {
+                console.error('❌ spineEditorAPIが見つかりません');
+                updateAPIStatus('APIエラー', 'error');
+            }
+            
+            console.log('✅ 基本テスト完了');
+        }
+        
+        // APIテスト
+        async function runAPITest() {
+            console.log('🧪 APIテスト開始');
+            
+            if (!window.spineEditorAPI) {
+                console.error('❌ APIが利用できません');
+                return;
+            }
+            
+            try {
+                // プラットフォーム情報取得
+                const platform = window.spineEditorAPI.utils.getPlatform();
+                console.log('Platform:', platform);
+                
+                // 環境情報取得
+                const env = window.spineEditorAPI.utils.getEnvironment();
+                console.log('Environment:', env);
+                
+                // 開発モード確認
+                const isDev = window.spineEditorAPI.utils.isDevelopment();
+                console.log('Development mode:', isDev);
+                
+                console.log('✅ APIテスト完了');
+            } catch (error) {
+                console.error('❌ APIテストエラー:', error);
+            }
+        }
+        
+        // スクリプトテスト
+        async function runScriptTest() {
+            console.log('🧪 スクリプトテスト開始');
+            
+            try {
+                // 最小限のスクリプト読み込みテスト
+                const script = document.createElement('script');
+                script.textContent = `
+                    console.log('📄 テストスクリプト実行');
+                    window.testScriptLoaded = true;
+                    window.testFunction = function() {
+                        console.log('✅ テスト関数動作確認');
+                    };
+                `;
+                document.head.appendChild(script);
+                
+                // 実行テスト
+                setTimeout(() => {
+                    if (window.testScriptLoaded && window.testFunction) {
+                        window.testFunction();
+                        console.log('✅ スクリプトテスト完了');
+                    } else {
+                        console.error('❌ スクリプトテスト失敗');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ スクリプトテストエラー:', error);
+            }
+        }
+        
+        // DOMContentLoaded時の初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOMContentLoaded');
+            initializeTest();
+        });
+        
+        // spine-editor-api-ready イベントリスナー
+        window.addEventListener('spine-editor-api-ready', (event) => {
+            console.log('📡 spine-editor-api-ready イベント受信');
+            console.log('イベント詳細:', event.detail);
+            initializeTest();
+        });
+        
+        console.log('📋 最小テストスクリプト読み込み完了');
+    </script>
+</body>
+</html>
