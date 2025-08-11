@@ -1,0 +1,57 @@
+{
+  "name": "spine-editor-desktop",
+  "version": "1.0.0",
+  "description": "Professional Spine Animation Editor - Desktop Application",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "spine",
+    "animation",
+    "editor",
+    "desktop",
+    "electron",
+    "timeline",
+    "webgl"
+  ],
+  "author": "CloudPartner",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "electron-store": "^8.0.0"
+  },
+  "build": {
+    "appId": "com.cloudpartner.spine-editor",
+    "productName": "Spine Editor Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  }
+}

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Editor Desktop</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <!-- ツールバー -->
+    <div id="toolbar" class="toolbar">
+        <div class="toolbar-group">
+            <button id="new-project" class="toolbar-btn" title="新規プロジェクト (Ctrl+N)">
+                📝 新規
+            </button>
+            <button id="open-project" class="toolbar-btn" title="プロジェクトを開く (Ctrl+O)">
+                📂 開く
+            </button>
+            <button id="save-project" class="toolbar-btn" title="保存 (Ctrl+S)">
+                💾 保存
+            </button>
+        </div>
+        
+        <div class="toolbar-separator"></div>
+        
+        <div class="toolbar-group">
+            <button id="select-homepage" class="toolbar-btn" title="ホームページフォルダ選択">
+                🏠 ホームページ
+            </button>
+            <button id="select-spine" class="toolbar-btn" title="Spineキャラクターフォルダ選択">
+                🎯 Spine
+            </button>
+        </div>
+        
+        <div class="toolbar-separator"></div>
+        
+        <div class="toolbar-group">
+            <button id="play-timeline" class="toolbar-btn" title="再生/停止 (Space)">
+                ▶️ 再生
+            </button>
+            <button id="stop-timeline" class="toolbar-btn" title="停止">
+                ⏹️ 停止
+            </button>
+        </div>
+        
+        <div class="toolbar-separator"></div>
+        
+        <div class="toolbar-group">
+            <button id="export-package" class="toolbar-btn" title="パッケージエクスポート (Ctrl+E)">
+                📦 エクスポート
+            </button>
+        </div>
+        
+        <div class="toolbar-spacer"></div>
+        
+        <div id="project-status" class="project-status">
+            プロジェクト未設定
+        </div>
+    </div>
+
+    <!-- メインコンテンツエリア -->
+    <div id="main-content" class="main-content">
+        
+        <!-- 左パネル: アウトライナー -->
+        <div id="outliner-panel" class="panel outliner-panel">
+            <div class="panel-header">
+                <h3>📋 アウトライナー</h3>
+                <div class="panel-controls">
+                    <button class="panel-btn" title="更新">🔄</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div id="project-tree" class="project-tree">
+                    <div class="tree-item welcome-message">
+                        <span>🎯 プロジェクトフォルダを選択してください</span>
+                        <br><br>
+                        <small>
+                        1. 「🏠 ホームページ」ボタンでWebサイトのルートフォルダを選択<br>
+                        2. 「🎯 Spine」ボタンでキャラクターフォルダを選択
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中央パネル: プレビュー -->
+        <div id="preview-panel" class="panel preview-panel">
+            <div class="panel-header">
+                <h3>🎬 プレビュー</h3>
+                <div class="panel-controls">
+                    <button id="fit-view" class="panel-btn" title="画面にフィット (F)">🔍</button>
+                    <button id="reset-view" class="panel-btn" title="ビューリセット">🎯</button>
+                    <span class="zoom-level">100%</span>
+                </div>
+            </div>
+            <div class="panel-content preview-content">
+                <div id="preview-canvas" class="preview-canvas">
+                    <div class="canvas-placeholder">
+                        <div class="placeholder-content">
+                            <h2>🎨 Spine キャラクター プレビュー</h2>
+                            <p>キャラクターフォルダを選択すると、ここにプレビューが表示されます</p>
+                            <br>
+                            <div class="placeholder-steps">
+                                <div class="step">
+                                    <strong>Step 1:</strong> 🏠 ホームページフォルダ選択
+                                </div>
+                                <div class="step">
+                                    <strong>Step 2:</strong> 🎯 Spineキャラクターフォルダ選択
+                                </div>
+                                <div class="step">
+                                    <strong>Step 3:</strong> キャラクターをドラッグ&ドロップで配置
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右上パネル: プロパティ -->
+        <div id="properties-panel" class="panel properties-panel">
+            <div class="panel-header">
+                <h3>⚙️ プロパティ</h3>
+            </div>
+            <div class="panel-content">
+                <div id="properties-content" class="properties-content">
+                    <div class="property-section">
+                        <h4>🎯 選択オブジェクト</h4>
+                        <div class="property-item">
+                            <span class="no-selection">キャラクターが選択されていません</span>
+                        </div>
+                    </div>
+                    
+                    <div class="property-section" id="transform-section" style="display: none;">
+                        <h4>📐 トランスフォーム</h4>
+                        <div class="property-item">
+                            <label>X座標:</label>
+                            <input type="number" id="pos-x" step="0.1" disabled>
+                        </div>
+                        <div class="property-item">
+                            <label>Y座標:</label>
+                            <input type="number" id="pos-y" step="0.1" disabled>
+                        </div>
+                        <div class="property-item">
+                            <label>スケール:</label>
+                            <input type="number" id="scale" step="0.01" min="0.1" max="5.0" disabled>
+                        </div>
+                        <div class="property-item">
+                            <label>回転:</label>
+                            <input type="number" id="rotation" step="1" min="-360" max="360" disabled>
+                        </div>
+                        <div class="property-item">
+                            <label>不透明度:</label>
+                            <input type="range" id="opacity" min="0" max="1" step="0.1" value="1" disabled>
+                            <span id="opacity-value">100%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="property-section" id="animation-section" style="display: none;">
+                        <h4>🎬 アニメーション</h4>
+                        <div class="property-item">
+                            <label>アニメーション:</label>
+                            <select id="animation-select" disabled>
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                        <div class="property-item">
+                            <label>ループ:</label>
+                            <input type="checkbox" id="animation-loop" disabled>
+                        </div>
+                        <div class="property-item">
+                            <label>再生速度:</label>
+                            <input type="number" id="animation-speed" step="0.1" min="0.1" max="5.0" value="1.0" disabled>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右下パネル: レイヤー -->
+        <div id="layers-panel" class="panel layers-panel">
+            <div class="panel-header">
+                <h3>📚 レイヤー</h3>
+                <div class="panel-controls">
+                    <button id="add-layer" class="panel-btn" title="レイヤー追加">➕</button>
+                    <button id="delete-layer" class="panel-btn" title="レイヤー削除">🗑️</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div id="layers-list" class="layers-list">
+                    <div class="layer-item placeholder">
+                        <span>レイヤーがありません</span>
+                        <small>キャラクターを追加するとレイヤーが作成されます</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 下部パネル: タイムライン -->
+    <div id="timeline-panel" class="panel timeline-panel">
+        <div class="panel-header">
+            <h3>⏱️ タイムライン</h3>
+            <div class="panel-controls timeline-controls">
+                <div class="timeline-info">
+                    <span id="current-time">00:00</span>
+                    <span>/</span>
+                    <span id="total-time">00:00</span>
+                </div>
+                <button id="timeline-zoom-in" class="panel-btn" title="ズームイン">🔍+</button>
+                <button id="timeline-zoom-out" class="panel-btn" title="ズームアウト">🔍-</button>
+                <button id="timeline-fit" class="panel-btn" title="フィット">📏</button>
+            </div>
+        </div>
+        <div class="panel-content timeline-content">
+            <div id="timeline-canvas" class="timeline-canvas">
+                <div class="timeline-placeholder">
+                    <h4>🎬 Maya Trax風タイムライン</h4>
+                    <p>Phase 1では基本表示のみ。Phase 3で本格実装予定</p>
+                    <div class="timeline-preview">
+                        <div class="track-header">Track 1: purattokun</div>
+                        <div class="track-content">
+                            <div class="clip-placeholder">syutugen (0-2s)</div>
+                            <div class="clip-placeholder">taiki (2-10s)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ステータスバー -->
+    <div id="statusbar" class="statusbar">
+        <div class="status-section">
+            <span id="mouse-position">マウス: (0, 0)</span>
+        </div>
+        <div class="status-section">
+            <span id="selection-info">選択: なし</span>
+        </div>
+        <div class="status-section">
+            <span id="fps-counter">FPS: --</span>
+        </div>
+        <div class="status-spacer"></div>
+        <div class="status-section">
+            <span id="app-version">Spine Editor Desktop v1.0.0</span>
+        </div>
+    </div>
+
+    <!-- JavaScriptファイル読み込み -->
+    <script src="js/spine-integration.js"></script>
+    <script src="js/package-export.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
