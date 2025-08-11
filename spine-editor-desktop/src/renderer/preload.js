@@ -11,18 +11,38 @@ const electronAPI = {
     selectFolder: (options) => ipcRenderer.invoke('select-folder', options),
     readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
     saveFile: (filePath, content) => ipcRenderer.invoke('save-file', filePath, content),
-    listDirectory: (dirPath) => ipcRenderer.invoke('list-directory', dirPath),
+    // Phase 2強化：ディレクトリ一覧取得（フィルター・ソート対応）
+    listDirectory: (dirPath, options) => ipcRenderer.invoke('list-directory', dirPath, options),
+    
+    // プロフェッショナルファイルダイアログ
+    showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
+    showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
+    showExportDialog: (options) => ipcRenderer.invoke('show-export-dialog', options),
+    
+    // Phase 2強化：ファイル履歴管理（詳細情報付き）
+    getFileHistory: (type) => ipcRenderer.invoke('get-file-history', type),
+    clearFileHistory: (type) => ipcRenderer.invoke('clear-file-history', type),
+    
+    // Phase 2強化：ファイル情報・プレビュー（プロフェッショナル版）
+    getFileInfo: (filePath) => ipcRenderer.invoke('get-file-info', filePath),
+    findRelatedFiles: (filePath) => ipcRenderer.invoke('find-related-files', filePath),
+    validateProjectFile: (filePath) => ipcRenderer.invoke('validate-project-file', filePath),
 
     // プロジェクト管理
     onProjectNew: (callback) => ipcRenderer.on('project-new', callback),
     onProjectOpen: (callback) => ipcRenderer.on('project-open', callback),
     onProjectSave: (callback) => ipcRenderer.on('project-save', callback),
+    
+    // プロフェッショナルダイアログイベント
+    onShowOpenProjectDialog: (callback) => ipcRenderer.on('show-open-project-dialog', callback),
+    onShowSaveProjectDialog: (callback) => ipcRenderer.on('show-save-project-dialog', callback),
+    onShowExportDialog: (callback) => ipcRenderer.on('show-export-dialog', callback),
 
     // フォルダ選択イベント
     onHomepageFolderSelected: (callback) => ipcRenderer.on('homepage-folder-selected', callback),
     onSpineFolderSelected: (callback) => ipcRenderer.on('spine-folder-selected', callback),
 
-    // エクスポート
+    // エクスポート（既存の後方互換性のために保持）
     onPackageExport: (callback) => ipcRenderer.on('package-export', callback),
 
     // イベントリスナー削除
@@ -164,10 +184,140 @@ const spineAPI = {
 // Spine APIを公開
 contextBridge.exposeInMainWorld('spineAPI', spineAPI);
 
+// Phase 2追加：プロフェッショナルダイアログユーティリティ
+const dialogUtilsAPI = {
+    // ダイアログヘルパー関数
+    formatFileSize: (bytes) => {
+        if (bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const digitGroups = Math.floor(Math.log(bytes) / Math.log(1024));
+        const size = bytes / Math.pow(1024, digitGroups);
+        return `${size.toFixed(digitGroups > 0 ? 1 : 0)} ${units[digitGroups]}`;
+    },
+    
+    formatDate: (date) => {
+        if (!date) return 'Unknown';
+        const target = new Date(date);
+        const now = new Date();
+        const diffMs = now.getTime() - target.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+            return target.toLocaleTimeString('ja-JP', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } else if (diffDays === 1) {
+            return '昨日';
+        } else if (diffDays < 7) {
+            return `${diffDays}日前`;
+        } else if (diffDays < 30) {
+            const weeks = Math.floor(diffDays / 7);
+            return `${weeks}週間前`;
+        } else {
+            return target.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+    },
+    
+    getFileTypeIcon: (extension, type) => {
+        const icons = {
+            // プロジェクトファイル
+            'spine-project': '🎨',
+            'spine-project-legacy': '📄',
+            
+            // データファイル
+            'json': '🗎️',
+            'xml': '🗎️',
+            'yaml': '🗎️',
+            
+            // 画像ファイル
+            'image': '🏞️',
+            'image-vector': '🎨',
+            
+            // Spineファイル
+            'spine-atlas': '🗺️',
+            'spine-skeleton': '🦴',
+            'spine-binary': '📦',
+            
+            // アーカイブ
+            'archive': '🗜️',
+            
+            // ドキュメント
+            'document': '📄',
+            'markdown': '📝',
+            'text': '📄',
+            
+            // コード
+            'javascript': '📦',
+            'typescript': '📦',
+            'html': '🌐',
+            'css': '🎨',
+            
+            // メディア
+            'audio': '🎧',
+            'video': '🎥'
+        };
+        
+        return icons[type] || '📄';
+    },
+    
+    // ファイルステータスバッジを生成
+    generateStatusBadge: (fileInfo) => {
+        const badges = [];
+        
+        if (fileInfo.isRecent) {
+            badges.push('🆕 新規');
+        }
+        
+        if (fileInfo.projectInfo && fileInfo.projectInfo.warnings?.length > 0) {
+            badges.push('⚠️ 警告');
+        }
+        
+        if (fileInfo.projectInfo && !fileInfo.projectInfo.valid) {
+            badges.push('❌ エラー');
+        }
+        
+        if (!fileInfo.accessible) {
+            badges.push('🚫 不可');
+        }
+        
+        return badges.join(' ');
+    },
+    
+    // プロジェクト情報の要約文字列を生成
+    generateProjectSummary: (projectPreview) => {
+        if (!projectPreview) return '詳細不明';
+        
+        const parts = [];
+        
+        if (projectPreview.version && projectPreview.version !== 'unknown') {
+            parts.push(`v${projectPreview.version}`);
+        }
+        
+        if (projectPreview.characterCount !== undefined) {
+            parts.push(`${projectPreview.characterCount}体のキャラクター`);
+        }
+        
+        if (projectPreview.hasTimeline) {
+            parts.push('タイムライン付き');
+        }
+        
+        return parts.length > 0 ? parts.join(' • ') : '基本プロジェクト';
+    }
+};
+
+// Dialog Utils APIを公開
+contextBridge.exposeInMainWorld('dialogUtilsAPI', dialogUtilsAPI);
+
 // デバッグ情報
-console.log('✅ Spine Editor Desktop - Preload Script 設定完了');
+console.log('✅ Spine Editor Desktop - Preload Script 設定完了（Phase 2強化版）');
 console.log('🔍 利用可能API:', {
     electronAPI: Object.keys(electronAPI),
     vfsAPI: Object.keys(vfsAPI),
-    spineAPI: Object.keys(spineAPI)
+    spineAPI: Object.keys(spineAPI),
+    dialogUtilsAPI: Object.keys(dialogUtilsAPI)
 });
