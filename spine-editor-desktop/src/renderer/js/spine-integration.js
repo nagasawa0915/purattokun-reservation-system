@@ -25,7 +25,7 @@ class SpineIntegrationManager {
         
         try {
             // Step 1: spine-edit-core.js 読み込み
-            const spineLibPath = '../../../spine-edit-core.js';
+            const spineLibPath = './spine-edit-core.js';
             
             const coreLoaded = await new Promise((resolve) => {
                 const script = document.createElement('script');

@@ -261,7 +261,7 @@ ${JSON.stringify(this.exportData, null, 2)}
             // 共通ファイル（TODO: 動的収集に変更）
             dependencies.push({
                 type: 'script',
-                sourcePath: '/mnt/d/クラウドパートナーHP/spine-edit-core.js',
+                sourcePath: './spine-edit-core.js',
                 targetPath: 'assets/js/spine-webgl.js'
             });
 
