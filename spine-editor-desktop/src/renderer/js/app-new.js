@@ -1,24 +1,5 @@
-// 🎯 Spine Editor Desktop - Main Application Logic (Refactored)
-// 分割されたモジュールを統合管理するメインアプリケーションクラス
-
-console.log('🚀 Spine Editor Desktop - Application 起動');
-
-// ========== モジュールインポート確認 ========== //
-if (typeof ProjectManager === 'undefined') {
-    console.error('❌ ProjectManager モジュールが読み込まれていません');
-}
-if (typeof CharacterManager === 'undefined') {
-    console.error('❌ CharacterManager モジュールが読み込まれていません');
-}
-if (typeof DragDropHandler === 'undefined') {
-    console.error('❌ DragDropHandler モジュールが読み込まれていません');
-}
-if (typeof CharacterRenderer === 'undefined') {
-    console.error('❌ CharacterRenderer モジュールが読み込まれていません');
-}
-if (typeof UIManager === 'undefined') {
-    console.error('❌ UIManager モジュールが読み込まれていません');
-}
+// 🎯 Spine Editor Desktop - Temporary Backup File
+// This file can be deleted after the refactoring is complete
 
 // ========== メインアプリケーション統合クラス ========== //
 class SpineEditorApp {

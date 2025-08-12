@@ -24,25 +24,26 @@ class SpineIntegrationManager {
         console.log('📦 Spine WebGL ライブラリ読み込み開始');
         
         try {
-            // Step 1: spine-edit-core.js 読み込み
-            const spineLibPath = './spine-edit-core.js';
+            // Step 1: Spine WebGL ライブラリ読み込み（直接）
+            const spineLibPath = '../../../assets/js/libs/spine-webgl.js';
             
             const coreLoaded = await new Promise((resolve) => {
                 const script = document.createElement('script');
                 script.src = spineLibPath;
                 script.onload = () => {
-                    console.log('✅ spine-edit-core.js 読み込み完了');
+                    console.log('✅ Spine WebGL ライブラリ読み込み完了');
                     resolve(true);
                 };
                 script.onerror = () => {
-                    console.warn('⚠️ spine-edit-core.js 読み込み失敗 - 代替方法を試行');
+                    console.warn('⚠️ Spine WebGL ライブラリ読み込み失敗 - 代替方法を試行');
                     this.loadSpineEditCoreDirect().then(resolve).catch(() => resolve(false));
                 };
                 document.head.appendChild(script);
             });
             
             if (!coreLoaded) {
-                console.warn('⚠️ spine-edit-core.js 読み込み失敗 - 基本モードで続行');
+                console.warn('⚠️ Spine WebGL ライブラリ読み込み失敗 - 基本モードで続行');
+                return false;
             }
             
             // Step 2: 軽量Spine WebGL Runtime読み込み（段階的フォールバック）
@@ -180,7 +181,7 @@ class SpineIntegrationManager {
 
     // プレビューコンテナ初期化
     initializePreviewContainer() {
-        this.previewContainer = document.getElementById('preview-canvas');
+        this.previewContainer = document.querySelector('.preview-content');
         if (!this.previewContainer) {
             console.error('❌ プレビューコンテナが見つかりません');
             return false;
@@ -383,11 +384,36 @@ class SpineIntegrationManager {
                 return this.createCanvas2DFallback(characterId, canvas);
             }
             
-            // Spine WebGLレンダラー初期化
-            const renderer = new window.spine.WebGLRenderer(gl);
-            if (!renderer.initialize()) {
-                console.warn('⚠️ Spineレンダラー初期化失敗 - 2Dフォールバック');
+            // Spine WebGL Renderer作成（API名前空間修正）
+            let renderer = null;
+            
+            // 新しいAPI（spine-webgl 4.0+）
+            if (window.spine.webgl && window.spine.webgl.SceneRenderer) {
+                renderer = new window.spine.webgl.SceneRenderer(canvas, gl);
+                console.log('✅ 新API使用: spine.webgl.SceneRenderer');
+            }
+            // 旧API（spine-webgl 3.8系）
+            else if (window.spine.WebGLRenderer) {
+                renderer = new window.spine.WebGLRenderer(gl);
+                console.log('✅ 旧API使用: spine.WebGLRenderer');
+            }
+            // 代替API
+            else if (window.spine.SceneRenderer) {
+                renderer = new window.spine.SceneRenderer(canvas, gl);
+                console.log('✅ 代替API使用: spine.SceneRenderer');
+            }
+            else {
+                console.error('❌ 利用可能なSpine WebGL Rendererが見つかりません');
+                console.log('🔍 利用可能なSpine API:', Object.keys(window.spine || {}));
                 return this.createCanvas2DFallback(characterId, canvas);
+            }
+            
+            // レンダラー初期化試行
+            if (renderer && typeof renderer.initialize === 'function') {
+                if (!renderer.initialize()) {
+                    console.warn('⚠️ Spineレンダラー初期化失敗 - 2Dフォールバック');
+                    return this.createCanvas2DFallback(characterId, canvas);
+                }
             }
             
             // Spineアセットからスケルトン作成
@@ -1717,17 +1743,61 @@ class SpineIntegrationManager {
             const atlasResponse = await fetch(spineData.atlasURL);
             const atlasText = await atlasResponse.text();
             
-            // テクスチャローダー作成
+            // テクスチャローダー作成（堅牢版）
             const textureLoader = (path) => {
-                // VFS Blob URLから画像を読み込み
-                const imageURL = spineData.imageURLs?.find(url => url.includes(path)) || spineData.imageURLs?.[0];
+                console.log('🖼️ 画像読み込み要求:', path);
+                console.log('📋 利用可能imageURLs:', spineData.imageURLs);
+                
+                // 複数の方法でマッチング
+                let imageURL = null;
+                
+                if (spineData.imageURLs && Array.isArray(spineData.imageURLs)) {
+                    // 完全一致
+                    imageURL = spineData.imageURLs.find(url => url.includes(path));
+                    
+                    // ファイル名のみで一致
+                    if (!imageURL) {
+                        const fileName = path.split(/[/\\]/).pop();
+                        imageURL = spineData.imageURLs.find(url => url.includes(fileName));
+                    }
+                    
+                    // 最初の画像をフォールバック
+                    if (!imageURL && spineData.imageURLs.length > 0) {
+                        imageURL = spineData.imageURLs[0];
+                        console.log('🔄 フォールバック画像使用:', imageURL);
+                    }
+                }
+                
                 if (imageURL) {
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log('✅ 画像読み込み成功:', path);
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error('❌ 画像読み込み失敗:', path, error);
+                    };
+                    
                     img.src = imageURL;
                     return img;
+                } else {
+                    console.warn('⚠️ 画像URLが見つかりません:', path);
+                    
+                    // 1x1ピクセルのダミー画像作成
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1;
+                    canvas.height = 1;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, 1, 1);
+                    
+                    const img = new Image();
+                    img.src = canvas.toDataURL();
+                    console.log('🔄 ダミー画像作成完了');
+                    return img;
                 }
-                return null;
             };
             
             // TextureAtlas作成
@@ -1743,7 +1813,46 @@ class SpineIntegrationManager {
             
             // Skeleton作成
             const skeleton = new window.spine.Skeleton(skeletonDataParsed);
-            skeleton.setToSetupPose();
+            
+            // 最新Spine WebGL Runtime対応初期化
+            try {
+                // 現代的なSpine Runtime（4.0+）では setToSetupPose() が標準
+                if (typeof skeleton.setToSetupPose === 'function') {
+                    skeleton.setToSetupPose();
+                    console.log('✅ 最新API使用: setToSetupPose()');
+                } 
+                // 古いSpine Runtime（3.8系）の場合
+                else if (typeof skeleton.setSlotsToSetupPose === 'function' && typeof skeleton.setBonesToSetupPose === 'function') {
+                    skeleton.setSlotsToSetupPose();
+                    skeleton.setBonesToSetupPose();
+                    console.log('✅ 旧API使用: setSlotsToSetupPose() + setBonesToSetupPose()');
+                }
+                // 手動初期化（最後の手段）
+                else {
+                    console.log('⚠️ 手動Skeleton初期化モード - データ検証中');
+                    
+                    // Skeletonオブジェクトの構造を検証
+                    if (skeleton && skeleton.bones && skeleton.slots) {
+                        console.log('✅ Skeleton構造確認: bones=' + skeleton.bones.length + ', slots=' + skeleton.slots.length);
+                        
+                        // 手動でセットアップポーズ適用（可能な範囲で）
+                        if (skeleton.bones) {
+                            for (let bone of skeleton.bones) {
+                                if (bone.data) {
+                                    bone.x = bone.data.x;
+                                    bone.y = bone.data.y;
+                                    bone.rotation = bone.data.rotation;
+                                    bone.scaleX = bone.data.scaleX;
+                                    bone.scaleY = bone.data.scaleY;
+                                }
+                            }
+                        }
+                        console.log('✅ 手動初期化完了');
+                    }
+                }
+            } catch (initError) {
+                console.warn('⚠️ Skeleton初期化エラー - 基本状態で続行:', initError.message);
+            }
             
             // AnimationState作成
             const stateData = new window.spine.AnimationStateData(skeletonDataParsed);
@@ -2794,6 +2903,256 @@ class SpineIntegrationManager {
         }
         
         console.log('✅ SpineIntegrationManager クリーンアップ完了');
+    }
+    
+    // WYSIWYG: プレビューにキャラクター追加
+    addCharacterToPreview(characterName, position, targetDoc) {
+        console.log('🎭 WYSIWYG キャラクター配置:', characterName, position);
+        
+        try {
+            const characterData = this.characters.get(characterName);
+            if (!characterData) {
+                console.error('❌ キャラクターデータが見つかりません:', characterName);
+                return;
+            }
+            
+            // HTML内にSpineキャラクター要素を作成
+            const characterElement = targetDoc.createElement('div');
+            characterElement.id = `spine-character-${characterName}`;
+            characterElement.className = 'spine-character-wysiwyg';
+            characterElement.style.cssText = `
+                position: absolute;
+                left: ${position.x}px;
+                top: ${position.y}px;
+                width: 200px;
+                height: 300px;
+                z-index: 1000;
+                cursor: move;
+                border: 2px dashed #007acc;
+                background: rgba(0, 122, 204, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: Arial, sans-serif;
+                color: #007acc;
+                font-weight: bold;
+            `;
+            
+            characterElement.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 16px;">🎭</div>
+                    <div style="font-size: 12px; margin-top: 4px;">${characterName}</div>
+                    <div style="font-size: 10px; opacity: 0.7; margin-top: 2px;">WYSIWYG Mode</div>
+                </div>
+            `;
+            
+            // ドラッグ移動機能
+            this.makeElementDraggable(characterElement);
+            
+            // HTML body に追加
+            targetDoc.body.appendChild(characterElement);
+            
+            console.log('✅ WYSIWYG キャラクター配置完了');
+            
+        } catch (error) {
+            console.error('❌ WYSIWYG キャラクター配置エラー:', error);
+        }
+    }
+    
+    // 要素をドラッグ可能にする
+    makeElementDraggable(element) {
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        
+        element.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = element.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            element.style.cursor = 'grabbing';
+            element.style.opacity = '0.8';
+            
+            console.log('🎯 WYSIWYG ドラッグ開始');
+        });
+        
+        element.ownerDocument.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const newX = e.clientX - dragOffset.x;
+            const newY = e.clientY - dragOffset.y;
+            
+            element.style.left = `${newX}px`;
+            element.style.top = `${newY}px`;
+        });
+        
+        element.ownerDocument.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                element.style.cursor = 'move';
+                element.style.opacity = '1';
+                console.log('✅ WYSIWYG ドラッグ完了');
+            }
+        });
+    }
+    
+    // WYSIWYG: 特定のキャンバスにキャラクターレンダリング
+    renderCharacterToCanvas(characterName, canvasElement) {
+        console.log('🎮 キャンバスレンダリング開始:', characterName);
+        
+        try {
+            const characterData = this.characters.get(characterName);
+            if (!characterData) {
+                console.error('❌ キャラクターデータが見つかりません:', characterName);
+                return false;
+            }
+            
+            // WebGLコンテキスト取得
+            const gl = canvasElement.getContext('webgl') || canvasElement.getContext('experimental-webgl');
+            if (!gl) {
+                console.warn('⚠️ WebGL未対応 - 2Dフォールバック');
+                return this.render2DFallback(characterName, canvasElement);
+            }
+            
+            console.log('✅ WebGL対応確認済み');
+            
+            // Spine WebGL レンダラー初期化
+            if (window.spine && characterData.spineInstance) {
+                this.initializeSpineRenderer(gl, characterData.spineInstance, canvasElement);
+                return true;
+            } else {
+                console.warn('⚠️ Spineインスタンス未準備 - 2Dフォールバック');
+                return this.render2DFallback(characterName, canvasElement);
+            }
+            
+        } catch (error) {
+            console.error('❌ キャンバスレンダリングエラー:', error);
+            return this.render2DFallback(characterName, canvasElement);
+        }
+    }
+    
+    // 2Dフォールバックレンダリング
+    render2DFallback(characterName, canvasElement) {
+        console.log('🎨 2Dフォールバックレンダリング:', characterName);
+        
+        const ctx = canvasElement.getContext('2d');
+        if (!ctx) {
+            console.error('❌ 2Dコンテキスト取得失敗');
+            return false;
+        }
+        
+        // キャンバスクリア
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        
+        // 背景
+        ctx.fillStyle = 'rgba(0, 122, 204, 0.1)';
+        ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+        
+        // キャラクター表示（2D）
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // 絵文字
+        ctx.font = '48px Arial';
+        ctx.fillStyle = '#007acc';
+        ctx.fillText('🎭', canvasElement.width/2, canvasElement.height/2 - 30);
+        
+        // キャラクター名
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#007acc';
+        ctx.fillText(characterName, canvasElement.width/2, canvasElement.height/2 + 20);
+        
+        // ステータス
+        ctx.font = '10px Arial';
+        ctx.fillStyle = 'rgba(0, 122, 204, 0.7)';
+        ctx.fillText('2D Mode', canvasElement.width/2, canvasElement.height/2 + 40);
+        
+        console.log('✅ 2Dフォールバック完了');
+        return true;
+    }
+    
+    // Spine WebGL レンダラー初期化
+    initializeSpineRenderer(gl, spineInstance, canvasElement) {
+        console.log('⚡ Spine WebGL レンダラー初期化');
+        
+        try {
+            let renderer = null;
+            
+            // 新しいAPI（spine-webgl 4.0+）
+            if (window.spine.webgl && window.spine.webgl.SceneRenderer) {
+                renderer = new window.spine.webgl.SceneRenderer(canvasElement, gl);
+                console.log('✅ 新WYSIWYG API使用: spine.webgl.SceneRenderer');
+            }
+            // 旧API（spine-webgl 3.8系）
+            else if (window.spine.WebGLRenderer) {
+                renderer = new window.spine.WebGLRenderer(gl);
+                console.log('✅ 旧WYSIWYG API使用: spine.WebGLRenderer');
+            }
+            // 代替API
+            else if (window.spine.SceneRenderer) {
+                renderer = new window.spine.SceneRenderer(canvasElement, gl);
+                console.log('✅ 代替WYSIWYG API使用: spine.SceneRenderer');
+            }
+            else {
+                console.error('❌ WYSIWYG: 利用可能なSpine WebGL Rendererが見つかりません');
+                console.log('🔍 WYSIWYG利用可能なSpine API:', Object.keys(window.spine || {}));
+                return false;
+            }
+            
+            // シーン設定
+            if (renderer.scene) {
+                renderer.scene.skeleton = spineInstance.skeleton;
+                renderer.scene.animationState = spineInstance.state;
+            } else if (renderer.drawSkeletons) {
+                // 旧API用の設定
+                renderer.skeletonRenderer.premultipliedAlpha = true;
+            }
+            
+            // 描画ループ開始
+            this.startRenderLoop(renderer, canvasElement);
+            
+            console.log('✅ Spine WebGL レンダラー初期化完了');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Spine WebGL 初期化エラー:', error);
+            return false;
+        }
+    }
+    
+    // 描画ループ
+    startRenderLoop(renderer, canvasElement) {
+        const renderFrame = (timestamp) => {
+            if (!canvasElement.isConnected) {
+                console.log('🔚 キャンバス削除 - 描画ループ終了');
+                return;
+            }
+            
+            try {
+                // 新API用の描画
+                if (renderer.camera && renderer.draw) {
+                    renderer.camera.setViewport(canvasElement.width, canvasElement.height);
+                    renderer.draw();
+                }
+                // 旧API用の描画
+                else if (renderer.drawSkeletons) {
+                    const gl = renderer.gl;
+                    gl.viewport(0, 0, canvasElement.width, canvasElement.height);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    
+                    // 必要に応じてスケルトン描画
+                    if (renderer.scene && renderer.scene.skeleton) {
+                        renderer.drawSkeletons([renderer.scene.skeleton]);
+                    }
+                }
+                
+                requestAnimationFrame(renderFrame);
+            } catch (error) {
+                console.error('❌ 描画エラー:', error);
+            }
+        };
+        
+        requestAnimationFrame(renderFrame);
+        console.log('🔄 描画ループ開始');
     }
 }
 
