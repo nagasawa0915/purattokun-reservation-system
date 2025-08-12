@@ -82,6 +82,39 @@ class SpineIntegrationManager {
         }
     }
 
+    // Spine WebGL読み込み完了を待機
+    async waitForSpine() {
+        console.log('⏳ Spine WebGL読み込み完了を待機中...');
+        
+        const timeout = 15000; // 10秒タイムアウト
+        const startTime = Date.now();
+        
+        return new Promise((resolve, reject) => {
+            const checkSpine = () => {
+                // Spine WebGLライブラリの存在確認
+                if (typeof window.spine !== 'undefined' && 
+                    typeof window.spine.AssetManager === 'function' &&
+                    typeof window.spine.WebGLRenderer === 'function') {
+                    console.log('✅ Spine WebGL読み込み確認完了');
+                    resolve(true);
+                    return;
+                }
+                
+                // タイムアウトチェック
+                if (Date.now() - startTime > timeout) {
+                    console.warn('⚠️ Spine WebGL読み込みタイムアウト');
+                    resolve(false); // Electron環境対応: エラーではなく警告として処理
+                    return;
+                }
+                
+                // 100ms後に再チェック
+                setTimeout(checkSpine, 100);
+            };
+            
+            checkSpine();
+        });
+    }
+
     // 軽量Spine WebGL Runtime読み込み
     async loadSpineWebGLRuntime() {
         console.log('🎮 Spine WebGL Runtime 読み込み開始');
@@ -493,6 +526,49 @@ class SpineIntegrationManager {
     }
 
     // 2D Canvas フォールバック表示（SpineWebGL失敗時）
+    // Spine WebGL読み込み失敗時のフォールバック
+    createSpineFallback(spineData, canvasElement) {
+        console.log("🔄 Spine WebGLフォールバック: 2D表示モードで続行");
+        
+        const ctx = canvasElement.getContext("2d");
+        if (!ctx) {
+            console.error("❌ Canvas 2D contextも取得できません");
+            return null;
+        }
+        
+        // 基本的な2D表示
+        ctx.fillStyle = "#4CAF50";
+        ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Spine WebGL読み込み中...", canvasElement.width/2, canvasElement.height/2);
+        
+        // 疑似アニメーション効果
+        let opacity = 1.0;
+        const fadeAnimation = () => {
+            opacity = 0.5 + 0.5 * Math.sin(Date.now() / 1000);
+            ctx.globalAlpha = opacity;
+            ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            ctx.fillStyle = "#4CAF50";
+            ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillText("Spine WebGL読み込み中...", canvasElement.width/2, canvasElement.height/2);
+            requestAnimationFrame(fadeAnimation);
+        };
+        
+        fadeAnimation();
+        
+        return {
+            skeleton: null,
+            state: {
+                setAnimation: () => console.log("🎬 フォールバックアニメーション開始")
+            },
+            isSpineFallback: true
+        };
+    }
+    
+
     createCanvas2DFallback(characterId, canvas) {
         console.log(`🎨 ${characterId} 2D Canvas フォールバック表示作成`);
         
@@ -1768,7 +1844,11 @@ class SpineIntegrationManager {
             }
             
             // Spine WebGLライブラリの確認
-            await this.waitForSpine();
+            const spineLoaded = await this.waitForSpine();
+            if (!spineLoaded) {
+                console.warn("⚠️ Spine WebGL読み込み失敗 - フォールバックモードで続行");
+                return this.createSpineFallback(spineData, canvasElement);
+            }
             
             // AssetManagerを使用した正しいSpine読み込み（マニュアル準拠）
             console.log('📦 AssetManager初期化開始');
