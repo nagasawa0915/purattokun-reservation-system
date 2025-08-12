@@ -70,6 +70,17 @@ class SpineEditorApp {
             }
         });
 
+        // F12キーで開発者ツールを開く
+        this.mainWindow.webContents.on('before-input-event', (event, input) => {
+            if (input.key === 'F12') {
+                if (this.mainWindow.webContents.isDevToolsOpened()) {
+                    this.mainWindow.webContents.closeDevTools();
+                } else {
+                    this.mainWindow.webContents.openDevTools();
+                }
+            }
+        });
+
         // ウィンドウクローズイベント
         this.mainWindow.on('closed', () => {
             console.log('🔒 メインウィンドウクローズ');

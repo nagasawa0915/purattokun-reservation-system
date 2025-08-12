@@ -37,6 +37,7 @@ body {
 .toolbar {
     grid-area: toolbar;
     display: flex;
+    z-index: 1000;
     align-items: center;
     padding: 0 12px;
     background: linear-gradient(to bottom, #3c3c3c, #2b2b2b);
@@ -211,6 +212,7 @@ body {
         radial-gradient(circle at 75% 75%, #333 2px, transparent 2px);
     background-size: 20px 20px;
     background-color: #2a2a2a;
+    position: relative;
 }
 
 .preview-canvas {

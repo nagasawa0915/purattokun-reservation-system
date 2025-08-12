@@ -64,22 +64,49 @@ class CharacterRenderer {
      * @param {HTMLElement} parentElement - 親要素
      * @returns {boolean} 作成成功かどうか
      */
-    createSpineCanvas(characterData, position, parentElement) {
+    async createSpineCanvas(characterData, position, parentElement) {
         try {
-            console.log('🎮 Spineキャンバス作成開始:', characterData.name);
+            console.log('🎮 新しいSpineキャンバス作成開始:', characterData.name);
             
             // SpineIntegrationが利用可能かチェック
-            if (!this.app.spineIntegration || !this.app.spineIntegration.characters) {
-                console.warn('⚠️ SpineIntegration未初期化 - プレースホルダーで代替');
+            if (!this.app.spineIntegration) {
+                console.warn('⚠️ SpineIntegration未初期化');
                 return false;
             }
             
-            // キャンバス要素作成
-            const canvasElement = document.createElement('canvas');
+            // Spineデータの準備
+            if (!characterData.spineFiles) {
+                console.warn('⚠️ Spineファイル情報がありません');
+                return false;
+            }
+            
+            // SpineデータをBlobURL形式に変換
+            const spineData = {
+                jsonURL: characterData.spineFiles.json.startsWith('blob:') ? 
+                        characterData.spineFiles.json : 
+                        `file://${characterData.spineFiles.json}`,
+                atlasURL: characterData.spineFiles.atlas.startsWith('blob:') ? 
+                         characterData.spineFiles.atlas : 
+                         `file://${characterData.spineFiles.atlas}`,
+                imageURLs: characterData.spineFiles.images || []
+            };
+            
+            console.log('📋 Spine データ:', spineData);
+            
+            // 新しいAssetManager方式でSpineインスタンス作成
+            const spineInstance = await this.app.spineIntegration.createSpineInstanceFromAssets(spineData);
+            
+            if (!spineInstance) {
+                console.warn('⚠️ Spineインスタンス作成失敗');
+                return false;
+            }
+            
+            console.log('✅ Spineインスタンス作成成功 - Canvas表示開始');
+            
+            // Spineから提供されたCanvasを使用
+            const canvasElement = spineInstance.canvas;
             canvasElement.id = `spine-canvas-${characterData.name}`;
             canvasElement.className = 'spine-canvas-wysiwyg';
-            canvasElement.width = 200;
-            canvasElement.height = 300;
             canvasElement.style.cssText = `
                 position: absolute;
                 left: ${position.x}px;
@@ -88,19 +115,26 @@ class CharacterRenderer {
                 height: 300px;
                 cursor: move;
                 z-index: 1000;
-                border: 1px solid #007acc;
+                border: 1px solid #4CAF50;
                 border-radius: 4px;
-                background: rgba(0, 0, 0, 0.05);
+                box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
             `;
             
             // ドラッグ移動機能追加
             this.app.dragDropHandler.makeElementDraggableSimple(canvasElement);
             
-            // SpineIntegrationでアニメーション初期化
-            this.app.spineIntegration.renderCharacterToCanvas(characterData.name, canvasElement);
+            // レンダーループ開始
+            this.startSpineRenderLoop(spineInstance, canvasElement);
+            
+            // クリックでyarareアニメーション（マニュアル準拠）
+            canvasElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.playSpineClickAnimation(spineInstance);
+            });
             
             parentElement.appendChild(canvasElement);
             
+            console.log('✅ Spineキャンバス配置完了:', characterData.name);
             return true;
             
         } catch (error) {
@@ -158,13 +192,16 @@ class CharacterRenderer {
             
             // 画像読み込み完了時の処理
             imgElement.onload = () => {
-                console.log('✅ キャラクター画像読み込み完了:', characterData.name);
+                console.log('✅ アニメーション対応キャラクター画像読み込み完了:', characterData.name);
                 
                 // キャラクター名前ラベル追加
                 const labelElement = document.createElement('div');
                 labelElement.style.cssText = this.getLabelStyles();
                 labelElement.textContent = characterData.name;
                 containerElement.appendChild(labelElement);
+                
+                // アニメーション機能を初期化
+                this.setupCharacterAnimation(containerElement, imgElement, characterData);
             };
             
             // 画像読み込みエラー時のフォールバック
@@ -591,6 +628,248 @@ class CharacterRenderer {
         }
         
         console.log('🎨 === デバッグ情報終了 ===');
+    }
+
+    // ========== Spine WebGL専用メソッド ========== //
+
+    /**
+     * SpineWebGLレンダーループ開始
+     * @param {Object} spineInstance - Spineインスタンス（skeleton, animationState, renderer含む）
+     * @param {HTMLCanvasElement} canvasElement - Canvas要素
+     */
+    startSpineRenderLoop(spineInstance, canvasElement) {
+        console.log('🎮 Spineレンダーループ開始');
+        
+        let lastTime = 0;
+        
+        const render = (currentTime) => {
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            
+            try {
+                // WebGLコンテキストとビューポート設定
+                const gl = canvasElement.getContext('webgl2') || canvasElement.getContext('webgl');
+                if (!gl) {
+                    console.error('❌ WebGLコンテキスト取得失敗');
+                    return;
+                }
+                
+                // ビューポート設定
+                gl.viewport(0, 0, canvasElement.width, canvasElement.height);
+                gl.clearColor(0, 0, 0, 0); // 透明背景
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                
+                // アニメーション状態更新
+                if (spineInstance.animationState) {
+                    spineInstance.animationState.update(deltaTime);
+                    spineInstance.animationState.apply(spineInstance.skeleton);
+                }
+                
+                // スケルトン更新
+                if (spineInstance.skeleton) {
+                    spineInstance.skeleton.updateWorldTransform();
+                }
+                
+                // レンダリング実行
+                if (spineInstance.renderer && spineInstance.skeleton) {
+                    spineInstance.renderer.draw(spineInstance.skeleton);
+                }
+                
+                // 次のフレームをスケジュール
+                requestAnimationFrame(render);
+                
+            } catch (error) {
+                console.error('❌ Spineレンダリングエラー:', error);
+                // エラーが発生してもレンダーループを続行
+                requestAnimationFrame(render);
+            }
+        };
+        
+        // レンダーループ開始
+        requestAnimationFrame(render);
+        
+        console.log('✅ Spineレンダーループ開始完了');
+    }
+
+    /**
+     * Spineクリックアニメーション再生
+     * @param {Object} spineInstance - Spineインスタンス
+     */
+    playSpineClickAnimation(spineInstance) {
+        try {
+            console.log('🎭 Spineクリックアニメーション再生開始');
+            
+            if (!spineInstance.animationState || !spineInstance.skeleton) {
+                console.warn('⚠️ Spineアニメーション状態が無効');
+                return;
+            }
+            
+            // 現在のアニメーション状態をクリア
+            spineInstance.animationState.clearTracks();
+            
+            // yarare（やられ）アニメーションを再生
+            const yarareEntry = spineInstance.animationState.setAnimation(0, 'yarare', false);
+            
+            if (yarareEntry) {
+                console.log('🎯 yarareアニメーション設定完了');
+                
+                // yarare完了後にtaikiアニメーションに戻る
+                yarareEntry.listener = {
+                    complete: () => {
+                        console.log('🔄 yarare完了 -> taikiに遷移');
+                        spineInstance.animationState.setAnimation(0, 'taiki', true);
+                    }
+                };
+                
+            } else {
+                console.warn('⚠️ yarareアニメーション見つからず - taikiで代用');
+                spineInstance.animationState.setAnimation(0, 'taiki', true);
+            }
+            
+            console.log('✅ Spineクリックアニメーション設定完了');
+            
+        } catch (error) {
+            console.error('❌ Spineクリックアニメーション再生エラー:', error);
+            
+            // フォールバック：とりあえずtaikiアニメーション再生
+            try {
+                spineInstance.animationState.setAnimation(0, 'taiki', true);
+            } catch (fallbackError) {
+                console.error('❌ フォールバックアニメーション再生も失敗:', fallbackError);
+            }
+        }
+    }
+    
+    // ========== アニメーション機能 ========== //
+    
+    /**
+     * キャラクターアニメーション設定
+     * @param {HTMLElement} containerElement - コンテナ要素
+     * @param {HTMLImageElement} imgElement - 画像要素
+     * @param {Object} characterData - キャラクターデータ
+     */
+    setupCharacterAnimation(containerElement, imgElement, characterData) {
+        console.log('🎬 キャラクターアニメーション設定:', characterData.name);
+        
+        // アニメーション状態管理
+        const animationState = {
+            isIdle: true,
+            currentAnimation: 'taiki',
+            animationTimer: null
+        };
+        
+        // アイドルアニメーション（浮遊・呼吸効果）
+        const startIdleAnimation = () => {
+            containerElement.style.animation = 'character-float 3s ease-in-out infinite';
+            imgElement.style.animation = 'character-breathe 4s ease-in-out infinite';
+            animationState.isIdle = true;
+            animationState.currentAnimation = 'taiki';
+            console.log('🌊 アイドルアニメーション開始:', characterData.name);
+        };
+        
+        // クリックアニメーション
+        const playClickAnimation = () => {
+            console.log('🎭 クリックアニメーション再生:', characterData.name);
+            
+            // 現在のアニメーション停止
+            containerElement.style.animation = 'none';
+            imgElement.style.animation = 'none';
+            
+            // クリックエフェクト
+            containerElement.style.animation = 'character-click 0.6s ease-out';
+            imgElement.style.animation = 'character-bounce 0.6s ease-out';
+            
+            animationState.isIdle = false;
+            animationState.currentAnimation = 'yarare';
+            
+            // 1秒後にアイドルに戻る
+            clearTimeout(animationState.animationTimer);
+            animationState.animationTimer = setTimeout(() => {
+                startIdleAnimation();
+            }, 1000);
+        };
+        
+        // クリックイベント設定
+        containerElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            playClickAnimation();
+        });
+        
+        // ホバーエフェクト
+        containerElement.addEventListener('mouseenter', () => {
+            if (animationState.isIdle) {
+                containerElement.style.transform = 'scale(1.05)';
+                containerElement.style.filter = 'brightness(1.1)';
+            }
+        });
+        
+        containerElement.addEventListener('mouseleave', () => {
+            if (animationState.isIdle) {
+                containerElement.style.transform = 'scale(1.0)';
+                containerElement.style.filter = 'brightness(1.0)';
+            }
+        });
+        
+        // アイドルアニメーション開始
+        startIdleAnimation();
+        
+        // CSS animations を動的追加
+        this.addAnimationStyles();
+        
+        console.log('✅ キャラクターアニメーション設定完了:', characterData.name);
+    }
+    
+    /**
+     * アニメーションCSSスタイルを追加
+     */
+    addAnimationStyles() {
+        // 既に追加済みかチェック
+        if (document.getElementById('character-animations')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'character-animations';
+        style.textContent = `
+            @keyframes character-float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-8px); }
+            }
+            
+            @keyframes character-breathe {
+                0%, 100% { transform: scale(1.0); }
+                50% { transform: scale(1.02); }
+            }
+            
+            @keyframes character-click {
+                0% { transform: scale(1.0) rotate(0deg); }
+                25% { transform: scale(1.1) rotate(-2deg); }
+                50% { transform: scale(0.95) rotate(2deg); }
+                75% { transform: scale(1.05) rotate(-1deg); }
+                100% { transform: scale(1.0) rotate(0deg); }
+            }
+            
+            @keyframes character-bounce {
+                0% { transform: scale(1.0); }
+                25% { transform: scale(1.15); }
+                50% { transform: scale(0.9); }
+                75% { transform: scale(1.05); }
+                100% { transform: scale(1.0); }
+            }
+            
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.7; }
+            }
+            
+            .character-image-display {
+                transition: transform 0.3s ease, filter 0.3s ease;
+            }
+            
+            .character-sprite {
+                transition: all 0.3s ease;
+            }
+        `;
+        document.head.appendChild(style);
+        console.log('✅ キャラクターアニメーションCSS追加完了');
     }
 }
 

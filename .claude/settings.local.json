@@ -42,7 +42,8 @@
       "Bash(./node_modules/.bin/electron:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run test:*)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(timeout 30 npm start)"
     ],
     "deny": []
   }

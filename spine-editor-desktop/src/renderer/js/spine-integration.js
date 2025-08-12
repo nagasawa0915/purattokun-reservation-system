@@ -1724,10 +1724,32 @@ class SpineIntegrationManager {
         console.log('✅ 全キャラクターSpineインスタンス初期化完了');
         return true;
     }
+    
+    // AssetManager アセット読み込み完了待機（マニュアル準拠）
+    waitForAssets(assetManager) {
+        return new Promise((resolve, reject) => {
+            let checkCount = 0;
+            const maxChecks = 50;
+
+            const checkAssets = () => {
+                checkCount++;
+                if (assetManager.isLoadingComplete()) {
+                    console.log("✅ アセット読み込み完了");
+                    resolve();
+                } else if (checkCount >= maxChecks) {
+                    reject(new Error("アセット読み込みタイムアウト"));
+                } else {
+                    setTimeout(checkAssets, 100);
+                }
+            };
+
+            checkAssets();
+        });
+    }
 
     // Spineアセットからインスタンス作成
     async createSpineInstanceFromAssets(spineData) {
-        console.log('🏗️ Spineアセットからインスタンス作成開始');
+        console.log('🏗️ 新しいAssetManager方式でSpineインスタンス作成開始');
         
         try {
             if (!spineData || !spineData.jsonURL || !spineData.atlasURL) {
@@ -1735,84 +1757,57 @@ class SpineIntegrationManager {
                 return null;
             }
             
-            // JSONデータ読み込み
-            const skeletonResponse = await fetch(spineData.jsonURL);
-            const skeletonData = await skeletonResponse.json();
+            // WebGLコンテキスト取得
+            const canvas = document.createElement('canvas');
+            canvas.width = 200;
+            canvas.height = 300;
+            const gl = canvas.getContext('webgl', { alpha: true });
+            if (!gl) {
+                console.warn('⚠️ WebGLが利用できません');
+                return null;
+            }
             
-            // Atlasデータ読み込み
-            const atlasResponse = await fetch(spineData.atlasURL);
-            const atlasText = await atlasResponse.text();
+            // Spine WebGLライブラリの確認
+            await this.waitForSpine();
             
-            // テクスチャローダー作成（堅牢版）
-            const textureLoader = (path) => {
-                console.log('🖼️ 画像読み込み要求:', path);
-                console.log('📋 利用可能imageURLs:', spineData.imageURLs);
-                
-                // 複数の方法でマッチング
-                let imageURL = null;
-                
-                if (spineData.imageURLs && Array.isArray(spineData.imageURLs)) {
-                    // 完全一致
-                    imageURL = spineData.imageURLs.find(url => url.includes(path));
-                    
-                    // ファイル名のみで一致
-                    if (!imageURL) {
-                        const fileName = path.split(/[/\\]/).pop();
-                        imageURL = spineData.imageURLs.find(url => url.includes(fileName));
-                    }
-                    
-                    // 最初の画像をフォールバック
-                    if (!imageURL && spineData.imageURLs.length > 0) {
-                        imageURL = spineData.imageURLs[0];
-                        console.log('🔄 フォールバック画像使用:', imageURL);
-                    }
-                }
-                
-                if (imageURL) {
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous';
-                    
-                    img.onload = () => {
-                        console.log('✅ 画像読み込み成功:', path);
-                    };
-                    
-                    img.onerror = (error) => {
-                        console.error('❌ 画像読み込み失敗:', path, error);
-                    };
-                    
-                    img.src = imageURL;
-                    return img;
-                } else {
-                    console.warn('⚠️ 画像URLが見つかりません:', path);
-                    
-                    // 1x1ピクセルのダミー画像作成
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 1;
-                    canvas.height = 1;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, 1, 1);
-                    
-                    const img = new Image();
-                    img.src = canvas.toDataURL();
-                    console.log('🔄 ダミー画像作成完了');
-                    return img;
-                }
-            };
+            // AssetManagerを使用した正しいSpine読み込み（マニュアル準拠）
+            console.log('📦 AssetManager初期化開始');
             
-            // TextureAtlas作成
-            const atlas = new window.spine.TextureAtlas(atlasText, textureLoader);
+            // ベースパスを設定（URLからパスを推測）
+            const atlasURL = new URL(spineData.atlasURL, window.location.href);
+            const basePath = atlasURL.pathname.substring(0, atlasURL.pathname.lastIndexOf('/') + 1);
+            console.log('📁 ベースパス:', basePath);
             
-            // AttachmentLoader作成
-            const attachmentLoader = new window.spine.AtlasAttachmentLoader(atlas);
+            // AssetManager作成
+            const assetManager = new window.spine.AssetManager(gl, basePath);
             
-            // SkeletonJson作成・データ読み込み
-            const skeletonJson = new window.spine.SkeletonJson(attachmentLoader);
-            skeletonJson.scale = 1;
-            const skeletonDataParsed = skeletonJson.readSkeletonData(skeletonData);
+            // アセット読み込み（ファイル名のみ指定）
+            const atlasFileName = atlasURL.pathname.split('/').pop();
+            const jsonURL = new URL(spineData.jsonURL, window.location.href);
+            const jsonFileName = jsonURL.pathname.split('/').pop();
+            
+            console.log('📋 読み込み対象:', { atlasFileName, jsonFileName });
+            
+            // AssetManager経由で読み込み
+            assetManager.loadTextureAtlas(atlasFileName);
+            assetManager.loadJson(jsonFileName);
+            
+            // アセット読み込み完了待機
+            await this.waitForAssets(assetManager);
+            
+            // スケルトン構築（マニュアル準拠）
+            const atlas = assetManager.get(atlasFileName);
+            const atlasLoader = new window.spine.AtlasAttachmentLoader(atlas);
+            const skeletonJson = new window.spine.SkeletonJson(atlasLoader);
+            const skeletonData = skeletonJson.readSkeletonData(assetManager.get(jsonFileName));
             
             // Skeleton作成
-            const skeleton = new window.spine.Skeleton(skeletonDataParsed);
+            const skeleton = new window.spine.Skeleton(skeletonData);
+            
+            // キャラクター位置設定（マニュアル準拠）
+            skeleton.x = 0;              // Canvas中央（X軸）
+            skeleton.y = -100;           // 地面から100px上
+            skeleton.scaleX = skeleton.scaleY = 0.55; // スケール調整
             
             // 最新Spine WebGL Runtime対応初期化
             try {
@@ -1854,12 +1849,39 @@ class SpineIntegrationManager {
                 console.warn('⚠️ Skeleton初期化エラー - 基本状態で続行:', initError.message);
             }
             
-            // AnimationState作成
-            const stateData = new window.spine.AnimationStateData(skeletonDataParsed);
+            // AnimationState作成（修正版）
+            const stateData = new window.spine.AnimationStateData(skeletonData);
             const state = new window.spine.AnimationState(stateData);
             
-            console.log('✅ Spineインスタンス作成完了');
-            return { skeleton, state, data: skeletonDataParsed };
+            // アニメーションシーケンス設定（マニュアル準拠）
+            console.log('🎬 アニメーションシーケンス設定開始');
+            
+            // 利用可能なアニメーション一覧を取得
+            const animations = [];
+            if (skeletonData.animations) {
+                for (let i = 0; i < skeletonData.animations.length; i++) {
+                    animations.push(skeletonData.animations[i].name);
+                }
+            }
+            console.log('📋 利用可能アニメーション:', animations);
+            
+            // syutugen → taiki シーケンス設定
+            if (animations.includes('syutugen') && animations.includes('taiki')) {
+                console.log('🎬 syutugen（登場）→ taiki（待機）シーケンス開始');
+                state.setAnimation(0, 'syutugen', false); // 1回のみ再生
+                state.addAnimation(0, 'taiki', true, 0);   // 完了後に待機ループ
+            } else if (animations.includes('taiki')) {
+                console.log('🎬 taiki（待機）アニメーション開始（syutugenなし）');
+                state.setAnimation(0, 'taiki', true);
+            } else {
+                console.log('⚠️ 既知のアニメーションが見つかりません - 最初のアニメーション使用');
+                if (animations.length > 0) {
+                    state.setAnimation(0, animations[0], true);
+                }
+            }
+            
+            console.log('✅ Spineインスタンス作成完了（AssetManager方式）');
+            return { skeleton, state, data: skeletonData, canvas, gl };
             
         } catch (error) {
             console.error('❌ Spineインスタンス作成エラー:', error);
