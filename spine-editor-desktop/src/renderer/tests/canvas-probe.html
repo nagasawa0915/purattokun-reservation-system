@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas/WebGL 診断プローブ</title>
+    <style>
+        body { font-family: 'Courier New', monospace; padding: 20px; background: #1a1a1a; color: #00ff00; }
+        pre { background: #000; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .success { color: #00ff00; }
+        .error { color: #ff4444; }
+        .warning { color: #ffaa00; }
+        canvas { border: 2px solid #444; margin: 10px 0; }
+        h1 { color: #ffffff; }
+        h2 { color: #88ccff; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Canvas/WebGL 診断プローブ</h1>
+    <pre id="log"></pre>
+    
+    <h2>テスト用Canvas:</h2>
+    <canvas id="test-canvas" width="300" height="200"></canvas>
+    
+    <script>
+        const log = (...args) => {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = `[${timestamp}] ${args.join(' ')}`;
+            document.getElementById('log').textContent += message + '\n';
+            console.log(...args);
+        };
+
+        const logSuccess = (...args) => {
+            const span = document.createElement('span');
+            span.className = 'success';
+            span.textContent = `[${new Date().toLocaleTimeString()}] ✅ ${args.join(' ')}\n`;
+            document.getElementById('log').appendChild(span);
+            console.log('✅', ...args);
+        };
+
+        const logError = (...args) => {
+            const span = document.createElement('span');
+            span.className = 'error';
+            span.textContent = `[${new Date().toLocaleTimeString()}] ❌ ${args.join(' ')}\n`;
+            document.getElementById('log').appendChild(span);
+            console.error('❌', ...args);
+        };
+
+        const logWarning = (...args) => {
+            const span = document.createElement('span');
+            span.className = 'warning';
+            span.textContent = `[${new Date().toLocaleTimeString()}] ⚠️ ${args.join(' ')}\n`;
+            document.getElementById('log').appendChild(span);
+            console.warn('⚠️', ...args);
+        };
+
+        // 🔍 基本環境情報
+        log('=== 基本環境情報 ===');
+        log('User Agent:', navigator.userAgent);
+        log('Platform:', navigator.platform);
+        log('是否Electron:', navigator.userAgent.includes('Electron') ? 'Yes' : 'No');
+        
+        // プロトコル確認
+        log('Protocol:', window.location.protocol);
+        log('Host:', window.location.host || 'local file');
+        
+        log('\n=== Canvas基本テスト ===');
+
+        // Canvas要素作成テスト
+        let testCanvas;
+        try {
+            testCanvas = document.createElement('canvas');
+            testCanvas.width = 256;
+            testCanvas.height = 256;
+            document.body.appendChild(testCanvas);
+            logSuccess('Canvas要素作成成功');
+        } catch (error) {
+            logError('Canvas要素作成失敗:', error.message);
+        }
+
+        // Canvas 2D コンテキストテスト
+        let ctx2d = null;
+        if (testCanvas) {
+            try {
+                ctx2d = testCanvas.getContext('2d');
+                if (ctx2d) {
+                    logSuccess('Canvas 2D コンテキスト取得成功');
+                    
+                    // 2D描画テスト
+                    try {
+                        ctx2d.fillStyle = '#ff0000';
+                        ctx2d.fillRect(10, 10, 50, 50);
+                        ctx2d.fillStyle = '#00ff00';
+                        ctx2d.fillText('2D OK', 70, 30);
+                        logSuccess('Canvas 2D 描画テスト成功');
+                    } catch (drawError) {
+                        logError('Canvas 2D 描画テスト失敗:', drawError.message);
+                    }
+                } else {
+                    logError('Canvas 2D コンテキスト取得失敗: null');
+                }
+            } catch (error) {
+                logError('Canvas 2D コンテキスト取得エラー:', error.message);
+            }
+        }
+
+        log('\n=== WebGL テスト ===');
+
+        // WebGL コンテキストテスト
+        let gl = null;
+        let gl2 = null;
+        
+        if (testCanvas) {
+            // WebGL 2.0 テスト
+            try {
+                gl2 = testCanvas.getContext('webgl2');
+                if (gl2) {
+                    logSuccess('WebGL 2.0 コンテキスト取得成功');
+                    log('WebGL 2.0 Version:', gl2.getParameter(gl2.VERSION));
+                    log('WebGL 2.0 Renderer:', gl2.getParameter(gl2.RENDERER));
+                    log('WebGL 2.0 Vendor:', gl2.getParameter(gl2.VENDOR));
+                } else {
+                    logWarning('WebGL 2.0 コンテキスト取得失敗: null');
+                }
+            } catch (error) {
+                logError('WebGL 2.0 コンテキスト取得エラー:', error.message);
+            }
+
+            // WebGL 1.0 テスト
+            try {
+                gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+                if (gl) {
+                    logSuccess('WebGL 1.0 コンテキスト取得成功');
+                    log('WebGL 1.0 Version:', gl.getParameter(gl.VERSION));
+                    log('WebGL 1.0 Renderer:', gl.getParameter(gl.RENDERER));
+                    log('WebGL 1.0 Vendor:', gl.getParameter(gl.VENDOR));
+                    log('WebGL 1.0 GLSL Version:', gl.getParameter(gl.SHADING_LANGUAGE_VERSION));
+                    
+                    // WebGL描画テスト
+                    try {
+                        gl.clearColor(0.0, 0.5, 1.0, 1.0);
+                        gl.clear(gl.COLOR_BUFFER_BIT);
+                        logSuccess('WebGL 基本描画テスト成功');
+                    } catch (drawError) {
+                        logError('WebGL 描画テスト失敗:', drawError.message);
+                    }
+                } else {
+                    logError('WebGL 1.0 コンテキスト取得失敗: null');
+                }
+            } catch (error) {
+                logError('WebGL 1.0 コンテキスト取得エラー:', error.message);
+            }
+        }
+
+        log('\n=== Spine WebGL ライブラリテスト ===');
+
+        // Spine WebGL ライブラリ確認
+        if (typeof spine !== 'undefined') {
+            logSuccess('Spine WebGL ライブラリ検出');
+            log('Spine オブジェクト:', Object.keys(spine));
+            
+            if (spine.AssetManager) {
+                logSuccess('spine.AssetManager 利用可能');
+            } else {
+                logError('spine.AssetManager 未定義');
+            }
+            
+            if (spine.SceneRenderer) {
+                logSuccess('spine.SceneRenderer 利用可能');
+            } else {
+                logError('spine.SceneRenderer 未定義');
+            }
+            
+            // AssetManager テスト（WebGLコンテキストが必要）
+            if (gl && spine.AssetManager) {
+                try {
+                    const assetManager = new spine.AssetManager(gl, './');
+                    logSuccess('spine.AssetManager 作成成功');
+                } catch (spineError) {
+                    logError('spine.AssetManager 作成失敗:', spineError.message);
+                }
+            }
+        } else {
+            logWarning('Spine WebGL ライブラリ未検出');
+        }
+
+        log('\n=== 診断結果サマリー ===');
+        
+        const results = {
+            'Canvas 2D': !!ctx2d,
+            'WebGL 1.0': !!gl,
+            'WebGL 2.0': !!gl2,
+            'Spine Library': typeof spine !== 'undefined',
+            'Protocol': window.location.protocol,
+            'Environment': navigator.userAgent.includes('Electron') ? 'Electron' : 'Browser'
+        };
+        
+        Object.entries(results).forEach(([key, value]) => {
+            if (typeof value === 'boolean') {
+                if (value) {
+                    logSuccess(`${key}: OK`);
+                } else {
+                    logError(`${key}: FAILED`);
+                }
+            } else {
+                log(`${key}: ${value}`);
+            }
+        });
+
+        // 総合判定
+        const canvasOK = !!ctx2d;
+        const webglOK = !!gl || !!gl2;
+        
+        log('\n=== 総合判定 ===');
+        if (canvasOK && webglOK) {
+            logSuccess('Canvas/WebGL環境: 正常 - Spine表示可能と推測');
+        } else if (canvasOK && !webglOK) {
+            logWarning('Canvas 2D: OK, WebGL: NG - 2Dフォールバック可能');
+        } else if (!canvasOK && !webglOK) {
+            logError('Canvas/WebGL環境: 完全失敗 - 根本的な環境問題');
+        } else {
+            logWarning('予期しない状況 - 詳細調査が必要');
+        }
+
+        // グローバル診断関数
+        window.runCanvasProbe = function() {
+            window.location.reload();
+        };
+        
+        log('\n🔧 手動再テスト: runCanvasProbe() を実行');
+    </script>
+</body>
+</html>

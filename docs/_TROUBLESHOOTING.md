@@ -157,6 +157,12 @@
 - **タグ**: `#Spine` `#ライブラリ` `#エラー`
 - **別名**: spine undefined、ライブラリエラー、CDN読込失敗
 
+#### Spine Editor Desktop v2.0パフォーマンス問題
+- **ファイル**: [Spine Editor Desktop v2.0パフォーマンス問題.md](./troubleshooting/Spine Editor Desktop v2.0パフォーマンス問題.md)
+- **症状**: WebGL問題継続、行数制限未達成、設計哲学との矛盾
+- **タグ**: `#デスクトップアプリ` `#パフォーマンス` `#Spine WebGL` `#アーキテクチャ` `#重量システム` `#未解決問題`
+- **別名**: v2.0パフォーマンス問題、デスクトップアプリ課題、WebGL失敗問題、設計哲学違反、軽量化課題
+
 #### Spineアニメーション再生問題
 - **ファイル**: [Spineアニメーション再生問題.md](./troubleshooting/Spineアニメーション再生問題.md)
 - **症状**: アニメーションが再生されない、静止画になる

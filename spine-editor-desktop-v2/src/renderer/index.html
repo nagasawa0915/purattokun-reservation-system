@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Editor Desktop v2.0</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <!-- メインコンテナ -->
+    <div id="app" class="app-container">
+        <!-- トップバー -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1 class="app-title">Spine Editor v2.0</h1>
+                <div class="project-info">
+                    <span id="project-name">No Project</span>
+                    <span id="project-status" class="status-indicator"></span>
+                </div>
+            </div>
+            <div class="header-center">
+                <div class="quick-actions">
+                    <button id="btn-open-project" class="btn btn-primary" title="プロジェクトを開く (Ctrl+O)">
+                        <span class="icon">📁</span>
+                        Open
+                    </button>
+                    <button id="btn-save-project" class="btn btn-secondary" title="プロジェクトを保存 (Ctrl+S)" disabled>
+                        <span class="icon">💾</span>
+                        Save
+                    </button>
+                    <button id="btn-export-package" class="btn btn-success" title="パッケージ出力 (Ctrl+E)" disabled>
+                        <span class="icon">📦</span>
+                        Export
+                    </button>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="app-controls">
+                    <button id="btn-toggle-preview" class="btn btn-outline" title="プレビュー切替">
+                        <span class="icon">👁️</span>
+                    </button>
+                    <button id="btn-settings" class="btn btn-outline" title="設定">
+                        <span class="icon">⚙️</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- メインコンテンツエリア -->
+        <main class="app-main">
+            <!-- サイドバー -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Characters</h3>
+                    <div id="character-list" class="character-list">
+                        <div class="placeholder-text">No characters loaded</div>
+                    </div>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3>Layers</h3>
+                    <div id="layer-list" class="layer-list">
+                        <div class="placeholder-text">No layers</div>
+                    </div>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3>Properties</h3>
+                    <div id="property-panel" class="property-panel">
+                        <div class="placeholder-text">Select a character</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- メインワークスペース -->
+            <section class="workspace">
+                <!-- ツールバー -->
+                <div class="toolbar">
+                    <div class="tool-group">
+                        <button id="tool-select" class="tool-btn active" title="選択ツール (V)">
+                            <span class="icon">🖱️</span>
+                        </button>
+                        <button id="tool-move" class="tool-btn" title="移動ツール (M)">
+                            <span class="icon">✋</span>
+                        </button>
+                        <button id="tool-scale" class="tool-btn" title="スケールツール (S)">
+                            <span class="icon">🔄</span>
+                        </button>
+                    </div>
+                    
+                    <div class="tool-group">
+                        <label class="zoom-control">
+                            Zoom: <span id="zoom-value">100%</span>
+                            <input id="zoom-slider" type="range" min="25" max="200" value="100">
+                        </label>
+                    </div>
+                    
+                    <div class="tool-group">
+                        <button id="btn-reset-view" class="btn btn-outline btn-sm" title="ビューリセット">
+                            <span class="icon">🎯</span>
+                            Reset View
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas エリア -->
+                <div class="canvas-container">
+                    <div id="spine-viewport" class="spine-viewport">
+                        <!-- Spineキャラクターがここに表示される -->
+                        <div class="viewport-overlay">
+                            <div class="grid-lines"></div>
+                            <div id="selection-handles" class="selection-handles"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- インスペクター -->
+            <aside class="inspector">
+                <div class="inspector-section">
+                    <h3>Transform</h3>
+                    <div class="transform-controls">
+                        <div class="control-row">
+                            <label>Position X:</label>
+                            <input id="pos-x" type="number" step="0.1" value="0">
+                        </div>
+                        <div class="control-row">
+                            <label>Position Y:</label>
+                            <input id="pos-y" type="number" step="0.1" value="0">
+                        </div>
+                        <div class="control-row">
+                            <label>Scale X:</label>
+                            <input id="scale-x" type="number" step="0.01" value="1.0" min="0.1" max="3.0">
+                        </div>
+                        <div class="control-row">
+                            <label>Scale Y:</label>
+                            <input id="scale-y" type="number" step="0.01" value="1.0" min="0.1" max="3.0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="inspector-section">
+                    <h3>Animation</h3>
+                    <div class="animation-controls">
+                        <select id="animation-select">
+                            <option value="">Select Animation</option>
+                        </select>
+                        <div class="playback-controls">
+                            <button id="btn-play" class="btn btn-sm">▶️</button>
+                            <button id="btn-pause" class="btn btn-sm">⏸️</button>
+                            <button id="btn-stop" class="btn btn-sm">⏹️</button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- ステータスバー -->
+        <footer class="app-footer">
+            <div class="status-left">
+                <span id="fps-counter">FPS: --</span>
+                <span id="mouse-coords">Mouse: (0, 0)</span>
+            </div>
+            <div class="status-center">
+                <span id="status-message">Ready</span>
+            </div>
+            <div class="status-right">
+                <span id="memory-usage">Memory: --</span>
+                <span id="app-version">v2.0.0</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- モーダルダイアログ -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Title</h3>
+                <button id="modal-close" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                Content
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="modal-confirm" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL 重複ロード防止 -->
+    <script>
+        // シングルトンガード: Spine WebGL ライブラリの重複ロード防止
+        window.__SPINE_WEBGL_LOADED__ = false;
+        
+        // デバッグ: 読み込み済みスクリプト一覧表示
+        window.addEventListener('DOMContentLoaded', () => {
+            const scripts = Array.from(document.scripts).map(s => s.src.split('/').pop()).filter(s => s);
+            console.log('📋 Document scripts:', scripts);
+            
+            // spine-webgl.js重複チェック
+            const spineScripts = scripts.filter(s => s.includes('spine-webgl'));
+            if (spineScripts.length > 1) {
+                console.warn('⚠️ Spine WebGL 重複ロード検出:', spineScripts);
+            }
+        });
+    </script>
+
+    <!-- JavaScript読み込み -->
+    <script src="js/app.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/spine-v2.js"></script>
+    <script src="js/export.js"></script>
+</body>
+</html>

@@ -323,8 +323,10 @@ class ProjectManager {
         this.app.state.project.homePageFolder = folder;
         this.app.uiManager.updateProjectStatus();
         
-        // WYSIWYG: index.htmlをプレビューエリアに表示
-        await this.app.dragDropHandler.loadHTMLPreview(folder);
+        // 🚨 緊急修正: iframe制約によるCanvas作成失敗を回避
+        // HTMLプレビュー機能を無効化し、直接Canvas作成方式に変更
+        console.log('🎯 HTMLプレビュー無効化 - 直接Canvas作成方式に切り替え');
+        this.app.dragDropHandler.initializeDirectPreview();
     }
 
     /**

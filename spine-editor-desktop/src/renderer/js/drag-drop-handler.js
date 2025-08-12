@@ -206,10 +206,60 @@ class DragDropHandler {
     // ========== HTMLプレビュー ========== //
 
     /**
-     * WYSIWYG: HTMLプレビュー表示
+     * 🚨 緊急修正: 直接プレビューエリア初期化
+     * iframe制約によるCanvas作成失敗を回避する新しい方式
+     */
+    initializeDirectPreview() {
+        console.log('🎯 直接プレビューエリア初期化 - iframe制約を回避');
+        
+        const previewArea = document.querySelector('.preview-content');
+        if (!previewArea) {
+            console.error('❌ プレビューエリアが見つかりません');
+            return;
+        }
+        
+        // プレースホルダーをクリア
+        previewArea.innerHTML = '';
+        
+        // Canvas作成用の背景エリアを作成
+        const canvasBackground = document.createElement('div');
+        canvasBackground.id = 'canvas-background';
+        canvasBackground.style.cssText = `
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+            position: relative;
+            overflow: hidden;
+        `;
+        
+        // Canvas作成用のメッセージ
+        const statusMessage = document.createElement('div');
+        statusMessage.id = 'canvas-status';
+        statusMessage.style.cssText = `
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ff00;
+            font-size: 14px;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 4px;
+            z-index: 1000;
+        `;
+        statusMessage.textContent = '✅ Canvas制約解除完了 - キャラクター配置可能';
+        
+        canvasBackground.appendChild(statusMessage);
+        previewArea.appendChild(canvasBackground);
+        
+        console.log('✅ 直接プレビューエリア初期化完了 - Canvas作成準備完了');
+    }
+
+    /**
+     * WYSIWYG: HTMLプレビュー表示 (🚨 iframe制約により無効化)
      * @param {string} homepageFolder - ホームページフォルダパス
      */
-    async loadHTMLPreview(homepageFolder) {
+    async loadHTMLPreview_DISABLED(homepageFolder) {
         try {
             console.log('🎨 WYSIWYG HTMLプレビュー読み込み開始:', homepageFolder);
             

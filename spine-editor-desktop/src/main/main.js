@@ -5,8 +5,111 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron')
 const path = require('path');
 const fs = require('fs').promises;
 const os = require('os');
+const express = require('express');
+const cors = require('cors');
+const net = require('net');
 
 console.log('🚀 Spine Editor Desktop - Main Process 起動');
+
+// Express.js統合HTTPサーバークラス（WebGL問題解決用）
+class ElectronHTTPServer {
+    constructor() {
+        this.app = express();
+        this.server = null;
+        this.port = 3000;
+    }
+
+    async startServer() {
+        console.log('🔧 HTTP環境構築開始 - WebGL問題解決対応');
+        
+        // CORS設定（セキュリティ確保）
+        this.app.use(cors({
+            origin: true,
+            credentials: true
+        }));
+        
+        // 静的ファイル配信設定
+        const rendererPath = path.join(__dirname, '../renderer');
+        const assetsPath = path.join(__dirname, '../../assets');
+        
+        console.log('📁 静的ファイル配信パス:');
+        console.log('  - renderer:', rendererPath);
+        console.log('  - assets:', assetsPath);
+        
+        // レンダラーファイル（HTML, JS, CSS）配信
+        this.app.use(express.static(rendererPath));
+        
+        // アセットファイル（Spine, images等）配信
+        this.app.use('/assets', express.static(assetsPath));
+        
+        // メインルート設定
+        this.app.get('/', (req, res) => {
+            const indexPath = path.join(rendererPath, 'index.html');
+            console.log('🏠 メインページ配信:', indexPath);
+            res.sendFile(indexPath);
+        });
+        
+        // 健康チェックエンドポイント
+        this.app.get('/health', (req, res) => {
+            res.json({
+                status: 'healthy',
+                timestamp: new Date().toISOString(),
+                purpose: 'WebGL問題解決用HTTP環境'
+            });
+        });
+
+        // ポート自動検出（競合回避）
+        this.port = await this.findAvailablePort(3000);
+        
+        return new Promise((resolve, reject) => {
+            this.server = this.app.listen(this.port, 'localhost', () => {
+                const serverUrl = `http://localhost:${this.port}`;
+                console.log(`✅ HTTP環境起動成功: ${serverUrl}`);
+                console.log('🎯 目的: Electron WebGL問題解決のためのHTTP環境提供');
+                resolve(serverUrl);
+            });
+            
+            this.server.on('error', (error) => {
+                console.error('❌ HTTPサーバー起動エラー:', error);
+                reject(error);
+            });
+        });
+    }
+
+    async findAvailablePort(startPort) {
+        console.log(`🔍 利用可能ポート検索開始: ${startPort}から`);
+        
+        for (let port = startPort; port < startPort + 100; port++) {
+            const available = await new Promise((resolve) => {
+                const testServer = net.createServer();
+                testServer.listen(port, 'localhost', () => {
+                    testServer.close();
+                    resolve(true);
+                });
+                testServer.on('error', () => {
+                    resolve(false);
+                });
+            });
+            
+            if (available) {
+                console.log(`✅ 利用可能ポート発見: ${port}`);
+                return port;
+            }
+        }
+        
+        console.warn(`⚠️ 利用可能ポート未発見、デフォルト使用: ${startPort}`);
+        return startPort;
+    }
+
+    stopServer() {
+        if (this.server) {
+            this.server.close(() => {
+                console.log('🔒 HTTPサーバー停止完了');
+            });
+            this.server = null;
+        }
+    }
+}
 
 // アプリケーション状態管理
 class SpineEditorApp {
@@ -18,6 +121,11 @@ class SpineEditorApp {
             spineCharactersFolder: null,
             currentProject: null
         };
+        
+        // HTTP環境統合（WebGL問題解決用）
+        this.httpServer = new ElectronHTTPServer();
+        this.httpServerUrl = null;
+        this.useHttpEnvironment = true; // WebGL問題解決のためHTTP環境をデフォルト有効
         
         // ファイル履歴管理
         this.fileHistory = {
@@ -35,33 +143,55 @@ class SpineEditorApp {
         console.log(`📊 起動モード: ${this.isDev ? 'Development' : 'Production'}`);
     }
 
-    // メインウィンドウ作成
-    createMainWindow() {
-        console.log('🖼️ メインウィンドウ作成開始');
+    // メインウィンドウ作成（HTTP環境統合版）
+    async createMainWindow() {
+        console.log('🖼️ メインウィンドウ作成開始（HTTP環境統合版）');
         
-        this.mainWindow = new BrowserWindow({
-            width: 1400,
-            height: 900,
-            minWidth: 1000,
-            minHeight: 700,
-            webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                enableRemoteModule: false,
-                preload: path.join(__dirname, '../renderer/preload.js'),
-                webSecurity: false  // Phase 1: ローカルファイル読み込み用（後で改善）
-            },
-            titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-            show: false // 準備完了まで非表示
+        try {
+            this.mainWindow = new BrowserWindow({
+                width: 1400,
+                height: 900,
+                minWidth: 1000,
+                minHeight: 700,
+                webPreferences: {
+                    nodeIntegration: false,
+                    contextIsolation: true,
+                    enableRemoteModule: false,
+                    preload: path.join(__dirname, '../renderer/preload.js')
+                    // 🔧 緊急修正: レンダリング障害修正のため危険設定を全て削除
+                    // webSecurity, experimentalFeatures, offscreen等がレンダリングプロセスを破壊
+                },
+                titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+                show: false // 準備完了まで非表示
+            });
+            
+            console.log('✅ BrowserWindow インスタンス作成成功');
+            
+        } catch (error) {
+            console.error('❌ BrowserWindow 作成エラー:', error);
+            throw error;
+        }
+
+        // 読み込み状況監視のためのWebContentsイベントハンドラー
+        this.mainWindow.webContents.on('did-start-loading', () => {
+            console.log('🔄 ページ読み込み開始');
         });
 
-        // レンダラープロセス読み込み
-        const indexPath = path.join(__dirname, '../renderer/index.html');
-        this.mainWindow.loadFile(indexPath);
+        this.mainWindow.webContents.on('did-finish-load', () => {
+            console.log('✅ ページ読み込み完了');
+        });
 
-        // 準備完了時に表示
+        this.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+            console.error('❌ ページ読み込み失敗:', errorCode, errorDescription, validatedURL);
+        });
+
+        this.mainWindow.webContents.on('dom-ready', () => {
+            console.log('📋 DOM準備完了');
+        });
+
+        // ready-to-show イベントハンドラーを先に設定
         this.mainWindow.once('ready-to-show', () => {
-            console.log('✅ メインウィンドウ準備完了');
+            console.log('✅ メインウィンドウ準備完了 - 表示開始');
             this.mainWindow.show();
             
             // 開発モード時は開発者ツールを開く
@@ -81,13 +211,72 @@ class SpineEditorApp {
             }
         });
 
-        // ウィンドウクローズイベント
+        // ウィンドウクローズイベント（HTTPサーバー停止処理追加）
         this.mainWindow.on('closed', () => {
             console.log('🔒 メインウィンドウクローズ');
             this.mainWindow = null;
+            
+            // HTTPサーバー停止
+            if (this.httpServer) {
+                this.httpServer.stopServer();
+            }
         });
 
-        console.log('✅ メインウィンドウ設定完了');
+        // WebGL問題解決: HTTP環境またはfile://環境の動的選択
+        if (this.useHttpEnvironment && this.httpServerUrl) {
+            // HTTP環境でのアプリケーション読み込み（WebGL問題解決）
+            const httpAppUrl = this.httpServerUrl + '/';
+            console.log('🌐 HTTP環境読み込み:', httpAppUrl);
+            console.log('🎯 目的: WebGL問題解決のためのHTTP環境使用');
+            
+            try {
+                await this.mainWindow.loadURL(httpAppUrl);
+                console.log('✅ HTTP環境読み込み成功');
+                
+                // HTTP読み込み成功後、強制的にウィンドウを表示（ready-to-showが発火しない場合の保険）
+                setTimeout(() => {
+                    if (this.mainWindow && !this.mainWindow.isVisible()) {
+                        console.log('⚠️ ready-to-show未発火 - 強制表示実行');
+                        this.mainWindow.show();
+                    }
+                }, 3000);
+                
+            } catch (error) {
+                console.error('❌ HTTP環境読み込み失敗:', error);
+                console.log('🔄 フォールバック: file://環境に切り替え');
+                await this.loadFileEnvironment();
+            }
+        } else {
+            // 従来のfile://環境
+            await this.loadFileEnvironment();
+        }
+    }
+    
+    // file://環境での読み込み（フォールバック用）
+    async loadFileEnvironment() {
+        const indexPath = path.join(__dirname, '../renderer/index.html');
+        console.log('📁 file://環境読み込み:', indexPath);
+        try {
+            await this.mainWindow.loadFile(indexPath);
+            console.log('✅ file://環境読み込み成功');
+            
+            // file://読み込み成功後、強制的にウィンドウを表示（ready-to-showが発火しない場合の保険）
+            setTimeout(() => {
+                if (this.mainWindow && !this.mainWindow.isVisible()) {
+                    console.log('⚠️ ready-to-show未発火 - 強制表示実行');
+                    this.mainWindow.show();
+                }
+            }, 2000);
+            
+        } catch (error) {
+            console.error('❌ file://環境読み込み失敗:', error);
+            
+            // 読み込み完全失敗時も最低限ウィンドウを表示
+            console.log('🚨 緊急表示 - 空ウィンドウ表示');
+            this.mainWindow.show();
+        }
+
+        console.log('✅ メインウィンドウ設定完了（フォールバック対応）');
     }
 
     // アプリケーションメニュー設定
@@ -145,6 +334,15 @@ class SpineEditorApp {
                     { role: 'reload', label: '再読み込み' },
                     { role: 'forceReload', label: '強制再読み込み' },
                     { role: 'toggleDevTools', label: '開発者ツール' },
+                    { type: 'separator' },
+                    {
+                        label: '🔍 Canvas診断プローブ',
+                        click: () => this.openCanvasProbe()
+                    },
+                    {
+                        label: '🔍 HTTP読み込みテスト',
+                        click: () => this.testHttpLoad()
+                    },
                     { type: 'separator' },
                     { role: 'resetZoom', label: 'ズームリセット' },
                     { role: 'zoomIn', label: 'ズームイン' },
@@ -943,29 +1141,231 @@ class SpineEditorApp {
         this.mainWindow?.webContents.send('show-export-dialog');
     }
 
-    // アプリケーション初期化
+    // 🔍 Canvas診断プローブウィンドウ
+    openCanvasProbe() {
+        console.log('🔍 Canvas診断プローブウィンドウ起動');
+        
+        const probeWindow = new BrowserWindow({
+            width: 800,
+            height: 600,
+            title: 'Canvas/WebGL 診断プローブ',
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                enableRemoteModule: false
+                // 診断用なので最小構成
+            },
+            show: true
+        });
+
+        // プローブページ読み込み
+        const probePath = path.join(__dirname, '../renderer/tests/canvas-probe.html');
+        probeWindow.loadFile(probePath);
+
+        // 開発者ツールを開く（診断結果確認用）
+        probeWindow.webContents.openDevTools();
+
+        console.log('✅ Canvas診断プローブウィンドウ起動完了');
+    }
+
+    // 🔍 HTTP読み込みテスト
+    testHttpLoad() {
+        console.log('🔍 HTTP読み込みテスト起動');
+        
+        const httpWindow = new BrowserWindow({
+            width: 1200,
+            height: 800,
+            title: 'HTTP読み込みテスト - index-clean.html',
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                enableRemoteModule: false
+            },
+            show: true
+        });
+
+        // HTTP読み込み（成功実証済み環境）
+        const httpUrl = 'http://127.0.0.1:8001/index-clean.html';
+        console.log('🔍 HTTP読み込み実行:', httpUrl);
+        
+        httpWindow.loadURL(httpUrl).then(() => {
+            console.log('✅ HTTP読み込み成功');
+        }).catch((error) => {
+            console.error('❌ HTTP読み込み失敗:', error);
+            // フォールバック: HTTPサーバー未起動の可能性
+            dialog.showErrorBox(
+                'HTTP読み込みテスト失敗', 
+                `URL: ${httpUrl}\n\nPython HTTPサーバーが起動しているか確認してください：\ncd /mnt/d/クラウドパートナーHP && python3 -m http.server 8001`
+            );
+        });
+
+        // 開発者ツールを開く
+        httpWindow.webContents.openDevTools();
+
+        console.log('✅ HTTP読み込みテストウィンドウ起動完了');
+    }
+
+    // アプリケーション初期化（HTTP環境統合版）
     async initialize() {
-        console.log('🔄 Spine Editor Desktop 初期化開始');
+        console.log('🔄 Spine Editor Desktop 初期化開始（HTTP環境統合版）');
         
-        this.createMainWindow();
-        this.createMenu();
-        this.setupIPC();
-        
-        console.log('✅ Spine Editor Desktop 初期化完了');
+        try {
+            // HTTP環境が有効な場合は先にサーバーを起動
+            if (this.useHttpEnvironment) {
+                console.log('🌐 HTTP環境初期化開始');
+                try {
+                    this.httpServerUrl = await this.httpServer.startServer();
+                    console.log(`✅ HTTP環境初期化完了: ${this.httpServerUrl}`);
+                } catch (httpError) {
+                    console.error('❌ HTTP環境初期化失敗:', httpError);
+                    console.log('🔄 HTTP環境無効化 - file://環境に切り替え');
+                    this.useHttpEnvironment = false;
+                    this.httpServerUrl = null;
+                }
+            }
+            
+            // メインウィンドウ作成（HTTP環境準備後）
+            console.log('🖼️ メインウィンドウ作成を開始...');
+            await this.createMainWindow();
+            console.log('✅ メインウィンドウ作成完了');
+            
+            console.log('🔧 メニュー作成を開始...');
+            this.createMenu();
+            console.log('✅ メニュー作成完了');
+            
+            console.log('🔗 IPC設定を開始...');
+            this.setupIPC();
+            console.log('✅ IPC設定完了');
+            
+            console.log('✅ Spine Editor Desktop 初期化完了（HTTP環境統合版）');
+            
+        } catch (error) {
+            console.error('❌ アプリケーション初期化エラー:', error);
+            console.error('❌ エラースタック:', error.stack);
+            
+            // 最後の手段：最小限のウィンドウ作成を試行
+            try {
+                console.log('🚨 緊急モード：最小限ウィンドウ作成試行');
+                if (!this.mainWindow) {
+                    this.mainWindow = new BrowserWindow({
+                        width: 800,
+                        height: 600,
+                        show: true, // 緊急時は即座に表示
+                        webPreferences: {
+                            nodeIntegration: false,
+                            contextIsolation: true
+                        }
+                    });
+                    console.log('✅ 緊急ウィンドウ作成成功');
+                }
+            } catch (emergencyError) {
+                console.error('❌ 緊急ウィンドウ作成も失敗:', emergencyError);
+                throw error; // 元のエラーを再スロー
+            }
+        }
     }
 }
 
 // アプリケーションインスタンス
 const spineEditorApp = new SpineEditorApp();
 
+// 🔧 GPU診断・強制有効化スイッチ（Canvas/WebGL問題切り分け用）
+console.log('🔍 GPU診断用スイッチ設定開始');
+
+// 🚨 WebGL強制有効化フラグ（診断結果: webgl: disabled_off 対策）
+app.commandLine.appendSwitch('ignore-gpu-blacklist');
+app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
+app.commandLine.appendSwitch('disable-gpu-sandbox');                    // GPU サンドボックス無効化
+app.commandLine.appendSwitch('enable-gpu-rasterization');              // GPU ラスタライゼーション強制
+app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');       // ネイティブGPUメモリ使用
+app.commandLine.appendSwitch('enable-gpu-memory-buffer-video-frames');  // GPUメモリバッファ強制
+app.commandLine.appendSwitch('disable-software-rasterizer');            // ソフトウェアレンダリング禁止
+app.commandLine.appendSwitch('disable-gpu-driver-bug-workarounds');     // GPUドライバ制限回避
+app.commandLine.appendSwitch('enable-webgl');                          // WebGL明示的有効化
+app.commandLine.appendSwitch('enable-webgl2');                         // WebGL2明示的有効化
+
+// Windows用ANGLE設定強化
+if (process.platform === 'win32') {
+    app.commandLine.appendSwitch('use-angle', 'd3d11');  // Windows: ANGLEをD3D11に
+    app.commandLine.appendSwitch('enable-d3d11');        // Direct3D 11強制
+}
+
+// 🔍 設定したスイッチの確認
+const setCommandLineSwitches = [
+    'ignore-gpu-blacklist',
+    'enable-accelerated-2d-canvas',
+    'disable-gpu-sandbox',
+    'enable-gpu-rasterization', 
+    'enable-native-gpu-memory-buffers',
+    'enable-gpu-memory-buffer-video-frames',
+    'disable-software-rasterizer',
+    'disable-gpu-driver-bug-workarounds',
+    'enable-webgl',
+    'enable-webgl2'
+];
+
+if (process.platform === 'win32') {
+    setCommandLineSwitches.push('use-angle', 'enable-d3d11');
+}
+
+console.log('✅ GPU診断用スイッチ設定完了 - WebGL強制有効化対応');
+console.log('🎯 設定されたスイッチ:', setCommandLineSwitches.length, '個');
+console.log('📋 詳細:', setCommandLineSwitches.join(', '));
+
 // Electronアプリケーションイベント
-app.whenReady().then(() => {
+// 🎯 Spine WebGL対応: GPU加速有効化（WebGLレンダリング許可）
+// app.disableHardwareAcceleration(); // ← WebGL阻害のため無効化
+
+app.whenReady().then(async () => {
     console.log('🎬 Electron Ready - アプリケーション初期化開始');
-    spineEditorApp.initialize();
+    
+    // 🔍 GPU状態診断（強化版）
+    try {
+        const gpuStatus = await app.getGPUFeatureStatus();
+        console.log('🔍 =====[ GPU診断結果 ]=====');
+        console.log('🎯 WebGL関連（修正対象）:');
+        console.log('  - webgl:', gpuStatus['webgl'] || 'undefined');
+        console.log('  - webgl2:', gpuStatus['webgl2'] || 'undefined');
+        console.log('📊 その他GPU機能:');
+        console.log('  - 2d_canvas:', gpuStatus['2d_canvas'] || 'undefined');
+        console.log('  - gpu_compositing:', gpuStatus['gpu_compositing'] || 'undefined');
+        console.log('  - multiple_raster_threads:', gpuStatus['multiple_raster_threads'] || 'undefined');
+        console.log('  - rasterization:', gpuStatus['rasterization'] || 'undefined');
+        console.log('  - video_decode:', gpuStatus['video_decode'] || 'undefined');
+        console.log('🔍 完全なGPU状態:', JSON.stringify(gpuStatus, null, 2));
+        
+        // 🚨 WebGL状態判定
+        const webglEnabled = gpuStatus['webgl'] === 'enabled';
+        const webgl2Enabled = gpuStatus['webgl2'] === 'enabled';
+        
+        if (webglEnabled && webgl2Enabled) {
+            console.log('✅ WebGL強制有効化成功 - Spine動作可能');
+        } else if (webglEnabled) {
+            console.log('⚠️ WebGL1のみ有効 - WebGL2無効、Spine動作制限あり');
+        } else {
+            console.log('❌ WebGL無効 - 追加設定が必要、Spine動作不可');
+        }
+        
+    } catch (error) {
+        console.error('❌ GPU状態取得エラー:', error);
+    }
+    
+    await spineEditorApp.initialize();
+    
+    // 🔍 Canvas診断プローブウィンドウ（別ウィンドウで診断）
+    setTimeout(() => {
+        spineEditorApp.openCanvasProbe();
+    }, 2000); // メインウィンドウ表示から2秒後
 });
 
 app.on('window-all-closed', () => {
     console.log('📱 全ウィンドウクローズ');
+    
+    // HTTPサーバー停止処理
+    if (spineEditorApp.httpServer) {
+        spineEditorApp.httpServer.stopServer();
+    }
+    
     if (process.platform !== 'darwin') {
         app.quit();
     }

@@ -1,0 +1,57 @@
+{
+  "name": "spine-editor-desktop-v2",
+  "version": "2.0.0",
+  "description": "Spine Editor Desktop v2.0 - 軽量・高速・シンプル設計",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "spine",
+    "editor",
+    "desktop",
+    "electron",
+    "webgl",
+    "animation"
+  ],
+  "author": "Cloud Partner",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "build": {
+    "appId": "com.cloudpartner.spine-editor-v2",
+    "productName": "Spine Editor v2",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
