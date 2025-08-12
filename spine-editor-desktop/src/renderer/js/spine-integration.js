@@ -86,32 +86,54 @@ class SpineIntegrationManager {
     async waitForSpine() {
         console.log('⏳ Spine WebGL読み込み完了を待機中...');
         
-        const timeout = 15000; // 10秒タイムアウト
+        // Electron環境診断情報
+        console.log('🔍 Electron環境診断:');
+        console.log('  - process.versions.electron:', typeof process !== 'undefined' ? process.versions?.electron : '未定義');
+        console.log('  - window.spine存在:', typeof window.spine !== 'undefined');
+        console.log('  - document scripts:', Array.from(document.scripts).map(s => s.src));
+        
+        const timeout = 30000; // 30秒に延長（Electron初回読み込み対応）
         const startTime = Date.now();
         
         return new Promise((resolve, reject) => {
             const checkSpine = () => {
-                // Spine WebGLライブラリの存在確認
-                if (typeof window.spine !== 'undefined' && 
-                    typeof window.spine.AssetManager === 'function' &&
-                    typeof window.spine.WebGLRenderer === 'function') {
+                // より詳細なSpine WebGLライブラリ存在確認
+                const spineExists = typeof window.spine !== 'undefined';
+                const assetManagerExists = spineExists && typeof window.spine.AssetManager === 'function';
+                const rendererExists = spineExists && typeof window.spine.WebGLRenderer === 'function';
+                
+                console.log(`🔍 Spine状態チェック: spine=${spineExists}, AssetManager=${assetManagerExists}, Renderer=${rendererExists}`);
+                
+                if (spineExists && assetManagerExists && rendererExists) {
                     console.log('✅ Spine WebGL読み込み確認完了');
                     resolve(true);
                     return;
                 }
                 
                 // タイムアウトチェック
-                if (Date.now() - startTime > timeout) {
-                    console.warn('⚠️ Spine WebGL読み込みタイムアウト');
-                    resolve(false); // Electron環境対応: エラーではなく警告として処理
+                const elapsed = Date.now() - startTime;
+                if (elapsed > timeout) {
+                    console.warn(`⚠️ Spine WebGL読み込みタイムアウト (${elapsed}ms)`);
+                    console.warn('  最終状態:', { spineExists, assetManagerExists, rendererExists });
+                    resolve(false); // フォールバックモードへ
                     return;
+                }
+                
+                // 進捗ログ（5秒ごと）
+                if (elapsed % 5000 < 100) {
+                    console.log(`⏳ Spine WebGL待機中... ${Math.floor(elapsed/1000)}s経過`);
                 }
                 
                 // 100ms後に再チェック
                 setTimeout(checkSpine, 100);
             };
             
-            checkSpine();
+            // DOMContentLoaded後に開始（Electron環境での読み込み順序対応）
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', checkSpine);
+            } else {
+                checkSpine();
+            }
         });
     }
 
@@ -163,6 +185,51 @@ class SpineIntegrationManager {
                     
                     setAnimation(trackIndex, animationName, loop) {
                         console.log(`🎬 アニメーション設定: ${animationName} (loop: ${loop})`);
+    }
+
+    // HTML要素フォールバック（Canvas 2Dも失敗時）
+    createHTMLFallback(canvasElement) {
+        console.log("🔄 HTML要素フォールバック: Canvas機能完全停止につき代替表示");
+        
+        // Canvasの代わりにdiv要素を作成
+        const fallbackDiv = document.createElement("div");
+        fallbackDiv.style.cssText = `
+            position: absolute;
+            width: ${canvasElement.width || 200}px;
+            height: ${canvasElement.height || 300}px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #45a049;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        `;
+        
+        fallbackDiv.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">🎭</div>
+            <div style="font-size: 16px; margin-bottom: 8px;">Character Display</div>
+            <div style="font-size: 12px; opacity: 0.8;">Canvas機能利用不可</div>
+        `;
+        
+        // Canvasを置き換え
+        if (canvasElement.parentNode) {
+            canvasElement.parentNode.replaceChild(fallbackDiv, canvasElement);
+        }
+        
+        return {
+            skeleton: null,
+            state: {
+                setAnimation: () => console.log("🎬 HTMLフォールバック表示中")
+            },
+            isHTMLFallback: true,
+            element: fallbackDiv
+        };
                         return { animation: { name: animationName } };
                     }
                     
@@ -189,6 +256,51 @@ class SpineIntegrationManager {
                     
                     readSkeletonData(skeletonData) {
                         console.log('📖 Skeleton データ読み込み');
+    }
+
+    // HTML要素フォールバック（Canvas 2Dも失敗時）
+    createHTMLFallback(canvasElement) {
+        console.log("🔄 HTML要素フォールバック: Canvas機能完全停止につき代替表示");
+        
+        // Canvasの代わりにdiv要素を作成
+        const fallbackDiv = document.createElement("div");
+        fallbackDiv.style.cssText = `
+            position: absolute;
+            width: ${canvasElement.width || 200}px;
+            height: ${canvasElement.height || 300}px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #45a049;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        `;
+        
+        fallbackDiv.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">🎭</div>
+            <div style="font-size: 16px; margin-bottom: 8px;">Character Display</div>
+            <div style="font-size: 12px; opacity: 0.8;">Canvas機能利用不可</div>
+        `;
+        
+        // Canvasを置き換え
+        if (canvasElement.parentNode) {
+            canvasElement.parentNode.replaceChild(fallbackDiv, canvasElement);
+        }
+        
+        return {
+            skeleton: null,
+            state: {
+                setAnimation: () => console.log("🎬 HTMLフォールバック表示中")
+            },
+            isHTMLFallback: true,
+            element: fallbackDiv
+        };
                         return {
                             name: 'character',
                             animations: {
@@ -532,8 +644,8 @@ class SpineIntegrationManager {
         
         const ctx = canvasElement.getContext("2d");
         if (!ctx) {
-            console.error("❌ Canvas 2D contextも取得できません");
-            return null;
+            console.error("❌ Canvas 2D contextも取得できません - HTML要素表示に切り替えます");
+            return this.createHTMLFallback(canvasElement);
         }
         
         // 基本的な2D表示
@@ -559,6 +671,51 @@ class SpineIntegrationManager {
         
         fadeAnimation();
         
+    }
+
+    // HTML要素フォールバック（Canvas 2Dも失敗時）
+    createHTMLFallback(canvasElement) {
+        console.log("🔄 HTML要素フォールバック: Canvas機能完全停止につき代替表示");
+        
+        // Canvasの代わりにdiv要素を作成
+        const fallbackDiv = document.createElement("div");
+        fallbackDiv.style.cssText = `
+            position: absolute;
+            width: ${canvasElement.width || 200}px;
+            height: ${canvasElement.height || 300}px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #45a049;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        `;
+        
+        fallbackDiv.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">🎭</div>
+            <div style="font-size: 16px; margin-bottom: 8px;">Character Display</div>
+            <div style="font-size: 12px; opacity: 0.8;">Canvas機能利用不可</div>
+        `;
+        
+        // Canvasを置き換え
+        if (canvasElement.parentNode) {
+            canvasElement.parentNode.replaceChild(fallbackDiv, canvasElement);
+        }
+        
+        return {
+            skeleton: null,
+            state: {
+                setAnimation: () => console.log("🎬 HTMLフォールバック表示中")
+            },
+            isHTMLFallback: true,
+            element: fallbackDiv
+        };
         return {
             skeleton: null,
             state: {
@@ -617,6 +774,51 @@ class SpineIntegrationManager {
         // 基本操作イベント
         this.addBasicInteractionEvents(characterId, canvas);
         
+    }
+
+    // HTML要素フォールバック（Canvas 2Dも失敗時）
+    createHTMLFallback(canvasElement) {
+        console.log("🔄 HTML要素フォールバック: Canvas機能完全停止につき代替表示");
+        
+        // Canvasの代わりにdiv要素を作成
+        const fallbackDiv = document.createElement("div");
+        fallbackDiv.style.cssText = `
+            position: absolute;
+            width: ${canvasElement.width || 200}px;
+            height: ${canvasElement.height || 300}px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #45a049;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        `;
+        
+        fallbackDiv.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">🎭</div>
+            <div style="font-size: 16px; margin-bottom: 8px;">Character Display</div>
+            <div style="font-size: 12px; opacity: 0.8;">Canvas機能利用不可</div>
+        `;
+        
+        // Canvasを置き換え
+        if (canvasElement.parentNode) {
+            canvasElement.parentNode.replaceChild(fallbackDiv, canvasElement);
+        }
+        
+        return {
+            skeleton: null,
+            state: {
+                setAnimation: () => console.log("🎬 HTMLフォールバック表示中")
+            },
+            isHTMLFallback: true,
+            element: fallbackDiv
+        };
         return { characterId, canvas, mode: 'fallback-2d' };
     }
 
@@ -1847,7 +2049,7 @@ class SpineIntegrationManager {
             const spineLoaded = await this.waitForSpine();
             if (!spineLoaded) {
                 console.warn("⚠️ Spine WebGL読み込み失敗 - フォールバックモードで続行");
-                return this.createSpineFallback(spineData, canvasElement);
+                return this.createSpineFallback(spineData, canvas);
             }
             
             // AssetManagerを使用した正しいSpine読み込み（マニュアル準拠）
@@ -1961,12 +2163,57 @@ class SpineIntegrationManager {
             }
             
             console.log('✅ Spineインスタンス作成完了（AssetManager方式）');
-            return { skeleton, state, data: skeletonData, canvas, gl };
-            
+            return { skeleton, state, gl, canvas }; // 作成したSpineインスタンスオブジェクトを返す
         } catch (error) {
-            console.error('❌ Spineインスタンス作成エラー:', error);
+            console.error("❌ AssetManager方式でSpineインスタンス作成失敗:", error);
             return null;
         }
+    }
+
+    // HTML要素フォールバック（Canvas 2Dも失敗時）
+    createHTMLFallback(canvasElement) {
+        console.log("🔄 HTML要素フォールバック: Canvas機能完全停止につき代替表示");
+        
+        // Canvasの代わりにdiv要素を作成
+        const fallbackDiv = document.createElement("div");
+        fallbackDiv.style.cssText = `
+            position: absolute;
+            width: ${canvasElement.width || 200}px;
+            height: ${canvasElement.height || 300}px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #45a049;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        `;
+        
+        fallbackDiv.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">🎭</div>
+            <div style="font-size: 16px; margin-bottom: 8px;">Character Display</div>
+            <div style="font-size: 12px; opacity: 0.8;">Canvas機能利用不可</div>
+        `;
+        
+        // Canvasを置き換え
+        if (canvasElement.parentNode) {
+            canvasElement.parentNode.replaceChild(fallbackDiv, canvasElement);
+        }
+        
+        return {
+            skeleton: null,
+            state: {
+                setAnimation: () => console.log("🎬 HTMLフォールバック表示中")
+            },
+            isHTMLFallback: true,
+            element: fallbackDiv
+        };
+            
     }
 
     // === スナップ・グリッド機能システム === //

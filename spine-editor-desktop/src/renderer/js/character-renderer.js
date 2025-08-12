@@ -245,7 +245,18 @@ class CharacterRenderer {
         canvasElement.height = 160;
         canvasElement.style.cssText = this.getCanvasStyles(position);
         
+        // DOM追加後にContext取得（Electron環境対応）
+        parentElement.appendChild(canvasElement);
+        
         const ctx = canvasElement.getContext('2d');
+        if (!ctx) {
+            console.error(`❌ Canvas 2D context取得失敗: ${characterData.name} - プレースホルダー表示に切り替えます`);
+            canvasElement.remove();
+            this.createPlaceholderElement(characterData, position, parentElement);
+            return true;
+        }
+        
+        console.log(`✅ Canvas 2D context取得成功: ${characterData.name}`);
         
         // 背景グラデーション
         const gradient = ctx.createLinearGradient(0, 0, 0, 160);
@@ -259,9 +270,6 @@ class CharacterRenderer {
         
         // ドラッグ移動機能追加
         this.app.dragDropHandler.makeElementDraggableSimple(canvasElement);
-        
-        // 親要素に追加
-        parentElement.appendChild(canvasElement);
         
         console.log('✅ Canvasフォールバック表示作成完了:', characterData.name);
         return true;
