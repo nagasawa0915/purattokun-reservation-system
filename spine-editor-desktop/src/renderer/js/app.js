@@ -111,6 +111,9 @@ class SpineEditorApp {
         
         // アウトライナー
         this.bindOutlinerEvents();
+        
+        // プレビューエリアのドロップゾーン設定
+        this.bindPreviewDropEvents();
     }
 
     // プロパティイベント
@@ -153,6 +156,114 @@ class SpineEditorApp {
                 this.selectCharacter(e.target.dataset.characterId);
             } else if (e.target.classList.contains('animation-item')) {
                 this.previewAnimation(e.target.dataset.characterId, e.target.dataset.animation);
+            }
+        });
+    }
+    
+    bindPreviewDropEvents() {
+        const previewArea = document.querySelector('.preview-content');
+        if (!previewArea) {
+            console.warn('⚠️ プレビューエリアが見つかりません');
+            return;
+        }
+        
+        console.log('🎯 プレビューエリアドロップゾーン設定開始');
+        
+        // ドラッグオーバー
+        previewArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            previewArea.style.background = 'rgba(0, 122, 204, 0.1)';
+            console.log('🎯 ドラッグオーバー');
+        });
+        
+        // ドラッグリーブ
+        previewArea.addEventListener('dragleave', (e) => {
+            if (!previewArea.contains(e.relatedTarget)) {
+                previewArea.style.background = '';
+                console.log('🎯 ドラッグリーブ');
+            }
+        });
+        
+        // ドロップ
+        previewArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            previewArea.style.background = '';
+            
+            const characterData = e.dataTransfer.getData('application/spine-character');
+            console.log('🎭 プレビューエリアドロップ:', characterData);
+            
+            if (characterData) {
+                const data = JSON.parse(characterData);
+                console.log('✅ キャラクターデータ解析完了:', data);
+                
+                // iframe内へのドロップ処理
+                this.handleDirectPreviewDrop(data, e);
+            }
+        });
+        
+        console.log('✅ プレビューエリアドロップゾーン設定完了');
+    }
+    
+    handleDirectPreviewDrop(draggedData, event) {
+        console.log('🎭 直接プレビュードロップ処理:', draggedData.name);
+        
+        // 完全なキャラクターデータを取得
+        const fullCharacterData = this.state.characters.get(draggedData.id);
+        if (!fullCharacterData) {
+            console.error('❌ キャラクターデータが見つかりません:', draggedData.id);
+            return;
+        }
+        
+        console.log('📋 完全なキャラクターデータ取得（直接ドロップ）:', {
+            name: fullCharacterData.name,
+            pngFile: fullCharacterData.pngFile,
+            spineFiles: fullCharacterData.spineFiles
+        });
+        
+        // プレビューエリアの座標計算
+        const rect = event.currentTarget.getBoundingClientRect();
+        const position = {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
+        };
+        
+        // キャラクター配置
+        this.addCharacterDirectly(fullCharacterData, position);
+    }
+    
+    makeElementDraggableSimple(element) {
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        
+        element.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = element.getBoundingClientRect();
+            const parentRect = element.parentElement.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            element.style.cursor = 'grabbing';
+            element.style.opacity = '0.8';
+            console.log('🎯 シンプルドラッグ開始');
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const parentRect = element.parentElement.getBoundingClientRect();
+            const newX = e.clientX - parentRect.left - dragOffset.x;
+            const newY = e.clientY - parentRect.top - dragOffset.y;
+            
+            element.style.left = `${newX}px`;
+            element.style.top = `${newY}px`;
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                element.style.cursor = 'move';
+                element.style.opacity = '1';
+                console.log('✅ シンプルドラッグ完了');
             }
         });
     }
@@ -537,6 +648,9 @@ class SpineEditorApp {
         console.log('🏠 ホームページフォルダ設定:', folder);
         this.state.project.homePageFolder = folder;
         this.updateProjectStatus();
+        
+        // WYSIWYG: index.htmlをプレビューエリアに表示
+        await this.loadHTMLPreview(folder);
     }
 
     async setSpineFolder(folder) {
@@ -582,6 +696,10 @@ class SpineEditorApp {
                             name: characterName,
                             folderPath: characterPath,
                             spineFiles: analysis.spineFiles,
+                            // PNG画像ファイルのパスを追加
+                            pngFile: analysis.spineFiles.images && analysis.spineFiles.images.length > 0 
+                                ? analysis.spineFiles.images[0] 
+                                : null,
                             x: 18, y: 49, scale: 0.55, rotation: 0, opacity: 1.0,
                             animation: 'taiki',
                             visible: true,
@@ -738,6 +856,31 @@ class SpineEditorApp {
             charEl.className = 'tree-item character-item';
             charEl.dataset.characterId = id;
             charEl.innerHTML = `🎭 ${character.name}`;
+            
+            // WYSIWYG: ドラッグ可能設定
+            charEl.draggable = true;
+            charEl.addEventListener('dragstart', (e) => {
+                console.log('🎭 キャラクタードラッグ開始:', character.name);
+                e.dataTransfer.setData('application/spine-character', JSON.stringify({
+                    id: id,
+                    name: character.name,
+                    animations: character.animations
+                }));
+                e.dataTransfer.effectAllowed = 'copy';
+                charEl.style.opacity = '0.5';
+                
+                // デバッグ情報
+                console.log('📝 ドラッグデータ設定完了:', {
+                    id: id,
+                    name: character.name,
+                    animations: character.animations
+                });
+            });
+            
+            charEl.addEventListener('dragend', (e) => {
+                console.log('🎭 キャラクタードラッグ終了:', character.name);
+                charEl.style.opacity = '1';
+            });
             
             if (this.state.selectedCharacter === id) {
                 charEl.classList.add('selected');
@@ -1494,6 +1637,453 @@ class SpineEditorApp {
         }
     }
 
+    // WYSIWYG: HTMLプレビュー表示
+    async loadHTMLPreview(homepageFolder) {
+        try {
+            console.log('🎨 WYSIWYG HTMLプレビュー読み込み開始:', homepageFolder);
+            
+            const indexPath = `${homepageFolder}/index.html`;
+            const previewArea = document.querySelector('.preview-content');
+            
+            if (!previewArea) {
+                console.error('❌ プレビューエリアが見つかりません');
+                return;
+            }
+            
+            // 既存のコンテンツをクリア
+            previewArea.innerHTML = '';
+            
+            // iframeでindex.htmlを表示（WYSIWYGプレビュー）
+            const iframe = document.createElement('iframe');
+            
+            // Electron用のパス設定
+            const normalizedPath = indexPath.replace(/\\/g, '/');
+            iframe.src = `file:///${normalizedPath}`;
+            
+            // セキュリティ設定
+            iframe.sandbox = 'allow-scripts allow-same-origin allow-forms';
+            iframe.style.cssText = `
+                width: 100%;
+                height: 100%;
+                border: none;
+                background: white;
+                overflow: hidden;
+            `;
+            
+            console.log('📄 iframe読み込みパス:', iframe.src);
+            
+            // iframe読み込み完了イベント
+            iframe.onload = () => {
+                console.log('✅ WYSIWYG HTMLプレビュー表示完了');
+                this.setupWYSIWYGEditMode(iframe);
+            };
+            
+            iframe.onerror = (error) => {
+                console.error('❌ HTMLプレビュー読み込みエラー:', error);
+                this.showFallbackPreview(previewArea);
+            };
+            
+            previewArea.appendChild(iframe);
+            
+        } catch (error) {
+            console.error('❌ HTMLプレビュー読み込み失敗:', error);
+        }
+    }
+    
+    // WYSIWYG編集モードセットアップ
+    setupWYSIWYGEditMode(iframe) {
+        console.log('🎯 WYSIWYG編集モード初期化開始');
+        
+        try {
+            // iframe内のドキュメントにアクセス
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            // ドラッグ&ドロップエリアとして設定
+            this.setupDropZone(iframeDoc);
+            
+            // 編集可能にするためのスタイル追加
+            const style = iframeDoc.createElement('style');
+            style.textContent = `
+                body { position: relative !important; }
+                .spine-character-editing {
+                    cursor: move !important;
+                    outline: 2px dashed #007acc !important;
+                    outline-offset: 2px !important;
+                }
+                .drop-zone-active {
+                    background: rgba(0, 122, 204, 0.1) !important;
+                    transition: background 0.2s ease !important;
+                }
+            `;
+            iframeDoc.head.appendChild(style);
+            
+            console.log('✅ WYSIWYG編集モード初期化完了');
+            
+        } catch (error) {
+            console.warn('⚠️ WYSIWYG編集モード初期化エラー:', error.message);
+            console.log('📝 クロスオリジン制限により、簡易モードで動作します');
+        }
+    }
+    
+    // ドラッグ&ドロップエリア設定
+    setupDropZone(doc) {
+        const body = doc.body;
+        
+        // ドラッグオーバーイベント
+        body.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            body.classList.add('drop-zone-active');
+        });
+        
+        // ドラッグリーブイベント
+        body.addEventListener('dragleave', (e) => {
+            if (!body.contains(e.relatedTarget)) {
+                body.classList.remove('drop-zone-active');
+            }
+        });
+        
+        // ドロップイベント
+        body.addEventListener('drop', (e) => {
+            e.preventDefault();
+            body.classList.remove('drop-zone-active');
+            
+            const characterData = e.dataTransfer.getData('application/spine-character');
+            if (characterData) {
+                this.handleCharacterDrop(JSON.parse(characterData), e, doc);
+            }
+        });
+    }
+    
+    // キャラクタードロップ処理
+    handleCharacterDrop(draggedData, event, doc) {
+        console.log('🎭 キャラクタードロップ:', draggedData.name, 'at', event.clientX, event.clientY);
+        
+        // 完全なキャラクターデータを取得
+        const fullCharacterData = this.state.characters.get(draggedData.id);
+        if (!fullCharacterData) {
+            console.error('❌ キャラクターデータが見つかりません:', draggedData.id);
+            return;
+        }
+        
+        console.log('📋 完全なキャラクターデータ取得:', {
+            name: fullCharacterData.name,
+            pngFile: fullCharacterData.pngFile,
+            spineFiles: fullCharacterData.spineFiles
+        });
+        
+        // 直接プレビューに配置（SpineIntegration不要）
+        const rect = event.currentTarget.getBoundingClientRect();
+        const offsetX = event.clientX - rect.left;
+        const offsetY = event.clientY - rect.top;
+        this.addCharacterDirectly(fullCharacterData, { x: offsetX, y: offsetY });
+    }
+    
+    // 直接キャラクター配置
+    addCharacterDirectly(characterData, position) {
+        console.log('🎭 直接キャラクター配置:', characterData.name, position);
+        console.log('📋 キャラクターデータ詳細:', {
+            name: characterData.name,
+            pngFile: characterData.pngFile,
+            spineFiles: characterData.spineFiles
+        });
+        
+        const previewArea = document.querySelector('.preview-content');
+        if (!previewArea) {
+            console.error('❌ プレビューエリアが見つかりません');
+            return;
+        }
+        
+        // 初回配置時にプレースホルダーをクリア
+        if (previewArea.querySelector('.canvas-placeholder')) {
+            previewArea.innerHTML = '';
+        }
+        
+        // 常に2D Canvas表示を試行（最も安定）
+        if (this.create2DCanvas(characterData, position, previewArea)) {
+            console.log('✅ 2D Canvas配置完了');
+        } else {
+            // 最終フォールバック：プレースホルダー表示
+            this.createPlaceholderElement(characterData, position, previewArea);
+            console.log('✅ プレースホルダー配置完了（最終フォールバック）');
+        }
+    }
+    
+    // Spineキャンバス作成
+    createSpineCanvas(characterData, position, parentElement) {
+        try {
+            console.log('🎮 Spineキャンバス作成開始:', characterData.name);
+            
+            // SpineIntegrationが利用可能かチェック
+            if (!this.spineIntegration || !this.spineIntegration.characters) {
+                console.warn('⚠️ SpineIntegration未初期化 - プレースホルダーで代替');
+                return false;
+            }
+            
+            // キャンバス要素作成
+            const canvasElement = document.createElement('canvas');
+            canvasElement.id = `spine-canvas-${characterData.name}`;
+            canvasElement.className = 'spine-canvas-wysiwyg';
+            canvasElement.width = 200;
+            canvasElement.height = 300;
+            canvasElement.style.cssText = `
+                position: absolute;
+                left: ${position.x}px;
+                top: ${position.y}px;
+                width: 200px;
+                height: 300px;
+                cursor: move;
+                z-index: 1000;
+                border: 1px solid #007acc;
+                border-radius: 4px;
+                background: rgba(0, 0, 0, 0.05);
+            `;
+            
+            // ドラッグ移動機能追加
+            this.makeElementDraggableSimple(canvasElement);
+            
+            // SpineIntegrationでアニメーション初期化
+            this.spineIntegration.renderCharacterToCanvas(characterData.name, canvasElement);
+            
+            parentElement.appendChild(canvasElement);
+            
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Spineキャンバス作成エラー:', error);
+            return false;
+        }
+    }
+    
+    // 2D Canvas作成（実際のキャラクター画像表示）
+    create2DCanvas(characterData, position, parentElement) {
+        try {
+            console.log('🎨 実際のキャラクター画像表示開始:', characterData.name);
+            
+            // 実際のキャラクター画像があるか確認
+            if (characterData.pngFile) {
+                return this.createCharacterImageDisplay(characterData, position, parentElement);
+            } else {
+                return this.createCanvasFallback(characterData, position, parentElement);
+            }
+            
+        } catch (error) {
+            console.error('❌ キャラクター表示作成エラー:', error);
+            return false;
+        }
+    }
+    
+    // 実際のキャラクター画像表示
+    createCharacterImageDisplay(characterData, position, parentElement) {
+        try {
+            console.log('🖼️ キャラクター画像表示作成:', characterData.pngFile);
+            
+            // コンテナ作成
+            const containerElement = document.createElement('div');
+            containerElement.id = `character-img-${characterData.name}`;
+            containerElement.className = 'character-image-display';
+            containerElement.style.cssText = `
+                position: absolute;
+                left: ${position.x}px;
+                top: ${position.y}px;
+                cursor: move;
+                z-index: 1000;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                background: rgba(255,255,255,0.1);
+                backdrop-filter: blur(10px);
+                padding: 8px;
+                border: 2px solid rgba(255,255,255,0.2);
+            `;
+            
+            // 実際のキャラクター画像
+            const imgElement = document.createElement('img');
+            imgElement.style.cssText = `
+                max-width: 150px;
+                max-height: 200px;
+                display: block;
+                border-radius: 6px;
+            `;
+            
+            // 画像読み込み完了時の処理
+            imgElement.onload = () => {
+                console.log('✅ キャラクター画像読み込み完了:', characterData.name);
+                
+                // キャラクター名前ラベル追加
+                const labelElement = document.createElement('div');
+                labelElement.style.cssText = `
+                    text-align: center;
+                    margin-top: 8px;
+                    color: #ffffff;
+                    font-size: 12px;
+                    font-weight: bold;
+                    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+                    background: rgba(0,0,0,0.6);
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                `;
+                labelElement.textContent = characterData.name;
+                containerElement.appendChild(labelElement);
+            };
+            
+            // 画像読み込みエラー時のフォールバック
+            imgElement.onerror = () => {
+                console.error('❌ キャラクター画像読み込み失敗:', characterData.pngFile);
+                containerElement.innerHTML = `
+                    <div style="
+                        width: 150px;
+                        height: 200px;
+                        background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-direction: column;
+                        color: white;
+                        font-size: 14px;
+                        font-weight: bold;
+                        text-align: center;
+                        border-radius: 6px;
+                    ">
+                        <div style="font-size: 32px;">🎭</div>
+                        <div style="margin-top: 8px;">${characterData.name}</div>
+                        <div style="font-size: 10px; opacity: 0.8; margin-top: 4px;">画像読み込み失敗</div>
+                    </div>
+                `;
+            };
+            
+            // 画像ファイルパスから画像URL作成
+            if (typeof electronAPI !== 'undefined') {
+                // Electronの場合、ファイルパスから直接読み込み
+                imgElement.src = 'file://' + characterData.pngFile.replace(/\\/g, '/');
+            } else {
+                // ウェブブラウザの場合、相対パス変換
+                const relativePath = characterData.pngFile.replace(/\\/g, '/');
+                imgElement.src = relativePath;
+            }
+            
+            containerElement.appendChild(imgElement);
+            
+            // ドラッグ移動機能追加
+            this.makeElementDraggableSimple(containerElement);
+            
+            // 親要素に追加
+            parentElement.appendChild(containerElement);
+            
+            console.log('✅ キャラクター画像表示作成完了:', characterData.name);
+            return true;
+            
+        } catch (error) {
+            console.error('❌ キャラクター画像表示作成エラー:', error);
+            return false;
+        }
+    }
+    
+    // Canvasフォールバック表示
+    createCanvasFallback(characterData, position, parentElement) {
+        const canvasElement = document.createElement('canvas');
+        canvasElement.id = `canvas-2d-${characterData.name}`;
+        canvasElement.className = 'character-canvas-2d';
+        canvasElement.width = 120;
+        canvasElement.height = 160;
+        canvasElement.style.cssText = `
+            position: absolute;
+            left: ${position.x}px;
+            top: ${position.y}px;
+            cursor: move;
+            z-index: 1000;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        `;
+        
+        const ctx = canvasElement.getContext('2d');
+        
+        // 背景グラデーション
+        const gradient = ctx.createLinearGradient(0, 0, 0, 160);
+        gradient.addColorStop(0, '#4a90e2');
+        gradient.addColorStop(1, '#357abd');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 120, 160);
+        
+        // キャラクター名前表示
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🎭', 60, 40);
+        
+        ctx.font = '12px Arial';
+        ctx.fillText(characterData.name, 60, 70);
+        
+        ctx.font = '10px Arial';
+        ctx.fillStyle = '#e6f3ff';
+        ctx.fillText('画像なし', 60, 90);
+        
+        // ドラッグ移動機能追加
+        this.makeElementDraggableSimple(canvasElement);
+        
+        // 親要素に追加
+        parentElement.appendChild(canvasElement);
+        
+        console.log('✅ Canvasフォールバック表示作成完了:', characterData.name);
+        return true;
+    }
+    
+    // プレースホルダー要素作成（フォールバック）
+    createPlaceholderElement(characterData, position, parentElement) {
+        const characterElement = document.createElement('div');
+        characterElement.id = `spine-character-${characterData.name}`;
+        characterElement.className = 'spine-character-wysiwyg';
+        characterElement.style.cssText = `
+            position: absolute;
+            left: ${position.x}px;
+            top: ${position.y}px;
+            width: 120px;
+            height: 160px;
+            border: 2px dashed #007acc;
+            background: rgba(0, 122, 204, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #007acc;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: move;
+            z-index: 1000;
+            border-radius: 4px;
+        `;
+        
+        characterElement.innerHTML = `
+            <div style="font-size: 24px;">🎭</div>
+            <div style="margin-top: 4px;">${characterData.name}</div>
+            <div style="font-size: 10px; opacity: 0.7; margin-top: 2px;">Loading...</div>
+        `;
+        
+        // ドラッグ移動機能追加
+        this.makeElementDraggableSimple(characterElement);
+        
+        parentElement.appendChild(characterElement);
+    }
+    
+    // フォールバックプレビュー表示
+    showFallbackPreview(previewArea) {
+        previewArea.innerHTML = `
+            <div style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                background: #1a1a1a;
+                color: #ccc;
+                font-size: 14px;
+                flex-direction: column;
+            ">
+                <div>📄 HTMLプレビューが利用できません</div>
+                <div style="font-size: 12px; margin-top: 8px; opacity: 0.7;">
+                    簡易編集モードで続行します
+                </div>
+            </div>
+        `;
+    }
+    
     // 通知表示
     showNotification(message, type = 'info') {
         console.log(`📢 [${type.toUpperCase()}] ${message}`);
