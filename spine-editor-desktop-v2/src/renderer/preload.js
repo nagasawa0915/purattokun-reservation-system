@@ -11,9 +11,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileDialog: (options) => ipcRenderer.invoke('dialog-save-file', options),
   
   // ファイルシステム操作
-  readFile: (filePath) => ipcRenderer.invoke('fs-read-file', filePath),
-  writeFile: (filePath, data) => ipcRenderer.invoke('fs-write-file', filePath, data),
-  scanDirectory: (folderPath) => ipcRenderer.invoke('fs-scan-directory', folderPath),
+  fs: {
+    // 基本ファイル操作
+    readFile: (filePath) => ipcRenderer.invoke('fs-read-file', filePath),
+    writeFile: (filePath, data) => ipcRenderer.invoke('fs-write-file', filePath, data),
+    
+    // フォルダ・ディレクトリ操作
+    selectFolder: (options) => ipcRenderer.invoke('dialog-open-file', { 
+      ...options, 
+      properties: ['openDirectory'] 
+    }),
+    scanDirectory: (folderPath, extensions) => ipcRenderer.invoke('fs-scan-directory', folderPath, extensions),
+    
+    // パス・ファイル存在確認
+    pathExists: (path) => ipcRenderer.invoke('fs-path-exists', path),
+    pathReadable: (path) => ipcRenderer.invoke('fs-path-readable', path),
+    getFileStats: (filePath) => ipcRenderer.invoke('fs-get-file-stats', filePath),
+  },
   
   // システム操作
   openPath: (path) => ipcRenderer.invoke('shell-open-item', path),

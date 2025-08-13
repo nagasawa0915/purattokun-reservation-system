@@ -325,6 +325,40 @@ ipcMain.handle('fs-write-file', async (event, filePath, data) => {
 
 ipcMain.handle('shell-open-item', async (event, path) => shell.openPath(path));
 
+// ProjectLoader用の追加IPC機能
+ipcMain.handle('fs-path-exists', async (event, filePath) => {
+  try {
+    await fs.promises.access(filePath);
+    return true;
+  } catch (error) {
+    return false;
+  }
+});
+
+ipcMain.handle('fs-path-readable', async (event, filePath) => {
+  try {
+    await fs.promises.access(filePath, fs.constants.R_OK);
+    return true;
+  } catch (error) {
+    return false;
+  }
+});
+
+ipcMain.handle('fs-get-file-stats', async (event, filePath) => {
+  try {
+    const stats = await fs.promises.stat(filePath);
+    return {
+      success: true,
+      size: stats.size,
+      mtime: stats.mtime,
+      isFile: stats.isFile(),
+      isDirectory: stats.isDirectory()
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 
 // URL開くためのIPC処理
 ipcMain.handle('open-url', async (event, url) => {
@@ -446,7 +480,7 @@ ipcMain.handle('fs-scan-directory', async (event, folderPath, extensions = ['.js
  * フォルダを再帰的にスキャンして指定拡張子のファイルを検索
  */
 async function scanDirectoryRecursive(dirPath, extensions) {
-  const foundFiles = { json: [], atlas: [], png: [] };
+  const foundFiles = { json: [], atlas: [], png: [], html: [] };
   
   async function scanDir(currentPath) {
     try {
@@ -468,6 +502,8 @@ async function scanDirectoryRecursive(dirPath, extensions) {
             foundFiles.atlas.push(fullPath);
           } else if (ext === '.png') {
             foundFiles.png.push(fullPath);
+          } else if (ext === '.html') {
+            foundFiles.html.push(fullPath);
           }
         }
       }

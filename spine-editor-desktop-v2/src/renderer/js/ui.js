@@ -1,40 +1,41 @@
 /**
- * Spine Editor Desktop v2.0 - UI Manager
- * ユーザーインターフェース制御
+ * Spine Editor Desktop v2.0 - UI Manager (Main Controller)
+ * UI統合管理・各マネージャーの制御
  */
 
 class UIManager {
   constructor(app) {
     this.app = app;
+    
+    // 分割されたUIマネージャー
+    this.panels = null;
+    this.menus = null;
+    this.dialogs = null;
+    
+    // 統合状態管理
+    this.isInitialized = false;
     this.currentTool = 'select';
     this.zoomLevel = 100;
-    this.modalVisible = false;
-    
-    // UI要素参照
-    this.elements = {};
-    
-    // イベントハンドラーマップ（最適化）
-    this.handlers = new Map();
-    this.cachedElements = new Map();
   }
 
   /**
-   * UI初期化
+   * UI統合システム初期化
    */
   async init() {
-    console.log('🎨 Initializing UI Manager v2.0...');
+    console.log('🎨 Initializing UI Manager v2.0 (Integrated System)...');
     
     try {
-      // DOM要素参照取得
-      this.initElements();
+      // 各UIマネージャー初期化
+      await this.initManagers();
       
-      // イベントリスナー設定
-      this.setupEventListeners();
+      // 統合イベント設定
+      this.setupIntegratedEvents();
       
       // 初期状態設定
       this.setupInitialState();
       
-      console.log('✅ UI Manager initialized');
+      this.isInitialized = true;
+      console.log('✅ UI Manager (Integrated) initialized');
       
     } catch (error) {
       console.error('❌ UI Manager initialization failed:', error);
@@ -43,95 +44,61 @@ class UIManager {
   }
 
   /**
-   * DOM要素参照初期化（キャッシュ最適化）
+   * 各UIマネージャー初期化
    */
-  initElements() {
-    const criticalIds = [
-      'btn-open-project', 'btn-save-project', 'btn-export-package',
-      'spine-viewport', 'zoom-slider', 'zoom-value',
-      'pos-x', 'pos-y', 'scale-x', 'scale-y',
-      'modal-overlay', 'character-list'
-    ];
-
-    // 重要な要素のみ事前キャッシュ
-    criticalIds.forEach(id => {
-      const element = document.getElementById(id);
-      if (element) {
-        this.elements[id] = element;
-        this.cachedElements.set(id, element);
-      }
-    });
-
-    console.log(`⚙️ UI Elements cached: ${criticalIds.length} critical elements`);
-  }
-
-  /**
-   * イベントリスナー設定
-   */
-  setupEventListeners() {
-    // Header buttons
-    this.addClickHandler('btn-open-project', () => this.app.openProject());
-    this.addClickHandler('btn-save-project', () => this.app.saveProject());
-    this.addClickHandler('btn-export-package', () => this.app.exportPackage());
-    this.addClickHandler('btn-toggle-preview', () => this.togglePreview());
-    this.addClickHandler('btn-settings', () => this.openSettings());
-
-    // Toolbar
-    this.addClickHandler('tool-select', () => this.selectTool('select'));
-    this.addClickHandler('tool-move', () => this.selectTool('move'));
-    this.addClickHandler('tool-scale', () => this.selectTool('scale'));
-    this.addClickHandler('btn-reset-view', () => this.resetView());
-
-    // Zoom slider
-    if (this.elements['zoom-slider']) {
-      this.elements['zoom-slider'].addEventListener('input', (e) => {
-        this.setZoom(parseInt(e.target.value));
-      });
-    }
-
-    // Inspector controls
-    this.addChangeHandler('pos-x', (value) => this.updateProperty('posX', parseFloat(value)));
-    this.addChangeHandler('pos-y', (value) => this.updateProperty('posY', parseFloat(value)));
-    this.addChangeHandler('scale-x', (value) => this.updateProperty('scaleX', parseFloat(value)));
-    this.addChangeHandler('scale-y', (value) => this.updateProperty('scaleY', parseFloat(value)));
-
-    // Workflow integration controls
-    this.addClickHandler('btn-import-character', () => this.importCharacter());
-    this.addClickHandler('btn-generate-package', () => this.generatePackage());
-
-    // Animation controls
-    this.addChangeHandler('animation-select', (value) => this.selectAnimation(value));
-    this.addClickHandler('btn-play', () => this.playAnimation());
-    this.addClickHandler('btn-pause', () => this.pauseAnimation());
-    this.addClickHandler('btn-stop', () => this.stopAnimation());
-
-    // Modal controls
-    this.addClickHandler('modal-close', () => this.hideModal());
-    this.addClickHandler('modal-cancel', () => this.hideModal());
-    this.addClickHandler('modal-confirm', () => this.confirmModal());
-
-    // Viewport interactions
-    if (this.elements['spine-viewport']) {
-      this.setupViewportEvents();
-    }
-
-    console.log('🎯 UI event listeners set up');
-  }
-
-  /**
-   * ビューポートイベント設定
-   */
-  setupViewportEvents() {
-    const viewport = this.elements['spine-viewport'];
+  async initManagers() {
+    // パネルマネージャー初期化
+    this.panels = new UIPanelsManager(this.app, this);
+    await this.panels.init();
     
-    // マウスイベント
+    // メニューマネージャー初期化
+    this.menus = new UIMenusManager(this.app, this);
+    await this.menus.init();
+    
+    // ダイアログマネージャー初期化
+    this.dialogs = new UIDialogsManager(this.app, this);
+    await this.dialogs.init();
+    
+    console.log('🎛️ All UI managers initialized');
+  }
+
+  /**
+   * 統合イベント設定
+   */
+  setupIntegratedEvents() {
+    // ビューポート相互作用イベント
+    this.setupViewportIntegration();
+    
+    // マネージャー間通信イベント
+    this.setupManagerCommunication();
+    
+    // グローバルキーボードショートカット
+    this.setupGlobalShortcuts();
+    
+    console.log('🎯 Integrated UI events set up');
+  }
+
+  /**
+   * ビューポート統合設定
+   */
+  setupViewportIntegration() {
+    const viewport = document.getElementById('spine-viewport');
+    if (!viewport) return;
+    
+    // マウスイベント統合処理
     viewport.addEventListener('click', (e) => this.handleViewportClick(e));
     viewport.addEventListener('mousedown', (e) => this.handleViewportMouseDown(e));
     viewport.addEventListener('mousemove', (e) => this.handleViewportMouseMove(e));
     viewport.addEventListener('mouseup', (e) => this.handleViewportMouseUp(e));
-    viewport.addEventListener('wheel', (e) => this.handleViewportWheel(e));
+    viewport.addEventListener('wheel', (e) => {
+      if (this.menus) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -10 : 10;
+        this.menus.setZoom(this.menus.zoomLevel + delta);
+      }
+    });
 
-    // タッチイベント（モバイル対応・最適化）
+    // タッチイベント（モバイル対応）
     viewport.addEventListener('touchstart', (e) => this.handleViewportTouchStart(e), { passive: false });
     viewport.addEventListener('touchmove', (e) => this.handleViewportTouchMove(e), { passive: false });
     viewport.addEventListener('touchend', (e) => this.handleViewportTouchEnd(e), { passive: true });
@@ -141,291 +108,175 @@ class UIManager {
    * 初期状態設定
    */
   setupInitialState() {
-    // ツール選択
-    this.selectTool('select');
+    // ツール選択（メニューマネージャー経由）
+    if (this.menus) {
+      this.menus.selectTool('select');
+      this.menus.setZoom(100);
+    }
     
-    // ズーム設定
-    this.setZoom(100);
+    // パネル初期レイアウト
+    if (this.panels) {
+      this.panels.switchLayout('default');
+    }
     
-    // モーダル非表示
-    this.hideModal();
-    
-    console.log('🎯 Initial UI state set');
+    console.log('🎯 Integrated UI initial state set');
   }
 
   /**
-   * 最適化クリックハンドラー追加
+   * マネージャー間通信設定
    */
-  addClickHandler(elementId, handler) {
-    const element = this.getElementEfficiently(elementId);
-    if (element) {
-      element.addEventListener('click', handler, { passive: true });
-      this.handlers.set(`${elementId}-click`, handler);
-    }
-  }
-
-  /**
-   * 最適化変更ハンドラー追加
-   */
-  addChangeHandler(elementId, handler) {
-    const element = this.getElementEfficiently(elementId);
-    if (element) {
-      const wrappedHandler = (e) => handler(e.target.value);
-      element.addEventListener('change', wrappedHandler, { passive: true });
-      this.handlers.set(`${elementId}-change`, wrappedHandler);
-    }
-  }
-
-  /**
-   * 効率的な要素取得（キャッシュ活用）
-   */
-  getElementEfficiently(elementId) {
-    if (this.cachedElements.has(elementId)) {
-      return this.cachedElements.get(elementId);
+  setupManagerCommunication() {
+    // パネル-メニュー連携
+    if (this.panels && this.menus) {
+      // キャラクター選択時のインスペクター更新
+      this.app.on('character-selected', (character) => {
+        this.panels.updateInspector(character);
+      });
+      
+      // ツール変更時のパネル状態更新
+      this.app.on('tool-changed', (tool) => {
+        this.currentTool = tool;
+      });
     }
     
-    const element = document.getElementById(elementId);
-    if (element) {
-      this.cachedElements.set(elementId, element);
-      this.elements[elementId] = element;
+    // エラー・成功時のダイアログ表示連携
+    if (this.dialogs) {
+      this.app.on('show-notification', (message, type) => {
+        this.dialogs.showNotification(message, type);
+      });
     }
-    return element;
   }
 
   /**
-   * ツール選択
+   * グローバルショートカット設定
+   */
+  setupGlobalShortcuts() {
+    // F1: ヘルプ
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        if (this.dialogs) {
+          this.dialogs.showShortcuts();
+        }
+      }
+    });
+  }
+
+  /**
+   * ツール選択（メニューマネージャー経由）
    */
   selectTool(tool) {
-    const tools = ['select', 'move', 'scale'];
-    
-    if (!tools.includes(tool)) {
-      console.warn(`⚠️ Invalid tool: ${tool}`);
-      return;
+    if (this.menus) {
+      this.menus.selectTool(tool);
+      this.currentTool = tool;
     }
-
-    this.currentTool = tool;
-
-    // ツールボタンの状態更新
-    tools.forEach(t => {
-      const btn = this.elements[`tool-${t}`];
-      if (btn) {
-        btn.classList.toggle('active', t === tool);
-      }
-    });
-
-    // カーソル変更
-    const viewport = this.elements['spine-viewport'];
-    if (viewport) {
-      viewport.className = `spine-viewport tool-${tool}`;
-    }
-
-    console.log(`🔧 Tool selected: ${tool}`);
   }
 
   /**
-   * ズーム設定
+   * ズーム設定（メニューマネージャー経由）
    */
   setZoom(level) {
-    this.zoomLevel = Math.max(25, Math.min(200, level));
-    
-    const slider = this.elements['zoom-slider'];
-    const valueDisplay = this.elements['zoom-value'];
-    
-    if (slider) slider.value = this.zoomLevel;
-    if (valueDisplay) valueDisplay.textContent = `${this.zoomLevel}%`;
-
-    // Spineビューポートにズーム適用
-    if (this.app.spine) {
-      this.app.spine.setZoom(this.zoomLevel / 100);
+    if (this.menus) {
+      this.menus.setZoom(level);
+      this.zoomLevel = level;
     }
   }
 
   /**
-   * ビューリセット
+   * ビューリセット（メニューマネージャー経由）
    */
   resetView() {
-    this.setZoom(100);
-    
-    if (this.app.spine) {
-      this.app.spine.resetView();
+    if (this.menus) {
+      this.menus.resetView();
     }
-    
-    console.log('🎯 View reset');
   }
 
   /**
-   * プレビュー切替
+   * プレビュー切替（メニューマネージャー経由）
    */
   togglePreview() {
-    // プレビューモードの実装
-    console.log('👁️ Preview toggle (TODO: implement)');
+    if (this.menus) {
+      this.menus.togglePreview();
+    }
   }
 
   /**
-   * 設定を開く
+   * 設定を開く（ダイアログマネージャー経由）
    */
   openSettings() {
-    this.showModal('Settings', 'Settings panel (TODO: implement)', 'info');
+    if (this.dialogs) {
+      this.dialogs.showSettings();
+    }
   }
 
   /**
-   * キャラクターインポート (ワークフロー統合)
+   * キャラクターインポート（メニューマネージャー経由）
    */
   async importCharacter() {
-    try {
-      await this.app.importSpineCharacter();
-      this.updateOutliner();
-      this.setStatus('Character imported successfully');
-    } catch (error) {
-      this.setStatus('Character import failed', 'error');
-      console.error('Character import error:', error);
+    if (this.menus) {
+      await this.menus.importCharacter();
     }
   }
 
   /**
-   * パッケージ生成 (ワークフロー統合)
+   * パッケージ生成（メニューマネージャー経由）
    */
   async generatePackage() {
-    try {
-      await this.app.generateFinalPackage();
-      this.setStatus('Package generated successfully');
-    } catch (error) {
-      this.setStatus('Package generation failed', 'error');
-      console.error('Package generation error:', error);
+    if (this.menus) {
+      await this.menus.generatePackage();
     }
   }
 
   /**
-   * アウトライナーUI更新
+   * アウトライナー更新（パネルマネージャー経由）
    */
   updateOutliner() {
-    const characterList = this.elements['character-list'];
-    if (!characterList) return;
-    
-    characterList.innerHTML = '';
-    
-    if (!this.app.currentProject?.spineData?.characters) {
-      characterList.innerHTML = '<div class="empty-state">🗂️ No characters loaded</div>';
-      return;
+    if (this.panels) {
+      this.panels.updateOutliner();
     }
-    
-    this.app.currentProject.spineData.characters.forEach((char, index) => {
-      const item = this.createCharacterItem(char, index);
-      characterList.appendChild(item);
-    });
   }
 
   /**
-   * キャラクターアイテム作成
-   */
-  createCharacterItem(character, index) {
-    const item = document.createElement('div');
-    item.className = 'character-item';
-    item.innerHTML = `
-      <div class="character-header">
-        <div class="character-icon">🦴</div>
-        <div class="character-info">
-          <div class="character-name">${character.name || 'Unnamed Character'}</div>
-          <div class="character-details">Scale: ${(character.scaleX || 0.5).toFixed(2)}</div>
-        </div>
-        <div class="character-controls">
-          <button class="btn btn-sm" onclick="app.selectCharacter(${index})">Select</button>
-          <button class="btn btn-sm btn-danger" onclick="ui.removeCharacter(${index})">Remove</button>
-        </div>
-      </div>
-      <div class="character-properties ${index === 0 ? 'expanded' : ''}">
-        <div class="property-row">
-          <label>Position</label>
-          <input type="number" value="${character.x || 0}" 
-                 onchange="ui.updateCharacterPosition(${index}, 'x', this.value)" step="0.1">
-          <input type="number" value="${character.y || 0}" 
-                 onchange="ui.updateCharacterPosition(${index}, 'y', this.value)" step="0.1">
-        </div>
-        <div class="property-row">
-          <label>Scale</label>
-          <input type="number" value="${character.scaleX || 0.5}" 
-                 onchange="ui.updateCharacterScale(${index}, 'x', this.value)" 
-                 min="0.1" max="2.0" step="0.1">
-          <input type="number" value="${character.scaleY || 0.5}" 
-                 onchange="ui.updateCharacterScale(${index}, 'y', this.value)" 
-                 min="0.1" max="2.0" step="0.1">
-        </div>
-      </div>
-    `;
-    
-    // Click to expand/collapse
-    const header = item.querySelector('.character-header');
-    header.addEventListener('click', (e) => {
-      if (e.target.tagName !== 'BUTTON') {
-        const properties = item.querySelector('.character-properties');
-        properties.classList.toggle('expanded');
-      }
-    });
-    
-    return item;
-  }
-
-  /**
-   * キャラクター位置更新
+   * キャラクター位置更新（パネルマネージャー経由）
    */
   updateCharacterPosition(index, axis, value) {
-    const character = this.app.currentProject?.spineData?.characters[index];
-    if (!character) return;
-    
-    const numValue = parseFloat(value);
-    if (axis === 'x') {
-      character.x = numValue;
-      if (this.app.spine) this.app.spine.updateCharacterPosition(numValue, character.y || 0);
-    } else if (axis === 'y') {
-      character.y = numValue;
-      if (this.app.spine) this.app.spine.updateCharacterPosition(character.x || 0, numValue);
+    if (this.panels) {
+      this.panels.updateCharacterProperty(index, axis, parseFloat(value));
     }
-    
-    this.app.markProjectModified();
   }
 
   /**
-   * キャラクタースケール更新
+   * キャラクタースケール更新（パネルマネージャー経由）
    */
   updateCharacterScale(index, axis, value) {
-    const character = this.app.currentProject?.spineData?.characters[index];
-    if (!character) return;
-    
-    const numValue = parseFloat(value);
-    if (axis === 'x') {
-      character.scaleX = numValue;
-      if (this.app.spine) this.app.spine.updateCharacterScale(numValue, character.scaleY || 0.5);
-    } else if (axis === 'y') {
-      character.scaleY = numValue;
-      if (this.app.spine) this.app.spine.updateCharacterScale(character.scaleX || 0.5, numValue);
+    if (this.panels) {
+      const property = axis === 'x' ? 'scaleX' : 'scaleY';
+      this.panels.updateCharacterProperty(index, property, parseFloat(value));
     }
-    
-    this.app.markProjectModified();
-    this.updateOutliner(); // UI更新
   }
 
   /**
-   * キャラクター削除
+   * キャラクター削除（パネルマネージャー経由）
    */
   removeCharacter(index) {
-    if (!this.app.currentProject?.spineData?.characters) return;
-    
-    if (confirm('Remove this character?')) {
-      this.app.currentProject.spineData.characters.splice(index, 1);
-      this.app.markProjectModified();
-      this.updateOutliner();
+    if (this.panels) {
+      this.panels.removeCharacter(index);
     }
   }
 
   /**
-   * ステータス設定
+   * ステータス設定（ダイアログマネージャー経由）
    */
   setStatus(message, type = 'info') {
-    this.app.setStatus(message, type);
+    if (this.dialogs) {
+      this.dialogs.showNotification(message, type);
+    } else {
+      this.app.setStatus(message, type);
+    }
   }
 
   /**
-   * プロパティ更新 (改良版)
+   * プロパティ更新（統合処理）
    */
   updateProperty(property, value) {
     if (this.app.selectedCharacter && this.app.spine) {
@@ -438,41 +289,38 @@ class UIManager {
   }
 
   /**
-   * アニメーション選択
+   * アニメーション選択（メニューマネージャー経由）
    */
   selectAnimation(animationName) {
-    if (this.app.selectedCharacter && this.app.spine) {
-      this.app.spine.selectAnimation(this.app.selectedCharacter, animationName);
+    if (this.menus) {
+      this.menus.selectAnimation(animationName);
     }
   }
 
   /**
-   * アニメーション再生
+   * アニメーション再生（メニューマネージャー経由）
    */
   playAnimation() {
-    if (this.app.spine) {
-      this.app.spine.playAnimationSequence(); // v2.0 シーケンス再生
-      this.setStatus('Animation playing: syutugen → taiki');
+    if (this.menus) {
+      this.menus.playAnimation();
     }
   }
 
   /**
-   * アニメーション一時停止
+   * アニメーション一時停止（メニューマネージャー経由）
    */
   pauseAnimation() {
-    if (this.app.selectedCharacter && this.app.spine) {
-      this.app.spine.pauseAnimation(this.app.selectedCharacter);
-      this.setStatus('Animation paused');
+    if (this.menus) {
+      this.menus.pauseAnimation();
     }
   }
 
   /**
-   * アニメーション停止
+   * アニメーション停止（メニューマネージャー経由）
    */
   stopAnimation() {
-    if (this.app.selectedCharacter && this.app.spine) {
-      this.app.spine.stopAnimation(this.app.selectedCharacter);
-      this.setStatus('Animation stopped');
+    if (this.menus) {
+      this.menus.stopAnimation();
     }
   }
 
@@ -498,7 +346,10 @@ class UIManager {
    * ビューポートマウスダウン処理
    */
   handleViewportMouseDown(e) {
-    // ドラッグ開始処理
+    // 現在のツールに応じた処理
+    if (this.currentTool === 'move') {
+      // ドラッグ開始処理
+    }
   }
 
   /**
@@ -516,16 +367,7 @@ class UIManager {
   }
 
   /**
-   * ビューポートホイール処理
-   */
-  handleViewportWheel(e) {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -10 : 10;
-    this.setZoom(this.zoomLevel + delta);
-  }
-
-  /**
-   * ビューポートタッチ開始処理
+   * ビューポートタッチ開始処理（モバイル対応）
    */
   handleViewportTouchStart(e) {
     e.preventDefault();
@@ -533,7 +375,7 @@ class UIManager {
   }
 
   /**
-   * ビューポートタッチ移動処理
+   * ビューポートタッチ移動処理（モバイル対応）
    */
   handleViewportTouchMove(e) {
     e.preventDefault();
@@ -541,7 +383,7 @@ class UIManager {
   }
 
   /**
-   * ビューポートタッチ終了処理
+   * ビューポートタッチ終了処理（モバイル対応）
    */
   handleViewportTouchEnd(e) {
     // タッチ終了処理
@@ -552,7 +394,9 @@ class UIManager {
    */
   selectCharacter(character) {
     this.app.selectedCharacter = character;
-    this.updateInspector(character);
+    if (this.panels) {
+      this.panels.updateInspector(character);
+    }
     this.showSelectionHandles(character);
   }
 
@@ -561,42 +405,18 @@ class UIManager {
    */
   clearSelection() {
     this.app.selectedCharacter = null;
-    this.updateInspector(null);
+    if (this.panels) {
+      this.panels.updateInspector(null);
+    }
     this.hideSelectionHandles();
   }
 
   /**
-   * インスペクター更新
+   * インスペクター更新（パネルマネージャー経由）
    */
   updateInspector(character) {
-    const posX = this.elements['pos-x'];
-    const posY = this.elements['pos-y'];
-    const scaleX = this.elements['scale-x'];
-    const scaleY = this.elements['scale-y'];
-    const animSelect = this.elements['animation-select'];
-
-    if (character) {
-      if (posX) posX.value = character.x || 0;
-      if (posY) posY.value = character.y || 0;
-      if (scaleX) scaleX.value = character.scaleX || 1;
-      if (scaleY) scaleY.value = character.scaleY || 1;
-      
-      // アニメーションリスト更新
-      if (animSelect && character.animations) {
-        animSelect.innerHTML = '<option value="">Select Animation</option>';
-        character.animations.forEach(anim => {
-          const option = document.createElement('option');
-          option.value = anim.name;
-          option.textContent = anim.name;
-          animSelect.appendChild(option);
-        });
-      }
-    } else {
-      if (posX) posX.value = 0;
-      if (posY) posY.value = 0;
-      if (scaleX) scaleX.value = 1;
-      if (scaleY) scaleY.value = 1;
-      if (animSelect) animSelect.innerHTML = '<option value="">No character selected</option>';
+    if (this.panels) {
+      this.panels.updateInspector(character);
     }
   }
 
@@ -604,118 +424,77 @@ class UIManager {
    * 選択ハンドル表示
    */
   showSelectionHandles(character) {
-    // 選択ハンドルの表示実装
+    // 選択ハンドルの表示実装（統合処理）
   }
 
   /**
    * 選択ハンドル非表示
    */
   hideSelectionHandles() {
-    const handles = this.elements['selection-handles'];
-    if (handles) {
-      handles.innerHTML = '';
-    }
+    // 選択ハンドルの非表示実装（統合処理）
   }
 
   /**
-   * モーダル表示
+   * モーダル表示（ダイアログマネージャー経由）
    */
   showModal(title, content, type = 'info') {
-    const overlay = this.elements['modal-overlay'];
-    const titleEl = this.elements['modal-title'];
-    const bodyEl = this.elements['modal-body'];
-    
-    if (overlay && titleEl && bodyEl) {
-      titleEl.textContent = title;
-      bodyEl.innerHTML = content;
-      overlay.classList.remove('hidden');
-      this.modalVisible = true;
+    if (this.dialogs) {
+      this.dialogs.showAlert(title, content);
     }
   }
 
   /**
-   * モーダル非表示
+   * モーダル非表示（ダイアログマネージャー経由）
    */
   hideModal() {
-    const overlay = this.elements['modal-overlay'];
-    if (overlay) {
-      overlay.classList.add('hidden');
-      this.modalVisible = false;
+    if (this.dialogs) {
+      this.dialogs.closeTopDialog();
     }
   }
 
   /**
-   * モーダル確認
+   * モーダル確認（ダイアログマネージャー経由）
    */
   confirmModal() {
-    // モーダル確認処理
     this.hideModal();
   }
 
   /**
-   * モーダル表示状態確認
+   * モーダル表示状態確認（ダイアログマネージャー経由）
    */
   isModalVisible() {
-    return this.modalVisible;
+    return this.dialogs ? this.dialogs.isModalVisible() : false;
   }
 
   /**
-   * フルスクリーンモード切替
+   * フルスクリーンモード切替（メニューマネージャー経由）
    */
   toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      this.setStatus('Fullscreen mode enabled');
-    } else {
-      document.exitFullscreen();
-      this.setStatus('Fullscreen mode disabled');
+    if (this.menus) {
+      this.menus.toggleFullscreen();
     }
   }
 
   /**
-   * ワークフロー状態更新
+   * ワークフロー状態更新（メニューマネージャー経由）
    */
   updateWorkflowState(phase) {
-    const phases = ['import', 'display', 'edit', 'save', 'export'];
-    
-    phases.forEach((p, index) => {
-      const indicator = document.querySelector(`[data-phase="${p}"]`);
-      if (indicator) {
-        indicator.classList.remove('active', 'completed');
-        
-        const currentIndex = phases.indexOf(phase);
-        if (index < currentIndex) {
-          indicator.classList.add('completed');
-        } else if (index === currentIndex) {
-          indicator.classList.add('active');
-        }
-      }
-    });
+    if (this.menus) {
+      this.menus.updateWorkflowIndicators();
+    }
   }
 
   /**
-   * キーボードショートカットガイド表示
+   * キーボードショートカットガイド表示（ダイアログマネージャー経由）
    */
   showShortcuts() {
-    const shortcuts = [
-      'Ctrl+O: Open Project',
-      'Ctrl+S: Save Project', 
-      'Ctrl+E: Export Package',
-      'V: Select Tool',
-      'M: Move Tool',
-      'S: Scale Tool',
-      'Space: Play Animation',
-      'ESC: Clear Selection',
-      'F11: Toggle Fullscreen'
-    ];
-    
-    this.showModal('Keyboard Shortcuts', 
-      '<ul>' + shortcuts.map(s => `<li>${s}</li>`).join('') + '</ul>',
-      'info');
+    if (this.dialogs) {
+      this.dialogs.showShortcuts();
+    }
   }
 
   /**
-   * プロジェクト統計表示
+   * プロジェクト統計表示（ダイアログマネージャー経由）
    */
   showProjectStats() {
     if (!this.app.currentProject) {
@@ -736,22 +515,40 @@ class UIManager {
       .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
       .join('');
     
-    this.showModal('Project Statistics', content, 'info');
+    if (this.dialogs) {
+      this.dialogs.showAlert('Project Statistics', content);
+    }
   }
 
   /**
    * 破棄処理
    */
   destroy() {
-    // イベントリスナー削除
-    this.handlers.clear();
-    
-    // アウトライナークリア
-    if (this.elements['character-list']) {
-      this.elements['character-list'].innerHTML = '';
+    // 各マネージャー破棄
+    if (this.panels) {
+      this.panels.destroy();
+      this.panels = null;
     }
     
-    console.log('🗑️ UI Manager destroyed');
+    if (this.menus) {
+      this.menus.destroy();
+      this.menus = null;
+    }
+    
+    if (this.dialogs) {
+      this.dialogs.destroy();
+      this.dialogs = null;
+    }
+    
+    this.isInitialized = false;
+    console.log('🗑️ UI Manager (Integrated) destroyed');
+  }
+
+  /**
+   * 初期化状態確認
+   */
+  isReady() {
+    return this.isInitialized && this.panels && this.menus && this.dialogs;
   }
 }
 

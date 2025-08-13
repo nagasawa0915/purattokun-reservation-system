@@ -1,13 +1,29 @@
 /**
- * Spine Editor Desktop v2.0 - Export Manager
- * パッケージ出力機能
+ * Spine Editor Desktop v2.0 - Export Manager (Main Controller)
+ * エクスポートシステム統合・制御
  */
+
+import ExportCSS from './export-css.js';
+import ExportPackage from './export-package.js';
+import ExportHTML from './export-html.js';
+import ExportSpine from './export-spine.js';
+import ExportUtils from './export-utils.js';
 
 class ExportManager {
   constructor(app) {
     this.app = app;
     this.exportFormats = ['html', 'json', 'css'];
     this.currentFormat = 'html';
+    
+    // モジュール初期化
+    this.utils = new ExportUtils();
+    this.cssExporter = new ExportCSS();
+    this.packageExporter = new ExportPackage(app);
+    this.htmlExporter = new ExportHTML();
+    this.spineExporter = new ExportSpine();
+    
+    // 設定初期化
+    this.initExportSettings();
   }
 
   /**
@@ -17,8 +33,8 @@ class ExportManager {
     console.log('📦 Initializing Export Manager v2.0...');
     
     try {
-      // エクスポート設定初期化
-      this.initExportSettings();
+      // 各モジュールの設定を統合
+      this.syncModuleConfigs();
       
       console.log('✅ Export Manager initialized');
       
@@ -46,13 +62,30 @@ class ExportManager {
       css: {
         prefix: 'spine-',
         units: 'px',
-        precision: 4
+        precision: 4,
+        responsive: true
+      },
+      package: {
+        compression: 6,
+        includeManifest: true,
+        validateAssets: true
       }
     };
   }
 
   /**
-   * 完全パッケージ出力 (v2.0 ワークフロー統合版)
+   * モジュール設定同期
+   */
+  syncModuleConfigs() {
+    // CSS エクスポーター設定更新
+    this.cssExporter.updateConfig(this.exportConfig.css);
+    
+    // HTML エクスポーター設定更新
+    this.htmlExporter.updateConfig(this.exportConfig.html);
+  }
+
+  /**
+   * 完全パッケージ出力 (統合版)
    */
   async exportPackage(project) {
     if (!project) {
@@ -63,80 +96,62 @@ class ExportManager {
       throw new Error('Export requires Electron environment');
     }
 
+    const timer = this.utils.createPerformanceTimer('Complete Package Export');
+
     try {
       // 出力先選択
-      const result = await window.electronAPI.saveFileDialog({
-        title: 'Export Complete Package',
-        defaultPath: `${project.name || 'spine-project'}-complete-package.zip`,
-        filters: [
-          { name: 'Complete ZIP Package', extensions: ['zip'] }
-        ]
-      });
-
+      const result = await this.selectOutputPath(project);
       if (result.canceled) {
         return;
       }
 
       this.app.setStatus('Generating complete package...', 'loading');
       
-      // 完全パッケージ生成
+      // 完全パッケージ生成（統合処理）
       const packageData = await this.generateCompletePackage(project);
+      timer.lap('Package Generation');
       
       // 実際ZIPファイル作成
-      await this.createActualZipFile(packageData, result.filePath);
+      await this.packageExporter.createActualZipFile(packageData, result.filePath);
+      timer.lap('ZIP Creation');
       
       this.app.setStatus('Complete package exported successfully');
       
-      // 成功時に出力フォルダを開く
-      if (window.electronAPI.openPath) {
-        const pathModule = window.require('path');
-        const dir = pathModule.dirname(result.filePath);
-        await window.electronAPI.openPath(dir);
-      }
-      
-      // 成功通知
-      this.showExportSuccess(result.filePath, packageData);
+      // 成功処理
+      await this.handleExportSuccess(result.filePath, packageData);
+      timer.end();
       
     } catch (error) {
       console.error('❌ Complete package export failed:', error);
       this.app.setStatus('Package export failed', 'error');
+      
+      // エラー通知
+      const errorNotification = this.utils.createErrorNotification(error, 'Package Export');
+      this.showNotification(errorNotification);
+      
       throw error;
     }
   }
 
   /**
-   * エクスポート成功通知（軽量化）
+   * 出力先選択
    */
-  showExportSuccess(filePath, packageData) {
-    const message = `Export complete: ${packageData.files.size} files (${this.formatFileSize(packageData.totalSize || 0)})`;
-    this.app.setStatus(message);
-    
-    // シンプルな成功モーダル
-    if (this.app.ui) {
-      this.app.ui.showModal('Export Complete', `
-        <div style="text-align: center; padding: 20px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">🎆</div>
-          <h3>Package Export Complete!</h3>
-          <p><strong>Files:</strong> ${packageData.files.size}</p>
-          <p><strong>Size:</strong> ${this.formatFileSize(packageData.totalSize || 0)}</p>
-        </div>
-      `, 'success');
-    }
+  async selectOutputPath(project) {
+    const projectName = this.utils.sanitizeProjectName(project.name);
+    const timestamp = this.utils.formatDateTime();
+    const defaultName = `${projectName}-complete-package-${timestamp}.zip`;
+
+    return await window.electronAPI.saveFileDialog({
+      title: 'Export Complete Package',
+      defaultPath: defaultName,
+      filters: [
+        { name: 'Complete ZIP Package', extensions: ['zip'] }
+      ]
+    });
   }
 
   /**
-   * ファイルサイズフォーマット
-   */
-  formatFileSize(bytes) {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
-
-  /**
-   * 完全パッケージデータ生成 (v2.0 統合版)
+   * 完全パッケージデータ生成 (統合版 - 並列処理最適化)
    */
   async generateCompletePackage(project) {
     const packageData = {
@@ -153,234 +168,122 @@ class ExportManager {
     };
 
     try {
-      // 🏠 HomepageベースHTML (最優先)
-      await this.generateHomepageIntegration(packageData, project);
-      
-      // 🦴 Spineアセット (必須)
-      await this.includeCompleteSpineAssets(packageData, project);
+      console.log('📦 Starting integrated package generation with parallel processing...');
 
-      // 📜 Spine WebGLライブラリ (ローカル化)
-      await this.includeOptimizedSpineLibrary(packageData);
-      
-      // 🎨 カスタムCSS (位置・スケール設定)
-      await this.generateOptimizedCSS(packageData, project);
-      
-      // 📊 プロジェクト情報JSON
-      await this.generateProjectManifest(packageData, project);
-      
-      // 📝 READMEファイル
-      await this.generateReadmeFile(packageData, project);
+      // 🚀 Phase 1: 独立タスクを並列実行（パフォーマンス最適化）
+      const [htmlContent, cssContent, spineLibraryResult] = await Promise.all([
+        // HTML生成 (独立タスク)
+        this.htmlExporter.generateHomepageIntegration(project)
+          .catch(error => {
+            console.warn('⚠️ HTML generation failed:', error);
+            return null;
+          }),
+        
+        // CSS生成 (独立タスク)  
+        this.cssExporter.generateOptimizedCSS(project)
+          .catch(error => {
+            console.warn('⚠️ CSS generation failed:', error);
+            return '/* CSS generation failed */';
+          }),
+        
+        // Spineライブラリ読み込み (独立タスク)
+        this.loadSpineLibraryAsync(packageData)
+          .catch(error => {
+            console.warn('⚠️ Spine library loading failed:', error);
+            return false;
+          })
+      ]);
 
-      // ファイルサイズ計算
-      packageData.totalSize = this.calculateTotalSize(packageData.files);
+      // Phase 1結果を統合
+      if (htmlContent) {
+        packageData.files.set('index.html', htmlContent);
+        console.log('✅ HTML content added');
+      }
+      
+      packageData.files.set('spine-styles.css', cssContent);
+      console.log('✅ CSS content added');
 
-      console.log(`📦 Package: ${packageData.files.size} files (${this.formatFileSize(packageData.totalSize)})`);
+      // 🚀 Phase 2: Spineアセット収集とプロジェクト文書を並列実行
+      const [spineAssetsResult, documentationResult] = await Promise.all([
+        // Spineアセット収集
+        this.spineExporter.includeCompleteSpineAssets(packageData, project)
+          .catch(error => {
+            console.warn('⚠️ Spine assets collection failed:', error);
+            return false;
+          }),
+        
+        // プロジェクト文書生成
+        this.packageExporter.addProjectDocumentation(packageData, project)
+          .catch(error => {
+            console.warn('⚠️ Documentation generation failed:', error);
+            return false;
+          })
+      ]);
+
+      // 🚀 Phase 3: 最適化とバリデーションを並列実行（設定により）
+      if (this.exportConfig.package.validateAssets) {
+        const [optimizationResult, validationResult] = await Promise.all([
+          // アセット最適化
+          Promise.resolve().then(() => {
+            this.spineExporter.optimizeAssets(packageData);
+            return true;
+          }).catch(error => {
+            console.warn('⚠️ Asset optimization failed:', error);
+            return false;
+          }),
+          
+          // 整合性チェック
+          Promise.resolve().then(() => {
+            const validation = this.spineExporter.validateAssetIntegrity(packageData, project);
+            if (!validation.valid) {
+              console.warn('⚠️ Asset validation warnings:', validation.errors);
+            }
+            return validation;
+          }).catch(error => {
+            console.warn('⚠️ Asset validation failed:', error);
+            return { valid: false, errors: [error.message] };
+          })
+        ]);
+      }
+
+      // ファイルサイズ計算（最後に実行）
+      packageData.totalSize = this.utils.calculateTotalSize(packageData.files);
+
+      console.log(`📦 Parallel package generation complete: ${packageData.files.size} files (${this.utils.formatFileSize(packageData.totalSize)})`);
       return packageData;
 
     } catch (error) {
-      console.error('❌ Complete package generation failed:', error);
+      console.error('❌ Parallel package generation failed:', error);
       throw error;
     }
   }
 
   /**
-   * Homepage統合HTML生成
+   * Spineライブラリ非同期読み込み（並列処理用）
    */
-  async generateHomepageIntegration(packageData, project) {
-    // ベースHTMLテンプレート
-    let htmlContent = await this.getHomepageTemplate(project);
-    
-    if (!htmlContent) {
-      // フォールバック: シンプルHTML
-      htmlContent = await this.generateStandaloneHTML(project);
-    }
-    
-    // Spine設定をHTMLに埋め込み
-    htmlContent = this.injectSpineConfiguration(htmlContent, project);
-    
-    packageData.files.set('index.html', htmlContent);
-    console.log('🏠 Homepage integration HTML generated');
-  }
-
-  /**
-   * Homepageテンプレート取得
-   */
-  async getHomepageTemplate(project) {
-    if (!project.homepageFolder || !window.electronAPI) {
-      return null;
-    }
-    
+  async loadSpineLibraryAsync(packageData) {
     try {
-      const indexPath = `${project.homepageFolder}/index.html`;
-      const result = await window.electronAPI.readFile(indexPath);
-      
-      if (result.success) {
-        console.log('🏠 Homepage template loaded from:', indexPath);
-        return result.data;
-      }
+      await this.spineExporter.includeOptimizedSpineLibrary(packageData);
+      console.log('✅ Spine library loaded');
+      return true;
     } catch (error) {
-      console.warn('⚠️ Failed to load homepage template:', error);
+      console.warn('⚠️ Spine library loading failed:', error);
+      return false;
     }
-    
-    return null;
   }
 
   /**
-   * Spine設定をHTMLに注入
-   */
-  injectSpineConfiguration(htmlContent, project) {
-    const character = project.spineData?.characters?.[0];
-    if (!character) return htmlContent;
-    
-    // purattokun-config セクションを更新
-    const configSection = `
-<div id="purattokun-config" style="display: none;"
-     data-x="${(character.x / 800 * 100).toFixed(1)}"
-     data-y="${(character.y / 600 * 100).toFixed(1)}"
-     data-scale="${character.scaleX || 0.5}"
-     data-fade-delay="1500"
-     data-fade-duration="2000">
-</div>`;
-    
-    // 既存の設定を置換または追加
-    if (htmlContent.includes('id="purattokun-config"')) {
-      htmlContent = htmlContent.replace(
-        /<div id="purattokun-config"[\s\S]*?<\/div>/,
-        configSection.trim()
-      );
-    } else {
-      htmlContent = htmlContent.replace(
-        '</head>',
-        `  ${configSection}\n</head>`
-      );
-    }
-    
-    return htmlContent;
-  }
-
-  /**
-   * ファイルサイズ計算
-   */
-  calculateTotalSize(fileMap) {
-    let totalSize = 0;
-    for (const content of fileMap.values()) {
-      totalSize += new Blob([content]).size;
-    }
-    return totalSize;
-  }
-
-  /**
-   * HTML生成
+   * HTML生成 (HTML Module統合)
    */
   async generateHTML(project) {
-    const config = this.exportConfig.html;
-    
-    const html = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${project.name || 'Spine Animation'}</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #f0f0f0;
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .spine-container {
-            position: relative;
-        }
-        canvas {
-            display: block;
-            max-width: 100%;
-            height: auto;
-        }
-        .controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 5px;
-        }
-        .btn {
-            padding: 8px 12px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .btn:hover {
-            background: #0056b3;
-        }
-        ${config.responsive ? this.generateResponsiveCSS() : ''}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="spine-container">
-            <canvas id="spine-canvas" width="800" height="600"></canvas>
-            <div class="controls">
-                <button class="btn" onclick="playAnimation()">▶️ Play</button>
-                <button class="btn" onclick="pauseAnimation()">⏸️ Pause</button>
-                <button class="btn" onclick="stopAnimation()">⏹️ Stop</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Generated by Spine Editor Desktop v2.0 -->
-    <script src="spine-webgl.js"></script>
-    <script>
-        ${this.generateSpineScript(project)}
-    </script>
-</body>
-</html>`;
-
-    return html;
+    return await this.htmlExporter.generateHTML(project);
   }
 
   /**
-   * CSS生成
+   * CSS生成 (CSS Module統合)
    */
   async generateCSS(project) {
-    const config = this.exportConfig.css;
-    let css = `/* Generated by Spine Editor Desktop v2.0 */\n\n`;
-
-    if (project.spineData && project.spineData.characters) {
-      for (const character of project.spineData.characters) {
-        css += this.generateCharacterCSS(character, config);
-      }
-    }
-
-    return css;
-  }
-
-  /**
-   * キャラクターCSS生成
-   */
-  generateCharacterCSS(character, config) {
-    const precision = config.precision || 4;
-    const prefix = config.prefix || 'spine-';
-    const units = config.units || 'px';
-
-    return `.${prefix}${character.id} {
-  position: absolute;
-  left: ${(character.x || 0).toFixed(precision)}${units};
-  top: ${(character.y || 0).toFixed(precision)}${units};
-  transform: scale(${(character.scaleX || 1).toFixed(precision)}, ${(character.scaleY || 1).toFixed(precision)});
-  transform-origin: center center;
-}
-
-`;
+    return await this.cssExporter.generateCSS(project);
   }
 
   /**
@@ -407,262 +310,73 @@ class ExportManager {
       }
     };
 
-    return config.prettyPrint 
-      ? JSON.stringify(exportData, null, 2)
-      : JSON.stringify(exportData);
+    return this.utils.formatJSON(exportData, !config.prettyPrint);
   }
 
   /**
-   * Spineアセット追加
+   * エクスポート成功処理
    */
-  async includeSpineAssets(packageData, project) {
-    if (!project.spineData || !project.spineData.characters) return;
-
-    for (const character of project.spineData.characters) {
-      if (character.jsonPath) {
-        await this.includeAssetFile(packageData, character.jsonPath, `assets/${character.id}.json`);
-      }
-      if (character.atlasPath) {
-        await this.includeAssetFile(packageData, character.atlasPath, `assets/${character.id}.atlas`);
-      }
-      if (character.imagePath) {
-        await this.includeAssetFile(packageData, character.imagePath, `assets/${character.id}.png`);
-      }
-    }
-  }
-
-  /**
-   * アセットファイル追加
-   */
-  async includeAssetFile(packageData, sourcePath, targetPath) {
-    try {
-      const fileResult = await window.electronAPI.readFile(sourcePath);
-      if (fileResult.success) {
-        packageData.files.set(targetPath, fileResult.data);
-      }
-    } catch (error) {
-      console.warn(`⚠️ Failed to include asset: ${sourcePath}`, error);
-    }
-  }
-
-  /**
-   * Spine WebGLライブラリ追加
-   */
-  async includeSpineLibrary(packageData) {
-    const libraryPath = 'assets/spine/spine-webgl-minimal.js';
+  async handleExportSuccess(filePath, packageData) {
+    // 成功通知データ生成
+    const notification = this.utils.createSuccessNotification(filePath, packageData);
+    this.showNotification(notification);
     
-    try {
-      const fileResult = await window.electronAPI.readFile(libraryPath);
-      if (fileResult.success) {
-        packageData.files.set('spine-webgl.js', fileResult.data);
-      } else {
-        // フォールバック：ローカルの最小版ライブラリ
-        const fallbackLibrary = this.getMinimalSpineLibrary();
-        packageData.files.set('spine-webgl.js', fallbackLibrary);
+    // 出力フォルダを開く
+    if (window.electronAPI.openPath) {
+      try {
+        const pathModule = window.require('path');
+        const dir = pathModule.dirname(filePath);
+        await window.electronAPI.openPath(dir);
+      } catch (error) {
+        console.warn('⚠️ Failed to open output directory:', error);
       }
-    } catch (error) {
-      console.warn('⚠️ Using fallback spine library', error);
-      const fallbackLibrary = this.getMinimalSpineLibrary();
-      packageData.files.set('spine-webgl.js', fallbackLibrary);
     }
   }
 
   /**
-   * 最小Spineライブラリ取得
+   * 通知表示
    */
-  getMinimalSpineLibrary() {
-    return `/* Spine WebGL Minimal - Generated by Spine Editor v2.0 */
-console.log('Spine WebGL Minimal loaded');
-// 最小限のSpine WebGL実装をここに含める
-`;
-  }
-
-  /**
-   * Spineスクリプト生成
-   */
-  generateSpineScript(project) {
-    return `
-// Spine Editor Desktop v2.0 - Generated Script
-let canvas, gl, shader, batcher;
-let skeleton, animationState;
-
-function initSpine() {
-    canvas = document.getElementById('spine-canvas');
-    gl = canvas.getContext('webgl');
+  showNotification(notification) {
+    console.log(`📢 ${notification.title}:`, notification.message);
     
-    if (!gl) {
-        console.error('WebGL not supported');
-        return;
-    }
-    
-    // Spine初期化処理
-    console.log('Spine initialized');
-}
-
-function playAnimation() {
-    console.log('Play animation');
-    // アニメーション再生処理
-}
-
-function pauseAnimation() {
-    console.log('Pause animation');
-    // アニメーション一時停止処理
-}
-
-function stopAnimation() {
-    console.log('Stop animation');
-    // アニメーション停止処理
-}
-
-// 自動初期化
-window.addEventListener('load', initSpine);
-`;
-  }
-
-  /**
-   * レスポンシブCSS生成
-   */
-  generateResponsiveCSS() {
-    return `
-@media (max-width: 768px) {
-    .container {
-        padding: 10px;
-    }
-    .controls {
-        position: static;
-        margin-top: 10px;
-        justify-content: center;
-    }
-    .btn {
-        padding: 12px 16px;
-        font-size: 14px;
-    }
-}
-`;
-  }
-
-  /**
-   * 実際ZIPファイル作成 (v2.0 完全版)
-   */
-  async createActualZipFile(packageData, outputPath) {
-    try {
-      // JSZipを使用して実際のZIP作成
-      const JSZip = window.JSZip || await this.loadJSZip();
-      const zip = new JSZip();
+    if (this.app.ui) {
+      const icon = notification.type === 'success' ? '🎆' : '❌';
+      const details = notification.details;
       
-      // ファイルをZIPに追加
-      packageData.files.forEach((content, filename) => {
-        // バイナリファイルの判定
-        if (this.isBinaryFile(filename)) {
-          zip.file(filename, content, { binary: true });
+      let detailsHTML = '';
+      if (details) {
+        if (notification.type === 'success') {
+          detailsHTML = `
+            <p><strong>Files:</strong> ${details.files}</p>
+            <p><strong>Size:</strong> ${details.size}</p>
+            <p><strong>Time:</strong> ${details.timestamp}</p>
+          `;
         } else {
-          zip.file(filename, content);
+          detailsHTML = `
+            <p><strong>Error:</strong> ${details.error}</p>
+            <p><strong>Context:</strong> ${details.context}</p>
+            <p><strong>Time:</strong> ${details.timestamp}</p>
+          `;
         }
-      });
-      
-      // マニフェストファイル追加
-      const manifest = this.createManifest(packageData);
-      zip.file('package-manifest.json', JSON.stringify(manifest, null, 2));
-      
-      // ZIPバイナリ生成
-      const zipBlob = await zip.generateAsync({ 
-        type: 'blob',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 6 }
-      });
-      
-      // ファイルに書き込み
-      const buffer = await zipBlob.arrayBuffer();
-      const uint8Array = new Uint8Array(buffer);
-      
-      const writeResult = await window.electronAPI.writeFile(
-        outputPath, 
-        Array.from(uint8Array)
-      );
-      
-      if (!writeResult.success) {
-        throw new Error(writeResult.error);
       }
 
-      console.log(`📦 ZIP created: ${outputPath}`);
-      
-    } catch (error) {
-      console.error('❌ ZIP failed:', error);
-      await this.createFallbackArchive(packageData, outputPath);
+      this.app.ui.showModal(notification.title, `
+        <div style="text-align: center; padding: 20px;">
+          <div style="font-size: 48px; margin-bottom: 16px;">${icon}</div>
+          <h3>${notification.title}</h3>
+          <p>${notification.message}</p>
+          ${detailsHTML}
+        </div>
+      `, notification.type);
     }
   }
 
   /**
-   * JSZipライブラリ読み込み
+   * プレビュー生成
    */
-  async loadJSZip() {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-      script.onload = () => resolve(window.JSZip);
-      script.onerror = () => reject(new Error('Failed to load JSZip'));
-      document.head.appendChild(script);
-    });
-  }
-
-  /**
-   * バイナリファイル判定
-   */
-  isBinaryFile(filename) {
-    const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.atlas', '.zip'];
-    return binaryExtensions.some(ext => filename.toLowerCase().endsWith(ext));
-  }
-
-  /**
-   * マニフェスト作成
-   */
-  createManifest(packageData) {
-    return {
-      name: packageData.metadata.name,
-      version: packageData.metadata.version,
-      generator: packageData.metadata.generator,
-      created: new Date().toISOString(),
-      files: {
-        count: packageData.files.size,
-        list: Array.from(packageData.files.keys()),
-        totalSize: packageData.totalSize
-      },
-      instructions: {
-        'deployment': 'Extract all files to web server directory',
-        'testing': 'Open index.html in web browser',
-        'spine': 'Spine animations are embedded and ready to use'
-      }
-    };
-  }
-
-  /**
-   * フォールバックアーカイブ作成（軽量化）
-   */
-  async createFallbackArchive(packageData, outputPath) {
-    // シンプルなテキストアーカイブ
-    const archiveData = Array.from(packageData.files.entries())
-      .map(([filename, content]) => `FILE: ${filename}\n${content}\n`)
-      .join('\n---\n\n');
-    
-    const result = await window.electronAPI.writeFile(outputPath, archiveData);
-    if (!result.success) throw new Error(result.error);
-    
-    console.log('📜 Fallback archive created');
-  }
-
-  /**
-   * 簡易アーカイブ作成
-   */
-  createSimpleArchive(packageData) {
-    // 実際の実装ではJSZipを使用してZIP作成
-    // ここでは説明用の疑似実装
-    let archive = '';
-    
-    packageData.files.forEach((content, filename) => {
-      archive += `--- ${filename} ---\n${content}\n\n`;
-    });
-    
-    return archive;
+  async generatePreview(project) {
+    const html = await this.htmlExporter.generateStandaloneHTML(project);
+    return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
   }
 
   /**
@@ -680,291 +394,78 @@ window.addEventListener('load', initSpine);
   updateExportConfig(format, config) {
     if (this.exportConfig[format]) {
       Object.assign(this.exportConfig[format], config);
+      this.syncModuleConfigs(); // 設定を各モジュールに反映
     }
   }
 
   /**
-   * スタンドアロンHTML生成
+   * 現在の設定取得
    */
-  async generateStandaloneHTML(project) {
-    const character = project.spineData?.characters?.[0];
-    
-    return `<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${project.name || 'Spine Animation'}</title>
-    <style>
-        body { 
-            margin: 0; 
-            padding: 0; 
-            background: #f0f0f0;
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .spine-container {
-            position: relative;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            padding: 20px;
-        }
-        #spine-canvas {
-            display: block;
-            max-width: 100%;
-            height: auto;
-        }
-        .controls {
-            margin-top: 15px;
-            text-align: center;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        .btn {
-            padding: 8px 16px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn:hover { background: #0056b3; }
-        .info {
-            margin-top: 10px;
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-        }
-    </style>
-</head>
-<body>
-    <div class="spine-container">
-        <canvas id="spine-canvas" width="800" height="600"></canvas>
-        <div class="controls">
-            <button class="btn" onclick="playAnimation()">▶️ Play</button>
-            <button class="btn" onclick="pauseAnimation()">⏸️ Pause</button>
-            <button class="btn" onclick="stopAnimation()">⏹️ Stop</button>
-        </div>
-        <div class="info">
-            Generated by Spine Editor Desktop v2.0
-        </div>
-    </div>
-
-    <script src="spine-webgl.js"></script>
-    <script>
-        ${this.generateSpineScript(project)}
-    </script>
-</body>
-</html>`;
+  getExportConfig() {
+    return this.utils.deepClone(this.exportConfig);
   }
 
   /**
-   * 完全Spineアセット含む
+   * デバッグ情報取得
    */
-  async includeCompleteSpineAssets(packageData, project) {
-    if (!project.spineData?.characters) return;
-    
-    for (const character of project.spineData.characters) {
-      // JSONファイル
-      if (character.jsonPath) {
-        await this.includeAssetFile(
-          packageData, 
-          character.jsonPath, 
-          `assets/${character.id || 'character'}.json`
-        );
-      }
-      
-      // Atlasファイル
-      if (character.atlasPath) {
-        await this.includeAssetFile(
-          packageData, 
-          character.atlasPath, 
-          `assets/${character.id || 'character'}.atlas`
-        );
-      }
-      
-      // 画像ファイル
-      if (character.imagePath) {
-        await this.includeAssetFile(
-          packageData, 
-          character.imagePath, 
-          `assets/${character.id || 'character'}.png`
-        );
-      }
-    }
-    
-    console.log('🦴 Complete Spine assets included');
-  }
-
-  /**
-   * 最適化Spineライブラリ含む
-   */
-  async includeOptimizedSpineLibrary(packageData) {
-    const libraryPaths = [
-      '../assets/spine/spine-webgl.js',
-      '../assets/spine/spine-webgl-minimal.js'
-    ];
-    
-    for (const path of libraryPaths) {
-      try {
-        const result = await window.electronAPI.readFile(path);
-        if (result.success) {
-          packageData.files.set('spine-webgl.js', result.data);
-          console.log('📜 Optimized Spine library included:', path);
-          return;
-        }
-      } catch (error) {
-        console.warn(`⚠️ Failed to load library: ${path}`);
-      }
-    }
-    
-    // フォールバック: ミニマルライブラリ
-    const minimalLibrary = this.getMinimalSpineLibrary();
-    packageData.files.set('spine-webgl.js', minimalLibrary);
-    console.log('📜 Fallback minimal library included');
-  }
-
-  /**
-   * 最適化CSS生成
-   */
-  async generateOptimizedCSS(packageData, project) {
-    const character = project.spineData?.characters?.[0];
-    if (!character) {
-      packageData.files.set('spine-styles.css', '/* No character data */');
-      return;
-    }
-    
-    const css = `/* Spine Editor Desktop v2.0 - Generated CSS */\n
-` +
-      `#purattokun-canvas {\n` +
-      `  position: absolute;\n` +
-      `  left: ${((character.x || 400) / 800 * 100).toFixed(2)}%;\n` +
-      `  top: ${((character.y || 300) / 600 * 100).toFixed(2)}%;\n` +
-      `  transform: translate(-50%, -50%) scale(${character.scaleX || 0.5});\n` +
-      `  transform-origin: center center;\n` +
-      `  z-index: 10;\n` +
-      `}\n\n` +
-      `@media (max-width: 768px) {\n` +
-      `  #purattokun-canvas {\n` +
-      `    width: 30%;\n` +
-      `    height: auto;\n` +
-      `  }\n` +
-      `}`;
-    
-    packageData.files.set('spine-styles.css', css);
-    console.log('🎨 Optimized CSS generated');
-  }
-
-  /**
-   * プロジェクトマニフェスト生成
-   */
-  async generateProjectManifest(packageData, project) {
-    const manifest = {
-      project: {
-        name: project.name || 'Untitled Spine Project',
-        version: project.version || '1.0.0',
-        created: project.created || new Date().toISOString(),
-        generator: 'Spine Editor Desktop v2.0'
+  getDebugInfo() {
+    return {
+      version: '2.0.0',
+      module: 'export-manager',
+      formats: this.exportFormats,
+      config: this.exportConfig,
+      modules: {
+        css: this.cssExporter.getDebugInfo(),
+        html: this.htmlExporter.getDebugInfo(),
+        spine: this.spineExporter.getDebugInfo(),
+        utils: this.utils.collectDebugInfo()
       },
-      spine: {
-        characters: project.spineData?.characters?.length || 0,
-        animations: this.extractAnimationList(project),
-        viewport: project.settings?.viewport || null
-      },
-      deployment: {
-        instructions: [
-          '1. Extract all files to your web server directory',
-          '2. Open index.html in a web browser',
-          '3. Spine animations will load automatically',
-          '4. Customize CSS for your specific layout needs'
-        ],
-        requirements: [
-          'Modern web browser with WebGL support',
-          'Web server (local or remote)',
-          'No additional dependencies required'
-        ]
-      },
-      files: {
-        html: 'index.html - Main HTML file',
-        css: 'spine-styles.css - Character positioning styles',
-        js: 'spine-webgl.js - Spine WebGL runtime library',
-        assets: 'assets/ - Spine character files (.json, .atlas, .png)'
-      }
+      memory: this.utils.getMemoryInfo(),
+      timestamp: new Date().toISOString()
     };
-    
-    packageData.files.set('PROJECT-INFO.json', JSON.stringify(manifest, null, 2));
-    console.log('📊 Project manifest generated');
   }
 
   /**
-   * アニメーションリスト抽出
+   * 統計情報取得
    */
-  extractAnimationList(project) {
-    // 実際の実装ではSpineデータからアニメーションを抽出
-    return ['syutugen', 'taiki', 'click']; // デフォルトアニメーション
+  getStatistics() {
+    return {
+      moduleCount: 5,
+      totalMethods: this.countMethods(),
+      cacheSize: this.spineExporter.assetCache?.size || 0,
+      lastExport: this.lastExportTime || null
+    };
   }
 
   /**
-   * READMEファイル生成
+   * メソッド数カウント（デバッグ用）
    */
-  async generateReadmeFile(packageData, project) {
-    const readme = `# ${project.name || 'Spine Animation Project'}
-
-` +
-      `Generated by Spine Editor Desktop v2.0\n` +
-      `Created: ${new Date().toLocaleDateString()}\n\n` +
-      `## Quick Start\n\n` +
-      `1. Extract all files to your web server directory\n` +
-      `2. Open \`index.html\` in a modern web browser\n` +
-      `3. Your Spine animation will load automatically\n\n` +
-      `## Files Structure\n\n` +
-      `- \`index.html\` - Main HTML file with embedded Spine configuration\n` +
-      `- \`spine-styles.css\` - Character positioning and styling\n` +
-      `- \`spine-webgl.js\` - Spine WebGL runtime library (self-contained)\n` +
-      `- \`assets/\` - Spine character files (.json, .atlas, .png)\n` +
-      `- \`PROJECT-INFO.json\` - Detailed project information\n\n` +
-      `## Customization\n\n` +
-      `- Edit \`spine-styles.css\` to adjust character positioning\n` +
-      `- Modify \`index.html\` to integrate with your website\n` +
-      `- All Spine animations are ready to use without additional setup\n\n` +
-      `## Browser Support\n\n` +
-      `Requires modern web browser with WebGL support:\n` +
-      `- Chrome 30+\n` +
-      `- Firefox 25+\n` +
-      `- Safari 8+\n` +
-      `- Edge 12+\n\n` +
-      `## Troubleshooting\n\n` +
-      `- If animations don't load, ensure all files are served via HTTP/HTTPS\n` +
-      `- Check browser console for any WebGL errors\n` +
-      `- Verify that all asset files are in the \`assets/\` directory\n\n` +
-      `---\n` +
-      `Created with Spine Editor Desktop v2.0`;
-    
-    packageData.files.set('README.md', readme);
-    console.log('📝 README file generated');
+  countMethods() {
+    const modules = [this.cssExporter, this.packageExporter, this.htmlExporter, this.spineExporter, this.utils];
+    return modules.reduce((count, module) => {
+      return count + Object.getOwnPropertyNames(Object.getPrototypeOf(module)).length - 1;
+    }, Object.getOwnPropertyNames(Object.getPrototypeOf(this)).length - 1);
   }
 
   /**
-   * プレビュー生成
+   * キャッシュクリア
    */
-  async generatePreview(project) {
-    const html = await this.generateStandaloneHTML(project);
-    return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+  clearCache() {
+    this.spineExporter.clearCache();
+    console.log('🗑️ Export Manager cache cleared');
   }
 
   /**
    * 破棄処理
    */
   destroy() {
+    this.clearCache();
     console.log('🗑️ Export Manager destroyed');
   }
 }
 
 // グローバル公開
 window.ExportManager = ExportManager;
+
+// デフォルトエクスポート
+export default ExportManager;

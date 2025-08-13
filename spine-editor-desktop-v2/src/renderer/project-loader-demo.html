@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Loader Demo - Spine Editor v2.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .main-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .status-section {
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: #f8fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .status-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .file-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .file-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .file-item.default {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: #1a202c;
+        }
+        
+        .file-display-name {
+            color: #667eea;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .file-meta {
+            font-size: 0.8rem;
+            color: #718096;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .default-badge {
+            background: #10b981;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            border-left-color: #c53030;
+        }
+        
+        .success {
+            background: #c6f6d5;
+            color: #2d3748;
+            border-left-color: #10b981;
+        }
+        
+        .loading {
+            background: #fef5e7;
+            color: #2d3748;
+            border-left-color: #d69e2e;
+        }
+        
+        .json-display {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+        
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📁 Project Loader Demo</h1>
+            <p>Phase 0 基盤機能: HTML-first Workflow</p>
+        </div>
+        
+        <div class="main-panel">
+            <div class="controls">
+                <button class="btn btn-primary" onclick="selectFolder()">
+                    📁 フォルダを選択
+                </button>
+                <button class="btn btn-secondary" onclick="showProjectStats()" id="statsBtn" disabled>
+                    📊 プロジェクト統計
+                </button>
+                <button class="btn btn-secondary" onclick="clearProject()" id="clearBtn" disabled>
+                    🗑️ プロジェクトをクリア
+                </button>
+            </div>
+            
+            <div class="status-section">
+                <div class="status-card" id="statusCard">
+                    <div class="status-title">
+                        📋 状態
+                    </div>
+                    <div id="statusContent">プロジェクトフォルダを選択してください</div>
+                </div>
+            </div>
+            
+            <div id="fileListContainer">
+                <div class="empty-state">
+                    <div class="icon">📂</div>
+                    <h3>プロジェクトフォルダを選択</h3>
+                    <p>HTMLファイルの自動スキャンとプレビュー機能をデモします</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { ProjectLoader } from './js/project-loader.js';
+        
+        // ProjectLoaderのインスタンス化
+        const projectLoader = new ProjectLoader();
+        
+        // グローバルな関数として定義（onclick属性から使用）
+        window.selectFolder = async function() {
+            updateStatus('loading', '📁 フォルダ選択中...', 'フォルダ選択ダイアログを開いています');
+            
+            const project = await projectLoader.selectFolder();
+            
+            if (project) {
+                updateStatus('success', `✅ プロジェクト読み込み完了`, 
+                    `${project.name}: ${project.htmlFiles.length}個のHTMLファイルを検出`);
+                displayFileList(project.htmlFiles, project.defaultHTML);
+                enableButtons();
+            } else {
+                const errors = projectLoader.getErrors();
+                if (errors.length > 0) {
+                    updateStatus('error', '❌ エラー発生', errors.map(e => e.message).join(', '));
+                } else {
+                    updateStatus('', '📋 状態', 'プロジェクトフォルダを選択してください');
+                }
+                displayEmptyState();
+                disableButtons();
+            }
+        };
+        
+        window.showProjectStats = function() {
+            const stats = projectLoader.getProjectStats();
+            if (stats) {
+                const statsJSON = JSON.stringify(stats, null, 2);
+                updateStatus('', '📊 プロジェクト統計', '', statsJSON);
+            }
+        };
+        
+        window.clearProject = function() {
+            projectLoader.clearProject();
+            updateStatus('', '📋 状態', 'プロジェクトフォルダを選択してください');
+            displayEmptyState();
+            disableButtons();
+        };
+        
+        // UI更新関数
+        function updateStatus(type, title, content, jsonData = null) {
+            const statusCard = document.getElementById('statusCard');
+            const statusContent = document.getElementById('statusContent');
+            
+            // スタイルクラスをリセット
+            statusCard.className = 'status-card';
+            if (type) {
+                statusCard.classList.add(type);
+            }
+            
+            // タイトル更新
+            const titleElement = statusCard.querySelector('.status-title');
+            titleElement.textContent = title;
+            
+            // コンテンツ更新
+            statusContent.textContent = content;
+            
+            // JSONデータがある場合は表示
+            if (jsonData) {
+                const existingJson = statusCard.querySelector('.json-display');
+                if (existingJson) {
+                    existingJson.remove();
+                }
+                
+                const jsonDiv = document.createElement('div');
+                jsonDiv.className = 'json-display';
+                jsonDiv.textContent = jsonData;
+                statusCard.appendChild(jsonDiv);
+            } else {
+                const existingJson = statusCard.querySelector('.json-display');
+                if (existingJson) {
+                    existingJson.remove();
+                }
+            }
+        }
+        
+        function displayFileList(files, defaultFile) {
+            const container = document.getElementById('fileListContainer');
+            
+            if (files.length === 0) {
+                displayEmptyState();
+                return;
+            }
+            
+            const fileList = document.createElement('div');
+            fileList.className = 'file-list';
+            
+            files.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                if (file === defaultFile) {
+                    fileItem.classList.add('default');
+                }
+                
+                fileItem.innerHTML = `
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-display-name">${file.displayName}</div>
+                    <div class="file-meta">
+                        <span>更新: ${file.lastModified.toLocaleDateString('ja-JP')}</span>
+                        ${file === defaultFile ? '<span class="default-badge">DEFAULT</span>' : ''}
+                    </div>
+                `;
+                
+                fileItem.onclick = () => {
+                    selectFile(file);
+                };
+                
+                fileList.appendChild(fileItem);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(fileList);
+        }
+        
+        function displayEmptyState() {
+            const container = document.getElementById('fileListContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📂</div>
+                    <h3>プロジェクトフォルダを選択</h3>
+                    <p>HTMLファイルの自動スキャンとプレビュー機能をデモします</p>
+                </div>
+            `;
+        }
+        
+        function selectFile(file) {
+            updateStatus('success', '📄 ファイル選択', 
+                `${file.displayName} (${file.name})`, 
+                JSON.stringify(file, null, 2));
+        }
+        
+        function enableButtons() {
+            document.getElementById('statsBtn').disabled = false;
+            document.getElementById('clearBtn').disabled = false;
+        }
+        
+        function disableButtons() {
+            document.getElementById('statsBtn').disabled = true;
+            document.getElementById('clearBtn').disabled = true;
+        }
+        
+        console.log('🚀 ProjectLoader Demo loaded');
+    </script>
+</body>
+</html>
