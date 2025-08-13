@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Editor - Project Setup</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .editor-header {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .editor-title {
+            font-size: 2.2rem;
+            font-weight: 300;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .editor-subtitle {
+            opacity: 0.9;
+            margin: 0.5rem 0 0 0;
+            font-size: 1.1rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .setup-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .section {
+            margin-bottom: 2.5rem;
+        }
+        
+        .section h3 {
+            color: #333;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            border-left: 4px solid #667eea;
+            padding-left: 1rem;
+        }
+        
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .template-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+        }
+        
+        .template-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+        }
+        
+        .template-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        }
+        
+        .template-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .template-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .template-description {
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        .folder-selector {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .folder-selector:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .folder-selector.selected {
+            border-color: #28a745;
+            background: rgba(40, 167, 69, 0.05);
+        }
+        
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1.2rem;
+            padding: 1rem 2.5rem;
+            font-weight: 500;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status-message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+        
+        .status-error {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+        
+        .start-section {
+            text-align: center;
+            margin-top: 2rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header class="editor-header">
+        <h1 class="editor-title">🦴 Spine Editor</h1>
+        <p class="editor-subtitle">デスクトップ版 v2.0 - プロジェクトセットアップ</p>
+    </header>
+
+    <div class="container">
+        <div class="setup-card">
+            <!-- プロジェクトタイプ選択 -->
+            <div class="section">
+                <h3>📋 プロジェクトタイプを選択</h3>
+                <div class="template-grid">
+                    <div class="template-card selected" data-template="existing">
+                        <div class="template-icon">🏠</div>
+                        <div class="template-title">既存プロジェクト</div>
+                        <div class="template-description">既存のホームページにSpineキャラクターを追加</div>
+                    </div>
+                    
+                    <div class="template-card" data-template="new">
+                        <div class="template-icon">✨</div>
+                        <div class="template-title">新規プロジェクト</div>
+                        <div class="template-description">新しいプロジェクトを作成</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- フォルダ選択 -->
+            <div id="folder-section" class="section">
+                <h3>📁 プロジェクトフォルダを選択</h3>
+                <div class="folder-selector" id="folder-selector">
+                    <div id="folder-content">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📂</div>
+                        <div style="font-size: 1.2rem; margin-bottom: 1rem;"><strong>プロジェクトフォルダを選択してください</strong></div>
+                        <button class="btn btn-primary" onclick="selectFolder()">📁 フォルダを選択</button>
+                    </div>
+                    <div id="folder-selected" class="hidden">
+                        <div style="font-size: 2rem; color: #28a745; margin-bottom: 1rem;">✅</div>
+                        <div style="font-weight: bold; margin-bottom: 0.5rem;">選択されたフォルダ:</div>
+                        <div id="folder-path" style="color: #666; word-break: break-all;"></div>
+                    </div>
+                </div>
+                <div id="status-message"></div>
+            </div>
+            
+            <!-- 開始ボタン -->
+            <div class="start-section">
+                <button id="start-btn" class="btn btn-success" disabled onclick="startEditing()">
+                    🚀 編集を開始
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let projectType = 'existing';
+        let selectedFolder = null;
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateUI();
+        });
+        
+        // イベントリスナーの設定
+        function setupEventListeners() {
+            // テンプレートカード選択
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    selectTemplate(this.dataset.template);
+                });
+            });
+        }
+        
+        // テンプレート選択
+        function selectTemplate(template) {
+            // 選択状態をリセット
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // 新しい選択を適用
+            const selectedCard = document.querySelector(`[data-template="${template}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+                projectType = template;
+                updateUI();
+                console.log('📋 プロジェクトタイプ選択:', template);
+            }
+        }
+        
+        // UI状態の更新
+        function updateUI() {
+            const folderSection = document.getElementById('folder-section');
+            const startBtn = document.getElementById('start-btn');
+            
+            if (projectType === 'existing') {
+                // 既存プロジェクト: フォルダ選択が必要
+                folderSection.classList.remove('hidden');
+                startBtn.disabled = !selectedFolder;
+            } else {
+                // 新規プロジェクト: フォルダ選択不要
+                folderSection.classList.add('hidden');
+                startBtn.disabled = false;
+            }
+        }
+        
+        // フォルダ選択
+        async function selectFolder() {
+            if (!window.electronAPI) {
+                showStatus('error', 'デスクトップ版でのみ利用可能です');
+                return;
+            }
+            
+            try {
+                const result = await window.electronAPI.invoke('dialog-open-file', {
+                    title: 'プロジェクトフォルダを選択',
+                    properties: ['openDirectory'],
+                    buttonLabel: 'このフォルダを選択'
+                });
+                
+                if (!result.canceled && result.filePaths.length > 0) {
+                    selectedFolder = result.filePaths[0];
+                    showSelectedFolder(selectedFolder);
+                    updateUI();
+                    showStatus('success', 'フォルダが選択されました');
+                }
+            } catch (error) {
+                console.error('❌ フォルダ選択エラー:', error);
+                showStatus('error', 'フォルダの選択に失敗しました: ' + error.message);
+            }
+        }
+        
+        // 選択されたフォルダの表示
+        function showSelectedFolder(folderPath) {
+            const folderContent = document.getElementById('folder-content');
+            const folderSelected = document.getElementById('folder-selected');
+            const folderPathDiv = document.getElementById('folder-path');
+            const folderSelector = document.getElementById('folder-selector');
+            
+            folderContent.classList.add('hidden');
+            folderSelected.classList.remove('hidden');
+            folderPathDiv.textContent = folderPath;
+            folderSelector.classList.add('selected');
+        }
+        
+        // ステータスメッセージの表示
+        function showStatus(type, message) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.textContent = message;
+            
+            // 3秒後に自動で消去
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = '';
+            }, 3000);
+        }
+        
+        // 編集開始
+        async function startEditing() {
+            const startBtn = document.getElementById('start-btn');
+            
+            try {
+                startBtn.disabled = true;
+                startBtn.textContent = '⏳ 読み込み中...';
+                
+                if (projectType === 'existing' && selectedFolder) {
+                    // 既存プロジェクトの場合、index.htmlを開く
+                    await openExistingProject(selectedFolder);
+                } else {
+                    // 新規プロジェクトの場合、新しいウィンドウを開く
+                    await createNewProject();
+                }
+                
+            } catch (error) {
+                console.error('❌ 編集開始エラー:', error);
+                showStatus('error', '編集システムの開始に失敗しました: ' + error.message);
+                
+                // エラー時は元の状態に戻す
+                startBtn.disabled = false;
+                startBtn.textContent = '🚀 編集を開始';
+            }
+        }
+        
+        // 既存プロジェクトを開く
+        async function openExistingProject(folderPath) {
+            if (!window.electronAPI) {
+                throw new Error('デスクトップ版でのみ利用可能です');
+            }
+            
+            // index.htmlのパスを構築
+            const indexPath = folderPath + '/index.html';
+            
+            try {
+                // index.htmlの存在確認
+                const exists = await window.electronAPI.invoke('fs-exists', indexPath);
+                
+                if (exists) {
+                    // 既存のindex.htmlを編集モードで開く
+                    const url = `file://${indexPath}?edit=true`;
+                    await window.electronAPI.invoke('open-url', url);
+                } else {
+                    // index.htmlが存在しない場合は新規作成
+                    await createIndexHtml(folderPath);
+                    const url = `file://${indexPath}?edit=true`;
+                    await window.electronAPI.invoke('open-url', url);
+                }
+                
+                console.log('✅ プロジェクトを開きました:', indexPath);
+                
+            } catch (error) {
+                throw new Error(`プロジェクトの読み込みに失敗しました: ${error.message}`);
+            }
+        }
+        
+        // 新規プロジェクトを作成
+        async function createNewProject() {
+            // 新規プロジェクト用のindex.htmlを開く
+            const url = './index.html?edit=true&new=true';
+            
+            if (window.electronAPI) {
+                await window.electronAPI.invoke('open-url', url);
+            } else {
+                // ブラウザ版の場合は同じウィンドウで開く
+                window.location.href = url;
+            }
+        }
+        
+        // 基本的なindex.htmlを作成
+        async function createIndexHtml(folderPath) {
+            const basicHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Editor Project</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦴 Spine Project</h1>
+        <p>Spine Editor Desktop v2.0 で作成されました</p>
+        <p>編集モードで位置やアニメーションを調整できます</p>
+    </div>
+</body>
+</html>`;
+            
+            const indexPath = folderPath + '/index.html';
+            await window.electronAPI.invoke('fs-write-file', indexPath, basicHtml);
+            console.log('✅ 基本のindex.htmlを作成しました:', indexPath);
+        }
+        
+        console.log('🚀 Spine Editor Setup initialized');
+    </script>
+</body>
+</html>

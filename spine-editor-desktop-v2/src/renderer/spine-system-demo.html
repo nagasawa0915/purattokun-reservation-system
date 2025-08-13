@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine System v2.0 統合デモ</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+        
+        .demo-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .control-panel {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .preview-area {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            min-height: 600px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+        }
+        
+        .control-section {
+            margin-bottom: 25px;
+        }
+        
+        .control-section h3 {
+            margin: 0 0 15px 0;
+            color: #00ff88;
+            font-size: 1.2em;
+        }
+        
+        .button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background: linear-gradient(45deg, #00ff88, #00cc66);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
+        }
+        
+        .button.secondary {
+            background: linear-gradient(45deg, #4a90e2, #357abd);
+        }
+        
+        .button.danger {
+            background: linear-gradient(45deg, #ff6b6b, #e74c3c);
+        }
+        
+        .status-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .info-box {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h4 {
+            margin: 0 0 10px 0;
+            color: #00ff88;
+        }
+        
+        .module-status {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .status-indicator {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .status-ok { background: #00ff88; color: black; }
+        .status-error { background: #ff6b6b; color: white; }
+        .status-loading { background: #ffa500; color: black; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Spine System v2.0</h1>
+        <p>軽量Spine WebGLシステム統合デモ - 3モジュール統合アーキテクチャ</p>
+    </div>
+    
+    <div class="demo-container">
+        <div class="control-panel">
+            <div class="info-box">
+                <h4>🚀 システム構成</h4>
+                <p><strong>spine-core.js</strong> (300行)<br>WebGL初期化・Canvas管理</p>
+                <p><strong>spine-renderer.js</strong> (200行)<br>キャラクター描画・Animation</p>
+                <p><strong>spine-utils.js</strong> (100行)<br>Asset読み込み・エラー処理</p>
+            </div>
+            
+            <div class="control-section">
+                <h3>📋 システム制御</h3>
+                <button class="button" onclick="initializeSystem()">🚀 システム初期化</button>
+                <button class="button secondary" onclick="addTestCharacter()">🎭 テストキャラクター追加</button>
+                <button class="button secondary" onclick="showSystemStatus()">📊 システム状態確認</button>
+                <button class="button danger" onclick="cleanupSystem()">🧹 システムクリーンアップ</button>
+            </div>
+            
+            <div class="control-section">
+                <h3>🎮 デモ機能</h3>
+                <button class="button secondary" onclick="addMultipleCharacters()">👥 複数キャラクター</button>
+                <button class="button secondary" onclick="testAssetLoading()">📦 Asset読み込みテスト</button>
+                <button class="button secondary" onclick="triggerErrorTest()">⚠️ エラーハンドリング</button>
+            </div>
+            
+            <div class="control-section">
+                <h3>📊 システム状態</h3>
+                <div id="systemStatus" class="status-display">
+                    システム未初期化
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-area" id="previewArea">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; opacity: 0.5;">
+                <h2>🎭 Spine System v2.0 Preview Area</h2>
+                <p>「🚀 システム初期化」ボタンでスタート</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spine System v2.0 Modules -->
+    <script src="js/spine-core.js"></script>
+    <script src="js/spine-renderer.js"></script>
+    <script src="js/spine-utils.js"></script>
+    <script src="js/spine-system.js"></script>
+
+    <script>
+        // Global variables
+        let spineSystem = null;
+        let characterCount = 0;
+
+        // システム初期化
+        async function initializeSystem() {
+            try {
+                updateStatus('🚀 システム初期化中...');
+                
+                spineSystem = new SpineSystem();
+                const success = await spineSystem.initialize();
+                
+                if (success) {
+                    updateStatus('✅ システム初期化完了\n🎮 デモ機能が利用可能になりました');
+                    clearPreviewArea();
+                } else {
+                    updateStatus('❌ システム初期化失敗');
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ 初期化エラー: ${error.message}`);
+            }
+        }
+
+        // テストキャラクター追加
+        async function addTestCharacter() {
+            if (!spineSystem || !spineSystem.initialized) {
+                updateStatus('❌ システム未初期化');
+                return;
+            }
+
+            try {
+                characterCount++;
+                const characterId = `test-character-${characterCount}`;
+                const position = {
+                    x: 100 + (characterCount * 50),
+                    y: 100 + (characterCount * 30)
+                };
+
+                updateStatus(`🎭 キャラクター${characterCount}配置中...`);
+                
+                // フォールバック表示での配置（実際のSpineファイルなしでのテスト）
+                const success = spineSystem.renderer.createFallbackDisplay(
+                    characterId,
+                    { name: `TestChar${characterCount}` },
+                    position,
+                    document.getElementById('previewArea')
+                );
+                
+                if (success) {
+                    updateStatus(`✅ キャラクター${characterCount}配置完了`);
+                } else {
+                    updateStatus(`❌ キャラクター${characterCount}配置失敗`);
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ キャラクター配置エラー: ${error.message}`);
+            }
+        }
+
+        // 複数キャラクター追加
+        async function addMultipleCharacters() {
+            for (let i = 0; i < 3; i++) {
+                await addTestCharacter();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        // システム状態確認
+        function showSystemStatus() {
+            if (!spineSystem) {
+                updateStatus('❌ システム未初期化');
+                return;
+            }
+
+            try {
+                const status = spineSystem.getSystemStatus();
+                const statusText = JSON.stringify(status, null, 2);
+                updateStatus(`📊 システム状態:\n${statusText}`);
+                
+                // コンソールにも詳細出力
+                spineSystem.debugSystemInfo();
+                
+            } catch (error) {
+                updateStatus(`❌ 状態取得エラー: ${error.message}`);
+            }
+        }
+
+        // Asset読み込みテスト
+        async function testAssetLoading() {
+            if (!spineSystem || !spineSystem.initialized) {
+                updateStatus('❌ システム未初期化');
+                return;
+            }
+
+            try {
+                updateStatus('📦 Asset読み込みテスト実行中...');
+                
+                // 存在しないアセットで意図的にエラーを発生
+                await spineSystem.utils.loadSpineAssets('/test/path', 'nonexistent');
+                
+            } catch (error) {
+                updateStatus(`✅ エラーハンドリング動作確認:\n${error.message}`);
+                
+                // エラー解決策表示
+                if (error.solutions) {
+                    updateStatus(`💡 解決策: ${error.solutions.join(', ')}`);
+                }
+            }
+        }
+
+        // エラーハンドリングテスト
+        function triggerErrorTest() {
+            if (!spineSystem) {
+                updateStatus('❌ システム未初期化');
+                return;
+            }
+
+            try {
+                updateStatus('⚠️ エラーハンドリングテスト実行');
+                
+                // 無効なキャラクター操作でエラー発生
+                spineSystem.renderer.removeCharacter('invalid-character-id');
+                
+                updateStatus('✅ エラーハンドリング正常動作');
+                
+            } catch (error) {
+                updateStatus(`❌ 予期しないエラー: ${error.message}`);
+            }
+        }
+
+        // システムクリーンアップ
+        function cleanupSystem() {
+            if (spineSystem) {
+                spineSystem.cleanup();
+                updateStatus('✅ システムクリーンアップ完了');
+            }
+            
+            clearPreviewArea();
+            characterCount = 0;
+            spineSystem = null;
+        }
+
+        // プレビューエリアクリア
+        function clearPreviewArea() {
+            const previewArea = document.getElementById('previewArea');
+            previewArea.innerHTML = `
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; opacity: 0.3;">
+                    <h2>🎮 Spine System v2.0 Ready</h2>
+                    <p>デモ機能でキャラクターを配置してください</p>
+                </div>
+            `;
+        }
+
+        // ステータス更新
+        function updateStatus(text) {
+            const statusDiv = document.getElementById('systemStatus');
+            const timestamp = new Date().toLocaleTimeString();
+            statusDiv.textContent = `[${timestamp}] ${text}`;
+            statusDiv.scrollTop = statusDiv.scrollHeight;
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus('🎯 Spine System v2.0 デモ準備完了');
+        });
+    </script>
+</body>
+</html>

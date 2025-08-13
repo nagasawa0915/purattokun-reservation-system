@@ -197,8 +197,8 @@ class SpineEditorApp {
       // Phase 1: Homepage/Projectフォルダ選択
       await this.selectHomepageFolder();
       
-      // Phase 2: Spineキャラクター選択・読み込み
-      await this.importSpineCharacter();
+      // Phase 2: Spineキャラクターは自動検索済み（selectHomepageFolder内で実行）
+      // await this.importSpineCharacter(); // 自動検索により不要
       
       // Phase 3: ワークフロー開始
       await this.executeWorkflow();
@@ -211,30 +211,187 @@ class SpineEditorApp {
   }
 
   /**
-   * Homepage フォルダ選択
+   * プロジェクトフォルダ選択（Spineファイル自動検索）
    */
   async selectHomepageFolder() {
     const result = await window.electronAPI.openFileDialog({
-      title: 'Select Homepage Folder',
+      title: 'フォルダを選択してください (Spineファイル自動検索)',
+      message: 'プロジェクト本体フォルダまたはキャラクターフォルダを選択すると、自動的に.json/.atlasファイルを検索します',
       properties: ['openDirectory']
     });
 
     if (result.canceled || !result.filePaths.length) {
-      throw new Error('No homepage folder selected');
+      throw new Error('No project folder selected');
     }
 
     this.homepageFolder = result.filePaths[0];
-    this.setStatus(`Homepage folder: ${this.homepageFolder}`);
-    console.log('📁 Homepage folder selected:', this.homepageFolder);
+    this.setStatus(`Project folder: ${this.homepageFolder}`);
+    console.log('📁 Project folder selected:', this.homepageFolder);
+
+    // フォルダ内のSpineファイルを自動検索
+    await this.autoDetectSpineFiles(this.homepageFolder);
   }
 
   /**
-   * Spine キャラクター選択・インポート
+   * フォルダ内Spineファイル自動検索
    */
-  async importSpineCharacter() {
+  async autoDetectSpineFiles(folderPath) {
+    try {
+      this.setStatus('Searching for Spine files in folder...');
+      
+      // Node.jsファイルシステムアクセスが必要なため、サーバー経由でファイルリスト取得
+      const spineFiles = await this.scanFolderForSpineFiles(folderPath);
+      
+      if (!spineFiles.json || !spineFiles.atlas) {
+        throw new Error('Spine files (.json and .atlas) not found in the selected folder');
+      }
+      
+      this.setStatus(`Found Spine files: ${spineFiles.json}, ${spineFiles.atlas}`);
+      
+      // 自動読み込み
+      await this.loadSpineData(spineFiles);
+      this.setStatus('Spine character auto-imported successfully');
+      
+    } catch (error) {
+      console.error('Auto-detection failed:', error);
+      this.setStatus('Auto-detection failed, manual selection required', 'warning');
+      
+      // フォールバック: 手動選択
+      await this.importSpineCharacterManual();
+    }
+  }
+
+  /**
+   * フォルダ内Spineファイルスキャン（完全実装）
+   */
+  async scanFolderForSpineFiles(folderPath) {
+    try {
+      this.setStatus('📁 フォルダを再帰的にスキャン中...');
+      
+      // ElectronのIPC経由でファイルシステム再帰スキャン
+      const scanResult = await window.electronAPI.scanDirectory(folderPath);
+      
+      if (!scanResult.success) {
+        throw new Error(scanResult.error);
+      }
+      
+      const foundFiles = scanResult.files;
+      console.log('🔍 スキャン結果:', foundFiles);
+      
+      // 最適なファイルペアを選択
+      const bestPair = this.selectBestSpineFilesPair(foundFiles);
+      
+      if (!bestPair.json || !bestPair.atlas) {
+        throw new Error(`Spine files not found. Found: ${foundFiles.json.length} JSON, ${foundFiles.atlas.length} Atlas files`);
+      }
+      
+      this.setStatus(`✅ Spineファイルペア発見: ${this.getBasename(bestPair.json)}, ${this.getBasename(bestPair.atlas)}`);
+      return bestPair;
+      
+    } catch (error) {
+      console.error('完全スキャン失敗:', error);
+      
+      // フォールバック: 簡易推測方式
+      this.setStatus('⚠️ 完全スキャン失敗、簡易推測を試行...');
+      return await this.fallbackSimpleScan(folderPath);
+    }
+  }
+
+  /**
+   * 最適なSpineファイルペアを選択
+   */
+  selectBestSpineFilesPair(foundFiles) {
+    const jsonFiles = foundFiles.json || [];
+    const atlasFiles = foundFiles.atlas || [];
+    const pngFiles = foundFiles.png || [];
+    
+    // 同じベース名のペアを検索
+    for (const jsonPath of jsonFiles) {
+      const jsonBasename = this.getBasename(jsonPath, '.json');
+      
+      for (const atlasPath of atlasFiles) {
+        const atlasBasename = this.getBasename(atlasPath, '.atlas');
+        
+        if (jsonBasename === atlasBasename) {
+          // 対応するPNGファイルを検索
+          const pngPath = pngFiles.find(p => 
+            this.getBasename(p, '.png') === jsonBasename
+          ) || atlasPath.replace('.atlas', '.png');
+          
+          return {
+            json: jsonPath,
+            atlas: atlasPath,
+            image: pngPath
+          };
+        }
+      }
+    }
+    
+    // 完全一致がない場合、最初のペアを返す
+    if (jsonFiles.length > 0 && atlasFiles.length > 0) {
+      const pngPath = pngFiles[0] || atlasFiles[0].replace('.atlas', '.png');
+      
+      return {
+        json: jsonFiles[0],
+        atlas: atlasFiles[0],
+        image: pngPath
+      };
+    }
+    
+    return { json: null, atlas: null, image: null };
+  }
+
+  /**
+   * フォールバック：簡易推測方式
+   */
+  async fallbackSimpleScan(folderPath) {
+    const commonNames = ['character', 'spine', 'animation', 'main', 'purattokun', 'nezumi'];
+    const files = { json: null, atlas: null, image: null };
+    
+    for (const name of commonNames) {
+      const jsonPath = `${folderPath}/${name}.json`;
+      const atlasPath = `${folderPath}/${name}.atlas`;
+      const imagePath = `${folderPath}/${name}.png`;
+      
+      try {
+        const jsonExists = await this.checkFileExists(jsonPath);
+        const atlasExists = await this.checkFileExists(atlasPath);
+        
+        if (jsonExists && atlasExists) {
+          files.json = jsonPath;
+          files.atlas = atlasPath;
+          files.image = imagePath;
+          this.setStatus(`📝 簡易推測成功: ${name}`);
+          break;
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+    
+    return files;
+  }
+
+  /**
+   * ファイル存在チェック
+   */
+  async checkFileExists(filePath) {
+    try {
+      const result = await window.electronAPI.readFile(filePath);
+      return result.success;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * 手動Spineファイル選択（フォールバック）
+   */
+  async importSpineCharacterManual() {
     const result = await window.electronAPI.openFileDialog({
-      title: 'Select Spine Character Files',
+      title: 'Select Spine Character Files (.json and .atlas required)',
       filters: [
+        { name: 'Spine Files', extensions: ['json', 'atlas'] },
         { name: 'Spine JSON', extensions: ['json'] },
         { name: 'Spine Atlas', extensions: ['atlas'] },
         { name: 'All Files', extensions: ['*'] }
@@ -249,13 +406,33 @@ class SpineEditorApp {
     // ファイル種別判定
     const files = this.categorizeSpineFiles(result.filePaths);
     
-    if (!files.json || !files.atlas) {
-      throw new Error('Both .json and .atlas files are required');
+    // より柔軟なファイル検証
+    if (!files.json && !files.atlas) {
+      throw new Error('At least one .json or .atlas file is required');
+    }
+    
+    // 不足ファイルの自動推測
+    if (!files.json && files.atlas) {
+      files.json = files.atlas.replace('.atlas', '.json');
+      this.setStatus('JSON file inferred from atlas file path');
+    }
+    if (!files.atlas && files.json) {
+      files.atlas = files.json.replace('.json', '.atlas');
+      this.setStatus('Atlas file inferred from JSON file path');
     }
 
     // Spine データ読み込み
     await this.loadSpineData(files);
     this.setStatus('Spine character imported successfully');
+  }
+
+  /**
+   * Spine キャラクター選択・インポート - 新ワークフロー
+   */
+  async importSpineCharacter() {
+    // プロジェクトフォルダ選択時に自動検索が実行されるため、
+    // このメソッドは空にしておく
+    console.log('🔄 importSpineCharacter: Auto-detection already handled');
   }
 
   /**
@@ -783,6 +960,17 @@ class SpineEditorApp {
       scaleX: this.spine.skeleton.scaleX,
       scaleY: this.spine.skeleton.scaleY
     };
+  }
+
+  /**
+   * ブラウザ対応パスヘルパー
+   */
+  getBasename(filePath, ext = '') {
+    const filename = filePath.split('/').pop() || filePath;
+    if (ext) {
+      return filename.endsWith(ext) ? filename.slice(0, -ext.length) : filename;
+    }
+    return filename;
   }
 
   /**

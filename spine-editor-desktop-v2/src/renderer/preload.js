@@ -13,9 +13,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ファイルシステム操作
   readFile: (filePath) => ipcRenderer.invoke('fs-read-file', filePath),
   writeFile: (filePath, data) => ipcRenderer.invoke('fs-write-file', filePath, data),
+  scanDirectory: (folderPath) => ipcRenderer.invoke('fs-scan-directory', folderPath),
   
   // システム操作
   openPath: (path) => ipcRenderer.invoke('shell-open-item', path),
+  
+  // メインプロセスへのメッセージ送信
+  send: (channel, data) => ipcRenderer.send(channel, data),
   
   // メニューイベント受信
   onMenuAction: (callback) => {

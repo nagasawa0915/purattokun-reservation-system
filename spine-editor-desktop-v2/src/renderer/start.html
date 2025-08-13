@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Editor Desktop v2.0 - Start</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .start-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .version {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 40px;
+        }
+        
+        .start-options {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .option-btn {
+            padding: 15px 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: block;
+        }
+        
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .option-btn:active {
+            transform: translateY(0);
+        }
+        
+        .features {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="start-container">
+        <div class="logo">🦴</div>
+        <h1>Spine Editor</h1>
+        <div class="version">Desktop v2.0</div>
+        
+        <div class="start-options">
+            <button class="option-btn" onclick="startNewProject()">
+                🚀 Start New Project
+            </button>
+            
+            <button class="option-btn" onclick="openProject()">
+                📁 Open Existing Project
+            </button>
+            
+            <a href="/?mode=demo" class="option-btn">
+                🎮 Demo Mode
+            </a>
+        </div>
+        
+        <div class="features">
+            ✨ Lightweight Editor<br>
+            🎯 Spine WebGL Integration<br>
+            📦 Package Export<br>
+            🔧 Real-time Preview
+        </div>
+    </div>
+    
+    <script>
+        // Electron API との統合
+        function openProject() {
+            if (window.electronAPI) {
+                // メインプロセスにプロジェクト開くメッセージ送信
+                window.electronAPI.send('menu-open-project');
+            } else {
+                // ブラウザ版フォールバック
+                window.location.href = '/';
+            }
+        }
+        
+        // 新しいプロジェクト開始
+        function startNewProject() {
+            if (window.electronAPI) {
+                // メインプロセスに新プロジェクト作成メッセージ送信
+                window.electronAPI.send('menu-new-project');
+            } else {
+                // ブラウザ版：プロジェクト選択画面またはエディタを空状態で表示
+                showProjectSelection();
+            }
+        }
+        
+        // プロジェクト選択画面の表示
+        function showProjectSelection() {
+            const container = document.querySelector('.start-container');
+            container.innerHTML = `
+                <div class="logo">📁</div>
+                <h1>Select Project Template</h1>
+                <div class="version">Choose your starting point</div>
+                
+                <div class="start-options">
+                    <button class="option-btn" onclick="createEmptyProject()">
+                        📄 Empty Project
+                    </button>
+                    
+                    <button class="option-btn" onclick="loadIndexProject()">
+                        🏠 Load Existing Index.html
+                    </button>
+                    
+                    <button class="option-btn" onclick="goBack()">
+                        ⬅️ Back to Start
+                    </button>
+                </div>
+                
+                <div class="features">
+                    💡 Empty Project: Start with a blank canvas<br>
+                    🏠 Load Index: Use existing project files<br>
+                    📦 Full customization available
+                </div>
+            `;
+        }
+        
+        // 空のプロジェクト作成
+        function createEmptyProject() {
+            // 空のエディタを表示
+            window.location.href = '/js/?mode=empty';
+        }
+        
+        // 既存のindex.htmlプロジェクトを読み込み
+        function loadIndexProject() {
+            window.location.href = '/';
+        }
+        
+        // スタート画面に戻る
+        function goBack() {
+            window.location.reload();
+        }
+        
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+                e.preventDefault();
+                openProject();
+            }
+        });
+        
+        console.log('🚀 Spine Editor v2.0 Start Page loaded');
+    </script>
+</body>
+</html>
