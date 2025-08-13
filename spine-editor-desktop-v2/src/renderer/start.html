@@ -290,6 +290,8 @@
 
     <!-- JavaScript -->
     <script src="js/demo-modules.js"></script>
+    <script src="js/spine-core.js"></script>
+    <script src="js/spine-renderer.js"></script>
     
     <script>
         // デモアプリケーション初期化
@@ -297,10 +299,16 @@
             constructor() {
                 this.currentProject = null;
                 this.currentPage = null;
-                this.spinePosition = { x: 0, y: 0 };
+                this.spinePosition = { x: 100, y: 100 };
+                this.spineCharacter = null;
+                
+                // Spine System初期化
+                this.spineCore = new SpineCore();
+                this.spineRenderer = null;
                 
                 this.initializeUI();
                 this.bindEvents();
+                this.initializeSpineSystem();
             }
 
             initializeUI() {
@@ -328,11 +336,38 @@
                 
                 this.spineXInput.addEventListener('change', (e) => {
                     this.spinePosition.x = parseInt(e.target.value) || 0;
+                    this.updateSpinePosition();
                 });
                 
                 this.spineYInput.addEventListener('change', (e) => {
                     this.spinePosition.y = parseInt(e.target.value) || 0;
+                    this.updateSpinePosition();
                 });
+            }
+
+            /**
+             * Spineシステム初期化
+             */
+            initializeSpineSystem() {
+                try {
+                    // SpineCore初期化
+                    const success = this.spineCore.initialize();
+                    if (!success) {
+                        console.error('❌ SpineCore初期化失敗');
+                        return;
+                    }
+                    
+                    // SpineRenderer初期化
+                    this.spineRenderer = new SpineRenderer(this.spineCore);
+                    
+                    // 保存された位置を復元
+                    this.restorePosition();
+                    
+                    console.log('✅ Spine System初期化完了');
+                    
+                } catch (error) {
+                    console.error('❌ Spineシステム初期化エラー:', error);
+                }
             }
 
             updateStatus(status, message) {
@@ -399,11 +434,20 @@
                 console.log('🔧 pageSelector.container:', window.pageSelector?.container);
                 
                 if (window.pageSelector && window.pageSelector.loadFiles) {
+                    console.log('🔧 Using pageSelector module');
+                    
+                    // pageSelector → DemoApp の連携設定
+                    window.pageSelector.setOnPageSelect((file) => {
+                        console.log('📋 PageSelector file selected:', file);
+                        this.currentPage = file;
+                        this.loadHTMLPreview(file);
+                    });
+                    
                     window.pageSelector.loadFiles(safeFiles);
                 } else {
-                    console.error('❌ pageSelector not properly initialized');
-                    // フォールバック: 直接DOM操作
-                    this.renderFileListDirect(safeFiles);
+                    console.log('🔧 Using fallback direct rendering');
+                    // フォールバック: 直接DOM操作（統合版）
+                    this.renderFileListWithPreview(safeFiles);
                 }
                 
                 // Spine制御を有効化
@@ -413,8 +457,8 @@
                 console.log('🎯 プロジェクトファイル読み込み完了:', safeFiles.length, '個');
             }
 
-            // フォールバック: 直接ファイル一覧表示
-            renderFileListDirect(files) {
+            // 統合フォールバック: ファイル一覧表示 + HTMLプレビュー機能
+            renderFileListWithPreview(files) {
                 console.log('🔧 Direct rendering files:', files);
                 this.pageList.innerHTML = '';
                 
@@ -425,7 +469,7 @@
                     item.dataset.index = index;
                     
                     item.addEventListener('click', () => {
-                        this.selectFileDirect(file, item);
+                        this.selectFileWithPreview(file, item);
                     });
                     
                     this.pageList.appendChild(item);
@@ -434,11 +478,11 @@
                 // 最初のファイルを自動選択
                 if (files.length > 0) {
                     const firstItem = this.pageList.firstChild;
-                    this.selectFileDirect(files[0], firstItem);
+                    this.selectFileWithPreview(files[0], firstItem);
                 }
             }
             
-            selectFileDirect(file, element) {
+            selectFileWithPreview(file, element) {
                 // 選択状態の更新
                 this.pageList.querySelectorAll('.file-item').forEach(item => {
                     item.classList.remove('selected');
@@ -449,10 +493,10 @@
                 console.log('📋 ファイル選択:', file.name || file.path);
                 
                 // HTMLプレビュー表示
-                this.loadPreviewDirect(file);
+                this.loadHTMLPreview(file);
             }
             
-            loadPreviewDirect(file) {
+            async loadHTMLPreview(file) {
                 console.log('🖼️ プレビュー読み込み:', file);
                 this.updateStatus('loading', `プレビュー読み込み中: ${file.name || file.path}`);
                 
@@ -460,15 +504,41 @@
                     const previewIframe = this.previewIframe;
                     const previewPlaceholder = this.previewPlaceholder;
                     
-                    if (file.fullPath) {
-                        // フルパスがある場合は直接読み込み
-                        previewIframe.src = `file://${file.fullPath}`;
-                    } else if (window.projectLoader.currentProject) {
-                        // プロジェクトパス + 相対パスで構築
-                        const fullPath = `${window.projectLoader.currentProject}/${file.path || file.name}`;
-                        previewIframe.src = `file://${fullPath}`;
+                    console.log('🔧 プレビュー処理開始');
+                    console.log('🔧 file.fullPath:', file.fullPath);
+                    console.log('🔧 file.path:', file.path);
+                    console.log('🔧 file.name:', file.name);
+                    console.log('🔧 currentProject:', window.projectLoader.currentProject);
+                    
+                    // ElectronAPIを使用してファイル内容を読み込み
+                    if (window.electronAPI && window.electronAPI.fs && file.fullPath) {
+                        console.log('🔧 Using ElectronAPI to read file');
+                        const result = await window.electronAPI.fs.readFile(file.fullPath);
+                        
+                        if (result.success) {
+                            console.log('🔧 File read successfully, creating blob URL');
+                            // Blob URLでiframeに表示
+                            const blob = new Blob([result.data], { type: 'text/html' });
+                            const blobURL = URL.createObjectURL(blob);
+                            
+                            previewIframe.src = blobURL;
+                            
+                            // メモリリーク防止
+                            setTimeout(() => URL.revokeObjectURL(blobURL), 10000);
+                        } else {
+                            throw new Error(`File read failed: ${result.error}`);
+                        }
                     } else {
-                        throw new Error('File path not available');
+                        console.log('🔧 Using direct file URL');
+                        // フォールバック: 直接ファイルURL
+                        if (file.fullPath) {
+                            previewIframe.src = `file://${file.fullPath}`;
+                        } else if (window.projectLoader.currentProject) {
+                            const fullPath = `${window.projectLoader.currentProject}/${file.path || file.name}`;
+                            previewIframe.src = `file://${fullPath}`;
+                        } else {
+                            throw new Error('File path not available');
+                        }
                     }
                     
                     previewPlaceholder.style.display = 'none';
@@ -476,24 +546,209 @@
                     
                     this.updateStatus('ready', `プレビュー表示中: ${file.name || file.path}`);
                 } catch (error) {
-                    console.error('プレビュー読み込みエラー:', error);
-                    this.updateStatus('error', 'プレビューの読み込みに失敗しました');
+                    console.error('🚨 プレビュー読み込みエラー:', error);
+                    this.updateStatus('error', `プレビューの読み込みに失敗しました: ${error.message}`);
+                    
+                    // エラー時はプレースホルダーに詳細表示
+                    this.previewPlaceholder.innerHTML = `
+                        <div style="color: #666; text-align: center; padding: 20px;">
+                            <p>HTMLプレビューの読み込みに失敗しました</p>
+                            <p style="font-size: 12px; color: #999;">ファイル: ${file.name || file.path}</p>
+                            <p style="font-size: 12px; color: #999;">エラー: ${error.message}</p>
+                        </div>
+                    `;
+                    this.previewPlaceholder.style.display = 'block';
+                    this.previewIframe.style.display = 'none';
                 }
             }
 
             addSpineCharacter() {
                 this.updateStatus('loading', 'Spineキャラクターを追加中...');
                 
-                // TODO: Phase 0.2で実装
-                setTimeout(() => {
-                    this.updateStatus('ready', 'Spineキャラクター追加完了（デモ）');
-                    this.btnSavePosition.disabled = false;
-                }, 1000);
+                try {
+                    // プレビューエリアを取得
+                    const previewContent = document.querySelector('.preview-content');
+                    if (!previewContent) {
+                        throw new Error('プレビューエリアが見つかりません');
+                    }
+                    
+                    // 既存のキャラクターがあれば削除
+                    if (this.spineCharacter) {
+                        this.spineRenderer.removeCharacter('dummy-character');
+                        this.spineCharacter = null;
+                    }
+                    
+                    // ダミーキャラクターデータ
+                    const characterData = {
+                        name: 'Dummy Character',
+                        type: 'demo',
+                        version: 'v2.0'
+                    };
+                    
+                    // Spineキャラクターを描画
+                    const success = this.spineRenderer.renderSpineCharacter(
+                        'dummy-character',
+                        characterData,
+                        { x: this.spinePosition.x, y: this.spinePosition.y },
+                        previewContent
+                    );
+                    
+                    if (success) {
+                        this.spineCharacter = 'dummy-character';
+                        
+                        // アニメーション初期化
+                        this.spineRenderer.initializeAnimation('dummy-character', {
+                            idle: 'taiki',
+                            click: 'yarare'
+                        });
+                        
+                        // ドラッグ機能を追加
+                        this.setupSpineDragFunction();
+                        
+                        // UI更新
+                        this.spineXInput.value = this.spinePosition.x;
+                        this.spineYInput.value = this.spinePosition.y;
+                        this.btnSavePosition.disabled = false;
+                        
+                        this.updateStatus('ready', 'Spineキャラクター追加完了');
+                        console.log('✅ Spineダミーキャラクター追加完了');
+                        
+                    } else {
+                        throw new Error('Spineキャラクター作成失敗');
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Spineキャラクター追加エラー:', error);
+                    this.updateStatus('error', `Spineキャラクター追加失敗: ${error.message}`);
+                }
+            }
+
+            /**
+             * Spineドラッグ機能設定
+             */
+            setupSpineDragFunction() {
+                const canvasElement = this.spineCore.canvasElements.get('spine-dummy-character');
+                if (!canvasElement) {
+                    console.warn('⚠️ Spineキャンバス要素が見つかりません');
+                    return;
+                }
+                
+                let isDragging = false;
+                let dragStartX = 0;
+                let dragStartY = 0;
+                let elementStartX = 0;
+                let elementStartY = 0;
+                
+                // マウスダウン（ドラッグ開始）
+                canvasElement.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+                    elementStartX = parseInt(canvasElement.style.left) || 0;
+                    elementStartY = parseInt(canvasElement.style.top) || 0;
+                    
+                    canvasElement.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+                
+                // マウス移動（ドラッグ中）
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    const deltaX = e.clientX - dragStartX;
+                    const deltaY = e.clientY - dragStartY;
+                    
+                    const newX = elementStartX + deltaX;
+                    const newY = elementStartY + deltaY;
+                    
+                    // Canvasを移動
+                    canvasElement.style.left = newX + 'px';
+                    canvasElement.style.top = newY + 'px';
+                    
+                    // 内部座標も更新
+                    this.spinePosition.x = newX;
+                    this.spinePosition.y = newY;
+                    
+                    // UI更新
+                    this.spineXInput.value = newX;
+                    this.spineYInput.value = newY;
+                });
+                
+                // マウスアップ（ドラッグ終了）
+                document.addEventListener('mouseup', (e) => {
+                    if (isDragging) {
+                        isDragging = false;
+                        canvasElement.style.cursor = 'move';
+                        
+                        this.updateStatus('ready', `位置更新: (${this.spinePosition.x}, ${this.spinePosition.y})`);
+                        console.log('🎯 ドラッグ完了:', this.spinePosition);
+                    }
+                });
+                
+                console.log('✅ Spineドラッグ機能設定完了');
+            }
+            
+            /**
+             * Spine位置更新（数値入力から）
+             */
+            updateSpinePosition() {
+                if (!this.spineCharacter) return;
+                
+                const canvasElement = this.spineCore.canvasElements.get('spine-dummy-character');
+                if (canvasElement) {
+                    canvasElement.style.left = this.spinePosition.x + 'px';
+                    canvasElement.style.top = this.spinePosition.y + 'px';
+                    
+                    this.updateStatus('ready', `位置更新: (${this.spinePosition.x}, ${this.spinePosition.y})`);
+                    console.log('📍 位置数値更新:', this.spinePosition);
+                }
             }
 
             savePosition() {
-                console.log('位置保存:', this.spinePosition);
-                this.updateStatus('ready', `位置保存完了: (${this.spinePosition.x}, ${this.spinePosition.y})`);
+                if (!this.spineCharacter) {
+                    this.updateStatus('error', 'Spineキャラクターがありません');
+                    return;
+                }
+                
+                // localStorage保存
+                const positionData = {
+                    characterId: this.spineCharacter,
+                    position: this.spinePosition,
+                    timestamp: Date.now()
+                };
+                
+                try {
+                    localStorage.setItem('spine-desktop-position', JSON.stringify(positionData));
+                    console.log('💾 位置保存完了:', positionData);
+                    this.updateStatus('ready', `位置保存完了: (${this.spinePosition.x}, ${this.spinePosition.y})`);
+                } catch (error) {
+                    console.error('❌ 位置保存エラー:', error);
+                    this.updateStatus('error', '位置保存に失敗しました');
+                }
+            }
+            
+            /**
+             * 保存された位置を復元
+             */
+            restorePosition() {
+                try {
+                    const saved = localStorage.getItem('spine-desktop-position');
+                    if (!saved) return false;
+                    
+                    const positionData = JSON.parse(saved);
+                    this.spinePosition = positionData.position;
+                    
+                    // UI更新
+                    this.spineXInput.value = this.spinePosition.x;
+                    this.spineYInput.value = this.spinePosition.y;
+                    
+                    console.log('📍 位置復元:', this.spinePosition);
+                    return true;
+                    
+                } catch (error) {
+                    console.error('❌ 位置復元エラー:', error);
+                    return false;
+                }
             }
 
             exportPackage() {

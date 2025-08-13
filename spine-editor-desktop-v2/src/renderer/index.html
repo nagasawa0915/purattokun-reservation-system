@@ -36,6 +36,10 @@
             </div>
             <div class="header-right">
                 <div class="app-controls">
+                    <button id="btn-demo-mode" class="btn btn-outline" title="デモモード (Phase 0.2)">
+                        <span class="icon">🚀</span>
+                        Demo
+                    </button>
                     <button id="btn-toggle-preview" class="btn btn-outline" title="プレビュー切替">
                         <span class="icon">👁️</span>
                     </button>
@@ -203,7 +207,48 @@
             if (spineScripts.length > 1) {
                 console.warn('⚠️ Spine WebGL 重複ロード検出:', spineScripts);
             }
+            
+            // デモモードボタンイベント
+            setupDemoModeButton();
         });
+        
+        /**
+         * デモモードボタン設定
+         */
+        function setupDemoModeButton() {
+            const demoBtn = document.getElementById('btn-demo-mode');
+            if (!demoBtn) {
+                console.warn('⚠️ Demo mode button not found');
+                return;
+            }
+            
+            demoBtn.addEventListener('click', async () => {
+                console.log('🚀 Demo mode button clicked');
+                
+                try {
+                    // 現在のウィンドウでstart.htmlに遷移
+                    const currentUrl = window.location.href;
+                    const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+                    const startUrl = `${baseUrl}/start.html`;
+                    
+                    console.log('🌐 Navigating to:', startUrl);
+                    window.location.href = startUrl;
+                    
+                } catch (error) {
+                    console.error('❌ Demo mode navigation error:', error);
+                    
+                    // フォールバック: 新しいタブで開く
+                    try {
+                        window.open('start.html', '_blank');
+                    } catch (fallbackError) {
+                        console.error('❌ Fallback navigation failed:', fallbackError);
+                        alert('デモモードの起動に失敗しました。');
+                    }
+                }
+            });
+            
+            console.log('✅ Demo mode button setup complete');
+        }
     </script>
 
     <!-- JavaScript読み込み -->
