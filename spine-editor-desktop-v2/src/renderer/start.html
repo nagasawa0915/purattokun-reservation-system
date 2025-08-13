@@ -215,6 +215,81 @@
         .status-ready { background-color: #4CAF50; }
         .status-loading { background-color: #FF9800; }
         .status-error { background-color: #F44336; }
+
+        /* アウトライナー方式スタイル */
+        .file-section {
+            margin-bottom: 2px;
+        }
+
+        .file-section-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .file-section-header:hover {
+            background-color: #e9ecef;
+        }
+
+        .section-toggle {
+            width: 16px;
+            text-align: center;
+            margin-right: 8px;
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+
+        .section-title {
+            flex: 1;
+        }
+
+        .section-count {
+            color: #6c757d;
+            font-size: 11px;
+            font-weight: normal;
+        }
+
+        .file-section-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            border-left: 2px solid #dee2e6;
+            margin-left: 8px;
+        }
+
+        .file-section-content.expanded {
+            max-height: 1000px;
+        }
+
+        .file-section-content.collapsed {
+            max-height: 0;
+        }
+
+        .file-section .file-item {
+            padding: 6px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #f8f9fa;
+            font-size: 12px;
+            margin: 0;
+            background-color: white;
+        }
+
+        .file-section .file-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .file-section .file-item.selected {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border-left: 3px solid #2196f3;
+        }
     </style>
 </head>
 <body>
@@ -408,8 +483,6 @@
             loadProjectFiles(files) {
                 console.log('🔧 loadProjectFiles受信:', files);
                 console.log('🔧 最初のファイルサンプル:', files[0]);
-                console.log('🔧 ファイルオブジェクトのキー:', Object.keys(files[0] || {}));
-                console.log('🔧 JSONシリアライズテスト:', JSON.stringify(files[0] || {}, null, 2));
                 
                 // ファイル形式を安全にチェック（より寛容な判定）
                 const safeFiles = files.filter(f => {
@@ -420,7 +493,6 @@
                     
                     // nameプロパティまたはpathプロパティを取得
                     const name = f.name || f.path || f.toString();
-                    console.log('🔧 Processing file name:', name, 'from object:', f);
                     
                     if (!name || typeof name !== 'string') {
                         console.log('🔧 Invalid name for file:', f);
@@ -428,37 +500,18 @@
                     }
                     
                     const isHTML = name.toLowerCase().endsWith('.html') || name.toLowerCase().endsWith('.htm');
-                    console.log('🔧 File', name, 'is HTML:', isHTML);
                     return isHTML;
                 });
                 
-                console.log('🔧 安全なHTMLファイル:', safeFiles);
+                console.log('🔧 安全なHTMLファイル:', safeFiles.length, '個');
                 
                 if (safeFiles.length === 0) {
                     this.pageList.innerHTML = '<div class="loading">HTMLファイルが見つかりません</div>';
                     return;
                 }
                 
-                // ページセレクターにファイルを渡す
-                console.log('🔧 pageSelector available:', !!window.pageSelector);
-                console.log('🔧 pageSelector.container:', window.pageSelector?.container);
-                
-                if (window.pageSelector && window.pageSelector.loadFiles) {
-                    console.log('🔧 Using pageSelector module');
-                    
-                    // pageSelector → DemoApp の連携設定
-                    window.pageSelector.setOnPageSelect((file) => {
-                        console.log('📋 PageSelector file selected:', file);
-                        this.currentPage = file;
-                        this.loadHTMLPreview(file);
-                    });
-                    
-                    window.pageSelector.loadFiles(safeFiles);
-                } else {
-                    console.log('🔧 Using fallback direct rendering');
-                    // フォールバック: 直接DOM操作（統合版）
-                    this.renderFileListWithPreview(safeFiles);
-                }
+                // アウトライナー方式でファイルを整理・表示
+                this.renderOutlinerView(safeFiles);
                 
                 // Spine制御を有効化
                 this.btnAddSpine.disabled = false;
@@ -466,6 +519,124 @@
                 this.btnPreviewPackage.disabled = false;
                 
                 console.log('🎯 プロジェクトファイル読み込み完了:', safeFiles.length, '個');
+            }
+            
+            /**
+             * アウトライナー方式でファイルを階層表示
+             */
+            renderOutlinerView(files) {
+                console.log('📂 Creating outliner view for', files.length, 'files');
+                
+                // ファイルを階層別に分類
+                const hierarchy = this.organizeFilesHierarchy(files);
+                
+                // アウトライナーUIを作成
+                this.pageList.innerHTML = '';
+                
+                // ルート直下ファイル（優先表示）
+                if (hierarchy.root.length > 0) {
+                    const rootSection = this.createFileSection('📄 ルートファイル', hierarchy.root, true);
+                    this.pageList.appendChild(rootSection);
+                }
+                
+                // サブフォルダ（折りたたみ表示）
+                Object.keys(hierarchy.folders).forEach(folderName => {
+                    const folderFiles = hierarchy.folders[folderName];
+                    const folderSection = this.createFileSection(`📁 ${folderName}`, folderFiles, false);
+                    this.pageList.appendChild(folderSection);
+                });
+                
+                console.log('📂 Outliner view created:', hierarchy);
+            }
+            
+            /**
+             * ファイルを階層別に整理
+             */
+            organizeFilesHierarchy(files) {
+                const hierarchy = {
+                    root: [],
+                    folders: {}
+                };
+                
+                files.forEach(file => {
+                    const path = file.path || file.name || '';
+                    const pathParts = path.split(/[\/\\]/);
+                    
+                    if (pathParts.length === 1) {
+                        // ルート直下のファイル
+                        hierarchy.root.push(file);
+                    } else {
+                        // サブフォルダ内のファイル
+                        const topLevelFolder = pathParts[0];
+                        if (!hierarchy.folders[topLevelFolder]) {
+                            hierarchy.folders[topLevelFolder] = [];
+                        }
+                        hierarchy.folders[topLevelFolder].push(file);
+                    }
+                });
+                
+                return hierarchy;
+            }
+            
+            /**
+             * ファイルセクション作成（ルート用・フォルダ用）
+             */
+            createFileSection(title, files, expanded = false) {
+                const section = document.createElement('div');
+                section.className = 'file-section';
+                
+                // セクションヘッダー
+                const header = document.createElement('div');
+                header.className = 'file-section-header';
+                header.innerHTML = `
+                    <span class="section-toggle ${expanded ? 'expanded' : 'collapsed'}">${expanded ? '▼' : '▶'}</span>
+                    <span class="section-title">${title}</span>
+                    <span class="section-count">(${files.length})</span>
+                `;
+                
+                // セクション内容
+                const content = document.createElement('div');
+                content.className = `file-section-content ${expanded ? 'expanded' : 'collapsed'}`;
+                
+                // ファイルリスト作成
+                files.forEach((file, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'file-item';
+                    item.textContent = file.name || file.path.split(/[\/\\]/).pop() || `File ${index + 1}`;
+                    item.dataset.index = index;
+                    
+                    // クリックイベント
+                    item.addEventListener('click', () => {
+                        this.selectFileWithPreview(file, item);
+                    });
+                    
+                    content.appendChild(item);
+                });
+                
+                // トグル機能
+                header.addEventListener('click', () => {
+                    const toggle = header.querySelector('.section-toggle');
+                    const isExpanded = content.classList.contains('expanded');
+                    
+                    if (isExpanded) {
+                        content.classList.remove('expanded');
+                        content.classList.add('collapsed');
+                        toggle.textContent = '▶';
+                        toggle.classList.remove('expanded');
+                        toggle.classList.add('collapsed');
+                    } else {
+                        content.classList.remove('collapsed');
+                        content.classList.add('expanded');
+                        toggle.textContent = '▼';
+                        toggle.classList.remove('collapsed');
+                        toggle.classList.add('expanded');
+                    }
+                });
+                
+                section.appendChild(header);
+                section.appendChild(content);
+                
+                return section;
             }
 
             // 統合フォールバック: ファイル一覧表示 + HTMLプレビュー機能
@@ -494,7 +665,7 @@
             }
             
             selectFileWithPreview(file, element) {
-                // 選択状態の更新
+                // アウトライナー内の全ファイルアイテムから選択状態を削除
                 this.pageList.querySelectorAll('.file-item').forEach(item => {
                     item.classList.remove('selected');
                 });
