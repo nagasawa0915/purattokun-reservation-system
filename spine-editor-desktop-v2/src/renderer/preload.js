@@ -31,6 +31,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // システム操作
   openPath: (path) => ipcRenderer.invoke('shell-open-item', path),
+  openURL: (url) => ipcRenderer.invoke('open-url', url),
+  
+  // サーバー操作
+  server: {
+    setProjectPath: (projectPath) => ipcRenderer.invoke('server-set-project-path', projectPath)
+  },
   
   // メインプロセスへのメッセージ送信
   send: (channel, data) => ipcRenderer.send(channel, data),

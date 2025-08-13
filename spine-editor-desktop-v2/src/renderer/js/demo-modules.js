@@ -11,19 +11,19 @@ window.projectLoader = {
     async selectFolder() {
         try {
             console.log('📁 フォルダ選択ダイアログを開きます');
-            console.log('🔧 electronAPI available:', !!window.electronAPI);
-            console.log('🔧 electronAPI.fs available:', !!window.electronAPI?.fs);
+            // console.log('🔧 electronAPI available:', !!window.electronAPI);
+            // console.log('🔧 electronAPI.fs available:', !!window.electronAPI?.fs);
             
             // Electronのダイアログを使用
             if (window.electronAPI && window.electronAPI.fs) {
-                console.log('🔧 Calling electronAPI.fs.selectFolder...');
+                // console.log('🔧 Calling electronAPI.fs.selectFolder...');
                 const result = await window.electronAPI.fs.selectFolder({
                     title: 'プロジェクトフォルダを選択',
                     properties: ['openDirectory'],
                     buttonLabel: 'フォルダを選択'
                 });
                 
-                console.log('🔧 Dialog result:', result);
+                // console.log('🔧 Dialog result:', result);
                 
                 if (result.canceled || !result.filePaths?.length) {
                     console.log('📁 フォルダ選択がキャンセルされました');
@@ -38,7 +38,7 @@ window.projectLoader = {
                 this.currentProject = folderPath;
                 this.htmlFiles = htmlFiles;
                 
-                console.log('📋 HTMLファイル最終結果:', htmlFiles.length, '個');
+                console.log('📋 HTMLファイル検出:', htmlFiles.length, '個');
                 
                 return {
                     success: true,
@@ -59,9 +59,9 @@ window.projectLoader = {
     
     async scanFolder(folderPath) {
         try {
-            console.log('🔧 スキャン開始:', folderPath);
+            // console.log('🔧 スキャン開始:', folderPath);
             const result = await window.electronAPI.fs.scanDirectory(folderPath, ['.html', '.htm']);
-            console.log('🔧 scanDirectory結果:', result);
+            // console.log('🔧 scanDirectory結果:', result);
             
             if (!result.success) {
                 console.error('スキャンエラー:', result.error);
@@ -70,11 +70,11 @@ window.projectLoader = {
             
             // resultの構造を確認
             const files = result.files;
-            console.log('🔧 files構造:', files);
-            console.log('🔧 files.html存在:', !!files.html);
-            console.log('🔧 files.html配列:', Array.isArray(files.html));
-            console.log('🔧 files.html最初の要素:', files.html?.[0]);
-            console.log('🔧 files.html最初の要素JSON:', JSON.stringify(files.html?.[0] || {}, null, 2));
+            // console.log('🔧 files構造:', files);
+            // console.log('🔧 files.html存在:', !!files.html);
+            // console.log('🔧 files.html配列:', Array.isArray(files.html));
+            // console.log('🔧 files.html最初の要素:', files.html?.[0]);
+            // console.log('🔧 files.html最初の要素JSON:', JSON.stringify(files.html?.[0] || {}, null, 2));
             
             // HTMLファイルを抽出
             const htmlFiles = [];
@@ -93,15 +93,15 @@ window.projectLoader = {
                 });
             }
             
-            console.log('🔧 HTMLファイル一覧:', htmlFiles);
-            console.log('🔧 最初のファイル構造サンプル:', htmlFiles[0]);
+            // console.log('🔧 HTMLファイル一覧:', htmlFiles);
+            // console.log('🔧 最初のファイル構造サンプル:', htmlFiles[0]);
             
-            if (htmlFiles[0]) {
-                console.log('🔧 最初のファイルJSON:', JSON.stringify(htmlFiles[0], null, 2));
-                console.log('🔧 最初のファイルのキー:', Object.keys(htmlFiles[0]));
-                console.log('🔧 name値:', htmlFiles[0].name);
-                console.log('🔧 path値:', htmlFiles[0].path);
-            }
+            // if (htmlFiles[0]) {
+            //     console.log('🔧 最初のファイルJSON:', JSON.stringify(htmlFiles[0], null, 2));
+            //     console.log('🔧 最初のファイルのキー:', Object.keys(htmlFiles[0]));
+            //     console.log('🔧 name値:', htmlFiles[0].name);
+            //     console.log('🔧 path値:', htmlFiles[0].path);
+            // }
             
             return htmlFiles;
             
@@ -196,7 +196,7 @@ window.pageSelector = {
             this.onPageSelect(file);
         }
         
-        console.log('📋 ページ選択:', file.name);
+        // console.log('📋 ページ選択:', file.name);
     },
     
     setOnPageSelect(callback) {
@@ -234,7 +234,7 @@ window.htmlPreviewer = {
     
     async loadFile(projectPath, filePath) {
         try {
-            console.log('🖼️ HTMLファイル読み込み開始:', filePath);
+            // console.log('🖼️ HTMLファイル読み込み開始:', filePath);
             
             if (window.electronAPI && window.electronAPI.fs) {
                 // Electronでファイル読み込み
@@ -259,7 +259,7 @@ window.htmlPreviewer = {
             }
             
             this.currentFile = filePath;
-            console.log('🖼️ プレビュー表示完了:', filePath);
+            // console.log('🖼️ プレビュー表示完了:', filePath);
             
         } catch (error) {
             console.error('HTMLファイル読み込みエラー:', error);

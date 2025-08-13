@@ -325,6 +325,15 @@ ipcMain.handle('fs-write-file', async (event, filePath, data) => {
 
 ipcMain.handle('shell-open-item', async (event, path) => shell.openPath(path));
 
+// プロジェクトパス設定
+ipcMain.handle('server-set-project-path', async (event, projectPath) => {
+  if (spineServer) {
+    spineServer.setProjectPath(projectPath);
+    return { success: true };
+  }
+  return { success: false, error: 'Server not available' };
+});
+
 // ProjectLoader用の追加IPC機能
 ipcMain.handle('fs-path-exists', async (event, filePath) => {
   try {

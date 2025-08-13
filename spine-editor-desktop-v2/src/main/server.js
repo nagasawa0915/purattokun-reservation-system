@@ -12,6 +12,7 @@ class SpineServer {
     this.port = port;
     this.app = express();
     this.server = null;
+    this.currentProjectPath = null; // 動的プロジェクトパス
     this.setupFastMiddleware();
     this.setupCoreRoutes();
   }
@@ -128,6 +129,30 @@ class SpineServer {
     this.app.get('/health', (req, res) => 
       res.json({ status: 'ok', v: '2.0.0' })
     );
+    
+    // 動的プロジェクトファイル配信ミドルウェア
+    this.app.use((req, res, next) => {
+      // プロジェクトパスが設定されている場合、そこから配信
+      if (this.currentProjectPath && req.path !== '/health') {
+        // URLパスをファイルパスに正規化（/ → \）
+        const normalizedPath = req.path.replace(/^\//, '').replace(/\//g, path.sep);
+        const projectFilePath = path.join(this.currentProjectPath, normalizedPath);
+        const fs = require('fs');
+        
+        console.log('🔧 Request path:', req.path);
+        console.log('🔧 Normalized path:', normalizedPath);
+        console.log('🔧 Full project file path:', projectFilePath);
+        
+        if (fs.existsSync(projectFilePath) && fs.statSync(projectFilePath).isFile()) {
+          console.log('📁 Serving from project:', projectFilePath);
+          res.sendFile(projectFilePath);
+          return;
+        } else {
+          console.log('⚠️ File not found:', projectFilePath);
+        }
+      }
+      next();
+    });
 
     // API情報(デバッグ用)
     this.app.get('/api/info', (req, res) => 
@@ -182,6 +207,14 @@ class SpineServer {
       
       tryPort(this.port);
     });
+  }
+
+  /**
+   * プロジェクトパス設定
+   */
+  setProjectPath(projectPath) {
+    this.currentProjectPath = projectPath;
+    console.log('📁 Project path set to:', projectPath);
   }
 
   /**
