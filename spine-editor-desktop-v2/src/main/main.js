@@ -316,7 +316,8 @@ ipcMain.handle('fs-read-file', async (event, filePath) => {
 
 ipcMain.handle('fs-write-file', async (event, filePath, data) => {
   try {
-    await fs.promises.writeFile(filePath, data, 'utf8');
+    // Uint8Array（バイナリ）またはstring（テキスト）を自動判定して書き込み
+    await fs.promises.writeFile(filePath, data);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };

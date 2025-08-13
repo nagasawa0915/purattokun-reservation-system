@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>クラウドパートナーHP - 背景表示</title>
+    <style>
+        /* 基本リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* シーンコンテナ（レスポンシブ基準） */
+        .scene-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 背景画像（基準となる要素） */
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .scene-container {
+                border-radius: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scene-container">
+        <!-- 背景画像のみ - 純粋表示 -->
+        <img src="assets/images/クラウドパートナーTOP.png" alt="クラウドパートナー背景" class="background-image">
+    </div>
+</body>
+</html>

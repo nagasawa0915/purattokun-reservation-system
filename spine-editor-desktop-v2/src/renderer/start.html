@@ -989,7 +989,7 @@
                     
                     const writeResult = await window.electronAPI.fs.writeFile(
                         outputPath, 
-                        Array.from(uint8Array)
+                        uint8Array
                     );
                     
                     if (writeResult.success) {

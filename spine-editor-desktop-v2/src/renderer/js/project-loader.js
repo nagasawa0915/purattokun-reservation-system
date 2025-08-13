@@ -167,7 +167,7 @@ export class ProjectLoader {
         displayName: displayName,
         lastModified: new Date(stats.mtime),
         size: stats.size,
-        isIndex: fileName.toLowerCase() === 'index.html'
+        isIndex: false  // 無効化: index.html特殊処理によるSpine Editor自動起動を防止
       };
       
     } catch (error) {
