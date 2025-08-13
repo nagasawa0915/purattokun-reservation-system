@@ -361,125 +361,23 @@
             }
 
             loadProjectFiles(files) {
-                console.log('🔧 loadProjectFiles受信:', files);
-                console.log('🔧 最初のファイルサンプル:', files[0]);
-                console.log('🔧 ファイルオブジェクトのキー:', Object.keys(files[0] || {}));
-                console.log('🔧 JSONシリアライズテスト:', JSON.stringify(files[0] || {}, null, 2));
+                // HTMLファイルをフィルタリング
+                const htmlFiles = files.filter(f => f.name.endsWith('.html'));
                 
-                // ファイル形式を安全にチェック（より寛容な判定）
-                const safeFiles = files.filter(f => {
-                    if (!f) {
-                        console.log('🔧 Null file detected');
-                        return false;
-                    }
-                    
-                    // nameプロパティまたはpathプロパティを取得
-                    const name = f.name || f.path || f.toString();
-                    console.log('🔧 Processing file name:', name, 'from object:', f);
-                    
-                    if (!name || typeof name !== 'string') {
-                        console.log('🔧 Invalid name for file:', f);
-                        return false;
-                    }
-                    
-                    const isHTML = name.toLowerCase().endsWith('.html') || name.toLowerCase().endsWith('.htm');
-                    console.log('🔧 File', name, 'is HTML:', isHTML);
-                    return isHTML;
-                });
-                
-                console.log('🔧 安全なHTMLファイル:', safeFiles);
-                
-                if (safeFiles.length === 0) {
+                if (htmlFiles.length === 0) {
                     this.pageList.innerHTML = '<div class="loading">HTMLファイルが見つかりません</div>';
                     return;
                 }
                 
                 // ページセレクターにファイルを渡す
-                console.log('🔧 pageSelector available:', !!window.pageSelector);
-                console.log('🔧 pageSelector.container:', window.pageSelector?.container);
+                window.pageSelector.loadFiles(htmlFiles);
                 
-                if (window.pageSelector && window.pageSelector.loadFiles) {
-                    window.pageSelector.loadFiles(safeFiles);
-                } else {
-                    console.error('❌ pageSelector not properly initialized');
-                    // フォールバック: 直接DOM操作
-                    this.renderFileListDirect(safeFiles);
-                }
-                
-                // Spine制御を有効化
+                // 最初のファイルが自動選択されるのでSpine制御を有効化
                 this.btnAddSpine.disabled = false;
                 this.btnExportPackage.disabled = false;
-                
-                console.log('🎯 プロジェクトファイル読み込み完了:', safeFiles.length, '個');
             }
 
-            // フォールバック: 直接ファイル一覧表示
-            renderFileListDirect(files) {
-                console.log('🔧 Direct rendering files:', files);
-                this.pageList.innerHTML = '';
-                
-                files.forEach((file, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'file-item';
-                    item.textContent = file.name || file.path || `File ${index + 1}`;
-                    item.dataset.index = index;
-                    
-                    item.addEventListener('click', () => {
-                        this.selectFileDirect(file, item);
-                    });
-                    
-                    this.pageList.appendChild(item);
-                });
-                
-                // 最初のファイルを自動選択
-                if (files.length > 0) {
-                    const firstItem = this.pageList.firstChild;
-                    this.selectFileDirect(files[0], firstItem);
-                }
-            }
-            
-            selectFileDirect(file, element) {
-                // 選択状態の更新
-                this.pageList.querySelectorAll('.file-item').forEach(item => {
-                    item.classList.remove('selected');
-                });
-                element.classList.add('selected');
-                
-                this.currentPage = file;
-                console.log('📋 ファイル選択:', file.name || file.path);
-                
-                // HTMLプレビュー表示
-                this.loadPreviewDirect(file);
-            }
-            
-            loadPreviewDirect(file) {
-                console.log('🖼️ プレビュー読み込み:', file);
-                this.updateStatus('loading', `プレビュー読み込み中: ${file.name || file.path}`);
-                
-                try {
-                    const previewIframe = this.previewIframe;
-                    const previewPlaceholder = this.previewPlaceholder;
-                    
-                    if (file.fullPath) {
-                        // フルパスがある場合は直接読み込み
-                        previewIframe.src = `file://${file.fullPath}`;
-                    } else if (window.projectLoader.currentProject) {
-                        // プロジェクトパス + 相対パスで構築
-                        const fullPath = `${window.projectLoader.currentProject}/${file.path || file.name}`;
-                        previewIframe.src = `file://${fullPath}`;
-                    } else {
-                        throw new Error('File path not available');
-                    }
-                    
-                    previewPlaceholder.style.display = 'none';
-                    previewIframe.style.display = 'block';
-                    
-                    this.updateStatus('ready', `プレビュー表示中: ${file.name || file.path}`);
-                } catch (error) {
-                    console.error('プレビュー読み込みエラー:', error);
-                    this.updateStatus('error', 'プレビューの読み込みに失敗しました');
-                }
-            }
+            // ページ選択処理はモジュールに移譲
 
             addSpineCharacter() {
                 this.updateStatus('loading', 'Spineキャラクターを追加中...');
