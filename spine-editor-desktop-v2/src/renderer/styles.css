@@ -1,0 +1,350 @@
+/* Spine Editor Desktop v2.0 - Main Styles */
+
+/* 最小4パネルレイアウト */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: #f5f5f5;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.demo-container {
+    display: grid;
+    grid-template-columns: 250px 1fr 250px;
+    grid-template-rows: 60px 1fr;
+    height: 100vh;
+    gap: 1px;
+    background-color: #ddd;
+}
+
+.demo-header {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.demo-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.demo-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.2);
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn:hover {
+    background-color: rgba(255,255,255,0.3);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: #4CAF50;
+}
+
+.btn-primary:hover {
+    background-color: #45a049;
+}
+
+/* 左パネル: プロジェクトローダー */
+.project-panel {
+    background-color: white;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+}
+
+.panel-content {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+/* 中央パネル: HTMLプレビュー */
+.preview-panel {
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f9f9f9;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.preview-content.drag-over {
+    background-color: #e3f2fd;
+    border: 2px dashed #007ACC;
+}
+
+.preview-placeholder {
+    color: #888;
+    font-size: 16px;
+    text-align: center;
+}
+
+.preview-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background-color: white;
+}
+
+/* 右パネル: ページセレクター + Spine制御 */
+.control-panel {
+    background-color: white;
+    border-left: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.control-section {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.control-section:last-child {
+    border-bottom: none;
+    flex: 1;
+}
+
+/* ファイルリスト */
+.file-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.file-item {
+    padding: 8px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+}
+
+.file-item:hover {
+    background-color: #f5f5f5;
+}
+
+.file-item.selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+/* Spine制御エリア */
+.spine-controls {
+    padding: 15px;
+}
+
+.spine-position {
+    margin-bottom: 15px;
+}
+
+.position-input {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.position-input label {
+    font-size: 12px;
+    color: #666;
+    width: 30px;
+}
+
+.position-input input {
+    width: 80px;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+/* ローディング表示 */
+.loading {
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+}
+
+/* ステータス表示 */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 8px;
+}
+
+.status-ready { background-color: #4CAF50; }
+.status-loading { background-color: #FF9800; }
+.status-error { background-color: #F44336; }
+
+/* アウトライナー方式スタイル */
+.file-section {
+    margin-bottom: 2px;
+}
+
+.file-section-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #495057;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.file-section-header:hover {
+    background-color: #e9ecef;
+}
+
+.section-toggle {
+    width: 16px;
+    text-align: center;
+    margin-right: 8px;
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.section-title {
+    flex: 1;
+}
+
+.section-count {
+    color: #6c757d;
+    font-size: 11px;
+    font-weight: normal;
+}
+
+.file-section-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    border-left: 2px solid #dee2e6;
+    margin-left: 8px;
+}
+
+.file-section-content.expanded {
+    max-height: 1000px;
+}
+
+.file-section-content.collapsed {
+    max-height: 0;
+}
+
+.file-section .file-item {
+    padding: 6px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+    font-size: 12px;
+    margin: 0;
+    background-color: white;
+}
+
+.file-section .file-item:hover {
+    background-color: #f8f9fa;
+}
+
+.file-section .file-item.selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border-left: 3px solid #2196f3;
+}
+
+/* Spineキャラクターアイテム */
+.spine-character-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: grab;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.spine-character-item:hover {
+    background-color: #f8f9ff;
+    transform: translateX(2px);
+}
+
+.spine-character-item.dragging {
+    opacity: 0.7;
+    background-color: #e8f5e8;
+    cursor: grabbing;
+}
+
+.character-icon {
+    font-size: 20px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.character-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.character-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.character-path {
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* セクショングループ */
+.section-group {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.section-group:last-child {
+    border-bottom: none;
+}
