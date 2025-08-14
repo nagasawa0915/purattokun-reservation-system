@@ -27,18 +27,18 @@ async function createMainWindow() {
     await waitForServerReady(serverUrl, 15); // 15回まで試行
     console.log('✅ Server health confirmed, proceeding to window creation...');
     
-    // 追加の安全確認：start.htmlの存在確認
+    // 追加の安全確認：index.htmlの存在確認
     try {
       const http = require('http');
-      const testReq = http.request(`${serverUrl}/start.html`, { method: 'HEAD' }, (res) => {
-        console.log(`✅ start.html response: ${res.statusCode}`);
+      const testReq = http.request(`${serverUrl}/index.html`, { method: 'HEAD' }, (res) => {
+        console.log(`✅ index.html response: ${res.statusCode}`);
       });
       testReq.on('error', (err) => {
-        console.warn('⚠️ start.html test failed:', err.message);
+        console.warn('⚠️ index.html test failed:', err.message);
       });
       testReq.end();
     } catch (testError) {
-      console.warn('⚠️ start.html test error:', testError.message);
+      console.warn('⚠️ index.html test error:', testError.message);
     }
     
     // ウィンドウ作成
@@ -87,8 +87,8 @@ async function createMainWindow() {
           // 1秒待機してリトライ
           setTimeout(async () => {
             try {
-              console.log(`🔄 Retrying direct start.html load...`);
-              await mainWindow.loadURL(`${serverUrl}/start.html`);
+              console.log(`🔄 Retrying direct index.html load...`);
+              await mainWindow.loadURL(`${serverUrl}/index.html`);
             } catch (retryError) {
               console.error('❌ Direct retry failed, trying root fallback:', retryError);
               try {
@@ -129,7 +129,7 @@ async function createMainWindow() {
     });
     
     // URLロード - より安全な読み込み手順
-    const startUrl = `${serverUrl}/start.html`;
+    const startUrl = `${serverUrl}/index.html`;
     
     console.log(`🌐 Loading URL: ${startUrl}`);
     
@@ -153,10 +153,10 @@ async function createMainWindow() {
     };
     
     try {
-      // 最初にstart.htmlを試行
+      // 最初にindex.htmlを試行
       const success = await loadWithRetry(startUrl, 2);
       if (!success) {
-        console.log('🔄 start.html failed, trying root URL...');
+        console.log('🔄 index.html failed, trying root URL...');
         const rootSuccess = await loadWithRetry(serverUrl, 2);
         if (!rootSuccess) {
           throw new Error('All load attempts failed');
