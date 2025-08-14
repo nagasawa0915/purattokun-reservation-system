@@ -134,7 +134,7 @@ class SpineEditorApp {
       this.core.destroy();
     }
     
-    console.log('🔚 Modularized Spine Editor v2.0 destroyed');
+    // console.log('🔚 Modularized Spine Editor v2.0 destroyed');
   }
 }
 

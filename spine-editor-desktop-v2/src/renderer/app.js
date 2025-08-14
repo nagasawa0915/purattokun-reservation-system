@@ -38,7 +38,7 @@ export class DemoApp {
      */
     async initialize() {
         try {
-            console.log('🚀 Demo App initializing...');
+            // console.log('🚀 Demo App initializing...');
             
             // UI要素初期化
             const elements = this.uiManager.initializeElements();
@@ -124,7 +124,7 @@ export class DemoApp {
             // 保存された位置を復元
             this.restorePosition();
             
-            console.log('✅ Spine System初期化完了');
+            // console.log('✅ Spine System初期化完了');
             
         } catch (error) {
             console.error('❌ Spineシステム初期化エラー:', error);
@@ -144,7 +144,7 @@ export class DemoApp {
 
             const success = await this.spinePreviewLayer.initialize(previewContent);
             if (success) {
-                console.log('✅ SpinePreviewLayer初期化完了');
+                // console.log('✅ SpinePreviewLayer初期化完了');
             } else {
                 console.warn('⚠️ SpinePreviewLayer初期化失敗 - ダミー表示で継続');
             }
@@ -217,7 +217,7 @@ export class DemoApp {
      * Spineフォルダを読み込み
      */
     async loadSpineFolder() {
-        console.log('🎭 loadSpineFolder() method called!');
+        // console.log('🎭 loadSpineFolder() method called!');
         this.uiManager.updateStatus('loading', 'Spineフォルダを選択中...');
         
         try {
@@ -259,20 +259,18 @@ export class DemoApp {
             
             // 実際のSpine表示を優先で試行
             if (this.spinePreviewLayer && this.spinePreviewLayer.spineLoaded) {
-                console.log('🎭 実際のSpine表示を試行中...');
+                // console.log('🎭 実際のSpine表示を試行中...');
                 
-                // Canvas座標に変換
-                const canvasCoords = this.spinePreviewLayer.clientToCanvasCoordinates(x, y);
-                
+                // マウス座標を直接SpinePreviewLayerに渡す（内部で適切な座標変換を行う）
                 const spineResult = await this.spinePreviewLayer.addCharacter(
                     characterData, 
-                    canvasCoords.x, 
-                    canvasCoords.y
+                    x, 
+                    y
                 );
                 
                 if (spineResult.success) {
                     this.uiManager.updateStatus('ready', `🎭 Spineキャラクター「${characterData.name}」を表示しました (LIVE)`);
-                    console.log(`✅ 実際のSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
+                    // console.log(`✅ 実際のSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
                     return;
                 } else {
                     console.warn('⚠️ Spine表示失敗、ダミー表示にフォールバック:', spineResult.error);
@@ -280,7 +278,7 @@ export class DemoApp {
             }
             
             // フォールバック: ダミー表示
-            console.log('📦 ダミー表示でキャラクター追加...');
+            // console.log('📦 ダミー表示でキャラクター追加...');
             const spineContainer = document.getElementById('spine-character-container');
             if (!spineContainer) {
                 throw new Error('Spineコンテナが見つかりません');
@@ -292,7 +290,7 @@ export class DemoApp {
             
             if (result.success) {
                 this.uiManager.updateStatus('ready', `📦 キャラクター「${characterData.name}」を追加しました (ダミー)`);
-                console.log(`✅ ダミーSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
+                // console.log(`✅ ダミーSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
             } else {
                 throw new Error(result.error);
             }
@@ -337,7 +335,7 @@ export class DemoApp {
             this.uiManager.enableSavePosition();
             
             this.uiManager.updateStatus('ready', 'Spineキャラクター追加完了');
-            console.log('✅ Spineダミーキャラクター追加完了');
+            // console.log('✅ Spineダミーキャラクター追加完了');
             
         } catch (error) {
             console.error('❌ Spineキャラクター追加エラー:', error);
@@ -365,7 +363,7 @@ export class DemoApp {
         }
         
         this.uiManager.updateStatus('ready', `位置更新: (${this.spinePosition.x}, ${this.spinePosition.y})`);
-        console.log('📍 位置数値更新:', this.spinePosition);
+        // console.log('📍 位置数値更新:', this.spinePosition);
     }
 
     /**
@@ -398,7 +396,7 @@ export class DemoApp {
             this.uiManager.updateSpineInputs(this.spinePosition);
             this.packageExporter.setSpinePosition(this.spinePosition);
             
-            console.log('📍 位置復元:', this.spinePosition);
+            // console.log('📍 位置復元:', this.spinePosition);
             return true;
         }
         
@@ -501,7 +499,7 @@ export class DemoApp {
                 this.packageExporter.importSettings(state.packageSettings);
             }
             
-            console.log('✅ アプリケーション状態インポート完了');
+            // console.log('✅ アプリケーション状態インポート完了');
             return true;
         } catch (error) {
             console.error('❌ アプリケーション状態インポートエラー:', error);
@@ -534,7 +532,7 @@ export class DemoApp {
         this.uiManager.updateSpineInputs(this.spinePosition);
         this.uiManager.updateStatus('ready', 'アプリケーションがリセットされました');
         
-        console.log('🔄 アプリケーションリセット完了');
+        // console.log('🔄 アプリケーションリセット完了');
     }
 
     /**
