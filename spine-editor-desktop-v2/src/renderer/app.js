@@ -8,6 +8,7 @@ import { ProjectLoader } from './project-loader.js';
 import { SpineCharacterManager } from './spine-character-manager.js';
 import { PreviewManager } from './preview-manager.js';
 import { PackageExporter } from './package-exporter.js';
+import { SpinePreviewLayer } from './spine-preview-layer.js';
 import { Utils } from './utils.js';
 
 export class DemoApp {
@@ -23,6 +24,7 @@ export class DemoApp {
         this.spineCharacterManager = new SpineCharacterManager();
         this.previewManager = new PreviewManager();
         this.packageExporter = new PackageExporter();
+        this.spinePreviewLayer = new SpinePreviewLayer();
         
         // Spine System初期化
         this.spineCore = null;
@@ -64,6 +66,9 @@ export class DemoApp {
             
             // Spineシステム初期化
             this.initializeSpineSystem();
+            
+            // SpinePreviewLayer初期化
+            await this.initializeSpinePreviewLayer();
             
             // ドロップゾーン設定
             this.setupDropZone();
@@ -123,6 +128,29 @@ export class DemoApp {
             
         } catch (error) {
             console.error('❌ Spineシステム初期化エラー:', error);
+        }
+    }
+
+    /**
+     * SpinePreviewLayer初期化
+     */
+    async initializeSpinePreviewLayer() {
+        try {
+            const previewContent = document.getElementById('preview-content');
+            if (!previewContent) {
+                console.warn('⚠️ プレビューコンテンツが見つかりません');
+                return;
+            }
+
+            const success = await this.spinePreviewLayer.initialize(previewContent);
+            if (success) {
+                console.log('✅ SpinePreviewLayer初期化完了');
+            } else {
+                console.warn('⚠️ SpinePreviewLayer初期化失敗 - ダミー表示で継続');
+            }
+
+        } catch (error) {
+            console.error('❌ SpinePreviewLayer初期化エラー:', error);
         }
     }
 
@@ -229,6 +257,30 @@ export class DemoApp {
         try {
             this.uiManager.updateStatus('loading', 'Spineキャラクターを読み込み中...');
             
+            // 実際のSpine表示を優先で試行
+            if (this.spinePreviewLayer && this.spinePreviewLayer.spineLoaded) {
+                console.log('🎭 実際のSpine表示を試行中...');
+                
+                // Canvas座標に変換
+                const canvasCoords = this.spinePreviewLayer.clientToCanvasCoordinates(x, y);
+                
+                const spineResult = await this.spinePreviewLayer.addCharacter(
+                    characterData, 
+                    canvasCoords.x, 
+                    canvasCoords.y
+                );
+                
+                if (spineResult.success) {
+                    this.uiManager.updateStatus('ready', `🎭 Spineキャラクター「${characterData.name}」を表示しました (LIVE)`);
+                    console.log(`✅ 実際のSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
+                    return;
+                } else {
+                    console.warn('⚠️ Spine表示失敗、ダミー表示にフォールバック:', spineResult.error);
+                }
+            }
+            
+            // フォールバック: ダミー表示
+            console.log('📦 ダミー表示でキャラクター追加...');
             const spineContainer = document.getElementById('spine-character-container');
             if (!spineContainer) {
                 throw new Error('Spineコンテナが見つかりません');
@@ -239,8 +291,8 @@ export class DemoApp {
             );
             
             if (result.success) {
-                this.uiManager.updateStatus('ready', `キャラクター「${characterData.name}」を追加しました`);
-                console.log(`✅ Spineキャラクター「${characterData.name}」をプレビューに追加完了`);
+                this.uiManager.updateStatus('ready', `📦 キャラクター「${characterData.name}」を追加しました (ダミー)`);
+                console.log(`✅ ダミーSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
             } else {
                 throw new Error(result.error);
             }
