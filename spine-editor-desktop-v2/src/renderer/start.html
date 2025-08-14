@@ -972,8 +972,31 @@
             displaySpineCharacters(spineFiles) {
                 console.log('🎭 Displaying Spine characters:', spineFiles);
                 
-                // ステータス更新
+                // 前回のアニメーション状態をリセット
+                this.spineCharacterStatus.style.display = 'block';
+                
+                // ステータス更新（フワッと現れて消えるアニメーション）
                 this.spineCharacterStatus.textContent = `${spineFiles.length}個のキャラクターが見つかりました`;
+                this.spineCharacterStatus.style.opacity = '0';
+                this.spineCharacterStatus.style.transform = 'translateY(10px)';
+                this.spineCharacterStatus.style.transition = 'all 0.3s ease';
+                
+                // フワッと現れるアニメーション
+                setTimeout(() => {
+                    this.spineCharacterStatus.style.opacity = '1';
+                    this.spineCharacterStatus.style.transform = 'translateY(0)';
+                }, 50);
+                
+                // 2秒後にフェードアウトして非表示
+                setTimeout(() => {
+                    this.spineCharacterStatus.style.opacity = '0';
+                    this.spineCharacterStatus.style.transform = 'translateY(-10px)';
+                    
+                    // フェードアウト完了後に要素を隠す（リストは自然に上にレイアウトされる）
+                    setTimeout(() => {
+                        this.spineCharacterStatus.style.display = 'none';
+                    }, 300);
+                }, 2000);
                 
                 // リストをクリア
                 this.spineCharacterList.innerHTML = '';
