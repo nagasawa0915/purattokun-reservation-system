@@ -448,6 +448,12 @@
                 this.spinePosition = { x: 100, y: 100 };
                 this.spineCharacter = null;
                 
+                // フォルダパス記憶機能
+                this.savedPaths = {
+                    project: localStorage.getItem('spine-editor-project-path'),
+                    spine: localStorage.getItem('spine-editor-spine-path')
+                };
+                
                 // Spine System初期化
                 this.spineCore = new SpineCore();
                 this.spineRenderer = null;
@@ -478,11 +484,34 @@
                 
                 this.spineXInput = document.getElementById('spine-x');
                 this.spineYInput = document.getElementById('spine-y');
+                
+                // 保存されたパスがあれば自動読み込み
+                this.loadSavedPaths();
+            }
+
+            // 保存されたパス自動読み込み
+            async loadSavedPaths() {
+                if (this.savedPaths.project) {
+                    console.log('🔄 Auto-loading saved project path:', this.savedPaths.project);
+                    // プロジェクトパスを自動設定（ファイル一覧は表示しない）
+                    this.currentProject = this.savedPaths.project;
+                }
+                
+                if (this.savedPaths.spine) {
+                    console.log('🔄 Auto-loading saved spine path:', this.savedPaths.spine);
+                    // Spineパスから自動検出（UI更新は行わない、次回のボタンクリック時に使用）
+                }
             }
 
             bindEvents() {
+                console.log('🔧 Setting up event handlers...');
+                console.log('🔧 btnLoadSpineFolder element:', this.btnLoadSpineFolder);
+                
                 this.btnOpenFolder.addEventListener('click', () => this.openFolder());
-                this.btnLoadSpineFolder.addEventListener('click', () => this.loadSpineFolder());
+                this.btnLoadSpineFolder.addEventListener('click', () => {
+                    console.log('🎭 Spine folder button clicked!');
+                    this.loadSpineFolder();
+                });
                 this.btnExportPackage.addEventListener('click', () => this.exportPackage());
                 this.btnPreviewPackage.addEventListener('click', () => this.previewPackage());
                 this.btnAddSpine.addEventListener('click', () => this.addSpineCharacter());
@@ -533,9 +562,14 @@
                 this.updateStatus('loading', 'フォルダを選択中...');
                 
                 try {
-                    const result = await window.projectLoader.selectFolder();
+                    // 保存されたパスを初期フォルダとして使用
+                    const result = await window.projectLoader.selectFolder(this.savedPaths.project);
                     if (result.success) {
                         this.currentProject = result.path;
+                        
+                        // プロジェクトパスを保存
+                        localStorage.setItem('spine-editor-project-path', result.path);
+                        console.log('💾 Project path saved:', result.path);
                         
                         // サーバーにプロジェクトパスを設定
                         if (window.electronAPI && window.electronAPI.server) {
@@ -557,19 +591,25 @@
             }
 
             async loadSpineFolder() {
+                console.log('🎭 loadSpineFolder() method called!');
                 this.updateStatus('loading', 'Spineフォルダを選択中...');
                 
                 try {
-                    const result = await window.electronAPI.fs.selectFolder({
-                        title: 'Spineキャラクターフォルダを選択',
-                        properties: ['openDirectory']
-                    });
+                    // projectLoaderを使用（既存システムと統一）・保存されたSpineパスを初期フォルダとして使用
+                    const result = await window.projectLoader.selectFolder(this.savedPaths.spine);
                     
                     if (result.success && result.path) {
                         console.log('🎭 Selected Spine folder:', result.path);
                         
+                        // Spineパスを保存
+                        localStorage.setItem('spine-editor-spine-path', result.path);
+                        console.log('💾 Spine path saved:', result.path);
+                        
+                        console.log('🔧 Starting Spine file detection...');
+                        
                         // Spineファイル検出処理（例: .json/.atlas/.png）
                         const spineFiles = await this.detectSpineFiles(result.path);
+                        console.log('🔧 Detection completed. Found files:', spineFiles);
                         
                         if (spineFiles.length > 0) {
                             this.updateStatus('ready', `Spineファイル検出: ${spineFiles.length}個のキャラクター`);
@@ -591,11 +631,15 @@
 
             async detectSpineFiles(folderPath) {
                 try {
+                    console.log('🔍 Scanning folder:', folderPath);
+                    
                     // ElectronAPIでフォルダ内のファイルをスキャン
                     const scanResult = await window.electronAPI.fs.scanDirectory(
                         folderPath, 
                         ['.json', '.atlas', '.png']
                     );
+                    
+                    console.log('📋 Scan result:', scanResult);
                     
                     if (!scanResult.success) {
                         console.warn('🚨 Spine folder scan failed:', scanResult.error);
@@ -607,12 +651,23 @@
                     const atlasFiles = scanResult.files?.atlas || [];
                     const pngFiles = scanResult.files?.png || [];
                     
+                    console.log('📁 Found files:');
+                    console.log('  JSON files:', jsonFiles);
+                    console.log('  Atlas files:', atlasFiles);
+                    console.log('  PNG files:', pngFiles);
+                    
                     const spineCharacters = [];
                     
                     for (const jsonFile of jsonFiles) {
+                        // バックアップフォルダを除外
+                        if (this.isBackupPath(jsonFile)) {
+                            console.log('🚫 Skipping backup file:', jsonFile);
+                            continue;
+                        }
+                        
                         const baseName = jsonFile.replace(/\.json$/, '').split('/').pop();
-                        const atlasFile = atlasFiles.find(f => f.includes(baseName + '.atlas'));
-                        const pngFile = pngFiles.find(f => f.includes(baseName + '.png'));
+                        const atlasFile = atlasFiles.find(f => f.includes(baseName + '.atlas') && !this.isBackupPath(f));
+                        const pngFile = pngFiles.find(f => f.includes(baseName + '.png') && !this.isBackupPath(f));
                         
                         if (atlasFile && pngFile) {
                             spineCharacters.push({
@@ -620,7 +675,7 @@
                                 jsonPath: jsonFile,
                                 atlasPath: atlasFile,
                                 texturePath: pngFile,
-                                folderPath: folderPath
+                                folderPath: this.getCharacterFolder(jsonFile)
                             });
                         }
                     }
@@ -630,6 +685,20 @@
                     console.error('🚨 Spine detection error:', error);
                     return [];
                 }
+            }
+
+            // バックアップパス判定（バックアップフォルダ除外）
+            isBackupPath(filePath) {
+                const backupKeywords = ['backup', 'bak', 'バックアップ', 'archive', 'old'];
+                const pathLower = filePath.toLowerCase();
+                return backupKeywords.some(keyword => pathLower.includes(keyword));
+            }
+
+            // キャラクターフォルダパス取得
+            getCharacterFolder(jsonPath) {
+                const parts = jsonPath.split('/');
+                parts.pop(); // ファイル名を除去
+                return parts.join('/');
             }
 
             displaySpineCharacters(spineFiles) {
