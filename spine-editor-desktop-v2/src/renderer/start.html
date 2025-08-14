@@ -111,6 +111,12 @@
             justify-content: center;
             background-color: #f9f9f9;
             position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .preview-content.drag-over {
+            background-color: #e3f2fd;
+            border: 2px dashed #007ACC;
         }
 
         .preview-placeholder {
@@ -389,11 +395,16 @@
         <!-- 中央パネル: HTMLプレビュー -->
         <div class="preview-panel">
             <div class="panel-header">HTML Preview</div>
-            <div class="preview-content">
+            <div class="preview-content" id="preview-content">
                 <div id="preview-placeholder" class="preview-placeholder">
-                    HTMLファイルを選択すると<br>プレビューが表示されます
+                    HTMLファイルを選択すると<br>プレビューが表示されます<br><br>
+                    <small style="color: #888;">💡 左からSpineキャラクターをドラッグ&ドロップして追加できます</small>
                 </div>
                 <iframe id="preview-iframe" class="preview-iframe" style="display: none;"></iframe>
+                <!-- Spineキャラクター表示エリア -->
+                <div id="spine-character-container" class="spine-character-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                    <!-- Spineキャラクターがここに動的追加される -->
+                </div>
             </div>
         </div>
 
@@ -487,6 +498,9 @@
                 
                 // 保存されたパスがあれば自動読み込み
                 this.loadSavedPaths();
+                
+                // ドロップゾーン設定
+                this.setupDropZone();
             }
 
             // 保存されたパス自動読み込み
@@ -501,6 +515,190 @@
                     console.log('🔄 Auto-loading saved spine path:', this.savedPaths.spine);
                     // Spineパスから自動検出（UI更新は行わない、次回のボタンクリック時に使用）
                 }
+            }
+
+            /**
+             * ドロップゾーン設定（プレビューエリアでSpineキャラクター受け入れ）
+             */
+            setupDropZone() {
+                const previewContent = document.getElementById('preview-content');
+                const spineContainer = document.getElementById('spine-character-container');
+                
+                if (!previewContent || !spineContainer) {
+                    console.warn('⚠️ ドロップゾーン要素が見つかりません');
+                    return;
+                }
+                
+                // ドラッグオーバー（ドロップ可能領域の視覚的フィードバック）
+                previewContent.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                    previewContent.classList.add('drag-over');
+                });
+                
+                // ドラッグリーブ（ドロップ可能領域を離れた時）
+                previewContent.addEventListener('dragleave', (e) => {
+                    // 子要素への移動は無視（バブリング対策）
+                    if (!previewContent.contains(e.relatedTarget)) {
+                        previewContent.classList.remove('drag-over');
+                    }
+                });
+                
+                // ドロップ（実際にSpineキャラクターを配置）
+                previewContent.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    previewContent.classList.remove('drag-over');
+                    
+                    try {
+                        // ドラッグされたキャラクターデータを取得
+                        const characterDataStr = e.dataTransfer.getData('application/json');
+                        if (!characterDataStr) {
+                            console.warn('⚠️ ドロップデータが見つかりません');
+                            return;
+                        }
+                        
+                        const characterData = JSON.parse(characterDataStr);
+                        console.log('🎭 Dropped character:', characterData);
+                        
+                        // ドロップ位置を計算（プレビューエリア内の相対位置）
+                        const rect = previewContent.getBoundingClientRect();
+                        const dropX = e.clientX - rect.left;
+                        const dropY = e.clientY - rect.top;
+                        
+                        // Spineキャラクターをプレビューに追加
+                        this.addSpineCharacterToPreview(characterData, dropX, dropY);
+                        
+                    } catch (error) {
+                        console.error('❌ ドロップ処理エラー:', error);
+                        this.updateStatus('error', `キャラクター追加失敗: ${error.message}`);
+                    }
+                });
+                
+                console.log('✅ ドロップゾーン設定完了');
+            }
+
+            /**
+             * プレビューエリアにSpineキャラクターを追加
+             */
+            async addSpineCharacterToPreview(characterData, x, y) {
+                try {
+                    this.updateStatus('loading', 'Spineキャラクターを読み込み中...');
+                    
+                    const spineContainer = document.getElementById('spine-character-container');
+                    
+                    // 一意のIDを生成
+                    const characterId = `spine-character-${Date.now()}`;
+                    
+                    // Spineキャラクター要素を作成
+                    const characterElement = document.createElement('div');
+                    characterElement.id = characterId;
+                    characterElement.className = 'spine-character-element';
+                    characterElement.style.cssText = `
+                        position: absolute;
+                        left: ${x}px;
+                        top: ${y}px;
+                        width: 200px;
+                        height: 200px;
+                        border: 2px dashed #007ACC;
+                        background: rgba(0, 122, 204, 0.1);
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: move;
+                        pointer-events: auto;
+                        user-select: none;
+                    `;
+                    
+                    // キャラクター情報を表示
+                    characterElement.innerHTML = `
+                        <div style="text-align: center; color: #007ACC;">
+                            <div style="font-size: 24px;">🎭</div>
+                            <div style="font-size: 14px; font-weight: bold;">${characterData.name}</div>
+                            <div style="font-size: 12px; opacity: 0.7;">Spine Character</div>
+                        </div>
+                    `;
+                    
+                    // キャラクター要素にドラッグ機能を追加
+                    this.setupCharacterDrag(characterElement, characterData);
+                    
+                    // コンテナに追加
+                    spineContainer.appendChild(characterElement);
+                    
+                    // キャラクターリストに登録
+                    if (!this.spineCharacters) {
+                        this.spineCharacters = [];
+                    }
+                    this.spineCharacters.push({
+                        id: characterId,
+                        element: characterElement,
+                        data: characterData,
+                        position: { x, y }
+                    });
+                    
+                    this.updateStatus('ready', `キャラクター「${characterData.name}」を追加しました`);
+                    console.log(`✅ Spineキャラクター「${characterData.name}」をプレビューに追加完了`);
+                    
+                } catch (error) {
+                    console.error('❌ Spineキャラクター追加エラー:', error);
+                    this.updateStatus('error', `キャラクター追加失敗: ${error.message}`);
+                }
+            }
+
+            /**
+             * キャラクター要素のドラッグ機能設定（プレビュー内での移動）
+             */
+            setupCharacterDrag(element, characterData) {
+                let isDragging = false;
+                let dragStartX = 0;
+                let dragStartY = 0;
+                let elementStartX = 0;
+                let elementStartY = 0;
+                
+                element.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+                    elementStartX = parseInt(element.style.left) || 0;
+                    elementStartY = parseInt(element.style.top) || 0;
+                    
+                    element.style.opacity = '0.8';
+                    element.style.transform = 'scale(1.05)';
+                    element.style.zIndex = '1000';
+                    
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    const deltaX = e.clientX - dragStartX;
+                    const deltaY = e.clientY - dragStartY;
+                    
+                    const newX = elementStartX + deltaX;
+                    const newY = elementStartY + deltaY;
+                    
+                    element.style.left = `${newX}px`;
+                    element.style.top = `${newY}px`;
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        element.style.opacity = '1';
+                        element.style.transform = 'scale(1)';
+                        element.style.zIndex = '';
+                        
+                        // 位置を保存
+                        const characterEntry = this.spineCharacters?.find(c => c.element === element);
+                        if (characterEntry) {
+                            characterEntry.position.x = parseInt(element.style.left) || 0;
+                            characterEntry.position.y = parseInt(element.style.top) || 0;
+                            console.log(`📍 キャラクター「${characterData.name}」位置更新:`, characterEntry.position);
+                        }
+                    }
+                });
             }
 
             bindEvents() {
