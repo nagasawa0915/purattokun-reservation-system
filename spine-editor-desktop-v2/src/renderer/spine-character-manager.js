@@ -4,11 +4,84 @@
  */
 
 import { Utils } from './utils.js';
+import { IframeSpineBridge } from './js/iframe-spine-bridge.js';
 
 export class SpineCharacterManager {
     constructor() {
         this.spineCharacters = [];
         this.savedSpinePath = localStorage.getItem('spine-editor-spine-path');
+        this.iframeSpineBridge = new IframeSpineBridge();
+        this.setupBridgeEventHandlers();
+    }
+
+    /**
+     * iframe通信ブリッジのイベントハンドラをセットアップ
+     * @private
+     */
+    setupBridgeEventHandlers() {
+        // Spine環境準備完了
+        this.iframeSpineBridge.on('spineReady', (data) => {
+            console.log('🎭 Spine environment ready for character operations');
+        });
+
+        // キャラクター追加成功
+        this.iframeSpineBridge.on('characterAdded', (data) => {
+            console.log(`✅ Character added to iframe: ${data.characterId}`);
+            
+            // ダミー要素を実際のSpine表示に置き換える処理をここに追加可能
+            this.updateDummyToSpineDisplay(data.characterId);
+        });
+
+        // エラーハンドリング
+        this.iframeSpineBridge.on('spineError', (data) => {
+            console.error('❌ Spine error:', data);
+            Utils.showToastNotification(`Spineエラー: ${data.error}`, 'error');
+        });
+
+        this.iframeSpineBridge.on('characterError', (data) => {
+            console.error('❌ Character operation error:', data);
+            Utils.showToastNotification(`キャラクター操作エラー: ${data.error}`, 'error');
+        });
+    }
+
+    /**
+     * プレビューiframeを設定
+     * @param {HTMLIFrameElement} iframe - プレビューiframe要素
+     */
+    setPreviewIframe(iframe) {
+        this.iframeSpineBridge.setIframe(iframe);
+        console.log('🖼️ Preview iframe set for Spine integration');
+    }
+
+    /**
+     * ダミー要素を実際のSpine表示に更新
+     * @private
+     * @param {string} characterId - キャラクターID
+     */
+    updateDummyToSpineDisplay(characterId) {
+        // 必要に応じて、ダミー要素を非表示にするなどの処理
+        const character = this.spineCharacters.find(c => c.id === characterId);
+        if (character && character.element) {
+            // ダミー要素に「実際のSpine表示中」の表示を追加
+            const statusDiv = character.element.querySelector('.spine-status') || document.createElement('div');
+            statusDiv.className = 'spine-status';
+            statusDiv.style.cssText = `
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                background: #28a745;
+                color: white;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 10px;
+                font-weight: bold;
+            `;
+            statusDiv.textContent = 'LIVE';
+            
+            if (!character.element.contains(statusDiv)) {
+                character.element.appendChild(statusDiv);
+            }
+        }
     }
 
     /**
@@ -295,7 +368,7 @@ export class SpineCharacterManager {
             // 一意のIDを生成
             const characterId = Utils.generateId('spine-character');
             
-            // Spineキャラクター要素を作成
+            // Spineキャラクター要素を作成（ダミー表示用）
             const characterElement = document.createElement('div');
             characterElement.id = characterId;
             characterElement.className = 'spine-character-element';
@@ -314,6 +387,7 @@ export class SpineCharacterManager {
                 cursor: move;
                 pointer-events: auto;
                 user-select: none;
+                opacity: 0.8;
             `;
             
             // キャラクター情報を表示
@@ -321,12 +395,12 @@ export class SpineCharacterManager {
                 <div style="text-align: center; color: #007ACC;">
                     <div style="font-size: 24px;">🎭</div>
                     <div style="font-size: 14px; font-weight: bold;">${characterData.name}</div>
-                    <div style="font-size: 12px; opacity: 0.7;">Spine Character</div>
+                    <div style="font-size: 12px; opacity: 0.7;">Loading Spine...</div>
                 </div>
             `;
             
             // キャラクター要素にドラッグ機能を追加
-            this.setupCharacterDrag(characterElement, characterData);
+            this.setupCharacterDrag(characterElement, characterData, characterId);
             
             // コンテナに追加
             containerElement.appendChild(characterElement);
@@ -336,14 +410,30 @@ export class SpineCharacterManager {
                 id: characterId,
                 element: characterElement,
                 data: characterData,
-                position: { x, y }
+                position: { x, y },
+                spineCharacterId: null // iframe内のSpineキャラクターIDを後で設定
             });
             
-            console.log(`✅ Spineキャラクター「${characterData.name}」をプレビューに追加完了`);
+            // 🚀 iframe内に実際のSpineキャラクターを追加
+            const spineCharacterId = this.iframeSpineBridge.addSpineCharacter(
+                characterData,
+                x,
+                y,
+                0.5 // デフォルトスケール
+            );
+            
+            // iframe内のSpineキャラクターIDを記録
+            const characterEntry = this.spineCharacters.find(c => c.id === characterId);
+            if (characterEntry) {
+                characterEntry.spineCharacterId = spineCharacterId;
+            }
+            
+            console.log(`✅ Spineキャラクター「${characterData.name}」をプレビューに追加開始 (ID: ${characterId}, SpineID: ${spineCharacterId})`);
             
             return {
                 success: true,
                 characterId,
+                spineCharacterId,
                 element: characterElement
             };
             
@@ -361,8 +451,9 @@ export class SpineCharacterManager {
      * @private
      * @param {Element} element - キャラクター要素
      * @param {object} characterData - キャラクターデータ
+     * @param {string} characterId - キャラクターID
      */
-    setupCharacterDrag(element, characterData) {
+    setupCharacterDrag(element, characterData, characterId) {
         let isDragging = false;
         let dragStartX = 0;
         let dragStartY = 0;
@@ -407,9 +498,21 @@ export class SpineCharacterManager {
                 // 位置を保存
                 const characterEntry = this.spineCharacters?.find(c => c.element === element);
                 if (characterEntry) {
-                    characterEntry.position.x = parseInt(element.style.left) || 0;
-                    characterEntry.position.y = parseInt(element.style.top) || 0;
+                    const newX = parseInt(element.style.left) || 0;
+                    const newY = parseInt(element.style.top) || 0;
+                    
+                    characterEntry.position.x = newX;
+                    characterEntry.position.y = newY;
+                    
                     console.log(`📍 キャラクター「${characterData.name}」位置更新:`, characterEntry.position);
+                    
+                    // 🚀 iframe内のSpineキャラクターの位置も同期更新
+                    if (characterEntry.spineCharacterId) {
+                        this.iframeSpineBridge.updateSpineCharacter(characterEntry.spineCharacterId, {
+                            position: { x: newX, y: newY }
+                        });
+                        console.log(`🎭 Spine character position synced: ${characterEntry.spineCharacterId}`);
+                    }
                 }
             }
         });

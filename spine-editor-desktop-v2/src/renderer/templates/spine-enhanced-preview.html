@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Enhanced Preview</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            position: relative;
+        }
+        
+        .content {
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .preview-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10000;
+        }
+        
+        .spine-status {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: #007ACC;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10000;
+        }
+        
+        #spine-container {
+            pointer-events: none;
+        }
+        
+        #spine-canvas {
+            pointer-events: auto;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 10001;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-info">Spine Enhanced Preview</div>
+    <div class="spine-status" id="spine-status">Spine Loading...</div>
+    
+    <div class="content">
+        <h1>プレビューコンテンツ</h1>
+        <p>ここにHTMLコンテンツが表示されます。Spineキャラクターをドロップすると、この上に表示されます。</p>
+        
+        <div style="height: 200px; background: #e9ecef; margin: 20px 0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+            <p style="color: #6c757d; margin: 0;">サンプルコンテンツエリア</p>
+        </div>
+        
+        <p>Spineキャラクターは透明な背景で表示され、HTML要素の上に重ねて表示されます。</p>
+    </div>
+    
+    <div class="loading" id="spine-loading">
+        <div style="text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 10px;">🎭</div>
+            <div>Spine WebGL Loading...</div>
+        </div>
+    </div>
+    
+    <script>
+        // Spine環境の動的読み込みと初期化
+        (function() {
+            const spineStatus = document.getElementById('spine-status');
+            const spineLoading = document.getElementById('spine-loading');
+            
+            function updateStatus(status, color = '#007ACC') {
+                if (spineStatus) {
+                    spineStatus.textContent = status;
+                    spineStatus.style.background = color;
+                }
+            }
+            
+            function showLoading() {
+                if (spineLoading) {
+                    spineLoading.style.display = 'block';
+                }
+            }
+            
+            function hideLoading() {
+                if (spineLoading) {
+                    spineLoading.style.display = 'none';
+                }
+            }
+            
+            // Spine WebGL環境の動的読み込み
+            function loadSpineEnvironment() {
+                updateStatus('Loading Spine System...', '#6c757d');
+                showLoading();
+                
+                // iframe-spine-loader.jsを読み込み
+                const script = document.createElement('script');
+                script.src = '../js/iframe-spine-loader.js';
+                script.onload = function() {
+                    updateStatus('Spine System Ready', '#28a745');
+                    hideLoading();
+                    console.log('✅ Spine environment loaded successfully');
+                };
+                script.onerror = function() {
+                    updateStatus('Spine Load Failed', '#dc3545');
+                    hideLoading();
+                    console.error('❌ Failed to load Spine environment');
+                };
+                document.head.appendChild(script);
+            }
+            
+            // ページ読み込み完了後にSpine環境を初期化
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', loadSpineEnvironment);
+            } else {
+                loadSpineEnvironment();
+            }
+            
+            // 親ウィンドウにプレビュー準備完了を通知
+            window.addEventListener('load', function() {
+                window.parent.postMessage({
+                    type: 'PREVIEW_READY',
+                    data: { 
+                        url: window.location.href,
+                        title: document.title
+                    },
+                    source: 'spine-enhanced-preview'
+                }, window.location.origin);
+            });
+            
+        })();
+    </script>
+</body>
+</html>

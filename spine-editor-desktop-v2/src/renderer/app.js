@@ -53,6 +53,9 @@ export class DemoApp {
                 elements.pageList
             );
             
+            // SpineCharacterManagerにプレビューiframeを設定
+            this.spineCharacterManager.setPreviewIframe(elements.previewIframe);
+            
             // イベントハンドラー設定
             this.bindEvents();
             

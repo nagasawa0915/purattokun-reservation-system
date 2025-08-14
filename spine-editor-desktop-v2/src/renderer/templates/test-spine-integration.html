@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Integration Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 0;
+        }
+        
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .spine-debug {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: monospace;
+            z-index: 10000;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="spine-debug" id="spine-debug">
+        Spine Status: <span id="spine-status">Loading...</span>
+    </div>
+    
+    <div class="header">
+        <h1>🎭 Spine Integration Test</h1>
+        <p>Spine WebGL統合テストページ</p>
+    </div>
+    
+    <div class="content">
+        <h2>テスト機能</h2>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>🚀 WebGL初期化</h3>
+                <p>Spine WebGLライブラリの読み込みと初期化</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🌉 通信システム</h3>
+                <p>iframe間のpostMessage通信</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🎭 キャラクター表示</h3>
+                <p>Spineキャラクターの動的追加と表示</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🔄 リアルタイム更新</h3>
+                <p>位置やスケールのリアルタイム同期</p>
+            </div>
+        </div>
+        
+        <h2>動作確認ポイント</h2>
+        <ul>
+            <li>Spine WebGLライブラリが正常に読み込まれるか</li>
+            <li>Canvas要素が正しく作成されるか</li>
+            <li>親ウィンドウからのメッセージを受信できるか</li>
+            <li>キャラクターの追加・更新・削除が動作するか</li>
+            <li>エラーハンドリングが正常に動作するか</li>
+        </ul>
+        
+        <div class="footer">
+            <p>このページはSpine統合機能のテスト用です。</p>
+            <p>Spineキャラクターをドロップして動作を確認してください。</p>
+        </div>
+    </div>
+    
+    <!-- Spine環境の動的読み込み -->
+    <script>
+        (function() {
+            const statusElement = document.getElementById('spine-status');
+            
+            function updateStatus(status, color = 'white') {
+                if (statusElement) {
+                    statusElement.textContent = status;
+                    statusElement.style.color = color;
+                }
+            }
+            
+            // Spineシステムの読み込みと初期化
+            function initializeSpineSystem() {
+                updateStatus('Loading Spine...', 'yellow');
+                
+                try {
+                    // iframe-spine-loader.jsを読み込み
+                    const script = document.createElement('script');
+                    script.src = '../js/iframe-spine-loader.js';
+                    
+                    script.onload = function() {
+                        updateStatus('Spine Ready', 'lightgreen');
+                        console.log('✅ Spine system loaded successfully');
+                        
+                        // テスト用のグローバル関数を設定
+                        window.testSpineIntegration = function() {
+                            console.log('🧪 Testing Spine integration...');
+                            
+                            if (window.iframeSpineLoader) {
+                                console.log('✅ IframeSpineLoader available');
+                                window.iframeSpineLoader.initializeSpineEnvironment();
+                            } else {
+                                console.warn('⚠️ IframeSpineLoader not found');
+                            }
+                        };
+                        
+                        // 自動テスト実行
+                        setTimeout(() => {
+                            if (window.testSpineIntegration) {
+                                window.testSpineIntegration();
+                            }
+                        }, 1000);
+                    };
+                    
+                    script.onerror = function() {
+                        updateStatus('Load Failed', 'red');
+                        console.error('❌ Failed to load Spine system');
+                    };
+                    
+                    document.head.appendChild(script);
+                    
+                } catch (error) {
+                    updateStatus('Error', 'red');
+                    console.error('❌ Spine initialization error:', error);
+                }
+            }
+            
+            // postMessageイベントリスナーを設定
+            window.addEventListener('message', function(event) {
+                console.log('📨 Message received in test page:', event.data);
+                
+                if (event.data.source === 'iframe-spine-bridge') {
+                    console.log('🌉 Message from iframe-spine-bridge:', event.data.type);
+                }
+            });
+            
+            // ページ読み込み完了後に初期化
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeSpineSystem);
+            } else {
+                initializeSpineSystem();
+            }
+            
+            // 親ウィンドウにテストページ準備完了を通知
+            window.addEventListener('load', function() {
+                window.parent.postMessage({
+                    type: 'TEST_PAGE_READY',
+                    data: {
+                        url: window.location.href,
+                        title: document.title,
+                        timestamp: new Date().toISOString()
+                    },
+                    source: 'spine-test-page'
+                }, window.location.origin);
+                
+                console.log('📨 Test page ready notification sent');
+            });
+            
+        })();
+    </script>
+</body>
+</html>
