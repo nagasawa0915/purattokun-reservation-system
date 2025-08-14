@@ -1,0 +1,22 @@
+            // 🎯 詳細座標診断: マウス位置とキャラクター位置のズレ特定
+            console.log("🎯 COORDINATE DIAGNOSIS:");
+            console.log("  Mouse Client:", event.clientX, event.clientY);
+            console.log("  Canvas Rect:", this.canvas.getBoundingClientRect());
+            console.log("  Converted Canvas:", canvasCoords);
+            if (selectedCharacter && selectedCharacter.skeleton) {
+                console.log("  Spine Skeleton:", selectedCharacter.skeleton.x, selectedCharacter.skeleton.y);
+            }
+            if (overlayElement) {
+                console.log("  Overlay Position:", overlayElement.style.left, overlayElement.style.top);
+                console.log("  Overlay Rect:", overlayElement.getBoundingClientRect());
+            }
+            // 🎯 マウス位置とキャラクター実際位置の差分計算
+            if (selectedCharacter && selectedCharacter.skeleton) {
+                const spineX = selectedCharacter.skeleton.x;
+                const spineY = selectedCharacter.skeleton.y;
+                const offsetX = canvasCoords.x - spineX;
+                const offsetY = canvasCoords.y - spineY;
+                console.log("  Position Offset X:", offsetX.toFixed(2), "px");
+                console.log("  Position Offset Y:", offsetY.toFixed(2), "px");
+                console.log("  Total Offset Distance:", Math.sqrt(offsetX*offsetX + offsetY*offsetY).toFixed(2), "px");
+            }
