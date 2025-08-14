@@ -67,6 +67,67 @@ window.projectLoader = {
         }
     },
     
+    // Spineフォルダ選択専用（プロジェクトフォルダとは別のダイアログ設定）
+    async selectSpineFolder(defaultPath = null) {
+        try {
+            console.log('🎭 Spineフォルダ選択ダイアログを開きます');
+            console.log('🔧 受信したdefaultPath:', defaultPath, 'タイプ:', typeof defaultPath, '真偽値:', !!defaultPath);
+            if (defaultPath) {
+                console.log('💾 Spine初期パス使用:', defaultPath);
+            }
+            
+            // Electronのダイアログを使用（Spine専用設定）
+            if (window.electronAPI && window.electronAPI.fs) {
+                const dialogOptions = {
+                    title: 'Spineキャラクターフォルダを選択',
+                    properties: ['openDirectory'],
+                    buttonLabel: 'Spineフォルダを選択'
+                };
+                
+                // 初期パスがある場合は設定
+                if (defaultPath) {
+                    dialogOptions.defaultPath = defaultPath;
+                    console.log('💾 Spineダイアログに初期パス設定:', defaultPath);
+                }
+                
+                console.log('🔧 Spineダイアログオプション:', dialogOptions);
+                const result = await window.electronAPI.fs.selectFolder(dialogOptions);
+                
+                if (result.canceled || !result.filePaths?.length) {
+                    console.log('🎭 Spineフォルダ選択がキャンセルされました');
+                    return { success: false, canceled: true };
+                }
+                
+                const folderPath = result.filePaths[0];
+                console.log('🎭 選択されたSpineフォルダ:', folderPath);
+                
+                // Spineフォルダの場合はHTMLファイルスキャンは不要
+                // 直接成功として返す
+                return {
+                    success: true,
+                    path: folderPath,
+                    files: [], // SpineフォルダなのでHTMLファイルは空
+                    allFiles: []
+                };
+            } else {
+                // フォールバック: モックデータ
+                console.log('⚠️ Electron API利用不可、モックデータ使用');
+                return {
+                    success: true,
+                    path: '/mock/spine/folder',
+                    files: [],
+                    allFiles: []
+                };
+            }
+        } catch (error) {
+            console.error('🚨 Spineフォルダ選択エラー:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+    
     async scanFolder(folderPath) {
         try {
             // console.log('🔧 スキャン開始:', folderPath);

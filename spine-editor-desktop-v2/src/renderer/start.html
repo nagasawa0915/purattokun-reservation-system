@@ -800,10 +800,10 @@
                 this.updateStatus('loading', 'Spineフォルダを選択中...');
                 
                 try {
-                    // projectLoaderを使用（既存システムと統一）・保存されたSpineパスを初期フォルダとして使用（有効な場合のみ）
+                    // Spine専用フォルダ選択関数を使用・保存されたSpineパスを初期フォルダとして使用（有効な場合のみ）
                     const initialSpinePath = this.savedPaths.spine || null;
                     console.log('🔧 Spine initial path:', initialSpinePath);
-                    const result = await window.projectLoader.selectFolder(initialSpinePath);
+                    const result = await window.projectLoader.selectSpineFolder(initialSpinePath);
                     
                     if (result.success && result.path) {
                         console.log('🎭 Selected Spine folder:', result.path);
