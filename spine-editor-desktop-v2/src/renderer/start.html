@@ -290,6 +290,63 @@
             color: #1976d2;
             border-left: 3px solid #2196f3;
         }
+
+        /* Spineキャラクターアイテム */
+        .spine-character-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            cursor: grab;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .spine-character-item:hover {
+            background-color: #f8f9ff;
+            transform: translateX(2px);
+        }
+
+        .spine-character-item.dragging {
+            opacity: 0.7;
+            background-color: #e8f5e8;
+            cursor: grabbing;
+        }
+
+        .character-icon {
+            font-size: 20px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .character-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .character-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .character-path {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        /* セクショングループ */
+        .section-group {
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .section-group:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -310,10 +367,22 @@
 
         <!-- 左パネル: プロジェクトローダー -->
         <div class="project-panel">
-            <div class="panel-header">Project Files</div>
-            <div class="panel-content">
-                <div id="project-status" class="loading">フォルダを選択してください</div>
-                <div id="file-list" class="file-list" style="display: none;"></div>
+            <!-- HTMLファイルセクション -->
+            <div class="section-group">
+                <div class="panel-header">Project Files</div>
+                <div class="panel-content">
+                    <div id="project-status" class="loading">フォルダを選択してください</div>
+                    <div id="file-list" class="file-list" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <!-- Spineキャラクターセクション -->
+            <div class="section-group">
+                <div class="panel-header">🎭 Spine Characters</div>
+                <div class="panel-content">
+                    <div id="spine-character-status" class="loading">Spineフォルダを選択してください</div>
+                    <div id="spine-character-list" class="file-list" style="display: none;"></div>
+                </div>
             </div>
         </div>
 
@@ -395,6 +464,10 @@
                 this.pageList = document.getElementById('page-list');
                 this.previewPlaceholder = document.getElementById('preview-placeholder');
                 this.previewIframe = document.getElementById('preview-iframe');
+                
+                // Spine関連要素
+                this.spineCharacterStatus = document.getElementById('spine-character-status');
+                this.spineCharacterList = document.getElementById('spine-character-list');
                 
                 this.btnOpenFolder = document.getElementById('btn-open-folder');
                 this.btnLoadSpineFolder = document.getElementById('btn-load-spine-folder');
@@ -502,11 +575,12 @@
                             this.updateStatus('ready', `Spineファイル検出: ${spineFiles.length}個のキャラクター`);
                             console.log('🎭 Detected Spine files:', spineFiles);
                             
-                            // TODO: Spineアウトライナーに表示・ドラッグ&ドロップ機能の実装
-                            alert(`${spineFiles.length}個のSpineキャラクターを検出しました！\n\n検出ファイル:\n${spineFiles.map(f => f.name).join('\n')}`);
+                            // 左パネルにSpineキャラクター一覧表示
+                            this.displaySpineCharacters(spineFiles);
                         } else {
                             this.updateStatus('ready', 'Spineファイルが見つかりませんでした');
-                            alert('選択したフォルダにSpineファイル（.json/.atlas/.png）が見つかりませんでした。');
+                            this.spineCharacterStatus.textContent = 'Spineファイルが見つかりませんでした';
+                            this.spineCharacterList.style.display = 'none';
                         }
                     }
                 } catch (error) {
@@ -556,6 +630,59 @@
                     console.error('🚨 Spine detection error:', error);
                     return [];
                 }
+            }
+
+            displaySpineCharacters(spineFiles) {
+                console.log('🎭 Displaying Spine characters:', spineFiles);
+                
+                // ステータス更新
+                this.spineCharacterStatus.textContent = `${spineFiles.length}個のキャラクターが見つかりました`;
+                
+                // リストをクリア
+                this.spineCharacterList.innerHTML = '';
+                
+                // 各キャラクターをリストに追加
+                spineFiles.forEach((character, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'file-item spine-character-item';
+                    item.draggable = true; // ドラッグ可能に設定
+                    item.dataset.characterId = character.name;
+                    item.dataset.characterPath = character.jsonPath;
+                    
+                    item.innerHTML = `
+                        <div class="character-icon">🎭</div>
+                        <div class="character-info">
+                            <div class="character-name">${character.name}</div>
+                            <div class="character-path">${character.folderPath.split('/').pop()}</div>
+                        </div>
+                    `;
+                    
+                    // クリックイベント（詳細表示用）
+                    item.addEventListener('click', () => {
+                        console.log('🎭 Selected character:', character.name);
+                        // TODO: キャラクター詳細表示
+                    });
+                    
+                    // ドラッグ開始イベント（次のステップで実装）
+                    item.addEventListener('dragstart', (e) => {
+                        console.log('🎭 Drag started:', character.name);
+                        e.dataTransfer.setData('application/json', JSON.stringify(character));
+                        e.dataTransfer.effectAllowed = 'copy';
+                        item.classList.add('dragging');
+                    });
+                    
+                    // ドラッグ終了イベント
+                    item.addEventListener('dragend', (e) => {
+                        item.classList.remove('dragging');
+                    });
+                    
+                    this.spineCharacterList.appendChild(item);
+                });
+                
+                // リストを表示
+                this.spineCharacterList.style.display = 'block';
+                
+                console.log('✅ Spine character list displayed');
             }
 
             loadProjectFiles(files) {
