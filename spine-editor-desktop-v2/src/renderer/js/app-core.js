@@ -73,12 +73,116 @@ export class SpineEditorCore {
     this.ui = new UIManager(this);
     await this.ui.init();
     console.log('✅ UI Manager initialized');
+    
+    // SpineOutlinerUI初期化
+    await this.initSpineOutlinerUI();
+  }
+
+  /**
+   * SpineOutlinerUI初期化
+   */
+  async initSpineOutlinerUI() {
+    if (typeof SpineOutlinerUI === 'undefined') {
+      console.warn('⚠️ SpineOutlinerUI not found, skipping initialization');
+      return;
+    }
+    
+    try {
+      const container = document.getElementById('spine-outliner-container');
+      if (!container) {
+        throw new Error('spine-outliner-container element not found');
+      }
+      
+      // SpineOutlinerUI インスタンス作成
+      this.spineOutliner = new SpineOutlinerUI(container);
+      
+      // ドラッグ&ドロップイベントリスナー設定
+      this.setupSpineOutlinerEvents();
+      
+      console.log('✅ SpineOutlinerUI initialized');
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize SpineOutlinerUI:', error);
+      // 初期化失敗時は従来のアウトライナーを維持
+    }
+  }
+
+  /**
+   * SpineOutlinerUIイベント設定
+   */
+  setupSpineOutlinerEvents() {
+    if (!this.spineOutliner) return;
+    
+    const spineStage = document.getElementById('spine-stage');
+    if (!spineStage) {
+      console.warn('⚠️ spine-stage element not found');
+      return;
+    }
+    
+    // ドラッグ&ドロップイベント設定
+    spineStage.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      spineStage.classList.add('drag-over');
+    });
+    
+    spineStage.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      spineStage.classList.remove('drag-over');
+    });
+    
+    spineStage.addEventListener('drop', (e) => {
+      e.preventDefault();
+      spineStage.classList.remove('drag-over');
+      
+      try {
+        const spineData = JSON.parse(e.dataTransfer.getData('application/spine-character'));
+        this.handleSpineCharacterDrop(spineData, e);
+      } catch (error) {
+        console.error('❌ Failed to handle Spine character drop:', error);
+      }
+    });
+    
+    console.log('✅ SpineOutlinerUI events configured');
+  }
+
+  /**
+   * Spineキャラクタードロップ処理
+   */
+  async handleSpineCharacterDrop(spineData, dropEvent) {
+    if (!this.spine) {
+      console.warn('⚠️ Spine system not initialized');
+      return;
+    }
+    
+    try {
+      // ドロップ位置計算
+      const rect = dropEvent.currentTarget.getBoundingClientRect();
+      const x = dropEvent.clientX - rect.left;
+      const y = dropEvent.clientY - rect.top;
+      
+      // Spineキャラクターを配置
+      await this.spine.loadCharacterAtPosition(spineData, x, y);
+      
+      // プロジェクト状態更新
+      this.markProjectModified();
+      this.utils.updateInspectorPanel();
+      
+      console.log('✅ Spine character dropped successfully:', spineData.name);
+      this.utils.setStatus(`Character "${spineData.name}" added to scene`);
+      
+    } catch (error) {
+      console.error('❌ Failed to drop Spine character:', error);
+      this.utils.setStatus('Failed to add character to scene', 'error');
+    }
   }
 
   /**
    * Spine初期化
    */
   async initSpine() {
+    // SpineWebGLRenderer初期化を優先
+    await this.initSpineWebGLRenderer();
+    
     if (typeof SpineManager === 'undefined') {
       throw new Error('SpineManager not found');
     }
@@ -86,6 +190,63 @@ export class SpineEditorCore {
     this.spine = new SpineManager(this);
     await this.spine.init();
     console.log('✅ Spine Manager initialized');
+  }
+
+  /**
+   * SpineWebGLRenderer初期化
+   */
+  async initSpineWebGLRenderer() {
+    if (typeof SpineWebGLRenderer === 'undefined') {
+      console.warn('⚠️ SpineWebGLRenderer not found, using fallback');
+      return;
+    }
+    
+    try {
+      const viewport = document.getElementById('spine-viewport');
+      if (!viewport) {
+        throw new Error('spine-viewport element not found');
+      }
+      
+      // SpineWebGLRenderer インスタンス作成
+      this.spineRenderer = new SpineWebGLRenderer(viewport);
+      
+      // ベースキャラクター（ぷらっとくん）を読み込み
+      await this.loadBaseCharacter();
+      
+      console.log('✅ SpineWebGLRenderer initialized');
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize SpineWebGLRenderer:', error);
+      // フォールバック処理
+      this.spineRenderer = null;
+    }
+  }
+
+  /**
+   * ベースキャラクター読み込み（ぷらっとくん）
+   */
+  async loadBaseCharacter() {
+    if (!this.spineRenderer) return;
+    
+    try {
+      // ベースキャラクター設定
+      const baseCharacterConfig = {
+        name: 'purattokun',
+        atlasPath: 'assets/spine/characters/purattokun/purattokun.atlas',
+        jsonPath: 'assets/spine/characters/purattokun/purattokun.json',
+        position: { x: 200, y: 200 },
+        scale: { x: 0.5, y: 0.5 }
+      };
+      
+      await this.spineRenderer.loadCharacter(baseCharacterConfig);
+      
+      console.log('✅ Base character (purattokun) loaded');
+      this.utils.setStatus('Base character loaded successfully');
+      
+    } catch (error) {
+      console.error('❌ Failed to load base character:', error);
+      this.utils.setStatus('Warning: Base character could not be loaded', 'warning');
+    }
   }
 
   /**

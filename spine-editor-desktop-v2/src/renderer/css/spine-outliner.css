@@ -1,0 +1,472 @@
+/**
+ * Spine Outliner CSS v1.0.0
+ * Spineキャラクターアウトライナー専用スタイル
+ * 
+ * 📋 CSS名前空間設計:
+ * - .spine-outliner-* : アウトライナーUI専用
+ * - .spine-asset-* : キャラクター表示専用
+ * - .spine-character-* : Canvas表示専用
+ * 
+ * 🎨 デザイン原則:
+ * - シンプル・軽量・視認性重視
+ * - ドラッグ&ドロップ対応の視覚効果
+ * - レスポンシブ対応（左パネル最適化）
+ * 
+ * @author Spine Editor Desktop v2.0
+ * @version 1.0.0
+ * @date 2025-08-13
+ */
+
+/* ==========================================================================
+   アウトライナーコンテナ
+   ========================================================================== */
+
+.spine-outliner-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   ヘッダー部分
+   ========================================================================== */
+
+.spine-outliner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: 1px solid #e0e0e0;
+  min-height: 60px;
+}
+
+.spine-outliner-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spine-outliner-load-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spine-outliner-load-btn:hover {
+  background: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.spine-outliner-load-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spine-outliner-load-btn.secondary {
+  background: #667eea;
+  color: white;
+  border: 2px solid #667eea;
+}
+
+.spine-outliner-load-btn.secondary:hover {
+  background: #5a6fd8;
+  border-color: #5a6fd8;
+}
+
+/* ==========================================================================
+   コンテンツ部分
+   ========================================================================== */
+
+.spine-outliner-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.spine-asset-list {
+  padding: 0;
+  margin: 0;
+}
+
+/* ==========================================================================
+   キャラクターアイテム
+   ========================================================================== */
+
+.spine-asset-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: grab;
+  transition: all 0.2s ease;
+  background: white;
+  position: relative;
+}
+
+.spine-asset-item:hover {
+  background: #f8f9ff;
+  transform: translateX(2px);
+  border-left: 3px solid #667eea;
+}
+
+.spine-asset-item:active {
+  cursor: grabbing;
+}
+
+.spine-asset-item.dragging {
+  opacity: 0.7;
+  transform: scale(0.98);
+  background: #e8ecff;
+  border-left: 3px solid #ff6b6b;
+}
+
+.spine-asset-item.selected {
+  background: #e8ecff;
+  border-left: 4px solid #667eea;
+}
+
+.spine-asset-item.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #667eea;
+}
+
+/* サムネイル */
+.asset-thumbnail {
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e0e0e0;
+  transition: border-color 0.2s ease;
+}
+
+.spine-asset-item:hover .asset-thumbnail {
+  border-color: #667eea;
+}
+
+.asset-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* アセット情報 */
+.asset-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asset-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.asset-details {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.2;
+}
+
+.asset-path {
+  font-size: 11px;
+  color: #999;
+  font-family: 'Consolas', 'Monaco', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* アクション */
+.asset-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.asset-preview-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.asset-preview-btn:hover {
+  background: #667eea;
+  border-color: #667eea;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* ==========================================================================
+   空状態表示
+   ========================================================================== */
+
+.spine-outliner-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-height: 300px;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.5;
+  margin-bottom: 8px;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.empty-description {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #666;
+  max-width: 280px;
+  margin-bottom: 24px;
+}
+
+/* ==========================================================================
+   ドラッグ&ドロップ効果
+   ========================================================================== */
+
+.spine-stage.drag-over {
+  border: 2px dashed #667eea !important;
+  background: rgba(102, 126, 234, 0.05) !important;
+  transition: all 0.2s ease;
+}
+
+.spine-stage.drag-over::before {
+  content: '🎭 Spineキャラクターをここにドロップ';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(102, 126, 234, 0.9);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   Spineキャラクター表示（Canvas）
+   ========================================================================== */
+
+.spine-character-canvas {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: move;
+  position: absolute;
+  background: transparent;
+}
+
+.spine-character-canvas:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.3);
+}
+
+.spine-character-canvas.editing {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 12px rgba(255, 107, 107, 0.4);
+}
+
+.spine-character-canvas.selected {
+  border-color: #28a745;
+  box-shadow: 0 0 8px rgba(40, 167, 69, 0.3);
+}
+
+/* ==========================================================================
+   編集ハンドル
+   ========================================================================== */
+
+.spine-edit-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #667eea;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1100;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+}
+
+.spine-edit-handle:hover {
+  background: #5a6fd8;
+  transform: scale(1.2);
+  opacity: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.spine-edit-handle.corner {
+  cursor: nw-resize;
+}
+
+.spine-edit-handle.edge-n,
+.spine-edit-handle.edge-s {
+  cursor: ns-resize;
+}
+
+.spine-edit-handle.edge-e,
+.spine-edit-handle.edge-w {
+  cursor: ew-resize;
+}
+
+/* ==========================================================================
+   レスポンシブ調整
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .spine-outliner-header {
+    padding: 12px;
+    flex-direction: column;
+    gap: 8px;
+    min-height: auto;
+  }
+  
+  .spine-outliner-title {
+    font-size: 14px;
+  }
+  
+  .spine-outliner-load-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .spine-asset-item {
+    padding: 10px 12px;
+  }
+  
+  .asset-thumbnail {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+  }
+  
+  .asset-name {
+    font-size: 13px;
+  }
+  
+  .asset-details,
+  .asset-path {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .spine-outliner-container {
+    border-radius: 0;
+  }
+  
+  .spine-outliner-header {
+    border-radius: 0;
+  }
+  
+  .asset-path {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   アニメーション
+   ========================================================================== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.spine-asset-item {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.spine-asset-item:nth-child(n+2) {
+  animation-delay: 0.05s;
+}
+
+.spine-asset-item:nth-child(n+3) {
+  animation-delay: 0.1s;
+}
+
+.spine-asset-item:nth-child(n+4) {
+  animation-delay: 0.15s;
+}
+
+/* ==========================================================================
+   プリント用スタイル（無効化）
+   ========================================================================== */
+
+@media print {
+  .spine-outliner-container {
+    display: none;
+  }
+}

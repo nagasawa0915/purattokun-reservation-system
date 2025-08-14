@@ -43,7 +43,9 @@
       "Bash(npm run dev:*)",
       "Bash(npm run test:*)",
       "Bash(npm install)",
-      "Bash(timeout 30 npm start)"
+      "Bash(timeout 30 npm start)",
+      "Bash(npm --version)",
+      "Bash(jobs)"
     ],
     "deny": []
   }

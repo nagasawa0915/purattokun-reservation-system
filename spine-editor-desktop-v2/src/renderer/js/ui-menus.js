@@ -56,6 +56,9 @@ class UIMenusManager {
     this.addMenuHandler('btn-export-package', () => this.app.exportPackage());
     this.addMenuHandler('btn-toggle-preview', () => this.togglePreview());
     this.addMenuHandler('btn-settings', () => this.openSettings());
+    
+    // SpineOutliner連携ボタン
+    this.addMenuHandler('btn-load-spine-folder', () => this.loadSpineFolder());
 
     // メインメニュー
     this.setupMainMenu();
@@ -471,6 +474,45 @@ class UIMenusManager {
     } catch (error) {
       this.app.setStatus('Package generation failed', 'error');
       console.error('Package generation error:', error);
+    }
+  }
+
+  /**
+   * Spineフォルダ読み込み（SpineOutliner連携）
+   */
+  async loadSpineFolder() {
+    try {
+      this.app.utils.setStatus('Loading Spine folder...');
+      
+      // フォルダ選択ダイアログ
+      const result = await window.electronAPI.openFileDialog({
+        title: 'Select Spine Character Folder',
+        message: 'Choose a folder containing Spine characters (.json, .atlas, .png files)',
+        properties: ['openDirectory']
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        this.app.utils.setStatus('Folder selection cancelled');
+        return;
+      }
+
+      const folderPath = result.filePaths[0];
+      
+      // SpineOutlinerUIでフォルダ読み込み
+      if (this.app.spineOutliner) {
+        await this.app.spineOutliner.loadFolder(folderPath);
+        this.app.utils.setStatus(`Spine folder loaded: ${folderPath}`);
+        console.log('✅ Spine folder loaded via OutlinerUI:', folderPath);
+      } else {
+        // フォールバック: 従来の方法
+        console.warn('⚠️ SpineOutlinerUI not available, using fallback');
+        await this.app.fileManager.selectHomepageFolder();
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to load Spine folder:', error);
+      this.app.utils.setStatus('Failed to load Spine folder', 'error');
+      this.app.utils.showErrorModal('Spine Folder Error', error.message);
     }
   }
 

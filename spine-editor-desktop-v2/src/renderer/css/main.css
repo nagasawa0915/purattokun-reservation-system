@@ -1,6 +1,9 @@
 /* Spine Editor Desktop v2.0 - Main Stylesheet */
 /* 軽量・高速・シンプル設計 */
 
+/* SpineアウトライナーUI統合 */
+@import 'spine-outliner.css';
+
 :root {
   --primary-color: #007bff;
   --secondary-color: #6c757d;

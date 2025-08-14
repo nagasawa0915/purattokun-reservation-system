@@ -52,12 +52,18 @@
 
         <!-- メインコンテンツエリア -->
         <main class="app-main">
-            <!-- サイドバー -->
+            <!-- サイドバー: Spine アウトライナー -->
             <aside class="sidebar">
                 <div class="sidebar-section">
-                    <h3>Characters</h3>
-                    <div id="character-list" class="character-list">
-                        <div class="placeholder-text">No characters loaded</div>
+                    <div id="spine-outliner-container" class="spine-outliner-container">
+                        <!-- SpineOutlinerUIがここに動的生成される -->
+                        <div class="spine-outliner-placeholder">
+                            <h3>🎭 Spine アウトライナー</h3>
+                            <p>フォルダを選択してSpineキャラクターを読み込んでください</p>
+                            <button id="btn-load-spine-folder" class="btn btn-primary">
+                                📂 Spineフォルダ選択
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -110,6 +116,11 @@
                 <!-- Canvas エリア -->
                 <div class="canvas-container">
                     <div id="spine-viewport" class="spine-viewport">
+                        <!-- Spine Stage: アウトライナーからのドロップ受け入れエリア -->
+                        <div class="spine-stage" id="spine-stage">
+                            <!-- Spineキャラクターがここに動的に配置される -->
+                        </div>
+                        
                         <!-- Spineキャラクターがここに表示される -->
                         <div class="viewport-overlay">
                             <div class="grid-lines"></div>
@@ -252,6 +263,11 @@
     </script>
 
     <!-- JavaScript読み込み -->
+    <!-- SpineOutlinerUI統合システム -->
+    <script src="js/spine-outliner-file-detector.js"></script>
+    <script src="js/spine-outliner-ui.js"></script>
+    <script src="js/spine-webgl-renderer.js"></script>
+    
     <!-- 軽量統合システム依存モジュール -->
     <script src="js/spine-core.js"></script>
     <script src="js/spine-renderer.js"></script>

@@ -275,7 +275,47 @@ export class AppFileManager {
     };
 
     this.app.isProjectModified = true;
+    
+    // SpineOutlinerUI更新
+    await this.updateSpineOutlinerAfterLoad(characterData);
+    
+    // UI状態更新
     this.app.utils.updateProjectInfo();
+    this.app.utils.updateOutlinerUI();
+  }
+
+  /**
+   * SpineOutlinerUI更新（キャラクター読み込み後）
+   */
+  async updateSpineOutlinerAfterLoad(characterData) {
+    if (!this.app.spineOutliner) {
+      console.warn('⚠️ SpineOutlinerUI not initialized');
+      return;
+    }
+    
+    try {
+      // キャラクターをアウトライナーに追加
+      const outlineData = {
+        id: characterData.id,
+        name: characterData.name || this.getBasename(characterData.jsonPath, '.json'),
+        type: 'spine-character',
+        jsonPath: characterData.jsonPath,
+        atlasPath: characterData.atlasPath,
+        imagePath: characterData.imagePath,
+        position: { x: characterData.x, y: characterData.y },
+        scale: { x: characterData.scaleX, y: characterData.scaleY }
+      };
+      
+      // フォルダーベースでキャラクター一覧を表示
+      if (this.homepageFolder) {
+        await this.app.spineOutliner.loadFolder(this.homepageFolder);
+      }
+      
+      console.log('✅ SpineOutlinerUI updated with character data');
+      
+    } catch (error) {
+      console.error('❌ Failed to update SpineOutlinerUI:', error);
+    }
   }
 
   /**
