@@ -933,18 +933,24 @@
                             continue;
                         }
                         
-                        const baseName = jsonFile.replace(/\.json$/, '').split('/').pop();
+                        // Windows/Unixパス両対応でファイル名のみ取得
+                        const baseName = jsonFile.replace(/\.json$/, '').split(/[/\\]/).pop();
                         const atlasFile = atlasFiles.find(f => f.includes(baseName + '.atlas') && !this.isBackupPath(f));
                         const pngFile = pngFiles.find(f => f.includes(baseName + '.png') && !this.isBackupPath(f));
                         
+                        console.log('🔧 Processing:', jsonFile);
+                        console.log('🔧 Extracted baseName:', baseName);
+                        
                         if (atlasFile && pngFile) {
+                            const characterFolder = this.getCharacterFolder(jsonFile);
                             spineCharacters.push({
-                                name: baseName,
+                                name: baseName, // キャラクター名のみ
                                 jsonPath: jsonFile,
                                 atlasPath: atlasFile,
                                 texturePath: pngFile,
-                                folderPath: this.getCharacterFolder(jsonFile)
+                                folderPath: characterFolder // 正しいフォルダパス
                             });
+                            console.log('🔧 Created character:', baseName, 'folder:', characterFolder);
                         }
                     }
                     
@@ -962,9 +968,9 @@
                 return backupKeywords.some(keyword => pathLower.includes(keyword));
             }
 
-            // キャラクターフォルダパス取得
+            // キャラクターフォルダパス取得（Windows/Unix両対応）
             getCharacterFolder(jsonPath) {
-                const parts = jsonPath.split('/');
+                const parts = jsonPath.split(/[/\\]/);
                 parts.pop(); // ファイル名を除去
                 return parts.join('/');
             }
@@ -1041,19 +1047,56 @@
                 
                 // 各キャラクターをリストに追加
                 spineFiles.forEach((character, index) => {
+                    console.log('🔧 Creating character item for:', character.name);
+                    console.log('🔧 Character data:', character);
+                    
                     const item = document.createElement('div');
-                    item.className = 'file-item spine-character-item';
+                    item.className = 'spine-character-simple'; // 新しいクラス名
                     item.draggable = true; // ドラッグ可能に設定
                     item.dataset.characterId = character.name;
                     item.dataset.characterPath = character.jsonPath;
                     
-                    item.innerHTML = `
-                        <div class="character-icon">🎭</div>
-                        <div class="character-info">
-                            <div class="character-name">${character.name}</div>
-                            <div class="character-path">${character.folderPath.split('/').pop()}</div>
-                        </div>
+                    // 名前のみをテキストノードとして設定
+                    item.textContent = character.name;
+                    console.log('🔧 Set textContent to:', item.textContent);
+                    
+                    // マウスオーバーでフルパス表示
+                    item.title = character.folderPath;
+                    console.log('🔧 Set title to:', item.title);
+                    
+                    // 確実にツールチップを表示するため、追加の属性も設定
+                    item.setAttribute('data-tooltip', character.folderPath);
+                    item.setAttribute('aria-label', character.folderPath);
+                    
+                    // 既存CSSを無効化して確実にシンプル表示
+                    item.style.cssText = `
+                        padding: 10px 15px !important;
+                        margin: 5px 0 !important;
+                        background: #f8f9fa !important;
+                        border: 1px solid #dee2e6 !important;
+                        border-radius: 6px !important;
+                        cursor: pointer !important;
+                        font-size: 14px !important;
+                        color: #495057 !important;
+                        display: block !important;
+                        text-align: left !important;
+                        transition: all 0.2s ease !important;
+                        user-select: none !important;
                     `;
+                    
+                    // ホバー効果とツールチップ確認
+                    item.addEventListener('mouseenter', (e) => {
+                        item.style.background = '#e9ecef !important';
+                        item.style.borderColor = '#007bff !important';
+                        console.log('🔧 Mouse enter - title:', e.target.title);
+                        console.log('🔧 Mouse enter - data-tooltip:', e.target.getAttribute('data-tooltip'));
+                    });
+                    
+                    item.addEventListener('mouseleave', () => {
+                        item.style.background = '#f8f9fa !important';
+                        item.style.borderColor = '#dee2e6 !important';
+                        console.log('🔧 Mouse leave');
+                    });
                     
                     // クリックイベント（詳細表示用）
                     item.addEventListener('click', () => {
