@@ -799,7 +799,42 @@
                 console.log('🎭 loadSpineFolder() method called!');
                 this.updateStatus('loading', 'Spineフォルダを選択中...');
                 
+                // デバッグ: 関数存在確認
+                console.log('🔧 window.projectLoader:', window.projectLoader);
+                console.log('🔧 selectSpineFolder exists:', typeof window.projectLoader?.selectSpineFolder);
+                
                 try {
+                    // 関数存在チェック
+                    if (!window.projectLoader || typeof window.projectLoader.selectSpineFolder !== 'function') {
+                        console.error('❌ selectSpineFolder function not found, falling back to selectFolder');
+                        // フォールバック: 元の関数を使用
+                        const initialSpinePath = this.savedPaths.spine || null;
+                        console.log('🔧 Spine initial path (fallback):', initialSpinePath);
+                        const result = await window.projectLoader.selectFolder(initialSpinePath);
+                        
+                        if (result.success && result.path) {
+                            console.log('🎭 Selected Spine folder (fallback):', result.path);
+                            
+                            // Spineパスを保存
+                            localStorage.setItem('spine-editor-spine-path', result.path);
+                            console.log('💾 Spine path saved:', result.path);
+                            
+                            // 以下は既存コードと同じ処理
+                            console.log('🔧 Starting Spine file detection...');
+                            const spineFiles = await this.detectSpineFiles(result.path);
+                            console.log('🔧 Detection completed. Found files:', spineFiles);
+                            
+                            this.displaySpineCharacters(spineFiles);
+                            console.log('🎭 Detected Spine files:', spineFiles);
+                            this.updateStatus('ready', `Spineキャラクター検出完了: ${spineFiles.length} 個`);
+                        } else if (result.canceled) {
+                            this.updateStatus('ready', 'Spineフォルダ選択がキャンセルされました');
+                        } else {
+                            this.updateStatus('error', 'Spineフォルダ選択に失敗しました');
+                        }
+                        return;
+                    }
+                    
                     // Spine専用フォルダ選択関数を使用・保存されたSpineパスを初期フォルダとして使用（有効な場合のみ）
                     const initialSpinePath = this.savedPaths.spine || null;
                     console.log('🔧 Spine initial path:', initialSpinePath);
