@@ -505,6 +505,11 @@
 
             // 保存されたパス自動読み込み
             async loadSavedPaths() {
+                console.log('🔧 localStorage状態確認:');
+                console.log('  - project:', localStorage.getItem('spine-editor-project-path'));
+                console.log('  - spine:', localStorage.getItem('spine-editor-spine-path'));
+                console.log('🔧 this.savedPaths:', this.savedPaths);
+                
                 if (this.savedPaths.project) {
                     console.log('🔄 Auto-loading saved project path:', this.savedPaths.project);
                     // プロジェクトパスを自動設定（ファイル一覧は表示しない）
