@@ -8,20 +8,29 @@ window.projectLoader = {
     currentProject: null,
     htmlFiles: [],
     
-    async selectFolder() {
+    async selectFolder(defaultPath = null) {
         try {
             console.log('📁 フォルダ選択ダイアログを開きます');
-            // console.log('🔧 electronAPI available:', !!window.electronAPI);
-            // console.log('🔧 electronAPI.fs available:', !!window.electronAPI?.fs);
+            if (defaultPath) {
+                console.log('💾 初期パス使用:', defaultPath);
+            }
             
             // Electronのダイアログを使用
             if (window.electronAPI && window.electronAPI.fs) {
-                // console.log('🔧 Calling electronAPI.fs.selectFolder...');
-                const result = await window.electronAPI.fs.selectFolder({
+                const dialogOptions = {
                     title: 'プロジェクトフォルダを選択',
                     properties: ['openDirectory'],
                     buttonLabel: 'フォルダを選択'
-                });
+                };
+                
+                // 初期パスがある場合は設定
+                if (defaultPath) {
+                    dialogOptions.defaultPath = defaultPath;
+                    console.log('💾 ダイアログに初期パス設定:', defaultPath);
+                }
+                
+                console.log('🔧 ダイアログオプション:', dialogOptions);
+                const result = await window.electronAPI.fs.selectFolder(dialogOptions);
                 
                 // console.log('🔧 Dialog result:', result);
                 

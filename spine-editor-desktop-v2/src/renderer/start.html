@@ -760,8 +760,10 @@
                 this.updateStatus('loading', 'フォルダを選択中...');
                 
                 try {
-                    // 保存されたパスを初期フォルダとして使用
-                    const result = await window.projectLoader.selectFolder(this.savedPaths.project);
+                    // 保存されたパスを初期フォルダとして使用（有効な場合のみ）
+                    const initialPath = this.savedPaths.project || null;
+                    console.log('🔧 Project initial path:', initialPath);
+                    const result = await window.projectLoader.selectFolder(initialPath);
                     if (result.success) {
                         this.currentProject = result.path;
                         
@@ -793,8 +795,10 @@
                 this.updateStatus('loading', 'Spineフォルダを選択中...');
                 
                 try {
-                    // projectLoaderを使用（既存システムと統一）・保存されたSpineパスを初期フォルダとして使用
-                    const result = await window.projectLoader.selectFolder(this.savedPaths.spine);
+                    // projectLoaderを使用（既存システムと統一）・保存されたSpineパスを初期フォルダとして使用（有効な場合のみ）
+                    const initialSpinePath = this.savedPaths.spine || null;
+                    console.log('🔧 Spine initial path:', initialSpinePath);
+                    const result = await window.projectLoader.selectFolder(initialSpinePath);
                     
                     if (result.success && result.path) {
                         console.log('🎭 Selected Spine folder:', result.path);
