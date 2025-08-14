@@ -487,7 +487,11 @@
                 this.updateStatus('loading', 'Spineフォルダを選択中...');
                 
                 try {
-                    const result = await window.electronAPI.dialog.selectFolder();
+                    const result = await window.electronAPI.fs.selectFolder({
+                        title: 'Spineキャラクターフォルダを選択',
+                        properties: ['openDirectory']
+                    });
+                    
                     if (result.success && result.path) {
                         console.log('🎭 Selected Spine folder:', result.path);
                         
