@@ -301,6 +301,7 @@
             </div>
             <div class="demo-actions">
                 <button id="btn-open-folder" class="btn btn-primary">📁 フォルダを開く</button>
+                <button id="btn-load-spine-folder" class="btn">🎭 Spineフォルダ選択</button>
                 <button id="btn-export-package" class="btn" disabled>📦 パッケージ出力</button>
                 <button id="btn-preview-package" class="btn" disabled>👁️ プレビュー</button>
                 <span id="status-indicator" class="status-indicator status-ready"></span>
@@ -396,6 +397,7 @@
                 this.previewIframe = document.getElementById('preview-iframe');
                 
                 this.btnOpenFolder = document.getElementById('btn-open-folder');
+                this.btnLoadSpineFolder = document.getElementById('btn-load-spine-folder');
                 this.btnExportPackage = document.getElementById('btn-export-package');
                 this.btnPreviewPackage = document.getElementById('btn-preview-package');
                 this.btnAddSpine = document.getElementById('btn-add-spine');
@@ -407,6 +409,7 @@
 
             bindEvents() {
                 this.btnOpenFolder.addEventListener('click', () => this.openFolder());
+                this.btnLoadSpineFolder.addEventListener('click', () => this.loadSpineFolder());
                 this.btnExportPackage.addEventListener('click', () => this.exportPackage());
                 this.btnPreviewPackage.addEventListener('click', () => this.previewPackage());
                 this.btnAddSpine.addEventListener('click', () => this.addSpineCharacter());
@@ -477,6 +480,77 @@
                 } catch (error) {
                     console.error('フォルダ選択エラー:', error);
                     this.updateStatus('error', 'フォルダ選択に失敗しました');
+                }
+            }
+
+            async loadSpineFolder() {
+                this.updateStatus('loading', 'Spineフォルダを選択中...');
+                
+                try {
+                    const result = await window.electronAPI.dialog.selectFolder();
+                    if (result.success && result.path) {
+                        console.log('🎭 Selected Spine folder:', result.path);
+                        
+                        // Spineファイル検出処理（例: .json/.atlas/.png）
+                        const spineFiles = await this.detectSpineFiles(result.path);
+                        
+                        if (spineFiles.length > 0) {
+                            this.updateStatus('ready', `Spineファイル検出: ${spineFiles.length}個のキャラクター`);
+                            console.log('🎭 Detected Spine files:', spineFiles);
+                            
+                            // TODO: Spineアウトライナーに表示・ドラッグ&ドロップ機能の実装
+                            alert(`${spineFiles.length}個のSpineキャラクターを検出しました！\n\n検出ファイル:\n${spineFiles.map(f => f.name).join('\n')}`);
+                        } else {
+                            this.updateStatus('ready', 'Spineファイルが見つかりませんでした');
+                            alert('選択したフォルダにSpineファイル（.json/.atlas/.png）が見つかりませんでした。');
+                        }
+                    }
+                } catch (error) {
+                    console.error('🚨 Spineフォルダ選択エラー:', error);
+                    this.updateStatus('error', 'Spineフォルダ選択に失敗しました');
+                }
+            }
+
+            async detectSpineFiles(folderPath) {
+                try {
+                    // ElectronAPIでフォルダ内のファイルをスキャン
+                    const scanResult = await window.electronAPI.fs.scanDirectory(
+                        folderPath, 
+                        ['.json', '.atlas', '.png']
+                    );
+                    
+                    if (!scanResult.success) {
+                        console.warn('🚨 Spine folder scan failed:', scanResult.error);
+                        return [];
+                    }
+                    
+                    // .json/.atlas/.pngのセットを検出
+                    const jsonFiles = scanResult.files?.json || [];
+                    const atlasFiles = scanResult.files?.atlas || [];
+                    const pngFiles = scanResult.files?.png || [];
+                    
+                    const spineCharacters = [];
+                    
+                    for (const jsonFile of jsonFiles) {
+                        const baseName = jsonFile.replace(/\.json$/, '').split('/').pop();
+                        const atlasFile = atlasFiles.find(f => f.includes(baseName + '.atlas'));
+                        const pngFile = pngFiles.find(f => f.includes(baseName + '.png'));
+                        
+                        if (atlasFile && pngFile) {
+                            spineCharacters.push({
+                                name: baseName,
+                                jsonPath: jsonFile,
+                                atlasPath: atlasFile,
+                                texturePath: pngFile,
+                                folderPath: folderPath
+                            });
+                        }
+                    }
+                    
+                    return spineCharacters;
+                } catch (error) {
+                    console.error('🚨 Spine detection error:', error);
+                    return [];
                 }
             }
 
