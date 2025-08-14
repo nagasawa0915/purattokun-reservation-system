@@ -764,10 +764,17 @@
             async openFolder() {
                 this.updateStatus('loading', 'フォルダを選択中...');
                 
+                // 詳細デバッグ: localStorage直接確認
+                const directProject = localStorage.getItem('spine-editor-project-path');
+                console.log('🔧 localStorage直接確認 project:', directProject);
+                console.log('🔧 this.savedPaths.project:', this.savedPaths.project);
+                console.log('🔧 値が同じか:', directProject === this.savedPaths.project);
+                
                 try {
                     // 保存されたパスを初期フォルダとして使用（有効な場合のみ）
                     const initialPath = this.savedPaths.project || null;
                     console.log('🔧 Project initial path:', initialPath);
+                    console.log('🔧 initialPathタイプ:', typeof initialPath, '長さ:', initialPath?.length);
                     const result = await window.projectLoader.selectFolder(initialPath);
                     if (result.success) {
                         this.currentProject = result.path;
@@ -775,6 +782,10 @@
                         // プロジェクトパスを保存
                         localStorage.setItem('spine-editor-project-path', result.path);
                         console.log('💾 Project path saved:', result.path);
+                        
+                        // this.savedPathsも更新
+                        this.savedPaths.project = result.path;
+                        console.log('🔄 this.savedPaths.project updated:', this.savedPaths.project);
                         
                         // サーバーにプロジェクトパスを設定
                         if (window.electronAPI && window.electronAPI.server) {
@@ -819,6 +830,10 @@
                             localStorage.setItem('spine-editor-spine-path', result.path);
                             console.log('💾 Spine path saved:', result.path);
                             
+                            // this.savedPathsも更新（フォールバック処理内）
+                            this.savedPaths.spine = result.path;
+                            console.log('🔄 this.savedPaths.spine updated (fallback):', this.savedPaths.spine);
+                            
                             // 以下は既存コードと同じ処理
                             console.log('🔧 Starting Spine file detection...');
                             const spineFiles = await this.detectSpineFiles(result.path);
@@ -835,9 +850,16 @@
                         return;
                     }
                     
+                    // 詳細デバッグ: localStorage直接確認
+                    const directSpine = localStorage.getItem('spine-editor-spine-path');
+                    console.log('🔧 localStorage直接確認 spine:', directSpine);
+                    console.log('🔧 this.savedPaths.spine:', this.savedPaths.spine);
+                    console.log('🔧 値が同じか:', directSpine === this.savedPaths.spine);
+                    
                     // Spine専用フォルダ選択関数を使用・保存されたSpineパスを初期フォルダとして使用（有効な場合のみ）
                     const initialSpinePath = this.savedPaths.spine || null;
                     console.log('🔧 Spine initial path:', initialSpinePath);
+                    console.log('🔧 initialSpinePathタイプ:', typeof initialSpinePath, '長さ:', initialSpinePath?.length);
                     const result = await window.projectLoader.selectSpineFolder(initialSpinePath);
                     
                     if (result.success && result.path) {
@@ -846,6 +868,10 @@
                         // Spineパスを保存
                         localStorage.setItem('spine-editor-spine-path', result.path);
                         console.log('💾 Spine path saved:', result.path);
+                        
+                        // this.savedPathsも更新
+                        this.savedPaths.spine = result.path;
+                        console.log('🔄 this.savedPaths.spine updated:', this.savedPaths.spine);
                         
                         console.log('🔧 Starting Spine file detection...');
                         
