@@ -298,9 +298,12 @@ function createMenu() {
 }
 
 // 軽量IPC通信
-ipcMain.handle('dialog-open-file', async (event, options) => 
-  await dialog.showOpenDialog(mainWindow, options)
-);
+ipcMain.handle('dialog-open-file', async (event, options) => {
+  console.log('🔧 dialog-open-file received options:', JSON.stringify(options, null, 2));
+  const result = await dialog.showOpenDialog(mainWindow, options);
+  console.log('🔧 dialog result:', result);
+  return result;
+});
 
 ipcMain.handle('dialog-save-file', async (event, options) => 
   await dialog.showSaveDialog(mainWindow, options)

@@ -11,6 +11,7 @@ window.projectLoader = {
     async selectFolder(defaultPath = null) {
         try {
             console.log('📁 フォルダ選択ダイアログを開きます');
+            console.log('🔧 受信したdefaultPath:', defaultPath, 'タイプ:', typeof defaultPath, '真偽値:', !!defaultPath);
             if (defaultPath) {
                 console.log('💾 初期パス使用:', defaultPath);
             }
