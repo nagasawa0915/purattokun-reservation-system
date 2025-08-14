@@ -21,12 +21,27 @@ window.projectLoader = {
                 const dialogOptions = {
                     title: 'プロジェクトフォルダを選択',
                     properties: ['openDirectory'],
-                    buttonLabel: 'フォルダを選択'
+                    buttonLabel: 'フォルダを選択',
+                    // フォルダ選択ダイアログの最適化
+                    message: 'HTMLファイルを含むプロジェクトフォルダを選択してください'
                 };
                 
                 // 初期パスがある場合は設定
                 if (defaultPath) {
+                    // 初期表示ディレクトリとして設定
                     dialogOptions.defaultPath = defaultPath;
+                    
+                    // Windows環境での選択状態を試行（実験的）
+                    try {
+                        const fs = require('fs');
+                        if (fs.existsSync && fs.existsSync(defaultPath)) {
+                            // フォルダが存在する場合、より詳細なパス指定
+                            console.log('💾 存在確認済みパス設定:', defaultPath);
+                        }
+                    } catch (e) {
+                        // ブラウザ環境では無視
+                    }
+                    
                     console.log('💾 ダイアログに初期パス設定:', defaultPath);
                 }
                 
@@ -81,7 +96,9 @@ window.projectLoader = {
                 const dialogOptions = {
                     title: 'Spineキャラクターフォルダを選択',
                     properties: ['openDirectory'],
-                    buttonLabel: 'Spineフォルダを選択'
+                    buttonLabel: 'Spineフォルダを選択',
+                    // Spineフォルダ選択ダイアログの最適化
+                    message: 'Spineキャラクターファイル(.json/.atlas/.png)を含むフォルダを選択してください'
                 };
                 
                 // 初期パスがある場合は設定

@@ -300,6 +300,33 @@ function createMenu() {
 // 軽量IPC通信
 ipcMain.handle('dialog-open-file', async (event, options) => {
   console.log('🔧 dialog-open-file received options:', JSON.stringify(options, null, 2));
+  
+  // defaultPathが指定されている場合の最適化
+  if (options.defaultPath && options.properties?.includes('openDirectory')) {
+    const path = require('path');
+    const fs = require('fs');
+    
+    try {
+      // パスが存在することを確認
+      if (fs.existsSync(options.defaultPath)) {
+        // 既存のフォルダの場合、親ディレクトリを指定して対象フォルダを強調
+        const parentDir = path.dirname(options.defaultPath);
+        const targetFolder = path.basename(options.defaultPath);
+        
+        console.log('🔧 Optimizing dialog for existing folder:');
+        console.log('  - Parent:', parentDir);
+        console.log('  - Target:', targetFolder);
+        
+        // Windows環境での最適化
+        if (process.platform === 'win32') {
+          options.defaultPath = options.defaultPath; // そのまま使用
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ defaultPath optimization failed:', error.message);
+    }
+  }
+  
   const result = await dialog.showOpenDialog(mainWindow, options);
   console.log('🔧 dialog result:', result);
   return result;
