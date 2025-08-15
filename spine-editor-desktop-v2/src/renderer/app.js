@@ -8,7 +8,7 @@ import { ProjectLoader } from './project-loader.js';
 import { SpineCharacterManager } from './spine-character-manager.js';
 import { PreviewManager } from './preview-manager.js';
 import { PackageExporter } from './package-exporter.js';
-import { SpinePreviewLayer } from './spine-preview-layer.js';
+import { SpinePreviewLayer } from './spine-preview-layer-clean.js';
 import { Utils } from './utils.js';
 
 export class DemoApp {
