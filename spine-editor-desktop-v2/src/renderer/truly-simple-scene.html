@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真のシンプルSpineシーン</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        #spine-canvas {
+            display: block;
+            margin: 20px auto;
+            border: 2px solid #444;
+            background: #111;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #555;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #666;
+        }
+        
+        .info {
+            text-align: center;
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 真のシンプルSpineシーン</h1>
+        
+        <canvas id="spine-canvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <button onclick="loadCharacter('purattokun')">🐱 ぷらっとくん</button>
+            <button onclick="loadCharacter('nezumi')">🐭 ねずみ</button>
+            <button onclick="clearCanvas()">🧹 クリア</button>
+        </div>
+        
+        <div class="info">
+            実験で証明された最小実装: skeleton.x = 0; skeleton.y = 0; の3行だけ
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js"></script>
+    <script>
+        // 🎯 真のシンプル実装 - 座標レイヤー数: 1個だけ
+        
+        let canvas, gl, renderer, currentCharacter;
+        
+        // 初期化
+        window.addEventListener('DOMContentLoaded', async () => {
+            canvas = document.getElementById('spine-canvas');
+            gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false });
+            
+            if (!gl) {
+                alert('WebGL未対応');
+                return;
+            }
+            
+            // Spineライブラリ読み込み待ち
+            await waitForSpine();
+            
+            // レンダラー初期化
+            renderer = new spine.SceneRenderer(canvas, gl);
+            
+            console.log('✅ 真のシンプルシーン初期化完了');
+        });
+        
+        // Spine読み込み待ち
+        async function waitForSpine() {
+            return new Promise((resolve) => {
+                const check = () => {
+                    if (typeof spine !== 'undefined' && spine.AssetManager) {
+                        resolve();
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+        
+        // 🎯 キャラクター読み込み（真のシンプル版）
+        async function loadCharacter(characterName) {
+            try {
+                console.log(`📥 ${characterName} 読み込み開始`);
+                
+                // アセット読み込み
+                const basePath = `../assets/spine/characters/${characterName}/`;
+                const assetManager = new spine.AssetManager(gl, basePath);
+                assetManager.loadTextureAtlas(`${characterName}.atlas`);
+                assetManager.loadJson(`${characterName}.json`);
+                
+                // 読み込み完了待ち
+                await waitForAssets(assetManager);
+                
+                // スケルトンデータ作成
+                const atlas = assetManager.get(`${characterName}.atlas`);
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(
+                    assetManager.get(`${characterName}.json`)
+                );
+                
+                // 🎯 核心部分: たった3行の座標設定
+                const skeleton = new spine.Skeleton(skeletonData);
+                skeleton.x = 0; // 画面中央
+                skeleton.y = 0; // 画面中央
+                skeleton.scaleX = skeleton.scaleY = 1.0;
+                
+                // アニメーション設定
+                const animationStateData = new spine.AnimationStateData(skeletonData);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                if (skeletonData.animations.length > 0) {
+                    animationState.setAnimation(0, skeletonData.animations[0].name, true);
+                }
+                
+                // キャラクター保存
+                currentCharacter = { skeleton, animationState };
+                
+                // レンダリング開始
+                startRender();
+                
+                console.log(`✅ ${characterName} 表示成功 - 座標レイヤー数: 1個`);
+                
+            } catch (error) {
+                console.error(`❌ ${characterName} 失敗:`, error);
+            }
+        }
+        
+        // アセット読み込み完了待ち
+        async function waitForAssets(assetManager) {
+            return new Promise((resolve, reject) => {
+                let count = 0;
+                const check = () => {
+                    if (assetManager.isLoadingComplete()) {
+                        resolve();
+                    } else if (count++ > 100) {
+                        reject(new Error('読み込みタイムアウト'));
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+        
+        // 🎯 シンプルレンダリング
+        function startRender() {
+            if (!currentCharacter) return;
+            
+            let lastTime = Date.now() / 1000;
+            
+            function render() {
+                if (!currentCharacter) return;
+                
+                const now = Date.now() / 1000;
+                const delta = now - lastTime;
+                lastTime = now;
+                
+                // アニメーション更新
+                currentCharacter.animationState.update(delta);
+                currentCharacter.animationState.apply(currentCharacter.skeleton);
+                currentCharacter.skeleton.updateWorldTransform();
+                
+                // 画面クリア
+                gl.clearColor(0, 0, 0, 0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                
+                // カメラ設定
+                renderer.camera.setViewport(canvas.width, canvas.height);
+                
+                // 描画
+                renderer.begin();
+                renderer.drawSkeleton(currentCharacter.skeleton, true);
+                renderer.end();
+                
+                requestAnimationFrame(render);
+            }
+            
+            render();
+        }
+        
+        // Canvas クリア
+        function clearCanvas() {
+            currentCharacter = null;
+            if (gl) {
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+            console.log('🧹 Canvas クリア完了');
+        }
+    </script>
+</body>
+</html>

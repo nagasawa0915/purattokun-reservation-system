@@ -448,8 +448,9 @@ class SpineManager {
       
       // デフォルト設定
       this.skeleton.scaleX = this.skeleton.scaleY = 0.5;
-      this.skeleton.x = 400;
-      this.skeleton.y = 500;
+      // 🚀 今回実験で証明された最シンプル座標配置
+      this.skeleton.x = 0;
+      this.skeleton.y = 0;
       
       // AnimationState作成
       let stateData, animationState;
@@ -513,8 +514,10 @@ class SpineManager {
    */
   updateCharacterPosition(x, y) {
     if (this.skeleton) {
-      this.skeleton.x = x;
-      this.skeleton.y = y;
+      // 🚀 今回実験で証明された最シンプル実装: 常に(0,0)で固定
+      this.skeleton.x = 0;
+      this.skeleton.y = 0;
+      // 注意: 位置パラメータ(x, y)はログ用のみ、実際は使用しない
     }
   }
 

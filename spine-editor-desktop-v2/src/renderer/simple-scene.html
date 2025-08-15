@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプルSpineシーン - デスクトップアプリ v2.0</title>
+    
+    <!-- シンプルSpineシーン専用CSS -->
+    <link rel="stylesheet" href="css/simple-scene.css">
+    
+    <!-- Spine WebGLライブラリ -->
+    <script src="assets/spine/spine-webgl.js"></script>
+    <!-- フォールバック用: spine-webgl-minimal.js も読み込み可能 -->
+</head>
+<body>
+    <!-- メインコンテナ -->
+    <div class="simple-scene-container">
+        <!-- ヘッダー -->
+        <header class="scene-header">
+            <div class="header-content">
+                <h1 class="scene-title">🎭 シンプルSpineシーン</h1>
+                <div class="scene-info">
+                    <span class="scene-status" id="scene-status">初期化中...</span>
+                    <button class="debug-toggle-btn" id="debug-toggle" title="デバッグモード切り替え">
+                        🔧 デバッグ
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- メインコンテンツ -->
+        <main class="scene-main">
+            <!-- キャンバスエリア -->
+            <section class="canvas-section">
+                <div class="canvas-container">
+                    <canvas id="spine-canvas" width="800" height="600">
+                        お使いのブラウザーHTML5 Canvasをサポートしていません。
+                    </canvas>
+                    
+                    <!-- CanvasオーバーレイUI -->
+                    <div class="canvas-overlay" id="canvas-overlay">
+                        <!-- 編集モード表示 -->
+                        <div class="edit-mode-indicator" id="edit-mode-indicator" style="display: none;">
+                            ✏️ 編集モード - ドラッグで移動できます
+                        </div>
+                        
+                        <!-- 座標表示 -->
+                        <div class="coordinate-display" id="coordinate-display" style="display: none;">
+                            <div class="coord-item">
+                                <span class="coord-label">X:</span>
+                                <span class="coord-value" id="coord-x">0.0</span>
+                            </div>
+                            <div class="coord-item">
+                                <span class="coord-label">Y:</span>
+                                <span class="coord-value" id="coord-y">0.0</span>
+                            </div>
+                            <div class="coord-item">
+                                <span class="coord-label">スケール:</span>
+                                <span class="coord-value" id="coord-scale">1.0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- コントロールパネル -->
+            <aside class="control-panel">
+                <div class="panel-header">
+                    <h2>🎮 コントロール</h2>
+                </div>
+                
+                <!-- キャラクター選択 -->
+                <div class="control-group">
+                    <h3>🐈 キャラクター</h3>
+                    <div class="character-selector">
+                        <select id="character-select" class="character-select">
+                            <option value="">キャラクターを選択...</option>
+                            <option value="purattokun">ぷらっとくん</option>
+                            <option value="nezumi">ねずみ</option>
+                        </select>
+                        <button id="load-character" class="action-btn" disabled>
+                            📥 読み込み
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 編集コントロール -->
+                <div class="control-group">
+                    <h3>✏️ 編集</h3>
+                    <div class="edit-controls">
+                        <button id="edit-mode-toggle" class="mode-btn" disabled>
+                            ドラッグ編集: OFF
+                        </button>
+                        <button id="reset-position" class="action-btn" disabled>
+                            🎯 位置リセット
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 位置精密調整 -->
+                <div class="control-group">
+                    <h3>🎯 精密調整</h3>
+                    <div class="position-controls">
+                        <div class="input-row">
+                            <label for="pos-x">X:</label>
+                            <input type="number" id="pos-x" class="pos-input" step="0.1" value="0" disabled>
+                        </div>
+                        <div class="input-row">
+                            <label for="pos-y">Y:</label>
+                            <input type="number" id="pos-y" class="pos-input" step="0.1" value="0" disabled>
+                        </div>
+                        <div class="input-row">
+                            <label for="scale-xy">スケール:</label>
+                            <input type="number" id="scale-xy" class="pos-input" step="0.01" min="0.1" max="3.0" value="1.0" disabled>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- アニメーションコントロール -->
+                <div class="control-group">
+                    <h3>🎥 アニメーション</h3>
+                    <div class="animation-controls">
+                        <select id="animation-select" class="animation-select" disabled>
+                            <option value="">アニメーションを選択...</option>
+                        </select>
+                        <div class="animation-buttons">
+                            <button id="play-animation" class="action-btn" disabled>▶️ 再生</button>
+                            <button id="stop-animation" class="action-btn" disabled>⏹️ 停止</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- デバッグ情報 -->
+                <div class="control-group debug-group" id="debug-info" style="display: none;">
+                    <h3>🔧 デバッグ情報</h3>
+                    <div class="debug-content">
+                        <div class="debug-item">
+                            <span class="debug-label">座標変換:</span>
+                            <span class="debug-value" id="debug-transform-count">0</span>
+                        </div>
+                        <div class="debug-item">
+                            <span class="debug-label">FPS:</span>
+                            <span class="debug-value" id="debug-fps">--</span>
+                        </div>
+                        <div class="debug-item">
+                            <span class="debug-label">Canvas:</span>
+                            <span class="debug-value" id="debug-canvas-info">--</span>
+                        </div>
+                    </div>
+                    <button id="coordinate-test" class="action-btn">🔍 座標テスト</button>
+                </div>
+            </aside>
+        </main>
+        
+        <!-- フッター -->
+        <footer class="scene-footer">
+            <div class="footer-content">
+                <span class="version-info">Desktop App v2.0 - Simple Scene</span>
+                <span class="coordinate-system-info">統一座標システム使用</span>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- メッセージオーバーレイ -->
+    <div class="message-overlay" id="message-overlay" style="display: none;">
+        <div class="message-box">
+            <div class="message-icon" id="message-icon">💬</div>
+            <div class="message-text" id="message-text">メッセージがここに表示されます</div>
+            <button class="message-close" id="message-close">×</button>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script type="module">
+        import { createSimpleScene } from './js/simple-scene-manager.js';
+        import { createCoordinateSystem } from './js/unified-coordinate-system.js';
+        
+        // グローバル変数
+        let sceneManager = null;
+        let debugMode = false;
+        let fpsCounter = { frames: 0, lastTime: 0, fps: 0 };
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 シンプルSpineシーン 初期化開始...');
+            
+            try {
+                await initializeScene();
+                setupUIEventListeners();
+                updateStatus('✅ 準備完了 - キャラクターを選択してください');
+                
+            } catch (error) {
+                console.error('❌ 初期化エラー:', error);
+                updateStatus('❌ 初期化失敗', 'error');
+                showMessage('初期化エラー', error.message, 'error');
+            }
+        });
+        
+        /**
+         * シーンを初期化
+         */
+        async function initializeScene() {
+            const canvas = document.getElementById('spine-canvas');
+            if (!canvas) {
+                throw new Error('Canvas要素が見つかりません');
+            }
+            
+            // シーンマネージャー作成
+            sceneManager = createSimpleScene({ debug: debugMode });
+            
+            // Canvas初期化
+            const success = await sceneManager.initializeCanvas(canvas);
+            if (!success) {
+                throw new Error('Canvas初期化失敗');
+            }
+            
+            console.log('✅ シーン初期化完了');
+        }
+        
+        /**
+         * UIイベントリスナーを設定
+         */
+        function setupUIEventListeners() {
+            // デバッグモード切り替え
+            document.getElementById('debug-toggle').addEventListener('click', () => {
+                debugMode = !debugMode;
+                if (sceneManager) {
+                    sceneManager.setDebugMode(debugMode);
+                }
+                
+                const debugInfo = document.getElementById('debug-info');
+                const coordDisplay = document.getElementById('coordinate-display');
+                
+                if (debugMode) {
+                    debugInfo.style.display = 'block';
+                    coordDisplay.style.display = 'block';
+                    startFPSCounter();
+                } else {
+                    debugInfo.style.display = 'none';
+                    coordDisplay.style.display = 'none';
+                }
+                
+                updateDebugToggleButton();
+            });
+            
+            // キャラクター選択
+            document.getElementById('character-select').addEventListener('change', (e) => {
+                const loadBtn = document.getElementById('load-character');
+                loadBtn.disabled = !e.target.value;
+            });
+            
+            // キャラクター読み込み
+            document.getElementById('load-character').addEventListener('click', async () => {
+                const characterId = document.getElementById('character-select').value;
+                if (!characterId) return;
+                
+                try {
+                    updateStatus('📥 キャラクター読み込み中...', 'loading');
+                    
+                    const characterData = {
+                        id: characterId,
+                        atlasPath: `assets/spine/characters/${characterId}/${characterId}.atlas`,
+                        jsonPath: `assets/spine/characters/${characterId}/${characterId}.json`
+                    };
+                    
+                    const success = await sceneManager.loadCharacter(characterData);
+                    if (!success) {
+                        throw new Error('キャラクター読み込み失敗');
+                    }
+                    
+                    // レンダリング開始
+                    sceneManager.startRenderLoop();
+                    
+                    // UI有効化
+                    enableCharacterControls();
+                    
+                    updateStatus(`✅ ${characterId} 読み込み完了`, 'success');
+                    showMessage('成功', `${characterId}を読み込みました`, 'success');
+                    
+                } catch (error) {
+                    console.error('❌ キャラクター読み込みエラー:', error);
+                    updateStatus('❌ 読み込み失敗', 'error');
+                    showMessage('エラー', error.message, 'error');
+                }
+            });
+            
+            // 編集モード切り替え
+            document.getElementById('edit-mode-toggle').addEventListener('click', () => {
+                if (!sceneManager) return;
+                
+                const isEdit = !sceneManager.isEditMode;
+                sceneManager.setEditMode(isEdit);
+                
+                const btn = document.getElementById('edit-mode-toggle');
+                const indicator = document.getElementById('edit-mode-indicator');
+                
+                btn.textContent = `ドラッグ編集: ${isEdit ? 'ON' : 'OFF'}`;
+                btn.className = isEdit ? 'mode-btn active' : 'mode-btn';
+                
+                indicator.style.display = isEdit ? 'block' : 'none';
+                
+                if (isEdit) {
+                    updateStatus('✏️ 編集モード - ドラッグで移動できます', 'edit');
+                } else {
+                    updateStatus('✅ 編集モード終了', 'success');
+                }
+            });
+            
+            // 位置リセット
+            document.getElementById('reset-position').addEventListener('click', () => {
+                if (sceneManager) {
+                    sceneManager.setCharacterPosition(0, 0);
+                    updatePositionInputs();
+                    showMessage('リセット', '位置をリセットしました', 'info');
+                }
+            });
+            
+            // 位置入力イベント
+            ['pos-x', 'pos-y', 'scale-xy'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updatePositionFromInputs);
+            });
+            
+            // メッセージクローズ
+            document.getElementById('message-close').addEventListener('click', () => {
+                document.getElementById('message-overlay').style.display = 'none';
+            });
+            
+            // 座標テスト
+            document.getElementById('coordinate-test').addEventListener('click', () => {
+                if (sceneManager && sceneManager.coordinateSystem) {
+                    const result = sceneManager.coordinateSystem.testCoordinateConsistency(200, 150);
+                    console.log('🔍 座標テスト結果:', result);
+                    showMessage('テスト結果', 
+                        `一貫性: ${result.isConsistent ? '✅' : '❌'} 誤差: ${result.error.max.toFixed(2)}px`, 
+                        result.isConsistent ? 'success' : 'warning');
+                }
+            });
+        }
+        
+        /**
+         * キャラクターコントロールを有効化
+         */
+        function enableCharacterControls() {
+            const controls = [
+                'edit-mode-toggle', 'reset-position', 'pos-x', 'pos-y', 'scale-xy',
+                'animation-select', 'play-animation', 'stop-animation'
+            ];
+            
+            controls.forEach(id => {
+                document.getElementById(id).disabled = false;
+            });
+            
+            // アニメーション一覧更新
+            updateAnimationList();
+            
+            // 位置入力更新開始
+            startPositionUpdateLoop();
+        }
+        
+        /**
+         * アニメーション一覧を更新
+         */
+        function updateAnimationList() {
+            if (!sceneManager) return;
+            
+            const info = sceneManager.getCharacterInfo();
+            if (info.error) return;
+            
+            const select = document.getElementById('animation-select');
+            select.innerHTML = '<option value="">アニメーションを選択...</option>';
+            
+            info.animations.forEach(animName => {
+                const option = document.createElement('option');
+                option.value = animName;
+                option.textContent = animName;
+                select.appendChild(option);
+            });
+        }
+        
+        /**
+         * 位置入力を更新
+         */
+        function updatePositionInputs() {
+            if (!sceneManager) return;
+            
+            const info = sceneManager.getCharacterInfo();
+            if (info.error) return;
+            
+            document.getElementById('pos-x').value = info.position.x.toFixed(1);
+            document.getElementById('pos-y').value = info.position.y.toFixed(1);
+            document.getElementById('scale-xy').value = info.scale.x.toFixed(2);
+            
+            // 座標表示更新
+            if (debugMode) {
+                document.getElementById('coord-x').textContent = info.position.x.toFixed(1);
+                document.getElementById('coord-y').textContent = info.position.y.toFixed(1);
+                document.getElementById('coord-scale').textContent = info.scale.x.toFixed(2);
+            }
+        }
+        
+        /**
+         * 入力値から位置を更新
+         */
+        function updatePositionFromInputs() {
+            if (!sceneManager) return;
+            
+            const x = parseFloat(document.getElementById('pos-x').value) || 0;
+            const y = parseFloat(document.getElementById('pos-y').value) || 0;
+            const scale = parseFloat(document.getElementById('scale-xy').value) || 1.0;
+            
+            sceneManager.setCharacterPosition(x, y);
+            
+            // スケール設定
+            if (sceneManager.skeleton) {
+                sceneManager.skeleton.scaleX = scale;
+                sceneManager.skeleton.scaleY = scale;
+            }
+        }
+        
+        /**
+         * 位置更新ループを開始
+         */
+        function startPositionUpdateLoop() {
+            setInterval(() => {
+                if (sceneManager && !sceneManager.isDragging) {
+                    updatePositionInputs();
+                }
+            }, 100); // 100ms間隔
+        }
+        
+        /**
+         * FPSカウンターを開始
+         */
+        function startFPSCounter() {
+            const updateFPS = (currentTime) => {
+                fpsCounter.frames++;
+                
+                if (currentTime - fpsCounter.lastTime >= 1000) {
+                    fpsCounter.fps = Math.round((fpsCounter.frames * 1000) / (currentTime - fpsCounter.lastTime));
+                    fpsCounter.frames = 0;
+                    fpsCounter.lastTime = currentTime;
+                    
+                    if (debugMode) {
+                        document.getElementById('debug-fps').textContent = fpsCounter.fps;
+                        
+                        // その他のデバッグ情報更新
+                        if (sceneManager && sceneManager.coordinateSystem) {
+                            const diagnostic = sceneManager.coordinateSystem.getDiagnosticInfo();
+                            document.getElementById('debug-transform-count').textContent = diagnostic.system.transformCount;
+                            document.getElementById('debug-canvas-info').textContent = 
+                                `${diagnostic.canvas.width}x${diagnostic.canvas.height}`;
+                        }
+                    }
+                }
+                
+                if (debugMode) {
+                    requestAnimationFrame(updateFPS);
+                }
+            };
+            
+            if (debugMode) {
+                fpsCounter.lastTime = performance.now();
+                requestAnimationFrame(updateFPS);
+            }
+        }
+        
+        /**
+         * ステータスを更新
+         */
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('scene-status');
+            statusElement.textContent = message;
+            statusElement.className = `scene-status ${type}`;
+        }
+        
+        /**
+         * デバッグボタンを更新
+         */
+        function updateDebugToggleButton() {
+            const btn = document.getElementById('debug-toggle');
+            btn.className = debugMode ? 'debug-toggle-btn active' : 'debug-toggle-btn';
+            btn.textContent = `🔧 デバッグ ${debugMode ? 'ON' : 'OFF'}`;
+        }
+        
+        /**
+         * メッセージを表示
+         */
+        function showMessage(title, message, type = 'info') {
+            const overlay = document.getElementById('message-overlay');
+            const icon = document.getElementById('message-icon');
+            const text = document.getElementById('message-text');
+            
+            const icons = {
+                info: '💬',
+                success: '✅',
+                warning: '⚠️',
+                error: '❌',
+                loading: '🔄'
+            };
+            
+            icon.textContent = icons[type] || icons.info;
+            text.innerHTML = `<strong>${title}</strong><br>${message}`;
+            
+            overlay.className = `message-overlay ${type}`;
+            overlay.style.display = 'flex';
+            
+            // 3秒後に自動クローズ（エラー以外）
+            if (type !== 'error') {
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        // グローバル関数として公開（デバッグ用）
+        window.sceneManager = sceneManager;
+        window.showMessage = showMessage;
+        
+    </script>
+</body>
+</html>

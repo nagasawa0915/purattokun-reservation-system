@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine表示テスト - デスクトップアプリ</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .spine-container {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            margin: 20px auto;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        #spine-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            margin: 5px;
+            padding: 12px 24px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .status.success { background: rgba(46, 204, 113, 0.3); }
+        .status.error { background: rgba(231, 76, 60, 0.3); }
+        .status.loading { background: rgba(241, 196, 15, 0.3); }
+        
+        .debug {
+            text-align: left;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-line;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Spine表示テスト</h1>
+            <p>動的script読み込み + SceneRenderer方式の検証</p>
+        </div>
+        
+        <div class="status" id="status">
+            準備完了
+        </div>
+        
+        <div class="spine-container">
+            <canvas id="spine-canvas" width="600" height="400"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button id="load-spine" onclick="loadSpineLibrary()">
+                🔧 Spineライブラリ読み込み
+            </button>
+            <button id="load-purattokun" onclick="loadCharacter('purattokun')" disabled>
+                🐱 purattokun表示
+            </button>
+            <button id="load-nezumi" onclick="loadCharacter('nezumi')" disabled>
+                🐭 nezumi表示  
+            </button>
+            <button id="clear-canvas" onclick="clearCanvas()" disabled>
+                🧹 クリア
+            </button>
+        </div>
+        
+        <div class="debug" id="debug">
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let spineRenderer = null;
+        let gl = null;
+        let canvas = null;
+        let currentCharacter = null;
+        let isRenderingActive = false;
+        
+        // UI要素
+        const statusElement = document.getElementById('status');
+        const debugElement = document.getElementById('debug');
+        
+        // デバッグログ関数
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            console.log(logEntry);
+            debugElement.textContent += logEntry + '\n';
+            debugElement.scrollTop = debugElement.scrollHeight;
+        }
+        
+        // ステータス更新
+        function updateStatus(message, type = '') {
+            statusElement.textContent = message;
+            statusElement.className = 'status ' + type;
+            log(message, type);
+        }
+        
+        /**
+         * 理解したメカニズム1: 動的script読み込み
+         */
+        async function loadSpineLibrary() {
+            updateStatus('Spineライブラリ読み込み開始...', 'loading');
+            
+            // 既読み込みチェック（複雑システムと同じ）
+            if (window.spine) {
+                updateStatus('✅ Spine既に読み込み済み', 'success');
+                initializeSpineSystem();
+                return;
+            }
+            
+            try {
+                log('🔧 動的script要素を作成中...');
+                
+                // 複雑システムと同じ方式：動的script要素作成
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js';
+                    
+                    script.onload = () => {
+                        log('📦 CDNダウンロード完了');
+                        // 複雑システムと同じ：ポーリング待ち
+                        waitForSpineLibrary().then(resolve).catch(reject);
+                    };
+                    
+                    script.onerror = () => {
+                        reject(new Error('CDN読み込み失敗'));
+                    };
+                    
+                    document.head.appendChild(script);
+                    log('🌐 CDN読み込み開始: spine-webgl@4.1.23');
+                });
+                
+                updateStatus('✅ Spineライブラリ読み込み成功', 'success');
+                initializeSpineSystem();
+                
+            } catch (error) {
+                updateStatus(`❌ Spineライブラリ読み込み失敗: ${error.message}`, 'error');
+                log(`❌ エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        /**
+         * 理解したメカニズム2: ポーリング待ち
+         */
+        async function waitForSpineLibrary() {
+            return new Promise((resolve, reject) => {
+                let checkCount = 0;
+                const maxChecks = 50;
+                
+                const checkSpine = () => {
+                    checkCount++;
+                    log(`🔍 Spine定義確認中... ${checkCount}/${maxChecks}`);
+                    
+                    // 複雑システムと同じ条件
+                    if (typeof spine !== "undefined" && spine.AssetManager) {
+                        log('✅ spine.AssetManager確認完了');
+                        resolve();
+                    } else if (checkCount >= maxChecks) {
+                        reject(new Error("読み込みタイムアウト"));
+                    } else {
+                        setTimeout(checkSpine, 100);
+                    }
+                };
+                
+                checkSpine();
+            });
+        }
+        
+        /**
+         * 理解したメカニズム3: SceneRenderer初期化
+         */
+        function initializeSpineSystem() {
+            try {
+                log('🎯 Spine初期化開始...');
+                
+                canvas = document.getElementById('spine-canvas');
+                gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false });
+                
+                if (!gl) {
+                    throw new Error('WebGL未対応');
+                }
+                
+                log('✅ WebGLコンテキスト取得成功');
+                
+                // 複雑システムと同じ：SceneRenderer使用
+                spineRenderer = new spine.SceneRenderer(canvas, gl);
+                log('✅ spine.SceneRenderer初期化完了');
+                
+                // WebGL設定
+                gl.enable(gl.BLEND);
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                gl.clearColor(0.1, 0.1, 0.1, 1.0);
+                
+                // ボタン有効化
+                document.getElementById('load-purattokun').disabled = false;
+                document.getElementById('load-nezumi').disabled = false;
+                document.getElementById('clear-canvas').disabled = false;
+                
+                updateStatus('✅ Spineシステム初期化完了', 'success');
+                
+            } catch (error) {
+                updateStatus(`❌ Spine初期化失敗: ${error.message}`, 'error');
+                log(`❌ 初期化エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        /**
+         * 理解したメカニズム4: キャラクター読み込み・表示
+         */
+        async function loadCharacter(characterName) {
+            if (!spineRenderer) {
+                updateStatus('❌ Spineシステムが初期化されていません', 'error');
+                return;
+            }
+            
+            updateStatus(`${characterName} 読み込み中...`, 'loading');
+            
+            try {
+                log(`🎭 ${characterName} アセット読み込み開始...`);
+                
+                // アセットパス（複雑システムと同じ構造）
+                const basePath = `assets/spine/characters/${characterName}/`;
+                
+                // AssetManager作成（複雑システムと同じ）
+                const assetManager = new spine.AssetManager(gl, basePath);
+                
+                // アセットファイル読み込み
+                assetManager.loadTextureAtlas(`${characterName}.atlas`);
+                assetManager.loadJson(`${characterName}.json`);
+                
+                log('📁 アセットファイル読み込み開始...');
+                
+                // 読み込み完了待ち
+                await waitForAssets(assetManager);
+                log('📦 アセット読み込み完了');
+                
+                // Spineオブジェクト構築（複雑システムと同じ手順）
+                const atlas = assetManager.get(`${characterName}.atlas`);
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(
+                    assetManager.get(`${characterName}.json`)
+                );
+                
+                log('🦴 スケルトンデータ構築完了');
+                
+                // キャラクター作成
+                const skeleton = new spine.Skeleton(skeletonData);
+                const animationState = new spine.AnimationState(
+                    new spine.AnimationStateData(skeletonData)
+                );
+                
+                // 🚀 今回実験で証明された最シンプル座標配置
+                skeleton.x = 0;
+                skeleton.y = 0;
+                skeleton.scaleX = skeleton.scaleY = 1.0;
+                
+                log(`📍 位置設定: (${skeleton.x}, ${skeleton.y})`);
+                
+                // アニメーション設定
+                if (skeletonData.animations.length > 0) {
+                    const firstAnimation = skeletonData.animations[0].name;
+                    animationState.setAnimation(0, firstAnimation, true);
+                    log(`🎬 アニメーション設定: ${firstAnimation}`);
+                }
+                
+                // キャラクター保存
+                currentCharacter = {
+                    skeleton,
+                    animationState,
+                    name: characterName
+                };
+                
+                // レンダリング開始
+                startRenderLoop();
+                
+                updateStatus(`✅ ${characterName} 表示完了`, 'success');
+                log(`🎉 ${characterName} 表示成功`);
+                
+            } catch (error) {
+                updateStatus(`❌ ${characterName} 読み込み失敗: ${error.message}`, 'error');
+                log(`❌ キャラクター読み込みエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // アセット読み込み完了待ち
+        async function waitForAssets(assetManager) {
+            return new Promise((resolve, reject) => {
+                let checkCount = 0;
+                const maxChecks = 100;
+                
+                const checkAssets = () => {
+                    checkCount++;
+                    
+                    if (assetManager.isLoadingComplete()) {
+                        resolve();
+                    } else if (checkCount >= maxChecks) {
+                        reject(new Error("アセット読み込みタイムアウト"));
+                    } else {
+                        setTimeout(checkAssets, 100);
+                    }
+                };
+                
+                checkAssets();
+            });
+        }
+        
+        /**
+         * 理解したメカニズム5: レンダリングループ
+         */
+        function startRenderLoop() {
+            if (isRenderingActive) return;
+            
+            isRenderingActive = true;
+            log('🔄 レンダリングループ開始');
+            
+            let lastTime = Date.now() / 1000;
+            
+            function render() {
+                if (!isRenderingActive || !currentCharacter) return;
+                
+                const now = Date.now() / 1000;
+                const delta = now - lastTime;
+                lastTime = now;
+                
+                // アニメーション更新
+                currentCharacter.animationState.update(delta);
+                currentCharacter.animationState.apply(currentCharacter.skeleton);
+                currentCharacter.skeleton.updateWorldTransform();
+                
+                // 画面クリア
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                
+                // 描画（複雑システムと同じ）
+                spineRenderer.begin();
+                spineRenderer.drawSkeleton(currentCharacter.skeleton, true);
+                spineRenderer.end();
+                
+                requestAnimationFrame(render);
+            }
+            
+            render();
+        }
+        
+        // Canvas クリア
+        function clearCanvas() {
+            isRenderingActive = false;
+            currentCharacter = null;
+            
+            if (gl) {
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+            
+            updateStatus('🧹 Canvas クリア完了', '');
+            log('🧹 キャラクタークリア完了');
+        }
+        
+        // 初期化
+        window.addEventListener('load', () => {
+            log('🚀 テストアプリ初期化完了');
+            updateStatus('準備完了 - Spineライブラリ読み込みボタンを押してください', '');
+        });
+    </script>
+</body>
+</html>

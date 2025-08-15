@@ -91,47 +91,66 @@ export class SpinePreviewLayer {
     }
 
     /**
-     * Spine WebGL初期化（マニュアル通り）
+     * Spine WebGL初期化（手動読み込み方式）
      */
     async initializeSpine() {
-        // Spineライブラリ読み込み待機（マニュアルパターン）
-        await this.waitForSpine();
-        
-        // Spine WebGL初期化
-        this.spine = {
-            assetManager: new spine.webgl.AssetManager(this.gl),
-            sceneRenderer: new spine.webgl.SceneRenderer(this.canvas, this.gl),
-            skeletonRenderer: new spine.webgl.SkeletonRenderer(this.gl),
-            shapeRenderer: new spine.webgl.ShapeRenderer(this.gl)
-        };
-        
-        console.log('🦴 Spine WebGL初期化完了');
+        try {
+            // 手動読み込み方式でSpineライブラリ取得
+            await this.loadSpineLibraryManually();
+            
+            // Spine WebGL初期化（実績方式）
+            this.spine = {
+                assetManager: new spine.AssetManager(this.gl),
+                sceneRenderer: new spine.SceneRenderer(this.canvas, this.gl)
+            };
+            
+            console.log('🦴 Spine WebGL初期化完了');
+        } catch (error) {
+            console.error('❌ Spine初期化失敗:', error);
+            throw error;
+        }
     }
 
     /**
-     * Spine読み込み待ち（マニュアルパターン）
+     * Spineライブラリ手動読み込み（実績のある方式）
      */
-    async waitForSpine() {
+    async loadSpineLibraryManually() {
         return new Promise((resolve, reject) => {
-            let checkCount = 0;
-            const maxChecks = 50;
+            // 既に読み込み済みかチェック
+            if (typeof spine !== 'undefined' && spine.AssetManager) {
+                console.log('✅ Spine既に読み込み済み');
+                resolve();
+                return;
+            }
             
-            const checkSpine = () => {
-                checkCount++;
-                
-                if (typeof spine !== 'undefined' && spine.webgl && spine.webgl.AssetManager) {
-                    console.log('✅ Spine WebGLライブラリ読み込み完了');
-                    resolve();
-                } else if (checkCount >= maxChecks) {
-                    console.error('❌ Spine WebGLライブラリ読み込みタイムアウト');
-                    reject(new Error('Spine WebGL library load timeout'));
-                } else {
-                    console.log(`⏳ Spine WebGLライブラリ読み込み待機中... (${checkCount}/${maxChecks})`);
-                    setTimeout(checkSpine, 100);
-                }
-            };
+            console.log('🔄 Spineライブラリ手動読み込み開始...');
+            const cdnUrl = 'https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js';
             
-            checkSpine();
+            fetch(cdnUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`CDN HTTP ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(scriptText => {
+                    console.log('📦 Spineライブラリダウンロード完了:', scriptText.length, 'characters');
+                    
+                    // スクリプト実行
+                    eval(scriptText);
+                    
+                    // 読み込み確認
+                    if (typeof spine !== 'undefined' && spine.AssetManager) {
+                        console.log('✅ Spineライブラリ手動読み込み成功');
+                        resolve();
+                    } else {
+                        throw new Error('Spine読み込み後も定義されていません');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Spineライブラリ手動読み込み失敗:', error);
+                    reject(error);
+                });
         });
     }
 
@@ -163,9 +182,9 @@ export class SpinePreviewLayer {
             const skeleton = new spine.Skeleton(skeletonData);
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
             
-            // 固定位置（画面中央）
-            skeleton.x = this.canvas.width / 2;
-            skeleton.y = this.canvas.height / 2;
+            // 🚀 今回実験で証明された最シンプル座標配置
+            skeleton.x = 0;
+            skeleton.y = 0;
             skeleton.scaleX = skeleton.scaleY = 2.0;
             
             // アニメーション設定
@@ -232,8 +251,10 @@ export class SpinePreviewLayer {
                 character.animationState.apply(character.skeleton);
                 character.skeleton.updateWorldTransform();
                 
-                // 描画
-                this.spine.skeletonRenderer.draw(character.skeleton);
+                // 描画（シンプル版）
+                this.spine.sceneRenderer.begin();
+                this.spine.sceneRenderer.drawSkeleton(character.skeleton, true);
+                this.spine.sceneRenderer.end();
             });
             
             requestAnimationFrame(render);

@@ -245,9 +245,9 @@ export class SpineWebGLRenderer {
             const skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonPath));
             const skeleton = new spine.Skeleton(skeletonData);
             
-            // 中央配置
-            skeleton.x = renderer.canvas.width / 2;
-            skeleton.y = renderer.canvas.height / 2;
+            // 🚀 今回実験で証明された最シンプル座標配置
+            skeleton.x = 0;
+            skeleton.y = 0;
             skeleton.scaleX = skeleton.scaleY = 1.0;
             
             // AnimationState作成

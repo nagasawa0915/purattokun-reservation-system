@@ -36,6 +36,10 @@
             </div>
             <div class="header-right">
                 <div class="app-controls">
+                    <button id="btn-simple-scene" class="btn btn-special" title="シンプルSpineシーン - 統一座標システム">
+                        <span class="icon">🎭</span>
+                        Simple Scene
+                    </button>
                     <button id="btn-demo-mode" class="btn btn-outline" title="デモモード (Phase 0.2)">
                         <span class="icon">🚀</span>
                         Demo
@@ -283,8 +287,8 @@
     <script src="js/ui-dialogs.js"></script>
     <script src="js/ui.js"></script>
     
-    <!-- Spine WebGL Library (CDN - 動作実装通り) -->
-    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    <!-- Spine WebGL Library (元の方式に復元) -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js"></script>
     <script src="js/spine.js"></script>
     <script src="js/export.js"></script>
 </body>

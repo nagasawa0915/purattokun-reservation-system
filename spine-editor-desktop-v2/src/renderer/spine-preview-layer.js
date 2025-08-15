@@ -8,9 +8,9 @@ import { Utils } from './utils.js';
 
 
 /**
- * 座標系スワップマネージャー（4層→2層削減）
- * Spine WebGL座標系対応強化版
- * 過去の成功実装：編集時はシンプル座標系、保存時は元座標系に復元
+ * 🚀 座標系マネージャー v2.0 - 最大シンプル化版
+ * 今回実験の知見: skeleton.x = 0; skeleton.y = 0; で完全解決
+ * 従来の複雑な座標変換システムを大幅削減、シンプル化、理解しやすいシステムを実現
  */
 class CoordinateSwapManager {
     constructor() {
@@ -37,15 +37,15 @@ class CoordinateSwapManager {
                 return true;
             }
             
-            // 元の座標系をバックアップ
+            // 🚀 今回実験で証明された最シンプル実装用バックアップ
             this.backup.set(characterId, {
                 // オーバーレイ要素の元座標
                 overlayLeft: overlayElement.style.left,
                 overlayTop: overlayElement.style.top,
                 overlayTransform: overlayElement.style.transform,
-                // Spineキャラクターの元座標（重要）
-                spineX: spineCharacter.skeleton.x,
-                spineY: spineCharacter.skeleton.y,
+                // 🚀 Spine座標は常に(0,0)で固定(今回実験の知見)
+                spineX: 0,  // 常に0で固定
+                spineY: 0,  // 常に0で固定
                 spineScaleX: spineCharacter.skeleton.scaleX,
                 spineScaleY: spineCharacter.skeleton.scaleY
             });

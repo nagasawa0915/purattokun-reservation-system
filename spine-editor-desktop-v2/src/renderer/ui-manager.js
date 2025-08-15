@@ -35,6 +35,7 @@ export class UIManager {
         this.elements.btnPreviewPackage = document.getElementById('btn-preview-package');
         this.elements.btnAddSpine = document.getElementById('btn-add-spine');
         this.elements.btnSavePosition = document.getElementById('btn-save-position');
+        this.elements.btnSimpleScene = document.getElementById('btn-simple-scene');
         
         // 入力要素
         this.elements.spineXInput = document.getElementById('spine-x');
@@ -58,6 +59,11 @@ export class UIManager {
         this.elements.btnPreviewPackage.addEventListener('click', handlers.previewPackage);
         this.elements.btnAddSpine.addEventListener('click', handlers.addSpineCharacter);
         this.elements.btnSavePosition.addEventListener('click', handlers.savePosition);
+        
+        // シンプルシーンボタン
+        if (this.elements.btnSimpleScene) {
+            this.elements.btnSimpleScene.addEventListener('click', handlers.openSimpleScene || this.openSimpleScene);
+        }
         
         // 位置入力イベント
         this.elements.spineXInput.addEventListener('change', (e) => {
@@ -295,6 +301,40 @@ export class UIManager {
         if (isMobile) {
             document.body.classList.add('mobile-view');
             console.log('📱 モバイルビュー有効化');
+        }
+    }
+    
+    /**
+     * シンプルSpineシーンを新しいウィンドウで開く
+     */
+    openSimpleScene() {
+        console.log('🎭 シンプルSpineシーン起動中...');
+        
+        try {
+            // 新しいウィンドウでシンプルシーンを開く
+            const simpleSceneWindow = window.open(
+                'simple-scene.html',
+                'SimpleSpineScene',
+                'width=1200,height=800,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no'
+            );
+            
+            if (simpleSceneWindow) {
+                simpleSceneWindow.focus();
+                console.log('✅ シンプルSpineシーン起動成功');
+            } else {
+                throw new Error('ウィンドウを開くことができませんでした');
+            }
+            
+        } catch (error) {
+            console.error('❌ シンプルSpineシーン起動失敗:', error);
+            
+            // フォールバック: 現在のタブで開く
+            try {
+                window.location.href = 'simple-scene.html';
+            } catch (fallbackError) {
+                console.error('❌ フォールバック起動も失敗:', fallbackError);
+                alert('シンプルSpineシーンを開くことができませんでした。\n\nエラー: ' + error.message);
+            }
         }
     }
 }

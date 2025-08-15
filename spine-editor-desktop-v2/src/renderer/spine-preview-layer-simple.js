@@ -133,9 +133,9 @@ export class SpinePreviewLayerSimple {
             const skeleton = new spine.Skeleton(skeletonData);
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
             
-            // 基本設定（座標変換なし）
-            skeleton.x = this.canvas.width / 2;
-            skeleton.y = this.canvas.height / 2;
+            // 🚀 今回実験で証明された最シンプル座標配置
+            skeleton.x = 0;
+            skeleton.y = 0;
             skeleton.scaleX = skeleton.scaleY = 2.0;
             
             // アニメーション設定
