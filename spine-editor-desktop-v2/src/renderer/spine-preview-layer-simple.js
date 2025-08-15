@@ -164,19 +164,28 @@ export class SpinePreviewLayerSimple {
     }
 
     /**
-     * Spineライブラリ読み込み待機
+     * Spineライブラリ読み込み待機（既存パターン使用）
      */
     async waitForSpineLibrary() {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            let checkCount = 0;
+            const maxChecks = 50; // 最大5秒待機
+            
             const checkSpine = () => {
-                if (typeof spine !== 'undefined' && spine.webgl) {
+                checkCount++;
+                
+                if (typeof spine !== 'undefined' && spine.webgl && spine.webgl.AssetManager) {
                     console.log('✅ Spine WebGLライブラリ読み込み完了');
                     resolve();
+                } else if (checkCount >= maxChecks) {
+                    console.error('❌ Spine WebGLライブラリ読み込みタイムアウト');
+                    reject(new Error('Spine WebGL library load timeout'));
                 } else {
-                    console.log('⏳ Spine WebGLライブラリ読み込み待機中...');
+                    console.log(`⏳ Spine WebGLライブラリ読み込み待機中... (${checkCount}/${maxChecks})`);
                     setTimeout(checkSpine, 100);
                 }
             };
+            
             checkSpine();
         });
     }
