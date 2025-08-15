@@ -272,6 +272,11 @@ export class SpinePreviewLayer {
         // 🔧 オフセット補正システム
         this.visualOffset = { x: 0, y: 0 }; // 視覚的ズレ補正値
         
+        // 🔧 バインド済みイベントハンドラー（参照一致確保）
+        this.boundHandleMouseDown = this.handleMouseDown.bind(this);
+        this.boundHandleMouseMove = this.handleMouseMove.bind(this);
+        this.boundHandleMouseUp = this.handleMouseUp.bind(this);
+        
     }
 
     /**
@@ -626,20 +631,22 @@ export class SpinePreviewLayer {
         this.canvas = document.createElement('canvas');
         this.canvas.id = 'spine-preview-canvas';
         
+        // WebGL描画用の内部解像度を設定（パーセンテージ対応・実際のサイズベース）
         const rect = this.container.getBoundingClientRect();
-        // アスペクト比を1:1に固定（正方形）
-        const size = Math.min(rect.width, rect.height);
-        this.canvas.width = size;
-        this.canvas.height = size;
+        // 🚨 緊急修正: 正方形強制を削除、実際のコンテナサイズを使用
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
         
-        // Canvas スタイル設定（アスペクト比固定）
+        console.log(`🎨 Canvas初期化: 内部解像度 ${this.canvas.width}x${this.canvas.height}, コンテナサイズ ${rect.width.toFixed(1)}x${rect.height.toFixed(1)}`);
+        
+        // Canvas スタイル設定（パーセンテージベース・レスポンシブ対応）
         this.canvas.style.cssText = `
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: ${size}px;
-            height: ${size}px;
+            width: 30%;
+            aspect-ratio: 1/1;
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
@@ -715,7 +722,7 @@ export class SpinePreviewLayer {
             
             skeleton.x = canvasX;
             skeleton.y = canvasY;
-            skeleton.scaleX = skeleton.scaleY = 0.5;
+            skeleton.scaleX = skeleton.scaleY = 3.0;
             
             // アニメーション設定
             const animationStateData = new spine.AnimationStateData(spineData.skeletonData);
@@ -735,7 +742,7 @@ export class SpinePreviewLayer {
                 animationState: animationState,
                 data: characterData,
                 position: { x: canvasX, y: canvasY },
-                scale: 0.5
+                scale: 3.0
             };
 
             this.characters.set(characterId, character);
@@ -991,13 +998,14 @@ export class SpinePreviewLayer {
         
         // 🔍 変換プロセスの詳細ログ（デバッグ時のみ）
         if (Utils.isDevelopmentMode() || this.selectedCharacterId || window.spineDebugMode) {
-            console.log('🔄 座標変換プロセス（完全修正版）:');
+            console.log('🔄 座標変換プロセス（パーセンテージCanvas対応版）:');
             console.log('  1. Client: (' + clientX + ', ' + clientY + ')');
             console.log('  2. Canvas Rect: (' + rect.left.toFixed(1) + ', ' + rect.top.toFixed(1) + ') ' + rect.width.toFixed(1) + 'x' + rect.height.toFixed(1));
-            console.log('  3. Raw Canvas: (' + rawCanvasX.toFixed(1) + ', ' + rawCanvasY.toFixed(1) + ')');
-            console.log('  4. DPR(' + dpr + ') 補正: (' + dprCorrectedX.toFixed(1) + ', ' + dprCorrectedY.toFixed(1) + ')');
-            console.log('  5. 中央原点(' + centerX.toFixed(1) + ', ' + centerY.toFixed(1) + ')');
-            console.log('  6. Final Spine: (' + canvasX.toFixed(1) + ', ' + canvasY.toFixed(1) + ')');
+            console.log('  3. Canvas内部: ' + this.canvas.width + 'x' + this.canvas.height + ' (WebGL解像度)');
+            console.log('  4. Raw Canvas: (' + rawCanvasX.toFixed(1) + ', ' + rawCanvasY.toFixed(1) + ')');
+            console.log('  5. DPR(' + dpr + ') 補正: (' + dprCorrectedX.toFixed(1) + ', ' + dprCorrectedY.toFixed(1) + ')');
+            console.log('  6. 中央原点(' + centerX.toFixed(1) + ', ' + centerY.toFixed(1) + ')');
+            console.log('  7. Final Spine: (' + canvasX.toFixed(1) + ', ' + canvasY.toFixed(1) + ')');
         }
         
         return { x: canvasX, y: canvasY };
@@ -1027,13 +1035,13 @@ export class SpinePreviewLayer {
         }
 
         // マウスダウンイベント
-        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        this.canvas.addEventListener('mousedown', this.boundHandleMouseDown);
         
         // マウスムーブイベント（ドキュメント全体で監視）
-        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        document.addEventListener('mousemove', this.boundHandleMouseMove);
         
         // マウスアップイベント（ドキュメント全体で監視）
-        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        document.addEventListener('mouseup', this.boundHandleMouseUp);
 
         if (Utils.isDevelopmentMode()) {
             console.log(`✅ mousedown イベント設定完了 - Canvas`);
@@ -1095,11 +1103,13 @@ export class SpinePreviewLayer {
         if (Utils.isDevelopmentMode() || this.selectedCharacterId || window.spineDebugMode) {
             console.log(`🎯 Canvas座標変換完了: Client(${event.clientX}, ${event.clientY}) → Canvas(${canvasCoords.x.toFixed(1)}, ${canvasCoords.y.toFixed(1)})`);
             
-            // 🔍 Canvas情報の詳細確認
+            // 🔍 Canvas情報の詳細確認（パーセンテージベース対応）
             const rect = this.canvas.getBoundingClientRect();
-            console.log(`📊 Canvas詳細情報:`);
-            console.log(`  - Canvas実サイズ: ${this.canvas.width}x${this.canvas.height}px`);
-            console.log(`  - Canvas DOM矩形: (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)}) ${rect.width.toFixed(1)}x${rect.height.toFixed(1)}px`);
+            console.log(`📊 Canvas詳細情報（パーセンテージベース）:`);
+            console.log(`  - Canvas内部解像度: ${this.canvas.width}x${this.canvas.height}px (WebGL描画用)`);
+            console.log(`  - Canvas表示サイズ: ${rect.width.toFixed(1)}x${rect.height.toFixed(1)}px (30%パーセンテージ)`);
+            console.log(`  - Canvas DOM矩形: (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)}) 表示位置`);
+            console.log(`  - 解像度比率: ${(this.canvas.width / rect.width).toFixed(2)}x (内部/表示)`);
             console.log(`  - 変換計算: Raw(${event.clientX - rect.left}, ${event.clientY - rect.top}) → Spine(${canvasCoords.x.toFixed(1)}, ${this.canvas.height - (event.clientY - rect.top)})`);
         }
         
@@ -1301,6 +1311,7 @@ export class SpinePreviewLayer {
     handleMouseUp(event) {
         if (Utils.isDevelopmentMode() || window.spineDebugMode) {
             console.log(`🔍 MOUSE UP FIRED: dragging=${this.isDragging}, operation=${this.dragState.operation}, selected=${this.selectedCharacterId}, client(${event.clientX}, ${event.clientY})`);
+            console.log(`🔧 バインド関数参照確認: mouseUp=${typeof this.boundHandleMouseUp}, mouseMove=${typeof this.boundHandleMouseMove}, mouseDown=${typeof this.boundHandleMouseDown}`);
         }
         
         if (this.isDragging && this.selectedCharacterId) {
@@ -1368,6 +1379,10 @@ export class SpinePreviewLayer {
             
             if (this.canvas) {
                 this.canvas.style.cursor = 'default';
+            }
+            
+            if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+                console.log(`✅ ドラッグ終了処理完了 - isDragging=${this.isDragging}, selectedCharacterId=${this.selectedCharacterId}`);
             }
             
             this.updateVisualFeedback();
@@ -1690,16 +1705,17 @@ export class SpinePreviewLayer {
      */
     handleResize() {
         if (this.canvas && this.container) {
-            const rect = this.container.getBoundingClientRect();
-            // アスペクト比を1:1に固定（正方形）
-            const size = Math.min(rect.width, rect.height);
-            this.canvas.width = size;
-            this.canvas.height = size;
+            // WebGL描画用の内部解像度を更新（パーセンテージベース対応・実際の表示サイズに合わせる）
+            const canvasRect = this.canvas.getBoundingClientRect();
             
-            // CSSサイズも更新
-            this.canvas.style.width = `${size}px`;
-            this.canvas.style.height = `${size}px`;
+            // 🚨 緊急修正: 正方形強制ではなく実際の表示サイズを使用
+            this.canvas.width = canvasRect.width;
+            this.canvas.height = canvasRect.height;
             
+            console.log(`📏 Canvas内部解像度更新: ${this.canvas.width}x${this.canvas.height} (表示サイズ: ${canvasRect.width.toFixed(1)}x${canvasRect.height.toFixed(1)})`);
+            
+            // CSSサイズは既にパーセンテージで設定済みのため更新不要
+            // WebGLビューポートのみ更新
             if (this.context) {
                 this.context.viewport(0, 0, this.canvas.width, this.canvas.height);
             }
@@ -1749,12 +1765,16 @@ export class SpinePreviewLayer {
                 this.coordinateSwap.clearAll();
             }
             
-            // イベントリスナー削除
+            // イベントリスナー削除（バインド済み関数使用）
             if (this.canvas) {
-                this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+                this.canvas.removeEventListener('mousedown', this.boundHandleMouseDown);
             }
-            document.removeEventListener('mousemove', this.handleMouseMove);
-            document.removeEventListener('mouseup', this.handleMouseUp);
+            document.removeEventListener('mousemove', this.boundHandleMouseMove);
+            document.removeEventListener('mouseup', this.boundHandleMouseUp);
+            
+            if (Utils.isDevelopmentMode()) {
+                console.log('🔧 イベントリスナー削除完了 - バインド済み関数使用');
+            }
             
             if (this.canvas && this.canvas.parentNode) {
                 this.canvas.parentNode.removeChild(this.canvas);
@@ -2102,8 +2122,10 @@ export class SpinePreviewLayer {
         const handleDomY = containerRelativeY - (overlayHeight / 2);
         
         if (Utils.isDevelopmentMode() || window.spineDebugMode) {
-            console.log(`🔧 ハンドル位置統一変換（強化版）:`);
+            console.log(`🔧 ハンドル位置統一変換（パーセンテージCanvas対応版）:`);
             console.log(`  - Spine座標: (${spineX.toFixed(1)}, ${spineY.toFixed(1)})`);
+            console.log(`  - Canvas内部: ${this.canvas.width}x${this.canvas.height} (WebGL解像度)`);
+            console.log(`  - Canvas表示: ${canvasRect.width.toFixed(1)}x${canvasRect.height.toFixed(1)} (DOM表示サイズ)`);
             console.log(`  - Canvas中央原点: (${centerOriginX.toFixed(1)}, ${centerOriginY.toFixed(1)})`);
             console.log(`  - DPR補正: (${rawCanvasX.toFixed(1)}, ${rawCanvasY.toFixed(1)})`);
             console.log(`  - クライアント座標: (${clientX.toFixed(1)}, ${clientY.toFixed(1)})`);
@@ -2111,18 +2133,26 @@ export class SpinePreviewLayer {
             console.log(`  - 最終Handle DOM: (${handleDomX.toFixed(1)}, ${handleDomY.toFixed(1)})`);
         }
 
-        // 🚨 座標精度保証のための検証
+        // 🚨 座標精度保証のための検証（パーセンテージCanvas対応強化）
         const coordinateValidation = {
             isValidX: isFinite(handleDomX) && !isNaN(handleDomX),
             isValidY: isFinite(handleDomY) && !isNaN(handleDomY),
             isReasonableX: Math.abs(handleDomX) < 10000,
-            isReasonableY: Math.abs(handleDomY) < 10000
+            isReasonableY: Math.abs(handleDomY) < 10000,
+            // パーセンテージCanvas特有の検証
+            canvasDisplaySizeValid: canvasRect.width > 0 && canvasRect.height > 0,
+            canvasInternalSizeValid: this.canvas.width > 0 && this.canvas.height > 0,
+            resolutionRatioReasonable: Math.abs((this.canvas.width / canvasRect.width) - 1) < 3 // 3倍以内の解像度差
         };
         
         if (!coordinateValidation.isValidX || !coordinateValidation.isValidY || 
-            !coordinateValidation.isReasonableX || !coordinateValidation.isReasonableY) {
-            console.warn('⚠️ ハンドル座標異常値検出:', {
-                handleDomX, handleDomY, spineX, spineY, validation: coordinateValidation
+            !coordinateValidation.isReasonableX || !coordinateValidation.isReasonableY ||
+            !coordinateValidation.canvasDisplaySizeValid || !coordinateValidation.canvasInternalSizeValid) {
+            console.warn('⚠️ ハンドル座標異常値検出（パーセンテージCanvas）:', {
+                handleDomX, handleDomY, spineX, spineY, 
+                canvasDisplay: `${canvasRect.width}x${canvasRect.height}`,
+                canvasInternal: `${this.canvas.width}x${this.canvas.height}`,
+                validation: coordinateValidation
             });
             return; // 異常値の場合は更新をスキップ
         }
