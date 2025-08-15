@@ -8,7 +8,7 @@ import { ProjectLoader } from './project-loader.js';
 import { SpineCharacterManager } from './spine-character-manager.js';
 import { PreviewManager } from './preview-manager.js';
 import { PackageExporter } from './package-exporter.js';
-import { SpinePreviewLayer } from './spine-preview-layer.js';
+import { SpinePreviewLayerSimple } from './spine-preview-layer-simple.js';
 import { Utils } from './utils.js';
 
 export class DemoApp {
@@ -24,7 +24,7 @@ export class DemoApp {
         this.spineCharacterManager = new SpineCharacterManager();
         this.previewManager = new PreviewManager();
         this.packageExporter = new PackageExporter();
-        this.spinePreviewLayer = new SpinePreviewLayer();
+        this.spinePreviewLayer = new SpinePreviewLayerSimple();
         
         // Spine System初期化
         this.spineCore = null;
@@ -142,11 +142,13 @@ export class DemoApp {
                 return;
             }
 
-            const success = await this.spinePreviewLayer.initialize(previewContent);
+            // シンプルSpineプレビューレイヤー初期化
+            this.spinePreviewLayer.container = previewContent;
+            const success = await this.spinePreviewLayer.initialize();
             if (success) {
-                // console.log('✅ SpinePreviewLayer初期化完了');
+                console.log('✅ シンプルSpinePreviewLayer初期化完了');
             } else {
-                console.warn('⚠️ SpinePreviewLayer初期化失敗 - ダミー表示で継続');
+                console.warn('⚠️ シンプルSpinePreviewLayer初期化失敗');
             }
 
         } catch (error) {
@@ -257,23 +259,26 @@ export class DemoApp {
         try {
             this.uiManager.updateStatus('loading', 'Spineキャラクターを読み込み中...');
             
-            // 実際のSpine表示を優先で試行
-            if (this.spinePreviewLayer && this.spinePreviewLayer.spineLoaded) {
-                // console.log('🎭 実際のSpine表示を試行中...');
+            // シンプルSpine表示を試行
+            if (this.spinePreviewLayer) {
+                console.log('🎭 シンプルSpine表示を試行中...');
                 
-                // マウス座標を直接SpinePreviewLayerに渡す（内部で適切な座標変換を行う）
-                const spineResult = await this.spinePreviewLayer.addCharacter(
-                    characterData, 
-                    x, 
-                    y
+                // キャラクターIDを生成
+                const characterId = `spine-character-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
+                // シンプルSpineキャラクター追加
+                const success = await this.spinePreviewLayer.addSimpleCharacter(
+                    characterId,
+                    characterData.atlasPath,
+                    characterData.jsonPath
                 );
                 
-                if (spineResult.success) {
-                    this.uiManager.updateStatus('ready', `🎭 Spineキャラクター「${characterData.name}」を表示しました (LIVE)`);
-                    // console.log(`✅ 実際のSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
+                if (success) {
+                    this.uiManager.updateStatus('ready', `🎭 Spineキャラクター「${characterData.name}」を表示しました (SIMPLE)`);
+                    console.log(`✅ シンプルSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
                     return;
                 } else {
-                    console.warn('⚠️ Spine表示失敗、ダミー表示にフォールバック:', spineResult.error);
+                    console.warn('⚠️ シンプルSpine表示失敗、ダミー表示にフォールバック');
                 }
             }
             
