@@ -86,6 +86,9 @@ export class SpinePreviewLayerSimple {
      * Spine WebGL初期化
      */
     async initializeSpine() {
+        // Spine WebGLライブラリの読み込み待機
+        await this.waitForSpineLibrary();
+        
         // Spine WebGLライブラリの確認
         if (typeof spine === 'undefined') {
             throw new Error('Spine WebGL library not loaded');
@@ -158,6 +161,24 @@ export class SpinePreviewLayerSimple {
             console.error(`❌ キャラクター追加失敗: ${characterId}`, error);
             return false;
         }
+    }
+
+    /**
+     * Spineライブラリ読み込み待機
+     */
+    async waitForSpineLibrary() {
+        return new Promise((resolve) => {
+            const checkSpine = () => {
+                if (typeof spine !== 'undefined' && spine.webgl) {
+                    console.log('✅ Spine WebGLライブラリ読み込み完了');
+                    resolve();
+                } else {
+                    console.log('⏳ Spine WebGLライブラリ読み込み待機中...');
+                    setTimeout(checkSpine, 100);
+                }
+            };
+            checkSpine();
+        });
     }
 
     /**
