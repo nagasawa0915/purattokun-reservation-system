@@ -2085,11 +2085,16 @@ export class SpinePreviewLayer {
         }
 
         // 🔧 キャラクター実体位置からハンドル位置を正確計算
-        const spineX = character.skeleton.x;
-        const spineY = character.skeleton.y;
+        const rawSpineX = character.skeleton.x;
+        const rawSpineY = character.skeleton.y;
+        
+        // ✅ 重要修正: visualOffset を逆算（設定時に加算されたoffsetを減算）
+        const spineX = rawSpineX - this.visualOffset.x;
+        const spineY = rawSpineY - this.visualOffset.y;
         
         if (Utils.isDevelopmentMode() || window.spineDebugMode) {
-            console.log(`🔧 ハンドル計算前: キャラクター位置 Spine(${spineX.toFixed(1)}, ${spineY.toFixed(1)}), Canvas size: ${this.canvas.width}x${this.canvas.height}`);
+            console.log(`🔧 ハンドル計算前: Raw Spine(${rawSpineX.toFixed(1)}, ${rawSpineY.toFixed(1)}) → offset補正後 Spine(${spineX.toFixed(1)}, ${spineY.toFixed(1)})`);
+            console.log(`🔧 visualOffset: (${this.visualOffset.x}, ${this.visualOffset.y})`);
         }
         
         // 🚨 重要: clientToCanvasCoordinatesの逆変換を正確に実行（統一性確保）
