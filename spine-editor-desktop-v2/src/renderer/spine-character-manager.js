@@ -50,7 +50,6 @@ export class SpineCharacterManager {
      */
     setPreviewIframe(iframe) {
         this.iframeSpineBridge.setIframe(iframe);
-        // console.log('🖼️ Preview iframe set for Spine integration');
     }
 
     /**
@@ -89,11 +88,6 @@ export class SpineCharacterManager {
      * @returns {object} 結果オブジェクト {success, spineFiles, message}
      */
     async loadSpineFolder() {
-        // console.log('🎭 loadSpineFolder() method called!');
-        
-        // デバッグ: 関数存在確認
-        // console.log('🔧 window.projectLoader:', window.projectLoader);
-        // console.log('🔧 selectSpineFolder exists:', typeof window.projectLoader?.selectSpineFolder);
         
         try {
             // 関数存在チェック
@@ -101,7 +95,6 @@ export class SpineCharacterManager {
                 console.error('❌ selectSpineFolder function not found, falling back to selectFolder');
                 // フォールバック: 元の関数を使用
                 const initialSpinePath = this.savedSpinePath || null;
-                // console.log('🔧 Spine initial path (fallback):', initialSpinePath);
                 const result = await window.projectLoader.selectFolder(initialSpinePath);
                 
                 if (result.success && result.path) {
@@ -122,14 +115,8 @@ export class SpineCharacterManager {
             
             // 詳細デバッグ: localStorage直接確認
             const directSpine = localStorage.getItem('spine-editor-spine-path');
-            // console.log('🔧 localStorage直接確認 spine:', directSpine);
-            // console.log('🔧 this.savedSpinePath:', this.savedSpinePath);
-            // console.log('🔧 値が同じか:', directSpine === this.savedSpinePath);
-            
             // Spine専用フォルダ選択関数を使用・保存されたSpineパスを初期フォルダとして使用（有効な場合のみ）
             const initialSpinePath = this.savedSpinePath || null;
-            // console.log('🔧 Spine initial path:', initialSpinePath);
-            // console.log('🔧 initialSpinePathタイプ:', typeof initialSpinePath, '長さ:', initialSpinePath?.length);
             const result = await window.projectLoader.selectSpineFolder(initialSpinePath);
             
             if (result.success && result.path) {
@@ -167,20 +154,13 @@ export class SpineCharacterManager {
         
         // Spineパスを保存
         localStorage.setItem('spine-editor-spine-path', folderPath);
-        // console.log('💾 Spine path saved:', folderPath);
-        
         // this.savedSpinePathも更新
         this.savedSpinePath = folderPath;
-        // console.log('🔄 this.savedSpinePath updated:', this.savedSpinePath);
-        
-        // console.log('🔧 Starting Spine file detection...');
         
         // Spineファイル検出処理（例: .json/.atlas/.png）
         const spineFiles = await this.detectSpineFiles(folderPath);
-        // console.log('🔧 Detection completed. Found files:', spineFiles);
         
         if (spineFiles.length > 0) {
-            // console.log('🎭 Detected Spine files:', spineFiles);
             return {
                 success: true,
                 spineFiles,
@@ -202,15 +182,12 @@ export class SpineCharacterManager {
      */
     async detectSpineFiles(folderPath) {
         try {
-            // console.log('🔍 Scanning folder:', folderPath);
-            
             // ElectronAPIでフォルダ内のファイルをスキャン
             const scanResult = await window.electronAPI.fs.scanDirectory(
                 folderPath, 
                 ['.json', '.atlas', '.png']
             );
             
-            // console.log('📋 Scan result:', scanResult);
             
             if (!scanResult.success) {
                 console.warn('🚨 Spine folder scan failed:', scanResult.error);
@@ -222,17 +199,12 @@ export class SpineCharacterManager {
             const atlasFiles = scanResult.files?.atlas || [];
             const pngFiles = scanResult.files?.png || [];
             
-            // console.log('📁 Found files:');
-            // console.log('  JSON files:', jsonFiles);
-            // console.log('  Atlas files:', atlasFiles);
-            // console.log('  PNG files:', pngFiles);
             
             const spineCharacters = [];
             
             for (const jsonFile of jsonFiles) {
                 // バックアップフォルダを除外
                 if (Utils.isBackupPath(jsonFile)) {
-                    // console.log('🚫 Skipping backup file:', jsonFile);
                     continue;
                 }
                 
@@ -240,9 +212,6 @@ export class SpineCharacterManager {
                 const baseName = Utils.getBaseName(jsonFile);
                 const atlasFile = atlasFiles.find(f => f.includes(baseName + '.atlas') && !Utils.isBackupPath(f));
                 const pngFile = pngFiles.find(f => f.includes(baseName + '.png') && !Utils.isBackupPath(f));
-                
-                // console.log('🔧 Processing:', jsonFile);
-                // console.log('🔧 Extracted baseName:', baseName);
                 
                 if (atlasFile && pngFile) {
                     const characterFolder = Utils.getCharacterFolder(jsonFile);
@@ -253,7 +222,6 @@ export class SpineCharacterManager {
                         texturePath: pngFile,
                         folderPath: characterFolder // 正しいフォルダパス
                     });
-                    // console.log('🔧 Created character:', baseName, 'folder:', characterFolder);
                 }
             }
             
@@ -270,8 +238,6 @@ export class SpineCharacterManager {
      * @param {Element} containerElement - 表示先コンテナ要素
      */
     displaySpineCharacters(spineFiles, containerElement) {
-        // console.log('🎭 Displaying Spine characters:', spineFiles);
-        
         // 別ウィンドウ風のトースト通知を表示
         Utils.showToastNotification(`${spineFiles.length}個のキャラクターが見つかりました`);
         
@@ -280,9 +246,6 @@ export class SpineCharacterManager {
         
         // 各キャラクターをリストに追加
         spineFiles.forEach((character, index) => {
-            // console.log('🔧 Creating character item for:', character.name);
-            // console.log('🔧 Character data:', character);
-            
             const item = document.createElement('div');
             item.className = 'spine-character-simple'; // 新しいクラス名
             item.draggable = true; // ドラッグ可能に設定
@@ -291,11 +254,9 @@ export class SpineCharacterManager {
             
             // 名前のみをテキストノードとして設定
             item.textContent = character.name;
-            // console.log('🔧 Set textContent to:', item.textContent);
             
             // マウスオーバーでフルパス表示
             item.title = character.folderPath;
-            // console.log('🔧 Set title to:', item.title);
             
             // 確実にツールチップを表示するため、追加の属性も設定
             item.setAttribute('data-tooltip', character.folderPath);
@@ -321,8 +282,6 @@ export class SpineCharacterManager {
             item.addEventListener('mouseenter', (e) => {
                 item.style.background = '#e9ecef !important';
                 item.style.borderColor = '#007bff !important';
-                // console.log('🔧 Mouse enter - title:', e.target.title);
-                // console.log('🔧 Mouse enter - data-tooltip:', e.target.getAttribute('data-tooltip'));
             });
             
             item.addEventListener('mouseleave', () => {
@@ -332,13 +291,11 @@ export class SpineCharacterManager {
             
             // クリックイベント（詳細表示用）
             item.addEventListener('click', () => {
-                // console.log('🎭 Selected character:', character.name);
                 // TODO: キャラクター詳細表示
             });
             
             // ドラッグ開始イベント
             item.addEventListener('dragstart', (e) => {
-                // console.log('🎭 Drag started:', character.name);
                 e.dataTransfer.setData('application/json', JSON.stringify(character));
                 e.dataTransfer.effectAllowed = 'copy';
                 item.classList.add('dragging');
@@ -504,14 +461,11 @@ export class SpineCharacterManager {
                     characterEntry.position.x = newX;
                     characterEntry.position.y = newY;
                     
-                    // console.log(`📍 キャラクター「${characterData.name}」位置更新:`, characterEntry.position);
-                    
                     // 🚀 iframe内のSpineキャラクターの位置も同期更新
                     if (characterEntry.spineCharacterId) {
                         this.iframeSpineBridge.updateSpineCharacter(characterEntry.spineCharacterId, {
                             position: { x: newX, y: newY }
                         });
-                        // console.log(`🎭 Spine character position synced: ${characterEntry.spineCharacterId}`);
                     }
                 }
             }

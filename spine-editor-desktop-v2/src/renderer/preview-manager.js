@@ -23,8 +23,6 @@ export class PreviewManager {
         this.previewIframe = iframe;
         this.previewPlaceholder = placeholder;
         this.pageListElement = pageList;
-        
-        console.log('✅ プレビュー管理初期化完了');
     }
 
     /**
@@ -33,8 +31,6 @@ export class PreviewManager {
      * @param {Function} onFileSelect - ファイル選択時のコールバック
      */
     renderOutlinerView(files, onFileSelect) {
-        console.log('📂 Creating outliner view for', files.length, 'files');
-        
         if (!this.pageListElement) {
             console.error('❌ ページリスト要素が初期化されていません');
             return;
@@ -59,7 +55,6 @@ export class PreviewManager {
             this.pageListElement.appendChild(folderSection);
         });
         
-        console.log('📂 Outliner view created:', hierarchy);
     }
 
     /**
@@ -177,7 +172,6 @@ export class PreviewManager {
         element.classList.add('selected');
         
         this.currentPage = file;
-        console.log('📋 ファイル選択:', file.name || file.path);
         
         // HTMLプレビュー表示
         this.loadHTMLPreview(file);
@@ -193,15 +187,7 @@ export class PreviewManager {
      * @param {object} file - ファイルオブジェクト
      */
     async loadHTMLPreview(file) {
-        console.log('🖼️ プレビュー読み込み:', file);
-        
         try {
-            console.log('🔧 プレビュー処理開始');
-            console.log('🔧 file.fullPath:', file.fullPath);
-            console.log('🔧 file.path:', file.path);
-            console.log('🔧 file.name:', file.name);
-            console.log('🔧 currentProject:', window.projectLoader?.currentProject);
-            
             // 内蔵HTTPサーバー経由でのプレビュー（Spineアセット対応）
             const currentPort = window.location.port || '8082';
             const serverUrl = `http://localhost:${currentPort}`;
@@ -210,12 +196,9 @@ export class PreviewManager {
             if (file.path) {
                 const normalizedPath = Utils.normalizePath(file.path);
                 const httpUrl = `${serverUrl}/${normalizedPath}`;
-                console.log('🔧 Using HTTP server preview:', httpUrl);
-                console.log('🔧 Path normalized:', file.path, '->', normalizedPath);
                 this.previewIframe.src = httpUrl;
             } else if (file.name) {
                 const httpUrl = `${serverUrl}/${file.name}`;
-                console.log('🔧 Using HTTP server preview (name):', httpUrl);
                 this.previewIframe.src = httpUrl;
             } else {
                 throw new Error('File path not available');
@@ -274,8 +257,6 @@ export class PreviewManager {
      * @param {Function} onFileSelect - ファイル選択コールバック
      */
     renderFileListWithPreview(files, onFileSelect) {
-        console.log('🔧 Direct rendering files:', files);
-        
         if (!this.pageListElement) {
             console.error('❌ ページリスト要素が初期化されていません');
             return;

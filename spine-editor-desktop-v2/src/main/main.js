@@ -15,31 +15,16 @@ const PORT = 8081;
  */
 async function createMainWindow() {
   try {
-    console.log('🔧 Starting Spine Server...');
-    
     // サーバー起動
     spineServer = new SpineServer(PORT);
     const serverUrl = await spineServer.start();
     
-    console.log(`✅ Server started successfully at ${serverUrl}`);
-    
-    // サーバーの正常動作確認と待機処理（より厳格に）
-    await waitForServerReady(serverUrl, 15); // 15回まで試行
-    console.log('✅ Server health confirmed, proceeding to window creation...');
-    
-    // 追加の安全確認：start.htmlの存在確認
-    try {
-      const http = require('http');
-      const testReq = http.request(`${serverUrl}/start.html`, { method: 'HEAD' }, (res) => {
-        console.log(`✅ start.html response: ${res.statusCode}`);
-      });
-      testReq.on('error', (err) => {
-        console.warn('⚠️ start.html test failed:', err.message);
-      });
-      testReq.end();
-    } catch (testError) {
-      console.warn('⚠️ start.html test error:', testError.message);
+    if (isDev) {
+        console.log(`✅ Server started at ${serverUrl}`);
     }
+    
+    // サーバーの正常動作確認
+    await waitForServerReady(serverUrl, 15);
     
     // ウィンドウ作成
     mainWindow = new BrowserWindow({
@@ -77,30 +62,22 @@ async function createMainWindow() {
       
       // ERR_ABORTED エラーの場合、より慎重に処理
       if (errorCode === -3 || errorDescription.includes('ERR_ABORTED')) {
-        console.log('🔄 ERR_ABORTED detected, checking server status...');
-        
-        // サーバーの正常性を再確認
         try {
-          await waitForServerReady(serverUrl, 3); // 3回まで
-          console.log('✅ Server confirmed ready, retrying load...');
-          
-          // 1秒待機してリトライ
+          await waitForServerReady(serverUrl, 3);
           setTimeout(async () => {
             try {
-              console.log(`🔄 Retrying direct start.html load...`);
               await mainWindow.loadURL(`${serverUrl}/start.html`);
             } catch (retryError) {
-              console.error('❌ Direct retry failed, trying root fallback:', retryError);
+              console.error('❌ Retry failed:', retryError);
               try {
                 await mainWindow.loadURL(serverUrl);
               } catch (fallbackError) {
-                console.error('❌ All retry attempts failed:', fallbackError);
-                dialog.showErrorBox('Load Failed', `Cannot load application page.\nServer: ${serverUrl}\nPlease restart the application.`);
+                console.error('❌ All attempts failed:', fallbackError);
               }
             }
           }, 1000);
         } catch (serverError) {
-          console.error('❌ Server not ready for retry:', serverError);
+          console.error('❌ Server error:', serverError);
           dialog.showErrorBox('Server Error', `Server is not responding.\nPlease restart the application.`);
         }
       } else {
@@ -108,43 +85,24 @@ async function createMainWindow() {
       }
     });
 
-    // ページ読み込み成功確認
-    mainWindow.webContents.on('did-finish-load', () => {
-      console.log('✅ Page loaded successfully');
-    });
-    
-    // DOM準備完了確認
-    mainWindow.webContents.on('dom-ready', () => {
-      console.log('✅ DOM ready');
-    });
-    
     // ナビゲーション設定（セキュリティ対応）
     mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-      console.log('🌐 Navigation to:', navigationUrl);
       // 同一オリジン内のナビゲーションのみ許可
       if (!navigationUrl.startsWith(serverUrl)) {
-        console.log('🚫 External navigation blocked');
         event.preventDefault();
       }
     });
     
-    // URLロード - より安全な読み込み手順
+    // URLロード
     const startUrl = `${serverUrl}/start.html`;
     
-    console.log(`🌐 Loading URL: ${startUrl}`);
-    
-    // ウィンドウが準備完了してから読み込み開始
     const loadWithRetry = async (url, retries = 3) => {
       for (let i = 0; i < retries; i++) {
         try {
-          console.log(`🔄 Load attempt ${i + 1}/${retries}: ${url}`);
           await mainWindow.loadURL(url);
-          console.log('✅ Load successful');
           return true;
         } catch (error) {
-          console.warn(`⚠️ Load attempt ${i + 1} failed:`, error.message);
           if (i < retries - 1) {
-            // 次の試行前に少し待機
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
@@ -153,18 +111,15 @@ async function createMainWindow() {
     };
     
     try {
-      // 最初にstart.htmlを試行
       const success = await loadWithRetry(startUrl, 2);
       if (!success) {
-        console.log('🔄 start.html failed, trying root URL...');
         const rootSuccess = await loadWithRetry(serverUrl, 2);
         if (!rootSuccess) {
           throw new Error('All load attempts failed');
         }
       }
-      console.log('✅ Initial URL load completed');
     } catch (loadError) {
-      console.error('❌ All load attempts failed:', loadError);
+      console.error('❌ Load failed:', loadError);
       throw loadError;
     }
     
@@ -243,7 +198,9 @@ async function createNewEditorWindow() {
     
     await editorWindow.loadURL(editorUrl);
     
-    console.log('✅ New editor window created successfully');
+    if (isDev) {
+        console.log('✅ New editor window created successfully');
+    }
     
   } catch (error) {
     console.error('❌ Failed to create new editor window:', error);
@@ -299,36 +256,24 @@ function createMenu() {
 
 // 軽量IPC通信
 ipcMain.handle('dialog-open-file', async (event, options) => {
-  console.log('🔧 dialog-open-file received options:', JSON.stringify(options, null, 2));
-  
   // defaultPathが指定されている場合の最適化
   if (options.defaultPath && options.properties?.includes('openDirectory')) {
     const path = require('path');
     const fs = require('fs');
     
     try {
-      // パスが存在することを確認
       if (fs.existsSync(options.defaultPath)) {
-        // 既存のフォルダの場合、親ディレクトリを指定して対象フォルダを強調
-        const parentDir = path.dirname(options.defaultPath);
-        const targetFolder = path.basename(options.defaultPath);
-        
-        console.log('🔧 Optimizing dialog for existing folder:');
-        console.log('  - Parent:', parentDir);
-        console.log('  - Target:', targetFolder);
-        
         // Windows環境での最適化
         if (process.platform === 'win32') {
-          options.defaultPath = options.defaultPath; // そのまま使用
+          options.defaultPath = options.defaultPath;
         }
       }
     } catch (error) {
-      console.warn('⚠️ defaultPath optimization failed:', error.message);
+      console.warn('⚠️ Path optimization failed:', error.message);
     }
   }
   
   const result = await dialog.showOpenDialog(mainWindow, options);
-  console.log('🔧 dialog result:', result);
   return result;
 });
 
@@ -403,7 +348,6 @@ ipcMain.handle('fs-get-file-stats', async (event, filePath) => {
 // URL開くためのIPC処理
 ipcMain.handle('open-url', async (event, url) => {
   try {
-    console.log('🔗 Opening URL:', url);
     
     // 新しいウィンドウでURLを開く
     const editorWindow = new BrowserWindow({
@@ -425,7 +369,9 @@ ipcMain.handle('open-url', async (event, url) => {
     
     editorWindow.once('ready-to-show', () => {
       editorWindow.show();
-      console.log('✅ Editor window opened for URL:', url);
+      if (isDev) {
+          console.log('✅ Editor window opened for URL:', url);
+      }
     });
     
     await editorWindow.loadURL(url);
@@ -436,12 +382,16 @@ ipcMain.handle('open-url', async (event, url) => {
   }
 });// プロジェクト関連IPC処理
 ipcMain.on('menu-new-project', async (event) => {
-  console.log('📁 New project requested - creating new editor window');
+  if (isDev) {
+      console.log('📁 New project requested - creating new editor window');
+  }
   await createNewEditorWindow();
 });
 
 ipcMain.on('menu-open-project', async (event) => {
-  console.log('📂 Open project requested');
+  if (isDev) {
+      console.log('📂 Open project requested');
+  }
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Select Spine Project Folder',
@@ -451,7 +401,9 @@ ipcMain.on('menu-open-project', async (event) => {
     
     if (!result.canceled && result.filePaths.length > 0) {
       const projectPath = result.filePaths[0];
-      console.log('📁 Project selected:', projectPath);
+      if (isDev) {
+          console.log('📁 Project selected:', projectPath);
+      }
       
       // プロジェクトフォルダをスキャンしてSpineファイルを探す
       const scanResult = await scanDirectoryRecursive(projectPath, ['.json', '.atlas']);
@@ -558,10 +510,9 @@ async function scanDirectoryRecursive(dirPath, extensions) {
 
 // アプリケーションライフサイクル
 app.whenReady().then(() => {
-  console.log('🚀 Spine Editor v2.0 starting...');
-  console.log('📁 Renderer path:', path.join(__dirname, '../renderer'));
-  console.log('⚙️ Development mode:', isDev);
-  console.log('🔧 Target port:', PORT);
+  if (isDev) {
+      console.log('🚀 Spine Editor v2.0 starting...');
+  }
   createMainWindow();
 });
 
@@ -601,21 +552,17 @@ function waitForServerReady(serverUrl, maxRetries = 10) {
       
       const req = http.request(options, (res) => {
         if (res.statusCode === 200) {
-          console.log('✅ Server health check passed');
           resolve();
         } else {
-          console.warn(`⚠️ Server health check failed: ${res.statusCode}`);
           retryCheck();
         }
       });
       
       req.on('error', (err) => {
-        console.warn(`⚠️ Server not ready (${retries + 1}/${maxRetries}):`, err.message);
         retryCheck();
       });
       
       req.on('timeout', () => {
-        console.warn(`⚠️ Server health check timeout (${retries + 1}/${maxRetries})`);
         req.destroy();
         retryCheck();
       });

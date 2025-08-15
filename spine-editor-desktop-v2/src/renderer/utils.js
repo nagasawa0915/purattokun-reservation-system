@@ -218,6 +218,51 @@ export class Utils {
     }
 
     /**
+     * 開発モード判定
+     * @returns {boolean} 開発モードかどうか
+     */
+    static isDevelopmentMode() {
+        // Electronアプリ（デスクトップアプリ）の場合は本番モード扱い
+        if (window.electronAPI || window.process?.type === 'renderer' || navigator.userAgent.includes('Electron')) {
+            // 明示的なデバッグフラグが設定されている場合のみ開発モード
+            return window.spineDebugMode === true;
+        }
+        
+        // URLパラメータで dev=true が指定されている場合
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('dev') === 'true') return true;
+        
+        // localhost または 127.0.0.1 の場合
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            // ポート8080-8099は開発モード扱い（ただしElectronアプリ除く）
+            const port = parseInt(window.location.port);
+            if (port >= 8080 && port <= 8099) return true;
+        }
+        
+        // デバッグフラグが設定されている場合
+        if (window.spineDebugMode) return true;
+        
+        // その他の場合は本番モード
+        return false;
+    }
+
+    /**
+     * デバッグモード手動切り替え（デスクトップアプリ用）
+     * @param {boolean} enabled - デバッグモードを有効にするかどうか
+     */
+    static setDebugMode(enabled) {
+        window.spineDebugMode = enabled;
+        console.log(`🔧 デバッグモード: ${enabled ? 'ON' : 'OFF'}`);
+        console.log(`📊 開発モード判定: ${this.isDevelopmentMode()}`);
+        
+        if (enabled) {
+            console.log('💡 デバッグモードが有効になりました。キャラクター検索ログが表示されます。');
+        } else {
+            console.log('💡 デバッグモードが無効になりました。ログ出力が停止されます。');
+        }
+    }
+
+    /**
      * LocalStorage操作のラッパー
      */
     static storage = {
@@ -282,4 +327,9 @@ export class Utils {
             }
         }
     };
+}
+
+// デスクトップアプリでのデバッグ用にUtilsをグローバルに公開
+if (typeof window !== 'undefined') {
+    window.Utils = Utils;
 }

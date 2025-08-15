@@ -6,6 +6,7 @@
 
 import { Utils } from './utils.js';
 
+
 /**
  * 座標系スワップマネージャー（4層→2層削減）
  * 過去の成功実装：編集時はシンプル座標系、保存時は元座標系に復元
@@ -51,7 +52,6 @@ class CoordinateSwapManager {
         
         this.isSwapped.set(characterId, true);
         
-        console.log(`🔄 座標系スワップ開始: ${characterId}`);
     }
     
     /**
@@ -73,7 +73,6 @@ class CoordinateSwapManager {
         this.isSwapped.delete(characterId);
         this.backup.delete(characterId);
         
-        console.log(`✅ 座標系スワップ終了: ${characterId}`);
     }
     
     /**
@@ -145,162 +144,150 @@ export class SpinePreviewLayer {
             
             this.spineLoaded = true;
             
-            // 🔧 デバッグ用グローバルアクセス
-            window.spinePreviewLayer = this;
-            
-            // 🔧 よくあるオフセットパターンの便利メソッド
-            window.fixRightUpOffset = (rightPx = 25, upPx = 15) => {
-                this.setVisualOffset(-rightPx, -upPx);
-                console.log(`🎯 右上ズレ修正適用: 右${rightPx}px, 上${upPx}px`);
-            };
-            
-            window.resetOffset = () => {
-                this.setVisualOffset(0, 0);
-                console.log(`🔄 オフセットリセット完了`);
-            };
-            
-            // 🔍 座標レイヤー診断システム（手動入力版）
-            window.diagnoseCoordinateLayers = (clientX, clientY) => {
-                console.log(`🗺️ === 座標レイヤー完全診断 ===`);
-                console.log(`🖱️ 1. マウスクライアント座標: (${clientX}, ${clientY})`);
+            // 🔧 デバッグ用グローバルアクセス（開発モード限定）
+            if (Utils.isDevelopmentMode()) {
+                window.spinePreviewLayer = this;
                 
-                const rect = this.canvas.getBoundingClientRect();
-                const canvasDomX = clientX - rect.left;
-                const canvasDomY = clientY - rect.top;
-                console.log(`📱 2. Canvas DOM座標: (${canvasDomX.toFixed(1)}, ${canvasDomY.toFixed(1)})`);
-                
-                const spineX = canvasDomX;
-                const spineY = this.canvas.height - canvasDomY;
-                console.log(`🎮 3. Spine WebGL座標: (${spineX.toFixed(1)}, ${spineY.toFixed(1)})`);
-                
-                const overlayDomX = spineX;
-                const overlayDomY = this.canvas.height - spineY;
-                console.log(`🎯 4. オーバーレイDOM座標: (${overlayDomX.toFixed(1)}, ${overlayDomY.toFixed(1)})`);
-                
-                console.log(`📊 Canvas情報: ${this.canvas.width}x${this.canvas.height}, rect:(${rect.left.toFixed(1)}, ${rect.top.toFixed(1)})`);
-                
-                // 各キャラクターの実際位置も表示
-                this.characters.forEach((char, id) => {
-                    console.log(`👾 キャラ${char.name}: Spine(${char.skeleton.x.toFixed(1)}, ${char.skeleton.y.toFixed(1)})`);
-                    
-                    const overlay = this.visualOverlays.get(id);
-                    if (overlay) {
-                        const overlayRect = overlay.getBoundingClientRect();
-                        const containerRect = this.container.getBoundingClientRect();
-                        console.log(`🎯 ハンドル${char.name}: DOM(${overlay.style.left}, ${overlay.style.top}) 実座標(${overlayRect.left - containerRect.left}px, ${overlayRect.top - containerRect.top}px)`);
-                    }
-                });
-            };
-            
-            // 🔍 自動マウス位置診断システム
-            window.diagnoseCurrentMousePosition = () => {
-                console.log(`🎯 マウスをクリックして座標診断を開始してください...`);
-                
-                const handleClick = (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    
-                    // 一度だけ実行してイベント削除
-                    document.removeEventListener('click', handleClick, true);
-                    
-                    // 診断実行
-                    window.diagnoseCoordinateLayers(event.clientX, event.clientY);
-                    
-                    console.log(`✅ 診断完了！マウス位置: (${event.clientX}, ${event.clientY})`);
+                // 🔧 よくあるオフセットパターンの便利メソッド
+                window.fixRightUpOffset = (rightPx = 25, upPx = 15) => {
+                    this.setVisualOffset(-rightPx, -upPx);
                 };
                 
-                // 次回クリックで診断実行
-                document.addEventListener('click', handleClick, true);
-            };
+                window.resetOffset = () => {
+                    this.setVisualOffset(0, 0);
+                };
+                
+                // 🔍 座標レイヤー診断システム（簡易版）
+                window.diagnoseCoordinateLayers = (clientX, clientY) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const canvasDomX = clientX - rect.left;
+                    const canvasDomY = clientY - rect.top;
+                    const spineX = canvasDomX;
+                    const spineY = this.canvas.height - canvasDomY;
+                    
+                    console.log(`🗺️ Mouse: (${clientX}, ${clientY}) → Canvas: (${canvasDomX.toFixed(1)}, ${canvasDomY.toFixed(1)}) → Spine: (${spineX.toFixed(1)}, ${spineY.toFixed(1)})`);
+                };
+            }
             
-            // 🔧 デバッグモードコントロール
-            window.enableSpineDebugMode = () => {
-                window.spineDebugMode = true;
-                console.log(`🔍 Spineデバッグモード: 有効`);
-            };
+            // 🔍 自動マウス位置診断システム（開発モード限定）
+            if (Utils.isDevelopmentMode()) {
+                window.diagnoseCurrentMousePosition = () => {
+                    console.log(`🎯 マウスをクリックして座標診断を開始してください...`);
+                    
+                    const handleClick = (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        
+                        // 一度だけ実行してイベント削除
+                        document.removeEventListener('click', handleClick, true);
+                        
+                        // 診断実行
+                        window.diagnoseCoordinateLayers(event.clientX, event.clientY);
+                        
+                        console.log(`✅ 診断完了！マウス位置: (${event.clientX}, ${event.clientY})`);
+                    };
+                    
+                    // 次回クリックで診断実行
+                    document.addEventListener('click', handleClick, true);
+                };
+            }
             
-            window.disableSpineDebugMode = () => {
-                window.spineDebugMode = false;
-                console.log(`🔇 Spineデバッグモード: 無効`);
-            };
+            // 🔧 デバッグモードコントロール（開発モード限定）
+            if (Utils.isDevelopmentMode()) {
+                window.enableSpineDebugMode = () => {
+                    window.spineDebugMode = true;
+                    console.log(`🔍 Spineデバッグモード: 有効`);
+                };
+                
+                window.disableSpineDebugMode = () => {
+                    window.spineDebugMode = false;
+                    console.log(`🔇 Spineデバッグモード: 無効`);
+                };
+                
+                // 🔍 キャラクター一覧表示
+                window.listAllCharacters = () => {
+                    console.log(`📊 登録キャラクター一覧 (${this.characters.size}体):`);
+                    this.characters.forEach((character, characterId) => {
+                        console.log(`👾 ${character.name}(${characterId}):`);
+                        console.log(`  - Spine座標: (${character.skeleton?.x?.toFixed?.(1) || 'N/A'}, ${character.skeleton?.y?.toFixed?.(1) || 'N/A'})`);
+                        console.log(`  - スケール: ${character.scale || 'N/A'}`);
+                        console.log(`  - skeleton状態: ${!!character.skeleton}`);
+                    });
+                };
+            }
             
-            // 🔍 キャラクター一覧表示
-            window.listAllCharacters = () => {
-                console.log(`📊 登録キャラクター一覧 (${this.characters.size}体):`);
-                this.characters.forEach((character, characterId) => {
-                    console.log(`👾 ${character.name}(${characterId}):`);
-                    console.log(`  - Spine座標: (${character.skeleton?.x?.toFixed?.(1) || 'N/A'}, ${character.skeleton?.y?.toFixed?.(1) || 'N/A'})`);
-                    console.log(`  - スケール: ${character.scale || 'N/A'}`);
-                    console.log(`  - skeleton状態: ${!!character.skeleton}`);
-                });
-            };
+            if (Utils.isDevelopmentMode()) {
+                console.log('✅ SpinePreviewLayer初期化完了');
+                console.log('🔧 デバッグコマンド使用可能:');
+                console.log('  - window.fixRightUpOffset(右px, 上px) // マウス-ハンドル修正');
+                console.log('  - window.resetOffset() // リセット');
+                console.log('  - window.diagnoseCoordinateLayers(clientX, clientY) // 5層座標診断');
+                console.log('  - window.diagnoseCurrentMousePosition() // 自動マウス位置診断');
+                console.log('  - window.enableSpineDebugMode() // 詳細ログON');
+                console.log('  - window.disableSpineDebugMode() // 詳細ログOFF'); 
+                console.log('  - window.listAllCharacters() // キャラクター一覧');
+            } else {
+                console.log('✅ SpinePreviewLayer初期化完了');
+            }
             
-            console.log('✅ SpinePreviewLayer初期化完了');
-            console.log('🔧 デバッグコマンド使用可能:');
-            console.log('  - window.fixRightUpOffset(右px, 上px) // マウス-ハンドル修正');
-            console.log('  - window.resetOffset() // リセット');
-            console.log('  - window.diagnoseCoordinateLayers(clientX, clientY) // 5層座標診断');
-            console.log('  - window.diagnoseCurrentMousePosition() // 自動マウス位置診断');
-            console.log('  - window.enableSpineDebugMode() // 詳細ログON');
-            console.log('  - window.disableSpineDebugMode() // 詳細ログOFF'); 
-            console.log('  - window.listAllCharacters() // キャラクター一覧');
-            
-            // 🚨 緊急座標系テスト機能
-            window.testDirectCoordinate = function(x, y) {
-                console.log('🧪 直接座標テスト:', x, y);
-                const character = Object.values(window.spinePreviewLayer.characters)[0];
-                if (character && character.skeleton) {
-                    const dx = Math.abs(character.skeleton.x - x);
-                    const dy = Math.abs(character.skeleton.y - y);
-                    const distance = Math.sqrt(dx*dx + dy*dy);
-                    console.log('🎯 距離計算: キャラ(' + character.skeleton.x.toFixed(1) + ', ' + character.skeleton.y.toFixed(1) + ') vs テスト(' + x + ', ' + y + ') = ' + distance.toFixed(1) + 'px');
-                    return distance < 100;
-                } else {
-                    console.log('❌ キャラクターが見つからない');
+            // 🚨 緊急座標系テスト機能（開発モード限定）
+            if (Utils.isDevelopmentMode()) {
+                window.testDirectCoordinate = function(x, y) {
+                    console.log('🧪 直接座標テスト:', x, y);
+                    const character = Object.values(window.spinePreviewLayer.characters)[0];
+                    if (character && character.skeleton) {
+                        const dx = Math.abs(character.skeleton.x - x);
+                        const dy = Math.abs(character.skeleton.y - y);
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        console.log('🎯 距離計算: キャラ(' + character.skeleton.x.toFixed(1) + ', ' + character.skeleton.y.toFixed(1) + ') vs テスト(' + x + ', ' + y + ') = ' + distance.toFixed(1) + 'px');
+                        return distance < 100;
+                    } else {
+                        console.log('❌ キャラクターが見つからない');
+                        return false;
+                    }
+                };
+
+                // Y軸変換テスト
+                window.testYAxisConversion = function(clientX, clientY) {
+                    const rect = window.spinePreviewLayer.canvas.getBoundingClientRect();
+                    const rawY = clientY - rect.top;
+                    const spineY = window.spinePreviewLayer.canvas.height - rawY;
+                    const domY = window.spinePreviewLayer.canvas.height - spineY; // 逆変換
+                    
+                    console.log('🔄 Y軸変換テスト:');
+                    console.log('  Client Y: ' + clientY);
+                    console.log('  Raw Canvas Y: ' + rawY);
+                    console.log('  Spine Y: ' + spineY);
+                    console.log('  DOM Y (逆変換): ' + domY);
+                    console.log('  元のRaw Yと一致?: ' + (Math.abs(rawY - domY) < 0.1));
+                };
+
+                // 座標変換無効化テスト
+                window.testNoYAxisFlip = function(clientX, clientY) {
+                    const rect = window.spinePreviewLayer.canvas.getBoundingClientRect();
+                    const rawCanvasX = clientX - rect.left;
+                    const rawCanvasY = clientY - rect.top; // Y軸変換なし
+                    
+                    console.log('🚨 Y軸変換なしテスト:');
+                    console.log('  Client: (' + clientX + ', ' + clientY + ')');
+                    console.log('  Raw Canvas (変換なし): (' + rawCanvasX.toFixed(1) + ', ' + rawCanvasY.toFixed(1) + ')');
+                    
+                    // キャラクター検索
+                    const character = Object.values(window.spinePreviewLayer.characters)[0];
+                    if (character && character.skeleton) {
+                        const dx = Math.abs(character.skeleton.x - rawCanvasX);
+                        const dy = Math.abs(character.skeleton.y - rawCanvasY);
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        console.log('  距離 (変換なし): ' + distance.toFixed(1) + 'px');
+                        return distance < 100;
+                    }
                     return false;
-                }
-            };
-
-            // Y軸変換テスト
-            window.testYAxisConversion = function(clientX, clientY) {
-                const rect = window.spinePreviewLayer.canvas.getBoundingClientRect();
-                const rawY = clientY - rect.top;
-                const spineY = window.spinePreviewLayer.canvas.height - rawY;
-                const domY = window.spinePreviewLayer.canvas.height - spineY; // 逆変換
-                
-                console.log('🔄 Y軸変換テスト:');
-                console.log('  Client Y: ' + clientY);
-                console.log('  Raw Canvas Y: ' + rawY);
-                console.log('  Spine Y: ' + spineY);
-                console.log('  DOM Y (逆変換): ' + domY);
-                console.log('  元のRaw Yと一致?: ' + (Math.abs(rawY - domY) < 0.1));
-            };
-
-            // 座標変換無効化テスト
-            window.testNoYAxisFlip = function(clientX, clientY) {
-                const rect = window.spinePreviewLayer.canvas.getBoundingClientRect();
-                const rawCanvasX = clientX - rect.left;
-                const rawCanvasY = clientY - rect.top; // Y軸変換なし
-                
-                console.log('🚨 Y軸変換なしテスト:');
-                console.log('  Client: (' + clientX + ', ' + clientY + ')');
-                console.log('  Raw Canvas (変換なし): (' + rawCanvasX.toFixed(1) + ', ' + rawCanvasY.toFixed(1) + ')');
-                
-                // キャラクター検索
-                const character = Object.values(window.spinePreviewLayer.characters)[0];
-                if (character && character.skeleton) {
-                    const dx = Math.abs(character.skeleton.x - rawCanvasX);
-                    const dy = Math.abs(character.skeleton.y - rawCanvasY);
-                    const distance = Math.sqrt(dx*dx + dy*dy);
-                    console.log('  距離 (変換なし): ' + distance.toFixed(1) + 'px');
-                    return distance < 100;
-                }
-                return false;
-            };
-            console.log("🚨 緊急座標テスト関数:");
-            console.log("  - window.testDirectCoordinate(76, 258) // nezumi位置直接テスト");
-            console.log("  - window.testNoYAxisFlip(clientX, clientY) // Y軸変換無効化テスト");
-            console.log('📋 使用例: 1) window.enableSpineDebugMode() 2) キャラクタークリック → 詳細ログ確認');
+                };
+                console.log("🚨 緊急座標テスト関数:");
+                console.log("  - window.testDirectCoordinate(76, 258) // nezumi位置直接テスト");
+                console.log("  - window.testNoYAxisFlip(clientX, clientY) // Y軸変換無効化テスト");
+                console.log('📋 使用例: 1) window.enableSpineDebugMode() 2) キャラクタークリック → 詳細ログ確認');
+            }
             return true;
             
         } catch (error) {
@@ -719,7 +706,7 @@ export class SpinePreviewLayer {
         const canvasY = centerY - dprCorrectedY; // Y軸反転 + 中央原点
         
         // 🔍 変換プロセスの詳細ログ（デバッグ時のみ）
-        if (this.selectedCharacterId || window.spineDebugMode) {
+        if (Utils.isDevelopmentMode() || this.selectedCharacterId || window.spineDebugMode) {
             console.log('🔄 座標変換プロセス（完全修正版）:');
             console.log('  1. Client: (' + clientX + ', ' + clientY + ')');
             console.log('  2. Canvas Rect: (' + rect.left.toFixed(1) + ', ' + rect.top.toFixed(1) + ') ' + rect.width.toFixed(1) + 'x' + rect.height.toFixed(1));
@@ -751,25 +738,30 @@ export class SpinePreviewLayer {
             return;
         }
 
-        console.log(`🔧 マウスイベントハンドラー設定開始 - Canvas ID: ${this.canvas.id}`);
+        if (Utils.isDevelopmentMode()) {
+            console.log(`🔧 マウスイベントハンドラー設定開始 - Canvas ID: ${this.canvas.id}`);
+        }
 
         // マウスダウンイベント
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        console.log(`✅ mousedown イベント設定完了 - Canvas`);
         
         // マウスムーブイベント（ドキュメント全体で監視）
         document.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        console.log(`✅ mousemove イベント設定完了 - Document`);
         
         // マウスアップイベント（ドキュメント全体で監視）
         document.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        console.log(`✅ mouseup イベント設定完了 - Document`);
 
-        // 🔍 イベントハンドラー設定確認のためのテスト
-        this.canvas.addEventListener('click', (event) => {
-            console.log(`🔍 TEST CLICK FIRED - Canvas正常動作確認済み`);
-        });
-        console.log(`✅ テスト用clickイベント設定完了`);
+        if (Utils.isDevelopmentMode()) {
+            console.log(`✅ mousedown イベント設定完了 - Canvas`);
+            console.log(`✅ mousemove イベント設定完了 - Document`);
+            console.log(`✅ mouseup イベント設定完了 - Document`);
+
+            // 🔍 イベントハンドラー設定確認のためのテスト
+            this.canvas.addEventListener('click', (event) => {
+                console.log(`🔍 TEST CLICK FIRED - Canvas正常動作確認済み`);
+            });
+            console.log(`✅ テスト用clickイベント設定完了`);
+        }
         
     }
 
@@ -778,34 +770,44 @@ export class SpinePreviewLayer {
      * @param {MouseEvent} event - マウスイベント
      */
     handleMouseDown(event) {
-        console.log(`🔍 MOUSE DOWN FIRED on canvas - Client(${event.clientX}, ${event.clientY})`);
+        if (Utils.isDevelopmentMode() || this.selectedCharacterId || window.spineDebugMode) {
+            console.log(`🔍 MOUSE DOWN FIRED on canvas - Client(${event.clientX}, ${event.clientY})`);
+        }
+        
         if (!this.canvas || this.characters.size === 0) {
-            console.log(`❌ No canvas or no characters: canvas=${!!this.canvas}, chars=${this.characters.size}`);
+            if (Utils.isDevelopmentMode()) {
+                console.log(`❌ No canvas or no characters: canvas=${!!this.canvas}, chars=${this.characters.size}`);
+            }
             return;
         }
 
         // Canvas座標に変換（詳細診断版）
         const canvasCoords = this.clientToCanvasCoordinates(event.clientX, event.clientY);
-        console.log(`🎯 Canvas座標変換完了: Client(${event.clientX}, ${event.clientY}) → Canvas(${canvasCoords.x.toFixed(1)}, ${canvasCoords.y.toFixed(1)})`);
         
-        // 🔍 Canvas情報の詳細確認
-        const rect = this.canvas.getBoundingClientRect();
-        console.log(`📊 Canvas詳細情報:`);
-        console.log(`  - Canvas実サイズ: ${this.canvas.width}x${this.canvas.height}px`);
-        console.log(`  - Canvas DOM矩形: (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)}) ${rect.width.toFixed(1)}x${rect.height.toFixed(1)}px`);
-        console.log(`  - 変換計算: Raw(${event.clientX - rect.left}, ${event.clientY - rect.top}) → Spine(${canvasCoords.x.toFixed(1)}, ${this.canvas.height - (event.clientY - rect.top)})`);
+        if (Utils.isDevelopmentMode() || this.selectedCharacterId || window.spineDebugMode) {
+            console.log(`🎯 Canvas座標変換完了: Client(${event.clientX}, ${event.clientY}) → Canvas(${canvasCoords.x.toFixed(1)}, ${canvasCoords.y.toFixed(1)})`);
+            
+            // 🔍 Canvas情報の詳細確認
+            const rect = this.canvas.getBoundingClientRect();
+            console.log(`📊 Canvas詳細情報:`);
+            console.log(`  - Canvas実サイズ: ${this.canvas.width}x${this.canvas.height}px`);
+            console.log(`  - Canvas DOM矩形: (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)}) ${rect.width.toFixed(1)}x${rect.height.toFixed(1)}px`);
+            console.log(`  - 変換計算: Raw(${event.clientX - rect.left}, ${event.clientY - rect.top}) → Spine(${canvasCoords.x.toFixed(1)}, ${this.canvas.height - (event.clientY - rect.top)})`);
+        }
         
         // キャラクター選択判定
         const selectedCharacter = this.getCharacterAtPosition(canvasCoords.x, canvasCoords.y);
         
         if (selectedCharacter) {
-            console.log(`🎯 CHARACTER SELECTED: ${selectedCharacter.name} (${selectedCharacter.id})`);
-            console.log(`🎯 キャラクター現在位置: Spine(${selectedCharacter.skeleton.x.toFixed(1)}, ${selectedCharacter.skeleton.y.toFixed(1)})`);
-            
-            // 🔍 初期オフセット測定
-            const initialOffsetX = canvasCoords.x - selectedCharacter.skeleton.x;
-            const initialOffsetY = canvasCoords.y - selectedCharacter.skeleton.y;
-            console.log(`🔍 初期オフセット測定: Mouse vs Spine = (${initialOffsetX.toFixed(1)}, ${initialOffsetY.toFixed(1)})`);
+            if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+                console.log(`🎯 CHARACTER SELECTED: ${selectedCharacter.name} (${selectedCharacter.id})`);
+                console.log(`🎯 キャラクター現在位置: Spine(${selectedCharacter.skeleton.x.toFixed(1)}, ${selectedCharacter.skeleton.y.toFixed(1)})`);
+                
+                // 🔍 初期オフセット測定
+                const initialOffsetX = canvasCoords.x - selectedCharacter.skeleton.x;
+                const initialOffsetY = canvasCoords.y - selectedCharacter.skeleton.y;
+                console.log(`🔍 初期オフセット測定: Mouse vs Spine = (${initialOffsetX.toFixed(1)}, ${initialOffsetY.toFixed(1)})`);
+            }
             
             this.isDragging = true;
             this.selectedCharacterId = selectedCharacter.id;
@@ -826,7 +828,9 @@ export class SpinePreviewLayer {
             this.canvas.style.cursor = 'grabbing';
             this.updateVisualFeedback();
         } else {
-            console.log(`❌ キャラクター未発見: 検索座標(${canvasCoords.x.toFixed(1)}, ${canvasCoords.y.toFixed(1)})`);
+            if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+                console.log(`❌ キャラクター未発見: 検索座標(${canvasCoords.x.toFixed(1)}, ${canvasCoords.y.toFixed(1)})`);
+            }
         }
     }
 
@@ -862,35 +866,39 @@ export class SpinePreviewLayer {
      * @param {MouseEvent} event - マウスイベント
      */
     handleMouseUp(event) {
-        console.log(`🔍 MOUSE UP FIRED: dragging=${this.isDragging}, selected=${this.selectedCharacterId}, client(${event.clientX}, ${event.clientY})`);
+        if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+            console.log(`🔍 MOUSE UP FIRED: dragging=${this.isDragging}, selected=${this.selectedCharacterId}, client(${event.clientX}, ${event.clientY})`);
+        }
         
         if (this.isDragging && this.selectedCharacterId) {
             // 🎯 右上ズレ診断：マウス位置 vs Spine位置の正確な差分測定
             const canvasCoords = this.clientToCanvasCoordinates(event.clientX, event.clientY);
             const character = this.characters.get(this.selectedCharacterId);
             
-            console.log(`🎯 ドロップ時詳細診断:`);
-            console.log(`  - マウス位置(Canvas): (${canvasCoords.x.toFixed(1)}, ${canvasCoords.y.toFixed(1)})`);
-            
-            if (character && character.skeleton) {
-                const offsetX = canvasCoords.x - character.skeleton.x;
-                const offsetY = canvasCoords.y - character.skeleton.y;
-                const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+            if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+                console.log(`🎯 ドロップ時詳細診断:`);
+                console.log(`  - マウス位置(Canvas): (${canvasCoords.x.toFixed(1)}, ${canvasCoords.y.toFixed(1)})`);
                 
-                console.log(`  - キャラ位置(Spine): (${character.skeleton.x.toFixed(1)}, ${character.skeleton.y.toFixed(1)})`);
-                console.log(`  - オフセット: (${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`);
-                console.log(`  - 距離: ${distance.toFixed(1)}px`);
-                
-                // 🚨 右上ズレの具体的判定
-                if (Math.abs(offsetX) > 5 || Math.abs(offsetY) > 5) {
-                    console.log(`🚨 POSITION MISMATCH DETECTED!`);
-                    console.log(`  右ズレ: ${offsetX.toFixed(1)}px (${offsetX > 0 ? '右' : '左'})`);
-                    console.log(`  上ズレ: ${offsetY.toFixed(1)}px (${offsetY > 0 ? '上' : '下'})`);
+                if (character && character.skeleton) {
+                    const offsetX = canvasCoords.x - character.skeleton.x;
+                    const offsetY = canvasCoords.y - character.skeleton.y;
+                    const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+                    
+                    console.log(`  - キャラ位置(Spine): (${character.skeleton.x.toFixed(1)}, ${character.skeleton.y.toFixed(1)})`);
+                    console.log(`  - オフセット: (${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`);
+                    console.log(`  - 距離: ${distance.toFixed(1)}px`);
+                    
+                    // 🚨 右上ズレの具体的判定
+                    if (Math.abs(offsetX) > 5 || Math.abs(offsetY) > 5) {
+                        console.log(`🚨 POSITION MISMATCH DETECTED!`);
+                        console.log(`  右ズレ: ${offsetX.toFixed(1)}px (${offsetX > 0 ? '右' : '左'})`);
+                        console.log(`  上ズレ: ${offsetY.toFixed(1)}px (${offsetY > 0 ? '上' : '下'})`);
+                    } else {
+                        console.log(`✅ 位置精度良好: ${distance.toFixed(1)}px以内`);
+                    }
                 } else {
-                    console.log(`✅ 位置精度良好: ${distance.toFixed(1)}px以内`);
+                    console.log(`❌ キャラクター取得失敗: ${this.selectedCharacterId}`);
                 }
-            } else {
-                console.log(`❌ キャラクター取得失敗: ${this.selectedCharacterId}`);
             }
             
             const overlay = this.visualOverlays.get(this.selectedCharacterId);
@@ -908,7 +916,9 @@ export class SpinePreviewLayer {
             
             this.updateVisualFeedback();
         } else {
-            console.log(`❌ マウスアップ処理スキップ: dragging=${this.isDragging}, selected=${this.selectedCharacterId}`);
+            if (Utils.isDevelopmentMode()) {
+                console.log(`❌ マウスアップ処理スキップ: dragging=${this.isDragging}, selected=${this.selectedCharacterId}`);
+            }
         }
     }
 
@@ -919,41 +929,55 @@ export class SpinePreviewLayer {
      * @returns {object|null} ヒットしたキャラクター、なければnull
      */
     getCharacterAtPosition(x, y) {
-        console.log(`🔍 === キャラクター検索開始 ===`);
-        console.log(`🎯 検索座標: Canvas(${x?.toFixed?.(1) || x}, ${y?.toFixed?.(1) || y})`);
+        if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+            console.log(`🔍 === キャラクター検索開始 ===`);
+            console.log(`🎯 検索座標: Canvas(${x?.toFixed?.(1) || x}, ${y?.toFixed?.(1) || y})`);
+        }
         
         if (!x && x !== 0 || !y && y !== 0) {
-            console.warn('⚠️ 無効な座標:', { x, y });
+            if (Utils.isDevelopmentMode()) {
+                console.warn('⚠️ 無効な座標:', { x, y });
+            }
             return null;
         }
 
         // 🔧 検索範囲を拡大（50px → 100px）
         const hitRadius = 100; // ヒット判定半径（px）
-        console.log(`🔍 ヒット判定範囲: ${hitRadius}px`);
         
-        // 🔍 全キャラクター情報をログ出力
-        console.log(`📊 登録キャラクター数: ${this.characters.size}`);
-        this.characters.forEach((character, characterId) => {
-            if (character && character.skeleton) {
-                console.log(`👾 ${character.name}(${characterId}): Spine(${character.skeleton.x?.toFixed?.(1) || character.skeleton.x}, ${character.skeleton.y?.toFixed?.(1) || character.skeleton.y})`);
-            } else {
-                console.log(`❌ 破損キャラクター: ${character?.name || 'Unknown'}(${characterId}) - skeleton: ${!!character?.skeleton}`);
-            }
-        });
+        if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+            console.log(`🔍 ヒット判定範囲: ${hitRadius}px`);
+            
+            // 🔍 全キャラクター情報をログ出力
+            console.log(`📊 登録キャラクター数: ${this.characters.size}`);
+            this.characters.forEach((character, characterId) => {
+                if (character && character.skeleton) {
+                    console.log(`👾 ${character.name}(${characterId}): Spine(${character.skeleton.x?.toFixed?.(1) || character.skeleton.x}, ${character.skeleton.y?.toFixed?.(1) || character.skeleton.y})`);
+                } else {
+                    console.log(`❌ 破損キャラクター: ${character?.name || 'Unknown'}(${characterId}) - skeleton: ${!!character?.skeleton}`);
+                }
+            });
+        }
         
         // すべてのキャラクターをチェック（後から追加されたものが優先）
         const characterArray = Array.from(this.characters.values()).reverse();
-        console.log(`🔍 検索対象配列: ${characterArray.length}個のキャラクター`);
+        
+        if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+            console.log(`🔍 検索対象配列: ${characterArray.length}個のキャラクター`);
+        }
         
         for (const character of characterArray) {
             try {
                 if (!character) {
-                    console.log(`❌ nullキャラクタースキップ`);
+                    if (Utils.isDevelopmentMode()) {
+                        console.log(`❌ nullキャラクタースキップ`);
+                    }
                     continue;
                 }
                 
                 if (!character.skeleton) {
-                    console.log(`❌ skeletonなしキャラクタースキップ: ${character.name}`);
+                    if (Utils.isDevelopmentMode()) {
+                        console.log(`❌ skeletonなしキャラクタースキップ: ${character.name}`);
+                    }
                     continue;
                 }
                 
@@ -965,13 +989,19 @@ export class SpinePreviewLayer {
                 const deltaY = y - charY;
                 const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                 
-                console.log(`🔍 ${character.name}: 座標差分(${deltaX.toFixed(1)}, ${deltaY.toFixed(1)}) 距離=${distance.toFixed(1)}px (判定範囲${hitRadius}px)`);
+                if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+                    console.log(`🔍 ${character.name}: 座標差分(${deltaX.toFixed(1)}, ${deltaY.toFixed(1)}) 距離=${distance.toFixed(1)}px (判定範囲${hitRadius}px)`);
+                }
                 
                 if (distance <= hitRadius) {
-                    console.log(`✅ キャラクター発見: ${character.name} - 距離${distance.toFixed(1)}px <= ${hitRadius}px`);
+                    if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+                        console.log(`✅ キャラクター発見: ${character.name} - 距離${distance.toFixed(1)}px <= ${hitRadius}px`);
+                    }
                     return character;
                 } else {
-                    console.log(`❌ 範囲外: ${character.name} - 距離${distance.toFixed(1)}px > ${hitRadius}px`);
+                    if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+                        console.log(`❌ 範囲外: ${character.name} - 距離${distance.toFixed(1)}px > ${hitRadius}px`);
+                    }
                 }
             } catch (error) {
                 console.error('❌ キャラクターヒット判定エラー:', character?.name, error);
@@ -979,8 +1009,10 @@ export class SpinePreviewLayer {
             }
         }
         
-        console.log(`❌ キャラクター検索結果: 見つからませんでした`);
-        console.log(`🔍 === キャラクター検索終了 ===`);
+        if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+            console.log(`❌ キャラクター検索結果: 見つからませんでした`);
+            console.log(`🔍 === キャラクター検索終了 ===`);
+        }
         return null;
     }
 
@@ -1196,7 +1228,9 @@ export class SpinePreviewLayer {
         const spineX = character.skeleton.x;
         const spineY = character.skeleton.y;
         
-        console.log(`🔧 ハンドル計算前: キャラクター位置 Spine(${spineX.toFixed(1)}, ${spineY.toFixed(1)}), Canvas size: ${this.canvas.width}x${this.canvas.height}`);
+        if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+            console.log(`🔧 ハンドル計算前: キャラクター位置 Spine(${spineX.toFixed(1)}, ${spineY.toFixed(1)}), Canvas size: ${this.canvas.width}x${this.canvas.height}`);
+        }
         
         // 🚨 重要: ドラッグ時と同じ座標変換を適用（DPR補正統一）
         const dpr = window.devicePixelRatio || 1;
@@ -1215,7 +1249,9 @@ export class SpinePreviewLayer {
         const handleDomX = domX - 50;
         const handleDomY = domY - 50;
         
-        console.log(`🔧 ハンドル位置統一変換: Spine(${spineX.toFixed(1)}, ${spineY.toFixed(1)}) → 中央原点(${centerOriginX.toFixed(1)}, ${centerOriginY.toFixed(1)}) → DPR補正(${domX.toFixed(1)}, ${domY.toFixed(1)}) → Handle DOM(${handleDomX.toFixed(1)}, ${handleDomY.toFixed(1)})`);
+        if (Utils.isDevelopmentMode() || window.spineDebugMode) {
+            console.log(`🔧 ハンドル位置統一変換: Spine(${spineX.toFixed(1)}, ${spineY.toFixed(1)}) → 中央原点(${centerOriginX.toFixed(1)}, ${centerOriginY.toFixed(1)}) → DPR補正(${domX.toFixed(1)}, ${domY.toFixed(1)}) → Handle DOM(${handleDomX.toFixed(1)}, ${handleDomY.toFixed(1)})`);
+        }
 
         overlay.style.left = `${handleDomX}px`;
         overlay.style.top = `${handleDomY}px`;
