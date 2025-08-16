@@ -24,7 +24,7 @@ export class DemoApp {
         this.spineCharacterManager = new SpineCharacterManager();
         this.previewManager = new PreviewManager();
         this.packageExporter = new PackageExporter();
-        this.spinePreviewLayer = new SpinePreviewLayer();
+        this.spinePreviewLayer = null; // 後で初期化
         
         // Spine System初期化
         this.spineCore = null;
@@ -142,8 +142,11 @@ export class DemoApp {
                 return;
             }
 
-            // SpinePreviewLayer初期化（元の実装）
-            const success = await this.spinePreviewLayer.initialize(previewContent);
+            // SpinePreviewLayer インスタンス作成（containerを渡す）
+            this.spinePreviewLayer = new SpinePreviewLayer(previewContent);
+
+            // SpinePreviewLayer初期化（新しい実装に対応）
+            const success = await this.spinePreviewLayer.initialize();
             if (success) {
                 console.log('✅ SpinePreviewLayer初期化完了');
             } else {

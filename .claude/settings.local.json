@@ -45,8 +45,11 @@
       "Bash(npm install)",
       "Bash(timeout 30 npm start)",
       "Bash(npm --version)",
-      "Bash(jobs)"
+      "Bash(jobs)",
+      "WebSearch",
+      "Bash(tree:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

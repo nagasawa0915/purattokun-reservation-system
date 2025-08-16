@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine WebGL テスト - シンプル版</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        
+        #container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #4a90e2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .status {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .status-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        #spine-canvas {
+            display: block;
+            margin: 20px auto;
+            border: 2px solid #ddd;
+            background: #ffffff;
+        }
+        
+        .controls {
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        
+        button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #4a90e2;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #357abd;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .log-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+        
+        #log-output {
+            height: 200px;
+            overflow-y: auto;
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="header">
+            <h1>🔎 Spine WebGL 読み込みテスト</h1>
+            <p>シンプルなElectronアプリでSpine読み込みをテスト</p>
+        </div>
+        
+        <div class="status">
+            <div id="status-spine" class="status-item status-pending">
+                🔄 Spine WebGLライブラリ: 読み込み中...
+            </div>
+            <div id="status-assets" class="status-item status-pending">
+                🔄 Spineアセット: 未読み込み
+            </div>
+            <div id="status-animation" class="status-item status-pending">
+                🔄 アニメーション: 未開始
+            </div>
+        </div>
+        
+        <canvas id="spine-canvas" width="400" height="400"></canvas>
+        
+        <div class="controls">
+            <button id="btn-load" onclick="loadSpineCharacter()" disabled>📋 アセット読み込み</button>
+            <button id="btn-play-taiki" onclick="playAnimation('taiki')" disabled>▶️ taikiアニメ再生</button>
+            <button id="btn-play-syutugen" onclick="playAnimation('syutugen')" disabled>▶️ syutugenアニメ再生</button>
+            <button id="btn-clear-log" onclick="clearLog()">🗑️ ログクリア</button>
+        </div>
+        
+        <div class="log-section">
+            <h3>📊 詳細ログ</h3>
+            <div id="log-output"></div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL 4.1.24 CDN -->
+    <script src="https://esotericsoftware.com/files/runtimes/spine-webgl/4.1/spine-webgl.min.js"></script>
+    
+    <script src="spine-test.js"></script>
+</body>
+</html>

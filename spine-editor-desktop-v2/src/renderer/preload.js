@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fs: {
     // 基本ファイル操作
     readFile: (filePath) => ipcRenderer.invoke('fs-read-file', filePath),
+    readFileBinary: (filePath) => ipcRenderer.invoke('fs-read-file-binary', filePath),
     writeFile: (filePath, data) => ipcRenderer.invoke('fs-write-file', filePath, data),
     
     // フォルダ・ディレクトリ操作

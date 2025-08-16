@@ -347,7 +347,7 @@ class SpineManager {
       if (!window.electronAPI) continue;
       
       try {
-        const result = await window.electronAPI.readFile(path);
+        const result = await window.electronAPI.fs.readFile(path);
         if (!result.success) {
           throw new Error(`File not found: ${path}`);
         }
@@ -566,8 +566,9 @@ class SpineManager {
   applyCharacterTransform(charData) {
     if (!this.skeleton) return;
     
-    if (charData.x !== undefined) this.skeleton.x = charData.x;
-    if (charData.y !== undefined) this.skeleton.y = charData.y;
+    // 🚀 今回実験で証明された最シンプル実装: 常に0で固定
+    this.skeleton.x = 0;
+    this.skeleton.y = 0;
     if (charData.scaleX !== undefined) this.skeleton.scaleX = charData.scaleX;
     if (charData.scaleY !== undefined) this.skeleton.scaleY = charData.scaleY;
     
@@ -663,8 +664,9 @@ class SpineManager {
     this.viewOffset = { x: 0, y: 0 };
     
     if (this.skeleton && this.currentCharacter) {
-      this.skeleton.x = this.currentCharacter.x || 400;
-      this.skeleton.y = this.currentCharacter.y || 300;
+      // 🚀 常にシンプル座標に統一
+      this.skeleton.x = 0;
+      this.skeleton.y = 0;
       this.skeleton.scaleX = this.currentCharacter.scaleX || 0.5;
       this.skeleton.scaleY = this.currentCharacter.scaleY || 0.5;
     }
@@ -698,11 +700,13 @@ class SpineManager {
     
     switch (property) {
       case 'posX':
-        this.skeleton.x = value;
+        // 🚀 位置は常に0で固定（シンプル実装）
+        this.skeleton.x = 0;
         character.x = value;
         break;
       case 'posY':
-        this.skeleton.y = value;
+        // 🚀 位置は常に0で固定（シンプル実装）  
+        this.skeleton.y = 0;
         character.y = value;
         break;
       case 'scaleX':

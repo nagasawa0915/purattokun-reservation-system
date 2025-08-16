@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://unpkg.com; connect-src 'self' https://unpkg.com data:; font-src 'self' data:;">
+    <title>Spine Editor Desktop v3.0</title>
+    
+    <!-- 🎨 メインスタイル -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- 🎯 編集システムスタイル（動的読み込み） -->
+    <!-- spine-edit/spine-positioning-system-explanation.css は必要時に動的読み込み -->
+</head>
+<body>
+    <!-- 🚀 アプリケーションヘッダー -->
+    <header class="app-header">
+        <div class="header-content">
+            <h1 class="app-title">
+                <span class="app-icon">🎯</span>
+                Spine Editor Desktop v3.0
+            </h1>
+            <div class="header-actions">
+                <button id="toggle-edit-mode" class="btn btn-primary" disabled>
+                    📝 編集モード
+                </button>
+                <button id="export-project" class="btn btn-success" disabled>
+                    📦 エクスポート
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 📁 プロジェクト管理パネル -->
+    <aside class="project-panel" id="project-panel">
+        <div class="panel-header">
+            <h3>📁 プロジェクト</h3>
+            <button id="panel-toggle" class="btn btn-sm">−</button>
+        </div>
+        
+        <div class="panel-content" id="panel-content">
+            <!-- プロジェクト未選択状態 -->
+            <div id="no-project-state" class="no-project">
+                <div class="no-project-icon">📂</div>
+                <p>プロジェクトが選択されていません</p>
+                <button id="open-folder-btn" class="btn btn-primary btn-large">
+                    📁 Spineフォルダを開く
+                </button>
+            </div>
+            
+            <!-- プロジェクト読み込み中 -->
+            <div id="loading-state" class="loading-state" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>プロジェクトを読み込み中...</p>
+            </div>
+            
+            <!-- プロジェクト情報表示 -->
+            <div id="project-info" class="project-info" style="display: none;">
+                <div class="project-header">
+                    <h4 id="project-name">プロジェクト名</h4>
+                    <p id="project-path" class="project-path">パス</p>
+                </div>
+                
+                <div class="characters-list">
+                    <h5>🎭 キャラクター</h5>
+                    <div id="characters-container" class="characters-container">
+                        <!-- 動的に生成される -->
+                    </div>
+                </div>
+                
+                <div class="project-actions">
+                    <button id="save-project-btn" class="btn btn-success btn-sm">
+                        💾 保存
+                    </button>
+                    <button id="close-project-btn" class="btn btn-secondary btn-sm">
+                        ✕ 閉じる
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 🎬 メインエディタエリア -->
+    <main class="main-editor" id="main-editor">
+        <!-- シーンコンテナ -->
+        <div class="scene-container" id="scene-container">
+            <!-- 背景画像（プレースホルダー） -->
+            <div class="background-placeholder" id="background-placeholder">
+                <div class="placeholder-content">
+                    <div class="placeholder-icon">🎨</div>
+                    <h3>Spine Editor Desktop v3.0</h3>
+                    <p>Spineフォルダを開いてキャラクターの配置編集を開始</p>
+                    <ul class="feature-list">
+                        <li>✨ ドラッグ&ドロップでキャラクター移動</li>
+                        <li>🎯 精密なバウンディングボックス編集</li>
+                        <li>📐 リアルタイム座標表示</li>
+                        <li>💾 プロジェクト保存・エクスポート</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Spineキャラクターが動的に追加される -->
+            <!-- <canvas id="character-canvas" data-character-name="name"></canvas> -->
+        </div>
+    </main>
+
+    <!-- 🎯 編集システムUI（動的に追加される） -->
+    <!-- spine-edit システムのUIパネルがここに挿入される -->
+
+    <!-- 📊 ステータスバー -->
+    <footer class="status-bar">
+        <div class="status-left">
+            <span id="app-status">準備完了</span>
+        </div>
+        <div class="status-right">
+            <span id="coordinates-display">座標: --</span>
+            <span class="separator">|</span>
+            <span id="app-version">v3.0.0</span>
+        </div>
+    </footer>
+
+    <!-- 🔧 JavaScriptライブラリ -->
+    
+    <!-- Spine WebGL Runtime（ローカル版使用） -->
+    <script src="assets/spine/spine-webgl.js"></script>
+    
+    <!-- アプリケーションスクリプト -->
+    <script src="app.js"></script>
+    
+    <!-- プロジェクト管理 -->
+    <script src="project-manager.js"></script>
+    
+    <!-- Spineフォールバックシステム -->
+    <script src="spine-fallback.js"></script>
+    
+    <!-- Spine統合システム -->
+    <script src="spine-integration.js"></script>
+    
+    <!-- 編集システム（動的読み込み） -->
+    <!-- spine-edit/spine-positioning-system-explanation.js は必要時に動的読み込み -->
+</body>
+</html>

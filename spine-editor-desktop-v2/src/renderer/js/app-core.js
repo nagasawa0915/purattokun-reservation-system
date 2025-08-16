@@ -149,8 +149,40 @@ export class SpineEditorCore {
    * Spineキャラクタードロップ処理
    */
   async handleSpineCharacterDrop(spineData, dropEvent) {
+    // SpinePreviewLayerを優先使用
+    if (this.spinePreviewLayer) {
+      try {
+        // ドロップ位置計算
+        const rect = dropEvent.currentTarget.getBoundingClientRect();
+        const x = dropEvent.clientX - rect.left;
+        const y = dropEvent.clientY - rect.top;
+        
+        console.log(`🎭 Adding character "${spineData.name}" at position (${x}, ${y})`);
+        
+        // SpinePreviewLayerでキャラクターを追加
+        const result = await this.spinePreviewLayer.addCharacter(spineData, x, y);
+        
+        if (result.success) {
+          // プロジェクト状態更新
+          this.markProjectModified();
+          this.utils.updateInspectorPanel();
+          
+          console.log('✅ Spine character dropped successfully:', spineData.name);
+          this.utils.setStatus(`🎭 Character "${spineData.name}" added to scene (LIVE)`);
+          return;
+        } else {
+          console.warn('⚠️ SpinePreviewLayer failed, trying fallback');
+        }
+        
+      } catch (error) {
+        console.error('❌ SpinePreviewLayer error:', error);
+      }
+    }
+    
+    // フォールバック: 従来システム
     if (!this.spine) {
-      console.warn('⚠️ Spine system not initialized');
+      console.warn('⚠️ No Spine system available');
+      this.utils.setStatus('Spine system not available', 'error');
       return;
     }
     
@@ -160,14 +192,14 @@ export class SpineEditorCore {
       const x = dropEvent.clientX - rect.left;
       const y = dropEvent.clientY - rect.top;
       
-      // Spineキャラクターを配置
+      // 従来システムでSpineキャラクターを配置
       await this.spine.loadCharacterAtPosition(spineData, x, y);
       
       // プロジェクト状態更新
       this.markProjectModified();
       this.utils.updateInspectorPanel();
       
-      console.log('✅ Spine character dropped successfully:', spineData.name);
+      console.log('✅ Spine character dropped successfully (fallback):', spineData.name);
       this.utils.setStatus(`Character "${spineData.name}" added to scene`);
       
     } catch (error) {
@@ -180,16 +212,51 @@ export class SpineEditorCore {
    * Spine初期化
    */
   async initSpine() {
-    // SpineWebGLRenderer初期化を優先
-    await this.initSpineWebGLRenderer();
+    // SpinePreviewLayer初期化（シンプル版）
+    await this.initSpinePreviewLayer();
     
     if (typeof SpineManager === 'undefined') {
-      throw new Error('SpineManager not found');
+      console.warn('⚠️ SpineManager not found, using SpinePreviewLayer only');
+      return;
     }
     
     this.spine = new SpineManager(this);
     await this.spine.init();
     console.log('✅ Spine Manager initialized');
+  }
+
+  /**
+   * SpinePreviewLayer初期化（シンプル版）
+   */
+  async initSpinePreviewLayer() {
+    // SpinePreviewLayerモジュールを動的インポート
+    try {
+      const { SpinePreviewLayer } = await import('../spine-preview-layer.js');
+      
+      const viewport = document.getElementById('spine-viewport');
+      if (!viewport) {
+        throw new Error('spine-viewport element not found');
+      }
+      
+      // SpinePreviewLayer インスタンス作成（container渡し）
+      this.spinePreviewLayer = new SpinePreviewLayer(viewport);
+      
+      // 初期化実行
+      const success = await this.spinePreviewLayer.initialize();
+      
+      if (success) {
+        console.log('✅ SpinePreviewLayer initialized');
+        this.utils.setStatus('Spine preview layer ready');
+      } else {
+        throw new Error('SpinePreviewLayer initialization failed');
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize SpinePreviewLayer:', error);
+      this.spinePreviewLayer = null;
+      // フォールバック処理
+      await this.initSpineWebGLRenderer();
+    }
   }
 
   /**

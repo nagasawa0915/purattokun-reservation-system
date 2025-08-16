@@ -1,0 +1,51 @@
+{
+  "name": "spine-editor-desktop-v3",
+  "version": "3.0.0",
+  "description": "Spine Character Positioning Editor - Desktop Version 3.0",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": [
+    "spine",
+    "animation",
+    "editor",
+    "positioning",
+    "desktop"
+  ],
+  "author": "Spine Positioning System",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.3.11",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "fs-extra": "^11.0.0",
+    "path": "^0.12.7"
+  },
+  "build": {
+    "appId": "com.spine.editor.desktop.v3",
+    "productName": "Spine Editor Desktop v3",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "homepage": "https://github.com/spine-editor/desktop-v3"
+}

@@ -263,8 +263,9 @@ class IframeSpineLoader {
                     const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
                     
                     // 位置とスケールを設定
-                    skeleton.x = position.x;
-                    skeleton.y = position.y;
+                    // 🚀 今回実験で証明された最シンプル実装
+                    skeleton.x = 0;
+                    skeleton.y = 0;
                     skeleton.scaleX = scale;
                     skeleton.scaleY = scale;
                     
@@ -310,8 +311,9 @@ class IframeSpineLoader {
         try {
             // 位置更新
             if (position) {
-                character.spine.skeleton.x = position.x;
-                character.spine.skeleton.y = position.y;
+                // 🚀 今回実験で証明された最シンプル実装
+                character.spine.skeleton.x = 0;
+                character.spine.skeleton.y = 0;
                 character.position = position;
             }
             

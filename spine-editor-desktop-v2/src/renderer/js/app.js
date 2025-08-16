@@ -142,7 +142,11 @@ class SpineEditorApp {
 let app;
 
 document.addEventListener('DOMContentLoaded', () => {
-  app = new SpineEditorApp();
+  // CDN読み込み完了を待ってから初期化（マニュアル準拠）
+  setTimeout(() => {
+    console.log('🚀 アプリケーション初期化開始 - CDN読み込み待機後');
+    app = new SpineEditorApp();
+  }, 1000); // 1秒待機でCDN読み込み確保
 });
 
 window.addEventListener('beforeunload', () => {

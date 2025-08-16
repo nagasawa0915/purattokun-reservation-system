@@ -289,6 +289,16 @@ ipcMain.handle('fs-read-file', async (event, filePath) => {
   }
 });
 
+ipcMain.handle('fs-read-file-binary', async (event, filePath) => {
+  try {
+    const data = await fs.promises.readFile(filePath);
+    // ArrayBufferとして返す
+    return { success: true, data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('fs-write-file', async (event, filePath, data) => {
   try {
     // Uint8Array（バイナリ）またはstring（テキスト）を自動判定して書き込み

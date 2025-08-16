@@ -5,6 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spine Editor Desktop v2.0</title>
     <link rel="stylesheet" href="css/main.css">
+    
+    <!-- Spine WebGL Library (Webアプリ版コピー - 動作確認済み) -->
+    <script src="assets/spine/spine-webgl-working.js"></script>
+    
+    <!-- デバッグ用即座チェック -->
+    <script>
+        console.log('🔍 HTML読み込み直後のSpine状態:');
+        console.log('  - typeof spine:', typeof spine);
+        console.log('  - typeof window.spine:', typeof window.spine);
+        console.log('  - document.readyState:', document.readyState);
+        
+        // 少し待ってから再度チェック
+        setTimeout(() => {
+            console.log('🔍 1秒後のSpine状態:');
+            console.log('  - typeof spine:', typeof spine);
+            console.log('  - typeof window.spine:', typeof window.spine);
+            console.log('  - spine:', spine);
+            if (typeof spine !== 'undefined') {
+                console.log('  - spine.AssetManager:', spine.AssetManager);
+                console.log('  - spine keys:', Object.keys(spine));
+            }
+        }, 1000);
+    </script>
 </head>
 <body>
     <!-- メインコンテナ -->
@@ -287,8 +310,6 @@
     <script src="js/ui-dialogs.js"></script>
     <script src="js/ui.js"></script>
     
-    <!-- Spine WebGL Library (元の方式に復元) -->
-    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.23/dist/iife/spine-webgl.js"></script>
     <script src="js/spine.js"></script>
     <script src="js/export.js"></script>
 </body>

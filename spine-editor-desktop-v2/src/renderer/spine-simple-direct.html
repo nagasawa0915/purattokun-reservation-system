@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直接Spine統合テスト</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #2c3e50; color: white; font-family: Arial, sans-serif; }
+        .container { max-width: 800px; margin: 0 auto; text-align: center; }
+        #spine-canvas { width: 400px; height: 300px; border: 2px solid #3498db; margin: 20px auto; display: none; }
+        .status { margin: 20px 0; padding: 10px; background: rgba(0,0,0,0.3); }
+        button { margin: 5px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:disabled { background: #7f8c8d; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 直接Spine統合テスト</h1>
+        <div class="status" id="status">初期化中...</div>
+        <canvas id="spine-canvas" width="400" height="300"></canvas>
+        <button id="load-character" disabled>🐱 キャラクター読み込み</button>
+    </div>
+
+    <!-- Spine WebGL Runtime (CDN - 成功実績) -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        let renderer = null;
+        let currentSkeleton = null;
+        let animationState = null;
+        
+        const canvas = document.getElementById('spine-canvas');
+        const status = document.getElementById('status');
+        
+        function updateStatus(msg) {
+            status.textContent = msg;
+            console.log(msg);
+        }
+        
+        // Spine初期化
+        async function initSpine() {
+            try {
+                updateStatus('Spine WebGL読み込み待機中...');
+                await waitForSpine();
+                
+                const gl = canvas.getContext("webgl", { alpha: true });
+                if (!gl) throw new Error("WebGL未対応");
+                
+                renderer = new spine.SceneRenderer(canvas, gl);
+                updateStatus('✅ Spine初期化完了');
+                
+                canvas.style.display = 'block';
+                document.getElementById('load-character').disabled = false;
+                
+            } catch (error) {
+                updateStatus('❌ 初期化失敗: ' + error.message);
+            }
+        }
+        
+        // Spine読み込み待ち（シンプルパターン）
+        async function waitForSpine() {
+            return new Promise((resolve, reject) => {
+                let count = 0;
+                const check = () => {
+                    count++;
+                    if (typeof spine !== "undefined" && spine.AssetManager) {
+                        console.log('✅ Spine WebGL読み込み完了');
+                        resolve();
+                    } else if (count >= 50) {
+                        reject(new Error("Spine読み込みタイムアウト"));
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+        
+        // キャラクター読み込み
+        async function loadCharacter() {
+            try {
+                updateStatus('purattokun読み込み中...');
+                
+                const gl = canvas.getContext("webgl");
+                const basePath = "./assets/spine/characters/purattokun/";
+                const assetManager = new spine.AssetManager(gl, basePath);
+                
+                assetManager.loadTextureAtlas("purattokun.atlas");
+                assetManager.loadJson("purattokun.json");
+                
+                await waitForAssets(assetManager);
+                
+                const atlas = assetManager.get("purattokun.atlas");
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(
+                    assetManager.get("purattokun.json")
+                );
+                
+                currentSkeleton = new spine.Skeleton(skeletonData);
+                currentSkeleton.x = 200;
+                currentSkeleton.y = 250;
+                currentSkeleton.scaleX = currentSkeleton.scaleY = 0.5;
+                
+                const animationStateData = new spine.AnimationStateData(skeletonData);
+                animationState = new spine.AnimationState(animationStateData);
+                
+                if (skeletonData.animations.length > 0) {
+                    const firstAnimation = skeletonData.animations[0].name;
+                    animationState.setAnimation(0, firstAnimation, true);
+                }
+                
+                startRenderLoop();
+                updateStatus('✅ キャラクター読み込み完了');
+                
+            } catch (error) {
+                updateStatus('❌ 読み込み失敗: ' + error.message);
+            }
+        }
+        
+        // アセット読み込み待ち
+        async function waitForAssets(assetManager) {
+            return new Promise((resolve, reject) => {
+                let count = 0;
+                const check = () => {
+                    count++;
+                    if (assetManager.isLoadingComplete()) {
+                        resolve();
+                    } else if (count >= 100) {
+                        reject(new Error("アセット読み込みタイムアウト"));
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+        
+        // レンダリングループ
+        function startRenderLoop() {
+            let lastTime = Date.now() / 1000;
+            
+            const render = () => {
+                if (!renderer || !currentSkeleton) return;
+                
+                const now = Date.now() / 1000;
+                const delta = now - lastTime;
+                lastTime = now;
+                
+                const gl = canvas.getContext("webgl");
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                
+                animationState.update(delta);
+                animationState.apply(currentSkeleton);
+                currentSkeleton.updateWorldTransform();
+                
+                renderer.drawSkeleton(currentSkeleton, false);
+                
+                requestAnimationFrame(render);
+            };
+            
+            requestAnimationFrame(render);
+        }
+        
+        // イベント
+        document.getElementById('load-character').addEventListener('click', loadCharacter);
+        
+        // 初期化開始
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initSpine, 100);
+        });
+    </script>
+</body>
+</html>
