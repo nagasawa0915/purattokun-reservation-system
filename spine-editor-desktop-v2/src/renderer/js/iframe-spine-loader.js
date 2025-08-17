@@ -93,7 +93,7 @@ class IframeSpineLoader {
         
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = '../assets/spine/spine-webgl.js';
+            script.src = '../assets/spine/spine-webgl-working.js';
             script.onload = () => {
                 console.log('✅ Spine WebGL library loaded');
                 resolve();
@@ -242,21 +242,53 @@ class IframeSpineLoader {
      */
     async loadSpineCharacter(name, jsonPath, atlasPath, position, scale) {
         return new Promise((resolve, reject) => {
-            // Spineアセットマネージャーを使用してキャラクターを読み込み
+            // 🚀 改善された絶対パス→相対パス変換
+            const convertPath = (fullPath) => {
+                // Windowsパス正規化
+                const normalizedPath = fullPath.replace(/\\/g, '/');
+                
+                // assets/spine/characters/ を探す
+                const assetsIndex = normalizedPath.indexOf('assets/spine/characters/');
+                
+                if (assetsIndex !== -1) {
+                    const relativePart = normalizedPath.substring(assetsIndex);
+                    return `../${relativePart}`;
+                }
+                
+                // フォールバック: ファイル名から推測
+                const fileName = normalizedPath.split('/').pop();
+                const baseName = fileName.replace(/\.(json|atlas|png)$/, '');
+                
+                return `../assets/spine/characters/${baseName}/${fileName}`;
+            };
+            
+            const relativeJsonPath = convertPath(jsonPath);
+            const relativeAtlasPath = convertPath(atlasPath);
+            
+            console.log('📁 パス変換結果:', { 
+                original: { jsonPath, atlasPath },
+                converted: { relativeJsonPath, relativeAtlasPath }
+            });
+            
+            // v3成功パターン移植: AssetManager使用方法
             const assetManager = new spine.AssetManager();
             
-            // アセットを追加
-            assetManager.loadText(jsonPath);
-            assetManager.loadTextureAtlas(atlasPath);
+            // v3成功パターン移植: アセット読み込み
+            assetManager.loadText(relativeJsonPath);
+            assetManager.loadTextureAtlas(relativeAtlasPath);
+            
+            // 画像ファイルも読み込み（v3パターン）
+            const imagePath = relativeJsonPath.replace('.json', '.png');
+            assetManager.loadTexture(imagePath);
             
             // 読み込み完了後のコールバック
             assetManager.loadAll(() => {
                 try {
-                    // Skeleton Dataを作成
-                    const atlas = assetManager.get(atlasPath);
+                    // v3成功パターン移植: Skeleton作成
+                    const atlas = assetManager.require(relativeAtlasPath);
                     const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
                     const skeletonJson = new spine.SkeletonJson(atlasLoader);
-                    const skeletonData = skeletonJson.readSkeletonData(assetManager.get(jsonPath));
+                    const skeletonData = skeletonJson.readSkeletonData(assetManager.require(relativeJsonPath));
                     
                     // Skeletonとアニメーションステートを作成
                     const skeleton = new spine.Skeleton(skeletonData);

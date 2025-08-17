@@ -24,6 +24,7 @@ export class UIManager {
         this.elements.previewPlaceholder = document.getElementById('preview-placeholder');
         this.elements.previewIframe = document.getElementById('preview-iframe');
         
+        
         // Spine関連要素
         this.elements.spineCharacterStatus = document.getElementById('spine-character-status');
         this.elements.spineCharacterList = document.getElementById('spine-character-list');
@@ -37,12 +38,40 @@ export class UIManager {
         this.elements.btnSavePosition = document.getElementById('btn-save-position');
         this.elements.btnSimpleScene = document.getElementById('btn-simple-scene');
         
+        // v3統合: 組み込みキャラクターボタン
+        this.elements.btnAddPurattokun = document.getElementById('btn-add-purattokun');
+        this.elements.btnAddNezumi = document.getElementById('btn-add-nezumi');
+        this.elements.btnClearCharacters = document.getElementById('btn-clear-characters');
+        
         // 入力要素
         this.elements.spineXInput = document.getElementById('spine-x');
         this.elements.spineYInput = document.getElementById('spine-y');
 
         console.log('✅ UI要素初期化完了');
         return this.elements;
+    }
+
+    /**
+     * Spineキャラクターリストを表示
+     */
+    showSpineCharacterList() {
+        this.elements.spineCharacterStatus.style.display = 'none';
+        this.elements.spineCharacterList.style.display = 'block';
+    }
+
+    /**
+     * Spineキャラクターリストを非表示
+     */
+    hideSpineCharacterList() {
+        this.elements.spineCharacterStatus.style.display = 'block';
+        this.elements.spineCharacterList.style.display = 'none';
+    }
+
+    /**
+     * Spineキャラクターステータスを設定
+     */
+    setSpineCharacterStatus(message) {
+        this.elements.spineCharacterStatus.textContent = message;
     }
 
     /**
@@ -54,11 +83,28 @@ export class UIManager {
         
         // ボタンイベント
         this.elements.btnOpenFolder.addEventListener('click', handlers.openFolder);
-        this.elements.btnLoadSpineFolder.addEventListener('click', handlers.loadSpineFolder);
+        if (this.elements.btnLoadSpineFolder && handlers.loadSpineFolder) {
+            this.elements.btnLoadSpineFolder.addEventListener('click', handlers.loadSpineFolder);
+        }
         this.elements.btnExportPackage.addEventListener('click', handlers.exportPackage);
         this.elements.btnPreviewPackage.addEventListener('click', handlers.previewPackage);
-        this.elements.btnAddSpine.addEventListener('click', handlers.addSpineCharacter);
-        this.elements.btnSavePosition.addEventListener('click', handlers.savePosition);
+        if (this.elements.btnAddSpine && handlers.addSpineCharacter) {
+            this.elements.btnAddSpine.addEventListener('click', handlers.addSpineCharacter);
+        }
+        if (this.elements.btnSavePosition && handlers.savePosition) {
+            this.elements.btnSavePosition.addEventListener('click', handlers.savePosition);
+        }
+        
+        // v3統合: 組み込みキャラクターボタンイベント
+        if (this.elements.btnAddPurattokun && handlers.addPurattokun) {
+            this.elements.btnAddPurattokun.addEventListener('click', handlers.addPurattokun);
+        }
+        if (this.elements.btnAddNezumi && handlers.addNezumi) {
+            this.elements.btnAddNezumi.addEventListener('click', handlers.addNezumi);
+        }
+        if (this.elements.btnClearCharacters && handlers.clearCharacters) {
+            this.elements.btnClearCharacters.addEventListener('click', handlers.clearCharacters);
+        }
         
         // シンプルシーンボタン
         if (this.elements.btnSimpleScene) {
@@ -261,7 +307,6 @@ export class UIManager {
             'spine-character-status',
             'spine-character-list',
             'btn-open-folder',
-            'btn-load-spine-folder',
             'btn-export-package',
             'btn-preview-package',
             'btn-add-spine',

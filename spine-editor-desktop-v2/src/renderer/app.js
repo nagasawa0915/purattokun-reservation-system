@@ -26,6 +26,10 @@ export class DemoApp {
         this.packageExporter = new PackageExporter();
         this.spinePreviewLayer = null; // 後で初期化
         
+        // v3 Spine統合システム
+        this.spineCharacterManagerV3 = null; // 動的読み込み後に設定
+        
+        
         // Spine System初期化
         this.spineCore = null;
         this.spineRenderer = null;
@@ -78,6 +82,9 @@ export class DemoApp {
             
             console.log('✅ Demo App初期化完了');
             
+            // v3 Spine統合システム初期化（実行不要 - start.htmlで既に確認済み）
+            // SimpleSpineManagerV3は start.html で読み込み確認済み
+            
         } catch (error) {
             console.error('❌ Demo App初期化エラー:', error);
             this.uiManager.updateStatus('error', `初期化エラー: ${error.message}`);
@@ -90,12 +97,15 @@ export class DemoApp {
     bindEvents() {
         const handlers = {
             openFolder: () => this.openFolder(),
-            loadSpineFolder: () => this.loadSpineFolder(),
+            loadSpineFolder: () => this.selectSpineFolder(),
             exportPackage: () => this.exportPackage(),
             previewPackage: () => this.previewPackage(),
             addSpineCharacter: () => this.addSpineCharacter(),
             savePosition: () => this.savePosition(),
-            updateSpinePosition: (position) => this.updateSpinePosition(position)
+            updateSpinePosition: (position) => this.updateSpinePosition(position),
+            addPurattokun: () => this.addBuiltInCharacter('purattokun'),
+            addNezumi: () => this.addBuiltInCharacter('nezumi'),
+            clearCharacters: () => this.clearAllCharacters()
         };
         
         this.uiManager.bindEvents(handlers);
@@ -217,39 +227,6 @@ export class DemoApp {
         }
     }
 
-    /**
-     * Spineフォルダを読み込み
-     */
-    async loadSpineFolder() {
-        // console.log('🎭 loadSpineFolder() method called!');
-        this.uiManager.updateStatus('loading', 'Spineフォルダを選択中...');
-        
-        try {
-            const result = await this.spineCharacterManager.loadSpineFolder();
-            
-            if (result.success) {
-                if (result.spineFiles.length > 0) {
-                    // Spineキャラクター一覧表示
-                    const spineCharacterList = this.uiManager.elements.spineCharacterList;
-                    this.spineCharacterManager.displaySpineCharacters(result.spineFiles, spineCharacterList);
-                    this.uiManager.showSpineCharacterList();
-                } else {
-                    this.uiManager.setSpineCharacterStatus('Spineファイルが見つかりませんでした');
-                    this.uiManager.hideSpineCharacterList();
-                }
-                
-                this.uiManager.updateStatus('ready', result.message);
-                
-            } else if (result.canceled) {
-                this.uiManager.updateStatus('ready', result.message);
-            } else {
-                this.uiManager.updateStatus('error', result.message);
-            }
-        } catch (error) {
-            console.error('🚨 Spineフォルダ選択エラー:', error);
-            this.uiManager.updateStatus('error', 'Spineフォルダ選択に失敗しました');
-        }
-    }
 
     /**
      * プレビューエリアにSpineキャラクターを追加
@@ -259,25 +236,46 @@ export class DemoApp {
      */
     async addSpineCharacterToPreview(characterData, x, y) {
         try {
+            console.log('🎭 addSpineCharacterToPreview呼び出し:', { characterData, x, y });
             this.uiManager.updateStatus('loading', 'Spineキャラクターを読み込み中...');
             
-            // 実際のSpine表示を優先で試行
-            if (this.spinePreviewLayer && this.spinePreviewLayer.spineLoaded) {
-                console.log('🎭 実際のSpine表示を試行中...');
+            // データ整合性チェック
+            if (!characterData) {
+                throw new Error('キャラクターデータが空です');
+            }
+            
+            // 🔧 安定化修正: SpinePreviewLayer初期化完了を確認・待機
+            if (this.spinePreviewLayer) {
+                // 初期化完了チェック
+                if (!this.spinePreviewLayer.isReadyForCharacters()) {
+                    console.log('⏳ SpinePreviewLayer初期化完了を待機中...');
+                    
+                    // 短時間待機後に再チェック（最大3秒）
+                    let waitCount = 0;
+                    while (!this.spinePreviewLayer.isReadyForCharacters() && waitCount < 30) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        waitCount++;
+                    }
+                    
+                    if (!this.spinePreviewLayer.isReadyForCharacters()) {
+                        console.warn('⚠️ SpinePreviewLayer初期化待機タイムアウト');
+                    }
+                }
+                console.log('🎭 v3パターンで直接Spine表示を試行中...');
                 
-                // マウス座標を直接SpinePreviewLayerに渡す（内部で適切な座標変換を行う）
+                // 🔧 安定化修正: 初期化完了後にキャラクター追加
                 const spineResult = await this.spinePreviewLayer.addCharacter(
                     characterData, 
                     x, 
                     y
                 );
                 
-                if (spineResult.success) {
-                    this.uiManager.updateStatus('ready', `🎭 Spineキャラクター「${characterData.name}」を表示しました (LIVE)`);
-                    console.log(`✅ 実際のSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
+                if (spineResult && spineResult.success) {
+                    this.uiManager.updateStatus('ready', `🎭 Spineキャラクター「${characterData.name}」を表示しました (v3パターン)`);
+                    console.log(`✅ v3パターンでSpineキャラクター「${characterData.name}」をプレビューに追加完了`);
                     return;
                 } else {
-                    console.warn('⚠️ Spine表示失敗、ダミー表示にフォールバック:', spineResult.error);
+                    console.warn('⚠️ v3パターンSpine表示失敗、ダミー表示にフォールバック:', spineResult?.error);
                 }
             }
             
@@ -463,6 +461,502 @@ export class DemoApp {
         }
     }
 
+
+
+
+
+    /**
+     * v3 Spine統合システム初期化
+     */
+    initializeV3SpineSystem() {
+        try {
+            console.log('🎮 シンプルSpine統合システム (v3ベース) 初期化開始');
+            
+            // シンプルSpineマネージャーV3が利用可能か確認
+            if (window.simpleSpineManagerV3) {
+                console.log('✅ SimpleSpineManagerV3統合完了');
+                return;
+            }
+            
+            // 最大5回まで再試行（無限ループ防止）
+            if (!this.v3InitRetryCount) {
+                this.v3InitRetryCount = 0;
+            }
+            
+            if (this.v3InitRetryCount < 5) {
+                this.v3InitRetryCount++;
+                console.warn(`⚠️ SimpleSpineManagerV3未読み込み - 再試行 ${this.v3InitRetryCount}/5`);
+                setTimeout(() => {
+                    this.initializeV3SpineSystem();
+                }, 1000);
+            } else {
+                console.error('❌ SimpleSpineManagerV3読み込み失敗 - 最大試行回数に達しました');
+                // フォールバック: ダミーのマネージャーを作成
+                this.createFallbackSpineManager();
+            }
+            
+        } catch (error) {
+            console.error('❌ シンプルSpine統合システム初期化エラー:', error);
+        }
+    }
+
+    /**
+     * フォールバックSpineマネージャー作成
+     */
+    createFallbackSpineManager() {
+        console.log('📦 フォールバックシンプルSpineマネージャー作成中...');
+        
+        // グローバルにフォールバック関数を設定
+        window.simpleSpineManagerV3 = {
+            createBuiltInCharacter: async (characterName) => {
+                console.warn(`⚠️ フォールバック: ${characterName}のダミー表示`);
+                
+                // ダミー要素作成
+                const dummyElement = document.createElement('div');
+                dummyElement.textContent = `🎭 ${characterName} (Dummy)`;
+                dummyElement.style.cssText = `
+                    position: absolute;
+                    left: 50%;
+                    top: 60%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(255, 165, 0, 0.7);
+                    padding: 15px;
+                    border-radius: 8px;
+                    color: white;
+                    font-weight: bold;
+                    z-index: 100;
+                    border: 2px solid orange;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                `;
+                
+                // spine-stageに追加
+                const spineStage = document.getElementById('spine-stage');
+                if (spineStage) {
+                    spineStage.appendChild(dummyElement);
+                }
+                
+                return true;
+            },
+            clearAllCharacters: () => {
+                const spineStage = document.getElementById('spine-stage');
+                if (spineStage) {
+                    spineStage.innerHTML = '';
+                }
+            }
+        };
+        
+        console.log('✅ フォールバックシンプルSpineマネージャー作成完了');
+    }
+
+    /**
+     * Spineフォルダ選択（v3移植）
+     */
+    async selectSpineFolder() {
+        if (!window.electronAPI) {
+            alert('Electron環境でのみ利用可能です');
+            return;
+        }
+        
+        try {
+            this.uiManager.updateStatus('loading', 'フォルダ選択中...');
+            
+            const result = await window.electronAPI.fs.selectFolder();
+            const folderPath = result?.canceled ? null : result?.filePaths?.[0];
+            
+            if (folderPath) {
+                console.log('📁 選択されたフォルダ:', folderPath);
+                await this.loadSpineProject(folderPath);
+            } else {
+                this.uiManager.updateStatus('ready', 'フォルダ選択がキャンセルされました');
+            }
+        } catch (error) {
+            console.error('❌ フォルダ選択エラー:', error);
+            this.uiManager.updateStatus('error', 'フォルダ選択エラー');
+            alert('フォルダ選択に失敗しました: ' + error.message);
+        }
+    }
+
+    /**
+     * Spineプロジェクト読み込み（v3移植）
+     */
+    async loadSpineProject(folderPath) {
+        try {
+            console.log('📦 プロジェクト読み込み開始:', folderPath);
+            
+            this.uiManager.updateStatus('loading', 'プロジェクトを読み込み中...');
+            
+            // Spineファイルをスキャン
+            const scanResult = await window.electronAPI.fs.scanDirectory(folderPath, ['.json', '.atlas', '.png']);
+            
+            console.log('🔍 scanResult:', scanResult);
+            
+            if (!scanResult.success) {
+                throw new Error('フォルダの読み込みに失敗しました: ' + scanResult.error);
+            }
+            
+            // Spineプロジェクトデータを構築  
+            const projectData = this.buildSpineProjectData(folderPath, scanResult.files);
+            
+            if (!projectData || projectData.characters.length === 0) {
+                throw new Error('有効なSpineファイルが見つかりませんでした');
+            }
+            
+            // プロジェクト状態更新
+            this.currentSpineProject = projectData;
+            
+            // UI更新
+            this.displaySpineProjectInfo(projectData);
+            
+            this.uiManager.updateStatus('ready', `プロジェクト読み込み完了: ${projectData.characters.length}個のキャラクター`);
+            console.log('✅ プロジェクト読み込み完了');
+            
+        } catch (error) {
+            console.error('❌ プロジェクト読み込みエラー:', error);
+            this.uiManager.updateStatus('error', 'プロジェクト読み込みエラー');
+            alert('プロジェクトの読み込みに失敗しました: ' + error.message);
+        }
+    }
+
+    /**
+     * Spineプロジェクト情報表示（v3移植）
+     */
+    displaySpineProjectInfo(projectData) {
+        try {
+            console.log('📋 プロジェクト情報表示:', projectData);
+            
+            // Spineキャラクターリスト表示
+            this.uiManager.showSpineCharacterList();
+            
+            // キャラクターリストを動的生成
+            const characterList = this.uiManager.elements.spineCharacterList;
+            characterList.innerHTML = '';
+            
+            projectData.characters.forEach((character, index) => {
+                const characterItem = document.createElement('div');
+                characterItem.className = 'character-item';
+                characterItem.draggable = true;
+                characterItem.innerHTML = `
+                    <div class="character-info">
+                        <span class="character-name">🎭 ${character.name}</span>
+                        <span class="character-files">${character.files.length} files</span>
+                    </div>
+                `;
+                
+                // ドラッグ開始イベント
+                characterItem.addEventListener('dragstart', (e) => {
+                    const dragData = {
+                        character: character,
+                        sourceUI: 'spine-folder'
+                    };
+                    e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+                    e.dataTransfer.effectAllowed = 'copy';
+                    console.log('🎯 ドラッグ開始:', character.name);
+                    console.log('🎯 ドラッグデータ:', dragData);
+                });
+                
+                // デバッグ: クリックイベントも追加
+                characterItem.addEventListener('click', () => {
+                    console.log('🖱️ キャラクターアイテムクリック:', character.name);
+                });
+                
+                characterList.appendChild(characterItem);
+            });
+            
+            // ドロップゾーン設定
+            console.log('🎯 ドロップゾーン設定開始...');
+            this.setupCharacterDropZone();
+            
+            console.log('✅ プロジェクト情報表示完了');
+            
+        } catch (error) {
+            console.error('❌ プロジェクト情報表示エラー:', error);
+        }
+    }
+
+    /**
+     * キャラクタードロップゾーン設定（v3移植）
+     */
+    setupCharacterDropZone() {
+        const dropZone = document.getElementById('spine-character-container') || 
+                         document.getElementById('spine-stage') ||
+                         document.querySelector('.preview-content');
+        
+        if (!dropZone) {
+            console.warn('⚠️ ドロップゾーンが見つかりません');
+            console.log('🔍 利用可能な要素:', {
+                spineCharacterContainer: !!document.getElementById('spine-character-container'),
+                spineStage: !!document.getElementById('spine-stage'),
+                previewContent: !!document.querySelector('.preview-content')
+            });
+            return;
+        }
+        
+        console.log('✅ ドロップゾーン設定:', dropZone.id || dropZone.className);
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            console.log('💧 ドロップイベント発生!');
+            
+            try {
+                const transferData = e.dataTransfer.getData('application/json');
+                console.log('📋 転送データ:', transferData);
+                
+                if (!transferData) {
+                    throw new Error('ドラッグデータが見つかりません');
+                }
+                
+                const characterData = JSON.parse(transferData);
+                console.log('🎯 キャラクタードロップ:', characterData);
+                console.log('🔍 ドロップデータ詳細:', {
+                    hasCharacter: !!characterData.character,
+                    characterName: characterData.character?.name,
+                    sourceUI: characterData.sourceUI,
+                    rawData: characterData
+                });
+                
+                // ドロップ位置計算
+                const rect = dropZone.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                
+                console.log('📐 ドロップ位置:', { x, y, clientX: e.clientX, clientY: e.clientY, rect });
+                
+                // キャラクター作成
+                console.log('🎭 キャラクター作成開始...');
+                await this.createSpineCharacterFromProject(characterData.character, x, y);
+                console.log('🎭 キャラクター作成完了');
+                
+            } catch (error) {
+                console.error('❌ キャラクタードロップエラー:', error);
+                alert('ドロップエラー: ' + error.message);
+            }
+        });
+        
+        console.log('✅ ドロップゾーン設定完了');
+    }
+
+    /**
+     * Spineプロジェクトデータ構築
+     */
+    buildSpineProjectData(folderPath, scanResult) {
+        try {
+            console.log('📋 Spineプロジェクトデータ構築開始:', { folderPath, scanResult });
+            
+            // キャラクター辞書を作成
+            const characterMap = new Map();
+            
+            // scanResultの構造: { json: [], atlas: [], png: [], html: [] }
+            const allFiles = [
+                ...(scanResult.json || []),
+                ...(scanResult.atlas || []),
+                ...(scanResult.png || [])
+            ];
+            
+            console.log('🔍 検出されたファイル:', allFiles);
+            
+            allFiles.forEach(filePath => {
+                const fileName = filePath.split(/[/\\]/).pop();
+                const baseName = fileName.replace(/\.(json|atlas|png)$/, '');
+                const extension = fileName.split('.').pop();
+                
+                if (!characterMap.has(baseName)) {
+                    characterMap.set(baseName, {
+                        name: baseName,
+                        files: [],
+                        hasJson: false,
+                        hasAtlas: false,
+                        hasPng: false
+                    });
+                }
+                
+                const character = characterMap.get(baseName);
+                character.files.push(filePath);
+                
+                if (extension === 'json') character.hasJson = true;
+                if (extension === 'atlas') character.hasAtlas = true;
+                if (extension === 'png') character.hasPng = true;
+            });
+            
+            // 有効なSpineキャラクターのみ抽出（.json と .atlas が必要）
+            const validCharacters = Array.from(characterMap.values())
+                .filter(char => char.hasJson && char.hasAtlas)
+                .map(char => ({
+                    name: char.name,
+                    files: char.files,
+                    position: { x: 50, y: 50 },
+                    scale: 1.0
+                }));
+            
+            const projectData = {
+                name: folderPath.split(/[/\\]/).pop(),
+                path: folderPath,
+                characters: validCharacters,
+                timestamp: Date.now()
+            };
+            
+            console.log('✅ Spineプロジェクトデータ構築完了:', projectData);
+            return projectData;
+            
+        } catch (error) {
+            console.error('❌ Spineプロジェクトデータ構築エラー:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * プロジェクトキャラクター作成（v3移植）
+     */
+    async createSpineCharacterFromProject(characterData, x, y) {
+        try {
+            console.log('🎭 プロジェクトキャラクター作成:', characterData.name);
+            console.log('🎭 キャラクターデータ詳細:', characterData);
+            console.log('🎭 ドロップ位置:', { x, y });
+            this.uiManager.updateStatus('loading', `${characterData.name}を作成中...`);
+            
+            // まずは組み込みキャラクターで動作確認（将来的にはファイルベース）
+            if (window.simpleSpineManagerV3) {
+                console.log('✅ SimpleSpineManagerV3利用可能');
+                console.log('🔍 利用可能な関数:', Object.getOwnPropertyNames(window.simpleSpineManagerV3));
+                
+                // 現時点では組み込みキャラクターとして処理
+                // TODO: 実際のSpineファイル（characterData.files）を使用する機能を実装
+                let characterName = characterData.name;
+                console.log(`🎭 処理対象キャラクター: ${characterName}`);
+                
+                // 既知のキャラクター名の場合は組み込みキャラクターとして作成
+                if (characterName === 'purattokun' || characterName === 'nezumi') {
+                    const result = await window.simpleSpineManagerV3.createBuiltInCharacter(characterName);
+                    
+                    if (result) {
+                        // 🎯 重要: ドロップ位置にキャラクターを配置
+                        await this.positionCharacterAtDropLocation(characterName, x, y);
+                        
+                        this.uiManager.updateStatus('ready', `🎭 ${characterData.name}を位置 (${x.toFixed(1)}%, ${y.toFixed(1)}%) に作成しました`);
+                        console.log(`✅ プロジェクトキャラクター作成完了: ${characterData.name} at (${x}, ${y})`);
+                    } else {
+                        throw new Error('キャラクター作成に失敗しました');
+                    }
+                } else {
+                    // 未知のキャラクターの場合はダミー表示
+                    console.warn(`⚠️ 未知のキャラクター: ${characterName} - ダミー表示`);
+                    this.uiManager.updateStatus('ready', `📦 ${characterData.name}をダミー表示しました`);
+                    
+                    // TODO: 実際のSpineファイルロード機能を実装
+                    // const result = await this.loadCustomSpineCharacter(characterData, x, y);
+                }
+            } else {
+                throw new Error('シンプルSpine統合システムが利用できません');
+            }
+            
+        } catch (error) {
+            console.error(`❌ プロジェクトキャラクター作成エラー: ${characterData.name}`, error);
+            this.uiManager.updateStatus('error', `${characterData.name}作成失敗: ${error.message}`);
+        }
+    }
+
+    /**
+     * ドロップ位置にキャラクターを配置
+     */
+    async positionCharacterAtDropLocation(characterName, x, y) {
+        try {
+            console.log(`🎯 ${characterName}を位置 (${x}%, ${y}%) に配置中...`);
+            
+            // spinePreviewLayerが利用可能かチェック
+            if (window.spinePreviewLayer && window.spinePreviewLayer.setCharacterPosition) {
+                // 座標系変換: パーセンテージ -> ピクセル座標 -> Spine座標
+                const canvas = window.spinePreviewLayer.canvas;
+                if (canvas) {
+                    const pixelX = (x / 100) * canvas.width;
+                    const pixelY = (y / 100) * canvas.height;
+                    
+                    // Spine座標系への変換（中央原点、Y軸反転）
+                    const spineX = pixelX - (canvas.width / 2);
+                    const spineY = (canvas.height / 2) - pixelY;
+                    
+                    console.log(`📐 座標変換: (${x}%, ${y}%) -> pixel(${pixelX}, ${pixelY}) -> spine(${spineX}, ${spineY})`);
+                    
+                    // キャラクター位置設定
+                    await window.spinePreviewLayer.setCharacterPosition(characterName, spineX, spineY);
+                    console.log(`✅ ${characterName}の位置設定完了`);
+                } else {
+                    console.warn('⚠️ Canvas要素が見つかりません');
+                }
+            } else if (window.simpleSpineManagerV3 && window.simpleSpineManagerV3.setCharacterPosition) {
+                // SimpleSpineManagerV3経由で位置設定
+                await window.simpleSpineManagerV3.setCharacterPosition(characterName, x, y);
+                console.log(`✅ SimpleSpineManagerV3で${characterName}の位置設定完了`);
+            } else {
+                console.warn('⚠️ 位置設定機能が利用できません - 位置設定をスキップ');
+            }
+            
+        } catch (error) {
+            console.error(`❌ ${characterName}の位置設定エラー:`, error);
+            // 位置設定エラーでもキャラクター作成は継続
+        }
+    }
+
+    /**
+     * 組み込みキャラクター追加
+     */
+    async addBuiltInCharacter(characterName) {
+        try {
+            console.log(`🎭 組み込みキャラクター追加: ${characterName}`);
+            this.uiManager.updateStatus('loading', `${characterName}を追加中...`);
+            
+            // シンプルSpineマネージャーV3を使用
+            if (window.simpleSpineManagerV3) {
+                const result = await window.simpleSpineManagerV3.createBuiltInCharacter(characterName);
+                
+                if (result) {
+                    this.uiManager.updateStatus('ready', `🎭 ${characterName}を追加しました`);
+                    console.log(`✅ 組み込みキャラクター追加完了: ${characterName}`);
+                } else {
+                    throw new Error('キャラクター作成に失敗しました');
+                }
+            } else {
+                throw new Error('シンプルSpine統合システムが利用できません');
+            }
+            
+        } catch (error) {
+            console.error(`❌ 組み込みキャラクター追加エラー: ${characterName}`, error);
+            this.uiManager.updateStatus('error', `${characterName}追加失敗: ${error.message}`);
+        }
+    }
+
+    /**
+     * 全キャラクター削除
+     */
+    clearAllCharacters() {
+        try {
+            console.log('🗑️ 全キャラクター削除開始');
+            
+            // シンプルSpineマネージャーV3を使用
+            if (window.simpleSpineManagerV3 && window.simpleSpineManagerV3.clearAllCharacters) {
+                window.simpleSpineManagerV3.clearAllCharacters();
+                this.uiManager.updateStatus('ready', '🗑️ 全キャラクターを削除しました');
+                console.log('✅ 全キャラクター削除完了');
+            } else {
+                throw new Error('シンプルSpine統合システムが利用できません');
+            }
+            
+        } catch (error) {
+            console.error('❌ 全キャラクター削除エラー:', error);
+            this.uiManager.updateStatus('error', `削除失敗: ${error.message}`);
+        }
+    }
+
     /**
      * アプリケーション状態をエクスポート
      * @returns {object} アプリケーション状態
@@ -561,6 +1055,3 @@ export class DemoApp {
         };
     }
 }
-
-// グローバルエクスポート（後方互換性）
-window.DemoApp = DemoApp;

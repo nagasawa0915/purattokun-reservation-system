@@ -85,11 +85,18 @@
                     <div id="spine-outliner-container" class="spine-outliner-container">
                         <!-- SpineOutlinerUIがここに動的生成される -->
                         <div class="spine-outliner-placeholder">
-                            <h3>🎭 Spine アウトライナー</h3>
-                            <p>フォルダを選択してSpineキャラクターを読み込んでください</p>
-                            <button id="btn-load-spine-folder" class="btn btn-primary">
-                                📂 Spineフォルダ選択
-                            </button>
+                            <h3>🎭 Spine キャラクター</h3>
+                            <p>組み込み済みキャラクターを使用できます</p>
+                            
+                            <!-- 組み込みキャラクター -->
+                            <div class="built-in-characters">
+                                <button id="btn-add-purattokun" class="btn btn-primary">
+                                    🐱 ぷらっとくん
+                                </button>
+                                <button id="btn-add-nezumi" class="btn btn-primary">
+                                    🐭 nezumi
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -397,14 +404,16 @@
             `;
             
             debugPanel.innerHTML = `
-                <h4 style="margin: 0 0 10px 0; color: #4CAF50;">🚀 Phase 1: 最小構成Spine</h4>
-                <button onclick="window.simpleSpineManager?.testSpineLoad()" style="background: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🔍 Spineテスト</button>
-                <button onclick="window.simpleSpineManager?.createCharacter('purattokun')" style="background: #2196F3; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🐱 プラットくん</button>
-                <button onclick="window.simpleSpineManager?.createCharacter('nezumi')" style="background: #FF9800; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🐭 nezumi</button>
-                <button onclick="window.simpleSpineManager?.clearAll()" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🗑️ 全削除</button>
+                <h4 style="margin: 0 0 10px 0; color: #4CAF50;">🚀 v2.0 (v3ベース) シンプルSpine統合</h4>
+                <button onclick="window.createPurattokun?.()" style="background: #2196F3; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🐱 ぷらっとくん</button>
+                <button onclick="window.createNezumi?.()" style="background: #FF9800; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🐭 nezumi</button>
+                <button onclick="window.clearAllSpineCharacters?.()" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🗑️ 全削除</button>
+                <button onclick="window.testSimpleSpineV3?.()" style="background: #9C27B0; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🧪 テスト</button>
+                <hr style="margin: 10px 0; border: 1px solid #555;">
+                <button onclick="console.log('Spine状態:', {spine: typeof spine, manager: !!window.simpleSpineManagerV3, ready: window.simpleSpineManagerV3?.isSpineReady})" style="background: #607D8B; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">📊 状態確認</button>
                 <button onclick="document.getElementById('simple-debug-panel').remove()" style="background: #666; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">✖ 閉じる</button>
                 <div id="simple-debug-status" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">
-                    初期化中...
+                    v3ベース シンプルSpine統合初期化中...
                 </div>
             `;
             
@@ -426,8 +435,8 @@
             
             const status = {
                 spine: typeof spine !== 'undefined' ? '✅' : '❌',
-                manager: window.simpleSpineManager ? '✅' : '❌',
-                characters: window.simpleSpineManager ? window.simpleSpineManager.characters.size : 0,
+                manager: window.simpleSpineManagerV3 ? '✅' : '❌',
+                characters: window.simpleSpineManagerV3 ? window.simpleSpineManagerV3.characters.size : 0,
                 stage: document.getElementById('spine-stage') ? '✅' : '❌'
             };
             
@@ -442,15 +451,40 @@
     </script>
 
     <!-- JavaScript読み込み -->
-    <!-- 🚀 Phase 1: 最小構成Spine実装 -->
-    <script src="js/spine-simple-new.js"></script>
+    <!-- v3 Spine統合システム -->
+    <script src="js/spine-simple-v3.js"></script>
     
-    <!-- UI システム（軽量版）-->
-    <script src="js/ui-panels.js"></script>
-    <script src="js/ui-menus.js"></script>
-    <script src="js/ui-dialogs.js"></script>
-    <script src="js/ui.js"></script>
+    <!-- 新しい統合システム -->
+    <script type="module">
+        import { DemoApp } from './app.js';
+        import { SpineDebug } from './js/spine-debug.js';
+        
+        // デバッグシステム開始
+        SpineDebug.startDebugging();
+        
+        // アプリ初期化（v3統合システム読み込み後）
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 DemoApp初期化開始');
+            
+            // v3統合システムの読み込み確認
+            console.log('🔍 v3統合システム状態:', {
+                spineCharacterManager: !!window.spineCharacterManager,
+                testSpineV3: !!window.testSpineV3,
+                spine: typeof spine !== 'undefined'
+            });
+            
+            window.demoApp = new DemoApp();
+            
+            console.log('✅ DemoApp初期化完了');
+        });
+    </script>
     
-    <script src="js/export.js"></script>
+    <!-- フォールバック: 旧UIシステム（互換性のため） -->
+    <!-- <script src="js/spine-simple-new.js"></script> -->
+    <!-- <script src="js/ui-panels.js"></script> -->
+    <!-- <script src="js/ui-menus.js"></script> -->
+    <!-- <script src="js/ui-dialogs.js"></script> -->
+    <!-- <script src="js/ui.js"></script> -->
+    <!-- <script src="js/export.js"></script> -->
 </body>
 </html>

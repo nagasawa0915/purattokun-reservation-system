@@ -81,7 +81,18 @@ class SpineCharacterManager {
     }
 
     // キャラクター動的作成 - v2デスクトップアプリ対応
-    async createCharacter(characterData) {
+    async createCharacter(characterName, position = { x: 50, y: 50 }) {
+        // 引数の形式を統一（文字列名 or オブジェクトデータ）
+        let characterData;
+        if (typeof characterName === 'string') {
+            characterData = {
+                name: characterName,
+                position: position,
+                scale: characterName === 'nezumi' ? 0.8 : 1.0
+            };
+        } else {
+            characterData = characterName; // 既にオブジェクト形式
+        }
         try {
             console.log(`🎭 キャラクター作成開始: ${characterData.name}`);
             
@@ -171,7 +182,7 @@ class SpineCharacterManager {
     createFallbackElement(characterData) {
         const fallback = document.createElement('img');
         fallback.id = `${characterData.name}-fallback`;
-        fallback.src = `assets/images/${characterData.name}.png`;
+        fallback.src = `assets/images/${characterData.name === 'purattokun' ? 'purattokunn' : characterData.name}.png`;
         fallback.alt = characterData.name;
         fallback.setAttribute('data-character-name', characterData.name);
         fallback.setAttribute('data-spine-character', 'true');
@@ -657,15 +668,7 @@ window.testSpineV3 = function() {
     });
 };
 
-// DOMContentLoaded後にv2統合初期化実行
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(initializeV2Integration, 1000);
-    });
-} else {
-    setTimeout(initializeV2Integration, 1000);
-}
-
+// 即座にグローバル関数を設定（初期化前でもアクセス可能に）
 console.log('✅ Spine Integration v3 移植版 初期化完了');
 console.log('🔍 利用可能な関数:', {
     spineCharacterManager: !!window.spineCharacterManager,
@@ -675,3 +678,12 @@ console.log('🔍 利用可能な関数:', {
     v2ProjectManager: !!window.v2ProjectManager,
     v2UIIntegration: !!window.v2UIIntegration
 });
+
+// DOMContentLoaded後にv2統合初期化実行
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initializeV2Integration, 500); // 短縮
+    });
+} else {
+    setTimeout(initializeV2Integration, 500); // 短縮
+}

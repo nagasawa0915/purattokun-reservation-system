@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spine Editor v2.0 - Demo</title>
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Spine WebGL Library (Webアプリ版コピー - 動作確認済み) -->
+    <script src="assets/spine/spine-webgl-working.js"></script>
 </head>
 <body>
     <div class="demo-container">
@@ -41,6 +44,7 @@
                     <div id="spine-character-list" class="file-list" style="display: none;"></div>
                 </div>
             </div>
+            
         </div>
 
         <!-- 中央パネル: HTMLプレビュー -->
@@ -52,8 +56,8 @@
                     <small style="color: #888;">💡 左からSpineキャラクターをドラッグ&ドロップして追加できます</small>
                 </div>
                 <iframe id="preview-iframe" class="preview-iframe" style="display: none;"></iframe>
-                <!-- Spineキャラクター表示エリア -->
-                <div id="spine-character-container" class="spine-character-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                <!-- Spineキャラクター表示エリア - フリッカリング修正 -->
+                <div id="spine-character-container" class="spine-character-container">
                     <!-- Spineキャラクターがここに動的追加される -->
                 </div>
             </div>
@@ -101,14 +105,28 @@
     <script src="js/spine-core.js"></script>
     <script src="js/spine-renderer.js"></script>
     
+    <!-- v3ベース シンプルSpine統合システム -->
+    <script src="js/spine-simple-v3.js"></script>
+    
     <!-- Application -->
     <script type="module">
         import { DemoApp } from './app.js';
         
-        // アプリケーション起動
+        // アプリケーション起動（シンプルSpineシステム読み込み後）
         document.addEventListener('DOMContentLoaded', () => {
-            window.demoApp = new DemoApp();
-            console.log('🎯 Demo App initialized');
+            // シンプルSpineシステムの読み込み確認
+            const waitForSpineSystem = () => {
+                if (window.simpleSpineManagerV3) {
+                    console.log('✅ SimpleSpineManagerV3読み込み確認済み');
+                    window.demoApp = new DemoApp();
+                    console.log('🎯 Demo App initialized');
+                } else {
+                    console.log('⏳ SimpleSpineManagerV3読み込み待機中...');
+                    setTimeout(waitForSpineSystem, 100);
+                }
+            };
+            
+            waitForSpineSystem();
         });
     </script>
 </body>

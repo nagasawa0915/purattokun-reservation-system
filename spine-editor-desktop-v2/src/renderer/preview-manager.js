@@ -390,7 +390,13 @@ export class PreviewManager {
                 }
                 
                 const characterData = JSON.parse(characterDataStr);
-                console.log('🎭 Dropped character:', characterData);
+                console.log('🎭 Dropped character data:', characterData);
+                
+                // データ整合性チェック
+                if (!characterData || !characterData.character) {
+                    console.error('❌ 無効なキャラクターデータ:', characterData);
+                    return;
+                }
                 
                 // ドロップ位置を計算（プレビューエリア内の相対位置）
                 const rect = dropZoneElement.getBoundingClientRect();
@@ -399,7 +405,7 @@ export class PreviewManager {
                 
                 // コールバック実行
                 if (onDrop) {
-                    onDrop(characterData, dropX, dropY);
+                    onDrop(characterData.character, dropX, dropY);
                 }
                 
             } catch (error) {

@@ -15,6 +15,10 @@ export class SpineWebGLRenderer {
         this.isInitialized = false;
         this.globalRenderer = null;
         
+        // 🚀 恒久対策1: グローバル描画ループ管理
+        this.globalRafId = 0;
+        this.isGlobalLoopRunning = false;
+        
         console.log('🎭 SpineWebGLRenderer v2.0 初期化中...');
     }
 
@@ -36,6 +40,9 @@ export class SpineWebGLRenderer {
             
             this.isInitialized = true;
             console.log('✅ SpineWebGLRenderer 初期化完了');
+            
+            // 🚀 恒久対策1: グローバル描画ループを先行起動（キャラ未配置でも回す）
+            this.startGlobalRenderLoop();
             
             // グローバル関数公開（デバッグ用）
             this.exposeGlobalFunctions();
@@ -111,8 +118,8 @@ export class SpineWebGLRenderer {
             // Container に追加
             targetContainer.appendChild(canvas);
             
-            // レンダリング開始
-            this.startRendering(renderer, character.id);
+            // 🚀 グローバルループに統合（個別レンダリングループは廃止）
+            // this.startRendering(renderer, character.id); // ← 廃止
             
             // 状態保存
             this.loadedCharacters.set(character.id, {
@@ -148,8 +155,9 @@ export class SpineWebGLRenderer {
         const canvas = document.createElement('canvas');
         canvas.id = `spine-${character.id}-${Date.now()}`;
         canvas.className = 'spine-character-canvas';
-        canvas.width = 400;
-        canvas.height = 400;
+        
+        // 🚀 恒久対策2: 初回サイズ凍結（リサイズ確定後に解凍）
+        this.freezeCanvasSize(canvas, 400, 400);
         
         // デスクトップアプリ用スタイル
         canvas.style.cssText = `
@@ -181,14 +189,16 @@ export class SpineWebGLRenderer {
      * WebGLコンテキスト作成
      */
     createWebGLContext(canvas) {
+        // 🧪 テストA: preserveDrawingBuffer:true でフリッカが止まるか確認
         const gl = canvas.getContext('webgl2', {
             alpha: false,
             antialias: true,
             powerPreference: 'high-performance',
-            preserveDrawingBuffer: false
+            preserveDrawingBuffer: true  // 🧪 一時テスト: フリッカ診断
         }) || canvas.getContext('webgl', {
             alpha: false,
-            antialias: true
+            antialias: true,
+            preserveDrawingBuffer: true  // 🧪 WebGLフォールバック時も同様
         });
         
         if (!gl) {
@@ -224,10 +234,17 @@ export class SpineWebGLRenderer {
             const basePath = `assets/spine/characters/${character.id}/`;
             const atlasPath = `${basePath}${character.id}.atlas`;
             const jsonPath = `${basePath}${character.id}.json`;
+            const texturePath = `${basePath}${character.id}.png`;
             
             console.log(`📦 アセット読み込み: ${character.name}`);
             console.log(`Atlas: ${atlasPath}`);
             console.log(`JSON: ${jsonPath}`);
+            console.log(`Texture: ${texturePath}`);
+            
+            // 🧪 テストC: 画像デコード待ち実装
+            console.log(`🧪 画像デコード開始: ${character.name}`);
+            await this.preloadAndDecodeTexture(texturePath);
+            console.log(`✅ 画像デコード完了: ${character.name}`);
             
             // AssetManager使用
             const assetManager = new spine.AssetManager(renderer.context);
@@ -260,12 +277,181 @@ export class SpineWebGLRenderer {
             renderer.skeleton = skeleton;
             renderer.animationState = animationState;
             
+            // 🧪 テストC: 1フレーム遅延して表示（テクスチャがGPUに確実に転送されるまで待つ）
+            console.log(`🧪 1フレーム待機開始: ${character.name}`);
+            await new Promise(resolve => requestAnimationFrame(() => resolve()));
+            console.log(`✅ 1フレーム待機完了: ${character.name}`);
+            
             console.log(`✅ アセット読み込み完了: ${character.name}`);
             
         } catch (error) {
             console.error(`❌ アセット読み込み失敗: ${character.name}`, error);
             throw error;
         }
+    }
+
+    /**
+     * 🧪 テストC: 画像プリロード＆デコード（テクスチャ転送待ち診断用）
+     */
+    async preloadAndDecodeTexture(textureUrl) {
+        try {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            // 画像読み込み完了を待つ
+            const loadPromise = new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+            
+            img.src = textureUrl;
+            await loadPromise;
+            
+            // CPU側での画像デコード完了を保証
+            if (img.decode) {
+                await img.decode();
+                console.log(`🧪 img.decode() 完了: ${textureUrl}`);
+            } else {
+                console.log(`🧪 img.decode() 未対応、onload完了: ${textureUrl}`);
+            }
+            
+            // createImageBitmap でさらに確実に
+            if (window.createImageBitmap) {
+                const bitmap = await createImageBitmap(img);
+                console.log(`🧪 createImageBitmap() 完了: ${textureUrl} (${bitmap.width}x${bitmap.height})`);
+                bitmap.close(); // メモリ解放
+            }
+            
+        } catch (error) {
+            console.warn(`⚠️ 画像デコード失敗: ${textureUrl}`, error);
+            // エラーが出ても処理続行（従来処理で自動フォールバック）
+        }
+    }
+
+    /**
+     * 🚀 恒久対策1: グローバル描画ループ先行起動
+     * キャラクター未配置でも requestAnimationFrame を常時実行してパイプラインを安定化
+     */
+    startGlobalRenderLoop() {
+        if (this.isGlobalLoopRunning) {
+            console.log('🎬 グローバル描画ループ既に実行中');
+            return;
+        }
+        
+        this.isGlobalLoopRunning = true;
+        let lastTime = 0;
+        
+        const globalLoop = (currentTime) => {
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            
+            // 停止指示があれば終了
+            if (!this.isGlobalLoopRunning) {
+                this.globalRafId = 0;
+                console.log('🛑 グローバル描画ループ停止');
+                return;
+            }
+            
+            // 全キャラクターの描画を実行
+            this.renderAllCharacters(deltaTime);
+            
+            // 次フレーム予約
+            this.globalRafId = requestAnimationFrame(globalLoop);
+        };
+        
+        this.globalRafId = requestAnimationFrame(globalLoop);
+        console.log('🚀 グローバル描画ループ開始（キャラ未配置でも常時実行）');
+    }
+
+    /**
+     * グローバル描画ループ停止
+     */
+    stopGlobalRenderLoop() {
+        this.isGlobalLoopRunning = false;
+        if (this.globalRafId) {
+            cancelAnimationFrame(this.globalRafId);
+            this.globalRafId = 0;
+        }
+    }
+
+    /**
+     * 全キャラクターの描画実行
+     */
+    renderAllCharacters(deltaTime) {
+        this.loadedCharacters.forEach((charData, characterId) => {
+            if (!charData.isActive || !charData.renderer) return;
+            
+            try {
+                const renderer = charData.renderer;
+                
+                // アニメーション更新
+                if (renderer.animationState && renderer.skeleton) {
+                    renderer.animationState.update(deltaTime);
+                    renderer.animationState.apply(renderer.skeleton);
+                    renderer.skeleton.updateWorldTransform();
+                }
+                
+                // 描画実行
+                this.drawSingleCharacter(renderer);
+                
+            } catch (error) {
+                console.error(`🔴 描画エラー: ${characterId}`, error);
+                // エラーが出ても他のキャラクターは続行
+            }
+        });
+    }
+
+    /**
+     * 単一キャラクターの描画（GL状態も毎フレーム明示）
+     */
+    drawSingleCharacter(renderer) {
+        if (!renderer.canvas || !renderer.skeleton) return;
+        
+        // 🚀 恒久対策3: GL状態を毎フレーム明示設定
+        const gl = renderer.context;
+        gl.viewport(0, 0, renderer.canvas.width, renderer.canvas.height);
+        gl.clearColor(0, 0, 0, 0); // 透明背景
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        
+        // Spine描画
+        renderer.camera.viewportWidth = renderer.canvas.width;
+        renderer.camera.viewportHeight = renderer.canvas.height;
+        renderer.resize();
+        
+        renderer.begin();
+        renderer.drawSkeleton(renderer.skeleton, true);
+        renderer.end();
+    }
+
+    /**
+     * 🚀 恒久対策2: 初回サイズ凍結（リサイズ確定後に解凍）
+     */
+    freezeCanvasSize(canvas, initialWidth, initialHeight) {
+        // DPR適用
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(initialWidth * dpr);
+        canvas.height = Math.round(initialHeight * dpr);
+        
+        console.log(`🔒 Canvas サイズ凍結: ${canvas.id} → ${canvas.width}x${canvas.height} (DPR: ${dpr})`);
+        
+        // 500ms後に凍結解除（初回のResizeObserver混乱を回避）
+        setTimeout(() => {
+            this.unfreezeCanvasSize(canvas);
+        }, 500);
+    }
+
+    /**
+     * Canvasサイズ凍結解除
+     */
+    unfreezeCanvasSize(canvas) {
+        if (!canvas.parentElement) return; // 既に削除済み
+        
+        console.log(`🔓 Canvas サイズ凍結解除: ${canvas.id}`);
+        
+        // 必要に応じてResizeObserverやサイズ調整ロジックを再開
+        // 現在はサイズ固定なので特に処理なし
     }
 
     /**
@@ -314,6 +500,11 @@ export class SpineWebGLRenderer {
      */
     startRendering(renderer, characterId) {
         let lastTime = 0;
+        // 🧪 テストB: 初回リサイズ診断用 (1秒間監視)
+        let startTime = Date.now();
+        let lastWidth = renderer.canvas.width;
+        let lastHeight = renderer.canvas.height;
+        let sizeLogCount = 0;
         
         const renderLoop = (currentTime) => {
             const deltaTime = (currentTime - lastTime) / 1000;
@@ -322,6 +513,19 @@ export class SpineWebGLRenderer {
             // キャラクターが削除されていたら停止
             if (!this.loadedCharacters.has(characterId)) {
                 return;
+            }
+            
+            // 🧪 テストB: 初回1秒間のサイズ変更を監視
+            if (Date.now() - startTime < 1000 && sizeLogCount < 30) {
+                const currentWidth = renderer.canvas.width;
+                const currentHeight = renderer.canvas.height;
+                
+                if (currentWidth !== lastWidth || currentHeight !== lastHeight) {
+                    console.log(`🧪 Canvas リサイズ検出 [${characterId}]: ${lastWidth}x${lastHeight} → ${currentWidth}x${currentHeight}`);
+                    lastWidth = currentWidth;
+                    lastHeight = currentHeight;
+                }
+                sizeLogCount++;
             }
             
             try {
@@ -349,7 +553,7 @@ export class SpineWebGLRenderer {
         };
         
         requestAnimationFrame(renderLoop);
-        console.log(`🎬 レンダリング開始: ${characterId}`);
+        console.log(`🎬 レンダリング開始: ${characterId} (初期サイズ: ${renderer.canvas.width}x${renderer.canvas.height})`);
     }
 
     /**
@@ -435,6 +639,9 @@ export class SpineWebGLRenderer {
      * リソース解放
      */
     dispose() {
+        // グローバル描画ループ停止
+        this.stopGlobalRenderLoop();
+        
         this.loadedCharacters.forEach((charData, characterId) => {
             if (charData.canvas) {
                 charData.canvas.remove();

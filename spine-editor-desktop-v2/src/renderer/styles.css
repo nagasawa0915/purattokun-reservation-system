@@ -1,5 +1,64 @@
 /* Spine Editor Desktop v2.0 - Main Styles */
 
+/* ========== ドラッグ&ドロップスタイル ========== */
+.character-item {
+    padding: 8px 12px;
+    margin: 4px 0;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.character-item:hover {
+    background: #e9ecef;
+    transform: translateX(2px);
+}
+
+.character-item:active {
+    cursor: grabbing;
+}
+
+.character-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.character-name {
+    font-weight: 500;
+    color: #495057;
+}
+
+.character-files {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.drag-over {
+    background-color: rgba(0, 123, 255, 0.1) !important;
+    border: 2px dashed #007bff !important;
+}
+
+/* ドロップゾーン視覚フィードバック */
+.preview-content.drag-over::after,
+#spine-character-container.drag-over::after,
+#spine-stage.drag-over::after {
+    content: "ここにドロップしてキャラクターを追加";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 123, 255, 0.9);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    z-index: 1000;
+    pointer-events: none;
+}
+
 /* 最小4パネルレイアウト */
 body {
     margin: 0;
@@ -347,4 +406,47 @@ body {
 
 .section-group:last-child {
     border-bottom: none;
+}
+
+/* Spineキャラクター表示エリア - フリッカリング修正 */
+.spine-character-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 40;
+    pointer-events: none;
+    /* フリッカリング防止 */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: auto;
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Canvas要素の表示保証 */
+#spine-preview-canvas {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 50 !important;
+    position: absolute !important;
+    /* フリッカリング防止 */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: auto;
+}
+
+/* iframe要素のz-index調整 */
+.preview-iframe {
+    z-index: 10;
+    position: relative;
+}
+
+/* Spine要素の優先表示 */
+canvas[id*="spine"] {
+    z-index: 50 !important;
+    display: block !important;
+    visibility: visible !important;
 }

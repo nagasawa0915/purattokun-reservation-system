@@ -222,7 +222,11 @@ export class SpineEditorCore {
     
     this.spine = new SpineManager(this);
     await this.spine.init();
-    console.log('✅ Spine Manager initialized');
+    
+    // v3移植: グローバル参照設定
+    this.spine.setAsGlobalInstance();
+    
+    console.log('✅ Spine Manager (v3パターン) initialized');
   }
 
   /**
