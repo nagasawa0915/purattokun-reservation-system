@@ -221,7 +221,7 @@ export class SpineWebGLRenderer {
     async loadCharacterAssets(renderer, character) {
         try {
             // アセットパス構築
-            const basePath = `./assets/spine/characters/${character.id}/`;
+            const basePath = `assets/spine/characters/${character.id}/`;
             const atlasPath = `${basePath}${character.id}.atlas`;
             const jsonPath = `${basePath}${character.id}.json`;
             

@@ -248,7 +248,67 @@
             
             // デモモードボタンイベント
             setupDemoModeButton();
+            
+            // v3統合システムテスト
+            setupV3Testing();
+            
+            // キーボードショートカット追加
+            setupV3KeyboardShortcuts();
         });
+        
+        /**
+         * Phase 1: 最小構成キーボードショートカット
+         */
+        function setupV3KeyboardShortcuts() {
+            document.addEventListener('keydown', (event) => {
+                // Ctrl+Alt+組み合わせで最小構成機能実行
+                if (event.ctrlKey && event.altKey) {
+                    switch(event.key) {
+                        case 't': // Ctrl+Alt+T: Spineテスト実行
+                            event.preventDefault();
+                            if (window.simpleSpineManager) {
+                                window.simpleSpineManager.testSpineLoad();
+                            }
+                            break;
+                        case 'p': // Ctrl+Alt+P: ぷらっとくん作成
+                            event.preventDefault();
+                            if (window.simpleSpineManager) {
+                                window.simpleSpineManager.createCharacter('purattokun');
+                            }
+                            break;
+                        case 'n': // Ctrl+Alt+N: nezumi作成
+                            event.preventDefault();
+                            if (window.simpleSpineManager) {
+                                window.simpleSpineManager.createCharacter('nezumi');
+                            }
+                            break;
+                        case 'c': // Ctrl+Alt+C: 全キャラクター削除
+                            event.preventDefault();
+                            if (window.simpleSpineManager) {
+                                window.simpleSpineManager.clearAll();
+                            }
+                            break;
+                        case 'd': // Ctrl+Alt+D: デバッグパネル表示/非表示
+                            event.preventDefault();
+                            const panel = document.getElementById('simple-debug-panel');
+                            if (panel) {
+                                panel.remove();
+                            } else {
+                                addSimpleDebugPanel();
+                            }
+                            break;
+                    }
+                }
+            });
+            
+            console.log('⌨️ Phase 1: 最小構成キーボードショートカット有効化');
+            console.log('📋 ショートカット一覧:');
+            console.log('  Ctrl+Alt+T: Spineテスト実行');
+            console.log('  Ctrl+Alt+P: ぷらっとくん作成');
+            console.log('  Ctrl+Alt+N: nezumi作成');
+            console.log('  Ctrl+Alt+C: 全キャラクター削除');
+            console.log('  Ctrl+Alt+D: デバッグパネル表示/非表示');
+        }
         
         /**
          * デモモードボタン設定
@@ -287,30 +347,110 @@
             
             console.log('✅ Demo mode button setup complete');
         }
+        
+        /**
+         * Phase 1: 最小構成Spineシステム初期化
+         */
+        function setupV3Testing() {
+            // 最小構成Spineシステムの初期化確認
+            setTimeout(() => {
+                console.log('🚀 Phase 1: 最小構成Spineシステム初期化確認');
+                
+                // 基本機能チェック
+                const basicStatus = {
+                    spine: typeof spine !== 'undefined',
+                    simpleSpineManager: !!window.simpleSpineManager,
+                    spineStage: !!document.getElementById('spine-stage')
+                };
+                
+                console.table(basicStatus);
+                
+                // デバッグパネル追加
+                addSimpleDebugPanel();
+                
+            }, 2000);
+        }
+        
+        /**
+         * Phase 1: 最小構成デバッグパネル
+         */
+        function addSimpleDebugPanel() {
+            // デバッグパネルが既に存在する場合はスキップ
+            if (document.getElementById('simple-debug-panel')) return;
+            
+            const debugPanel = document.createElement('div');
+            debugPanel.id = 'simple-debug-panel';
+            debugPanel.style.cssText = `
+                position: fixed;
+                top: 100px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 15px;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 12px;
+                z-index: 1000;
+                min-width: 250px;
+                max-height: 400px;
+                overflow-y: auto;
+            `;
+            
+            debugPanel.innerHTML = `
+                <h4 style="margin: 0 0 10px 0; color: #4CAF50;">🚀 Phase 1: 最小構成Spine</h4>
+                <button onclick="window.simpleSpineManager?.testSpineLoad()" style="background: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🔍 Spineテスト</button>
+                <button onclick="window.simpleSpineManager?.createCharacter('purattokun')" style="background: #2196F3; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🐱 プラットくん</button>
+                <button onclick="window.simpleSpineManager?.createCharacter('nezumi')" style="background: #FF9800; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🐭 nezumi</button>
+                <button onclick="window.simpleSpineManager?.clearAll()" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">🗑️ 全削除</button>
+                <button onclick="document.getElementById('simple-debug-panel').remove()" style="background: #666; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin: 2px;">✖ 閉じる</button>
+                <div id="simple-debug-status" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                    初期化中...
+                </div>
+            `;
+            
+            document.body.appendChild(debugPanel);
+            
+            // ステータス更新
+            updateSimpleDebugStatus();
+            
+            // 5秒毎にステータス更新
+            setInterval(updateSimpleDebugStatus, 5000);
+        }
+        
+        /**
+         * Phase 1: 最小構成ステータス更新
+         */
+        function updateSimpleDebugStatus() {
+            const statusElement = document.getElementById('simple-debug-status');
+            if (!statusElement) return;
+            
+            const status = {
+                spine: typeof spine !== 'undefined' ? '✅' : '❌',
+                manager: window.simpleSpineManager ? '✅' : '❌',
+                characters: window.simpleSpineManager ? window.simpleSpineManager.characters.size : 0,
+                stage: document.getElementById('spine-stage') ? '✅' : '❌'
+            };
+            
+            statusElement.innerHTML = `
+                Spine WebGL: ${status.spine}<br>
+                Simple Manager: ${status.manager}<br>
+                Characters: ${status.characters}<br>
+                Stage: ${status.stage}<br>
+                <small>Updated: ${new Date().toLocaleTimeString()}</small>
+            `;
+        }
     </script>
 
     <!-- JavaScript読み込み -->
-    <!-- SpineOutlinerUI統合システム -->
-    <script src="js/spine-outliner-file-detector.js"></script>
-    <script src="js/spine-outliner-ui.js"></script>
-    <script src="js/spine-webgl-renderer.js"></script>
+    <!-- 🚀 Phase 1: 最小構成Spine実装 -->
+    <script src="js/spine-simple-new.js"></script>
     
-    <!-- 軽量統合システム依存モジュール -->
-    <script src="js/spine-core.js"></script>
-    <script src="js/spine-renderer.js"></script>
-    <script src="js/spine-utils.js"></script>
-    <script src="js/spine-system.js"></script>
-    
-    <!-- メインシステム -->
-    <script type="module" src="js/app.js"></script>
-    
-    <!-- UI システム（分割済み・依存関係順）-->
+    <!-- UI システム（軽量版）-->
     <script src="js/ui-panels.js"></script>
     <script src="js/ui-menus.js"></script>
     <script src="js/ui-dialogs.js"></script>
     <script src="js/ui.js"></script>
     
-    <script src="js/spine.js"></script>
     <script src="js/export.js"></script>
 </body>
 </html>

@@ -1,7 +1,8 @@
 // 🎮 Spine Editor Desktop v3.0 - Spine Integration
 // Spine WebGLとの統合・キャラクター管理・動的読み込み
+// v2デスクトップアプリに移植
 
-console.log('🎮 Spine Integration 初期化開始');
+console.log('🎮 Spine Integration v3 移植版 初期化開始');
 
 // ========== Spineキャラクター管理 ========== //
 
@@ -79,7 +80,7 @@ class SpineCharacterManager {
         }
     }
 
-    // キャラクター動的作成
+    // キャラクター動的作成 - v2デスクトップアプリ対応
     async createCharacter(characterData) {
         try {
             console.log(`🎭 キャラクター作成開始: ${characterData.name}`);
@@ -93,18 +94,19 @@ class SpineCharacterManager {
             // 設定要素作成
             const config = this.createConfigElement(characterData);
             
-            // シーンコンテナに追加
-            const sceneContainer = document.getElementById('scene-container');
-            if (sceneContainer) {
-                // プレースホルダーを非表示
-                const placeholder = document.getElementById('background-placeholder');
-                if (placeholder) {
-                    placeholder.style.display = 'none';
-                }
-                
-                sceneContainer.appendChild(canvas);
-                sceneContainer.appendChild(fallback);
-                sceneContainer.appendChild(config);
+            // v2デスクトップアプリのspine-stageに追加
+            const spineStage = document.getElementById('spine-stage');
+            if (spineStage) {
+                spineStage.appendChild(canvas);
+                spineStage.appendChild(fallback);
+                spineStage.appendChild(config);
+                console.log('✅ v2デスクトップアプリのspine-stageに追加完了');
+            } else {
+                console.warn('⚠️ spine-stage要素が見つかりません');
+                // フォールバック: body直接追加
+                document.body.appendChild(canvas);
+                document.body.appendChild(fallback);
+                document.body.appendChild(config);
             }
             
             // Spine WebGL初期化
@@ -113,16 +115,7 @@ class SpineCharacterManager {
                     await this.initializeSpineCharacter(characterData, canvas, fallback);
                 } catch (error) {
                     console.warn(`⚠️ Spine初期化失敗、フォールバックに切り替え: ${characterData.name}`, error);
-                    // Spine初期化失敗時はフォールバック使用
-                    if (window.spineFallbackManager) {
-                        // 既存要素を削除してフォールバック作成
-                        canvas.remove();
-                        fallback.remove();
-                        config.remove();
-                        return window.spineFallbackManager.createFallbackCharacter(characterData);
-                    } else {
-                        this.showFallbackCharacter(canvas, fallback);
-                    }
+                    this.showFallbackCharacter(canvas, fallback);
                 }
             } else {
                 // Spine WebGL利用不可時はフォールバック表示
@@ -402,11 +395,16 @@ class SpineCharacterManager {
         canvas.addEventListener('click', (event) => {
             console.log(`🎯 キャラクタークリック: ${characterData.name}`);
             
-            // アプリケーション状態更新
+            // v2デスクトップアプリのキャラクター選択システムとの統合
             if (window.selectCharacter) {
                 // キャラクターインデックスを取得
                 const characterIndex = Array.from(this.characters.keys()).indexOf(characterData.name);
                 window.selectCharacter(characterIndex);
+            }
+            
+            // SpineOutlinerUIとの統合
+            if (window.spineOutlinerUI && window.spineOutlinerUI.selectCharacter) {
+                window.spineOutlinerUI.selectCharacter(characterData.name);
             }
             
             // クリックアニメーション再生
@@ -472,12 +470,6 @@ class SpineCharacterManager {
             this.removeCharacter(characterName);
         }
         
-        // プレースホルダー表示
-        const placeholder = document.getElementById('background-placeholder');
-        if (placeholder) {
-            placeholder.style.display = 'flex';
-        }
-        
         console.log('🗑️ 全キャラクター削除完了');
     }
 
@@ -503,8 +495,9 @@ class SpineCharacterManager {
     }
 }
 
-// ========== プロジェクト読み込み統合 ========== //
+// ========== v2デスクトップアプリ統合関数 ========== //
 
+// プロジェクト読み込み統合
 async function loadProjectCharacters(projectData) {
     try {
         console.log('📦 プロジェクトキャラクター読み込み開始');
@@ -529,19 +522,156 @@ async function loadProjectCharacters(projectData) {
     }
 }
 
+// テスト用キャラクター作成（デバッグ用）
+function createTestCharacter(characterName = 'purattokun') {
+    const testCharacterData = {
+        name: characterName,
+        position: { x: 50, y: 50 },
+        scale: 1.0,
+        files: {
+            atlas: `assets/spine/characters/${characterName}/${characterName}.atlas`,
+            json: `assets/spine/characters/${characterName}/${characterName}.json`,
+            image: `assets/spine/characters/${characterName}/${characterName}.png`
+        }
+    };
+    
+    return spineCharacterManager.createCharacter(testCharacterData);
+}
+
+// ========== v2デスクトップアプリ統合関数 ========== //
+
+// SpineOutlinerUIとの統合
+function integrateWithSpineOutlinerUI() {
+    // v2デスクトップアプリのSpineOutlinerUIを検索・統合
+    if (window.spineOutlinerUI) {
+        console.log('✅ SpineOutlinerUI統合開始');
+        
+        // SpineOutlinerUIからのキャラクター選択イベント
+        const originalSelectCharacter = window.spineOutlinerUI.selectCharacter;
+        if (originalSelectCharacter) {
+            window.spineOutlinerUI.selectCharacter = function(characterName) {
+                console.log(`🎯 SpineOutlinerUI -> v3統合: ${characterName}`);
+                
+                // 元のメソッド実行
+                originalSelectCharacter.call(this, characterName);
+                
+                // v3統合システムでキャラクター選択
+                const character = spineCharacterManager.characters.get(characterName);
+                if (character) {
+                    // キャラクターを視覚的にハイライト
+                    character.canvas.style.boxShadow = '0 0 10px rgba(255, 255, 0, 0.5)';
+                    setTimeout(() => {
+                        character.canvas.style.boxShadow = 'none';
+                    }, 2000);
+                }
+            };
+        }
+    } else {
+        console.log('⏳ SpineOutlinerUI初期化待機中...');
+        setTimeout(integrateWithSpineOutlinerUI, 1000);
+    }
+}
+
+// v2デスクトップアプリとの統合初期化
+function initializeV2Integration() {
+    // 1. SpineOutlinerUIとの統合
+    integrateWithSpineOutlinerUI();
+    
+    // 2. v2のプロジェクト管理システムとの統合
+    window.v2ProjectManager = {
+        // プロジェクトにキャラクター追加
+        addCharacterToProject: function(characterData) {
+            return spineCharacterManager.createCharacter(characterData);
+        },
+        
+        // プロジェクトからキャラクター削除
+        removeCharacterFromProject: function(characterName) {
+            spineCharacterManager.removeCharacter(characterName);
+        },
+        
+        // プロジェクト全キャラクター削除
+        clearProject: function() {
+            spineCharacterManager.clearAllCharacters();
+        }
+    };
+    
+    // 3. v2のUI要素との統合
+    window.v2UIIntegration = {
+        // spine-stage要素にキャラクター配置確認
+        checkSpineStage: function() {
+            const spineStage = document.getElementById('spine-stage');
+            if (spineStage) {
+                console.log('✅ spine-stage要素発見:', spineStage);
+                return true;
+            } else {
+                console.warn('⚠️ spine-stage要素が見つかりません');
+                return false;
+            }
+        },
+        
+        // キャラクター選択UI更新
+        updateCharacterSelection: function(characterName) {
+            // プロパティパネル更新
+            const propertyPanel = document.getElementById('property-panel');
+            if (propertyPanel && characterName) {
+                propertyPanel.innerHTML = `
+                    <h4>🎭 ${characterName}</h4>
+                    <p>v3統合システムで管理中</p>
+                    <button onclick="window.testSpineV3()">テスト実行</button>
+                `;
+            }
+        }
+    };
+    
+    console.log('✅ v2デスクトップアプリ統合機能初期化完了');
+}
+
 // ========== グローバル初期化 ========== //
 
 // SpineCharacterManagerインスタンス作成
 const spineCharacterManager = new SpineCharacterManager();
 
-// グローバル関数公開
+// グローバル関数公開（v2デスクトップアプリとの統合）
 window.spineCharacterManager = spineCharacterManager;
 window.loadProjectCharacters = loadProjectCharacters;
+window.createTestCharacter = createTestCharacter;
 window.clearAllCharacters = () => {
     spineCharacterManager.clearAllCharacters();
-    if (window.spineFallbackManager) {
-        window.spineFallbackManager.clearAllCharacters();
-    }
 };
 
-console.log('✅ Spine Integration 初期化完了');
+// v2デスクトップアプリ用デバッグ関数
+window.testSpineV3 = function() {
+    console.log('🔍 v3統合テスト開始');
+    console.log('🔍 SpineCharacterManager:', spineCharacterManager);
+    console.log('🔍 Spine WebGL状態:', typeof spine !== 'undefined' ? '利用可能' : '未読み込み');
+    console.log('🔍 spine-stage要素:', document.getElementById('spine-stage') ? '発見' : '未発見');
+    
+    // テストキャラクター作成
+    console.log('🎭 テストキャラクター作成開始...');
+    createTestCharacter('purattokun').then(result => {
+        if (result) {
+            console.log('✅ テストキャラクター作成成功');
+        } else {
+            console.error('❌ テストキャラクター作成失敗');
+        }
+    });
+};
+
+// DOMContentLoaded後にv2統合初期化実行
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initializeV2Integration, 1000);
+    });
+} else {
+    setTimeout(initializeV2Integration, 1000);
+}
+
+console.log('✅ Spine Integration v3 移植版 初期化完了');
+console.log('🔍 利用可能な関数:', {
+    spineCharacterManager: !!window.spineCharacterManager,
+    loadProjectCharacters: !!window.loadProjectCharacters,
+    createTestCharacter: !!window.createTestCharacter,
+    testSpineV3: !!window.testSpineV3,
+    v2ProjectManager: !!window.v2ProjectManager,
+    v2UIIntegration: !!window.v2UIIntegration
+});

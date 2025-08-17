@@ -145,7 +145,7 @@ export class SpinePreviewLayer {
         try {
             console.log(`🎭 ${characterName} 読み込み中...`);
             
-            const basePath = `./assets/spine/characters/${characterName}/`;
+            const basePath = `assets/spine/characters/${characterName}/`;
             console.log(`🔧 ベースパス: ${basePath}`);
             
             // アセットマネージャー（シンプルシーンパターン）
@@ -170,9 +170,9 @@ export class SpinePreviewLayer {
             
             // スケルトン作成（シンプルシーン成功座標）
             const skeleton = new spine.Skeleton(skeletonData);
-            skeleton.x = 200; // Canvas中央
-            skeleton.y = 250; // 調整位置  
-            skeleton.scaleX = skeleton.scaleY = 0.5;
+            skeleton.x = 0; // 🚀 シンプル化革命: v3成功パターン
+            skeleton.y = 0; // 🚀 シンプル化革命: v3成功パターン  
+            skeleton.scaleX = skeleton.scaleY = 1.0; // 🚀 シンプル化革命: v3成功パターン
             
             // アニメーション設定
             const animationStateData = new spine.AnimationStateData(skeletonData);

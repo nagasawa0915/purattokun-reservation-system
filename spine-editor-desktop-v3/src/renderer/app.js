@@ -296,15 +296,22 @@ async function startEditMode() {
         console.log('🎯 編集モード開始');
         updateAppStatus('編集モード開始中...');
         
-        // 編集システム読み込み
-        await loadEditingSystem();
+        // v3統合編集システム確認・開始
+        if (window.SpineEditCore && window.SpineBoundingBoxV3) {
+            console.log('✅ v3編集システム統合確認済み');
+            window.spineEditCoreInstance = new window.SpineEditCore();
+            window.spineEditCoreInstance.startEditMode();
+        } else {
+            console.log('📦 レガシー編集システム読み込み中...');
+            await loadEditingSystem();
+        }
         
         // UI更新
         elements.toggleEditMode.textContent = '✅ 編集モード';
         elements.toggleEditMode.classList.add('btn-success');
         elements.toggleEditMode.classList.remove('btn-primary');
         
-        updateAppStatus('編集モード: 有効');
+        updateAppStatus('編集モード: 有効 (バウンディングボックス対応)');
         console.log('✅ 編集モード開始完了');
         
     } catch (error) {
@@ -317,6 +324,12 @@ async function startEditMode() {
 
 function stopEditMode() {
     console.log('🛑 編集モード終了');
+    
+    // v3編集コアシステム終了
+    if (window.spineEditCoreInstance) {
+        window.spineEditCoreInstance.endEditMode();
+        window.spineEditCoreInstance = null;
+    }
     
     // 編集システムクリーンアップ
     if (window.cleanupEditingSystem) {

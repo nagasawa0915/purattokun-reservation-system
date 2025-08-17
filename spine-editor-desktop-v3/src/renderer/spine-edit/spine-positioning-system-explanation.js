@@ -39,23 +39,26 @@ function waitForSpineEditCore(callback, maxRetries = 50) {
     }, 100);
 }
 
-// Core モジュール読み込み（改良版）
+// v3.0統合版: 既存SpineEditCoreを使用（動的読み込み無効化）
 try {
-    // spine-edit-core.js の動的読み込み
-    const coreScript = document.createElement('script');
-    coreScript.src = 'spine-edit-core.js';
-    coreScript.onload = function() {
-        console.log('📦 spine-edit-core.jsファイル読み込み完了');
+    // HTMLで既に読み込まれたSpineEditCoreを確認
+    if (window.SpineEditCore) {
+        console.log('✅ SpineEditCoreクラス検出済み - v3統合版使用');
         spineEditCoreLoaded = true;
-    };
-    coreScript.onerror = function() {
-        console.error('❌ SpineEditCore モジュール読み込み失敗 - spine-edit-core.js が見つかりません');
-        console.log('🔄 フォールバックシステムで継続...');
+        
+        // バウンディングボックス統合確認
+        if (window.SpineBoundingBoxV3) {
+            console.log('✅ バウンディングボックスv3統合確認済み');
+        }
+        
+        // 初期化は不要（app.jsで管理）
+        
+    } else {
+        console.warn('⚠️ SpineEditCore未検出 - フォールバックモード');
         initializeFallbackSystem();
-    };
-    document.head.appendChild(coreScript);
+    }
 } catch (error) {
-    console.error('❌ SpineEditCore モジュール読み込み例外:', error);
+    console.error('❌ SpineEditCore確認例外:', error);
     initializeFallbackSystem();
 }
 

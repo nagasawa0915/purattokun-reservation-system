@@ -41,10 +41,27 @@ class SpineEditCore {
         this.isEditMode = false;
         this.selectedCharacter = null;
         
+        // バウンディングボックス終了
+        if (window.SpineBoundingBoxV3 && window.SpineBoundingBoxV3.isActive) {
+            window.SpineBoundingBoxV3.endEdit();
+        }
+        
         // 編集ハンドル削除
         if (this.editHandles) {
             this.editHandles.remove();
             this.editHandles = null;
+        }
+        
+        // 編集用スタイル削除
+        const editStyles = document.getElementById('spine-edit-styles');
+        if (editStyles) {
+            editStyles.remove();
+        }
+        
+        // 終了ボタン削除
+        const exitBtn = document.getElementById('spine-exit-edit-btn');
+        if (exitBtn) {
+            exitBtn.remove();
         }
         
         console.log('📝 編集モード終了');
@@ -165,12 +182,22 @@ class SpineEditCore {
             el.classList.remove('spine-character-selected');
         });
         
+        // 既存バウンディングボックス終了
+        if (window.SpineBoundingBoxV3 && window.SpineBoundingBoxV3.isActive) {
+            window.SpineBoundingBoxV3.endEdit();
+        }
+        
         // 新しい選択
         character.classList.add('spine-character-selected');
         this.selectedCharacter = character;
         
-        // 編集ハンドル作成
-        this.createEditHandles(character);
+        // バウンディングボックス開始
+        if (window.SpineBoundingBoxV3) {
+            window.SpineBoundingBoxV3.startEdit(character);
+        } else {
+            // フォールバック: 従来ハンドル
+            this.createEditHandles(character);
+        }
         
         const characterName = character.getAttribute('data-character-name');
         console.log('🎯 キャラクター選択:', characterName);
@@ -377,13 +404,21 @@ class SpineEditCore {
 
 // ========== グローバル初期化 ========== //
 
-// SpineEditCoreインスタンス作成
-const spineEditCore = new SpineEditCore();
+// ========== グローバル公開 ========== //
 
-// グローバル関数公開
-window.spineEditCore = spineEditCore;
-window.startEditMode = () => spineEditCore.startEditMode();
-window.endEditMode = () => spineEditCore.endEditMode();
-window.saveCharacterPositions = () => spineEditCore.savePositions();
+// SpineEditCoreクラスをグローバルに公開
+window.SpineEditCore = SpineEditCore;
+
+// v3バウンディングボックステスト関数
+window.testBoundingBoxV3 = function() {
+    const character = document.querySelector('[data-spine-character="true"]');
+    if (character && window.SpineBoundingBoxV3) {
+        window.SpineBoundingBoxV3.startEdit(character);
+        console.log('✅ v3バウンディングボックステスト開始');
+    } else {
+        console.error('❌ キャラクターまたはバウンディングボックスシステムが見つかりません');
+    }
+};
 
 console.log('✅ Spine Edit Core Module 初期化完了');
+console.log('🎯 テスト方法: testBoundingBoxV3() をコンソールで実行');
