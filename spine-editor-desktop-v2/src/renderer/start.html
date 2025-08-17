@@ -92,9 +92,34 @@
                     <button id="btn-add-spine" class="btn" style="width: 100%; margin-bottom: 10px;" disabled>
                         🎭 Spineキャラクター追加
                     </button>
-                    <button id="btn-save-position" class="btn" style="width: 100%;" disabled>
+                    <button id="btn-save-position" class="btn" style="width: 100%; margin-bottom: 10px;" disabled>
                         💾 位置を保存
                     </button>
+                    
+                    <!-- バウンディングボックス編集エリア（マニュアル準拠） -->
+                    <div class="bbox-edit-section" style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
+                        <div class="panel-header" style="font-size: 14px; margin-bottom: 10px;">📦 バウンディングボックス編集</div>
+                        <button id="btn-start-bbox-edit" class="btn" style="width: 100%; margin-bottom: 8px;" disabled 
+                                onclick="startBoundingBoxEdit()">
+                            🔲 編集開始
+                        </button>
+                        <div id="bbox-edit-controls" style="display: none;">
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <button id="btn-save-bbox" class="btn" style="flex: 1; background: #4CAF50; color: white;" 
+                                        onclick="saveBoundingBoxState()">
+                                    💾 保存
+                                </button>
+                                <button id="btn-cancel-bbox" class="btn" style="flex: 1; background: #FFC107; color: white;" 
+                                        onclick="cancelBoundingBoxEdit()">
+                                    ↶ キャンセル
+                                </button>
+                            </div>
+                            <button id="btn-end-bbox-edit" class="btn" style="width: 100%; background: #f44336; color: white;" 
+                                    onclick="endBoundingBoxEdit()">
+                                ✅ 編集終了
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

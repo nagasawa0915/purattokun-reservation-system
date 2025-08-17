@@ -106,6 +106,20 @@ export class UIManager {
             this.elements.btnClearCharacters.addEventListener('click', handlers.clearCharacters);
         }
         
+        // バウンディングボックス編集ボタン（マニュアル準拠: onclick属性使用）
+        const btnStartBboxEdit = document.getElementById('btn-start-bbox-edit');
+        
+        console.log('🔍 バウンディングボックスボタン確認:');
+        console.log('  btnStartBboxEdit:', !!btnStartBboxEdit);
+        console.log('  グローバル関数確認:');
+        console.log('    window.startBoundingBoxEdit:', typeof window.startBoundingBoxEdit);
+        console.log('    window.saveBoundingBoxState:', typeof window.saveBoundingBoxState);
+        console.log('    window.cancelBoundingBoxEdit:', typeof window.cancelBoundingBoxEdit);
+        console.log('    window.endBoundingBoxEdit:', typeof window.endBoundingBoxEdit);
+        
+        // マニュアル準拠: onclick属性を使用するため、addEventListenerは削除
+        // ボタンの存在確認のみ行う
+        
         // シンプルシーンボタン
         if (this.elements.btnSimpleScene) {
             this.elements.btnSimpleScene.addEventListener('click', handlers.openSimpleScene || this.openSimpleScene);

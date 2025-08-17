@@ -23,6 +23,14 @@ export class SpinePreviewLayer {
         this.isRenderingActive = false;
         this.renderLoopId = null;
         
+        // 🚀 Phase 1: 常時rAFレンダーループ用
+        this._rafId = 0;
+        this._running = false;
+        this._lost = false;
+        
+        // 🚀 Phase 1: テクスチャ復旧用のアセット記録
+        this._textureAssets = new Map(); // characterId -> { atlas, json, pngs }
+        
         // 🔧 メソッドバインディング確保（エラー回避）
         this.freezeCanvasSize = this.freezeCanvasSize.bind(this);
         this.unfreezeCanvasSize = this.unfreezeCanvasSize.bind(this);
@@ -110,6 +118,9 @@ export class SpinePreviewLayer {
             throw new Error('WebGL not supported');
         }
         
+        // 🚀 Phase 1: WebGL Context Lost/Restored イベントハンドリング
+        this._bindContextEvents();
+        
         // 🚀 B. 初回だけサイズ凍結（エラーハンドリング付き）
         try {
             if (typeof this.freezeCanvasSize === 'function') {
@@ -129,6 +140,149 @@ export class SpinePreviewLayer {
         this.gl.clearColor(0.0, 0.0, 0.0, 0.0); // 透明背景
         
         console.log('🔧 WebGLコンテキスト初期化完了（preserveDrawingBuffer + サイズ凍結）');
+    }
+
+    /**
+     * 🚀 Phase 1: WebGL Context Lost/Restored イベントハンドリング
+     */
+    _bindContextEvents() {
+        if (!this.canvas) {
+            console.warn('⚠️ Canvas要素が見つからないため、Context Eventをバインドできません');
+            return;
+        }
+
+        console.log('🔗 WebGL Context Lost/Restored イベントをバインド中...');
+
+        // Context Lost イベント
+        this.canvas.addEventListener('webglcontextlost', (e) => {
+            console.warn('⚠️ WebGL Context Lost 検出');
+            e.preventDefault();
+            this._lost = true;
+            
+            // 🚀 Phase 1: レンダリング安全停止
+            this._running = false;
+            if (this._rafId) {
+                cancelAnimationFrame(this._rafId);
+                this._rafId = 0;
+            }
+        }, false);
+
+        // Context Restored イベント
+        this.canvas.addEventListener('webglcontextrestored', async () => {
+            console.log('🔄 WebGL Context Restored 検出 - 復旧開始');
+            
+            try {
+                // レンダラー再初期化
+                await this._initRenderer(true);
+                
+                // 全テクスチャ再アップロード
+                await this._reuploadAllTextures();
+                
+                // Context Lost フラグを解除
+                this._lost = false;
+                
+                // 🚀 Phase 1: rAFループ再開
+                if (!this._running) {
+                    this.startRenderLoop();
+                }
+                
+                console.log('✅ WebGL Context 復旧完了');
+            } catch (error) {
+                console.error('❌ WebGL Context 復旧失敗:', error);
+            }
+        }, false);
+
+        console.log('✅ WebGL Context イベントバインド完了');
+    }
+
+    /**
+     * 🚀 Phase 1: レンダラー初期化（復旧対応）
+     */
+    async _initRenderer(isRestore = false) {
+        if (isRestore) {
+            console.log('🔄 レンダラー復旧初期化中...');
+            
+            // WebGLコンテキスト再取得
+            const contextOptions = {
+                preserveDrawingBuffer: true,
+                alpha: true,
+                antialias: true,
+                premultipliedAlpha: true
+            };
+            
+            this.gl = this.canvas.getContext('webgl', contextOptions) || 
+                      this.canvas.getContext('experimental-webgl', contextOptions);
+            
+            if (!this.gl) {
+                throw new Error('WebGL context restoration failed');
+            }
+            
+            // WebGL状態を再設定
+            this.gl.enable(this.gl.BLEND);
+            this.gl.blendFuncSeparate(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA, this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA);
+            this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
+            
+            // Spine レンダラー再作成
+            if (typeof spine !== 'undefined' && spine.SceneRenderer) {
+                this.spine.renderer = new spine.SceneRenderer(this.canvas, this.gl);
+                console.log('✅ Spine レンダラー復旧完了');
+            }
+        }
+    }
+
+    /**
+     * 🚀 Phase 1: 全テクスチャ再アップロード
+     */
+    async _reuploadAllTextures() {
+        console.log('🔄 全テクスチャ再アップロード開始');
+        
+        let reuploadCount = 0;
+        
+        // 記録されたテクスチャアセットを再アップロード
+        for (const [characterId, assets] of this._textureAssets) {
+            try {
+                console.log(`🔄 ${characterId} のテクスチャを再アップロード中...`);
+                
+                // 各キャラクターのアセットを再読み込み
+                if (assets.atlas && assets.json && assets.pngs) {
+                    const assetManager = new spine.AssetManager(this.gl);
+                    
+                    // 再読み込み
+                    assetManager.loadTextureAtlas(assets.atlas);
+                    assetManager.loadText(assets.json);
+                    assets.pngs.forEach(png => {
+                        assetManager.loadTexture(png);
+                    });
+                    
+                    // 読み込み完了待機
+                    await this.waitForAssetsSimple(assetManager);
+                    
+                    // キャラクター状態を復旧
+                    const character = this.characters.get(characterId);
+                    if (character) {
+                        // Skeleton再構築
+                        const atlas = assetManager.require(assets.atlas);
+                        const skeletonJson = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
+                        const skeletonData = skeletonJson.readSkeletonData(assetManager.require(assets.json));
+                        
+                        character.skeleton = new spine.Skeleton(skeletonData);
+                        character.animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                        
+                        // アニメーション復旧
+                        if (skeletonData.animations.length > 0) {
+                            character.animationState.setAnimation(0, skeletonData.animations[0].name, true);
+                        }
+                        
+                        reuploadCount++;
+                        console.log(`✅ ${characterId} テクスチャ復旧完了`);
+                    }
+                }
+            } catch (error) {
+                console.error(`❌ ${characterId} テクスチャ復旧失敗:`, error);
+            }
+        }
+        
+        console.log(`✅ テクスチャ再アップロード完了 (${reuploadCount}件)`);
     }
 
     /**
@@ -316,6 +470,13 @@ export class SpinePreviewLayer {
             const assetManager = new spine.AssetManager(this.gl);
             
             console.log('📁 アセット読み込み開始:', { atlasPath, jsonPath, imagePath });
+            
+            // 🚀 Phase 1: テクスチャアセット記録（Context Lost復旧用）
+            this._textureAssets.set(characterName, {
+                atlas: atlasPath,
+                json: jsonPath,
+                pngs: [imagePath]
+            });
             
             // v3成功パターン移植: 標準読み込み
             assetManager.loadTextureAtlas(atlasPath);
@@ -632,30 +793,51 @@ export class SpinePreviewLayer {
     }
 
     /**
-     * 🚀 フリッカリング根本修正: 描画ループの常時稼働
-     * アプリ起動時から常時動いている状態にする
+     * 🚀 Phase 1: 常時rAFレンダーループ（最適化版）
+     * 設計仕様: アプリ起動時から継続稼働・Context Lost対応
      */
     startRenderLoop() {
-        if (this.isRenderingActive) {
-            console.log('🎬 レンダリングループ重複起動防止');
+        // 🚀 Phase 1: 重複起動防止（_runningフラグ活用）
+        if (this._running) {
+            console.log('🎬 レンダリングループ既に稼働中（_running=true）');
             return;
         }
         
-        this.isRenderingActive = true;
-        console.log('🎬 描画ループ開始（常時稼働モード）');
+        // 🚀 Phase 1: Context Lost状態チェック
+        if (this._lost) {
+            console.warn('⚠️ Context Lost状態のため、レンダリングループ開始を保留');
+            return;
+        }
+        
+        // 🚀 Phase 1: 稼働フラグ設定
+        this._running = true;
+        this.isRenderingActive = true; // 互換性維持
+        
+        console.log('🎬 Phase 1 レンダリングループ開始（常時稼働・Context Lost対応）');
         
         let lastTime = Date.now() / 1000;
         
         const render = () => {
-            // 🚀 フリッカリング修正: 描画継続性の保証
-            if (!this.isRenderingActive) {
-                console.log('🔴 レンダリング停止要求');
+            // 🚀 Phase 1: Context Lost時の安全な停止
+            if (this._lost) {
+                console.warn('⚠️ Context Lost検出 - レンダリング一時停止');
+                this._running = false;
+                this.isRenderingActive = false;
                 return;
             }
             
-            // 🚀 最小限の停止条件のみ（WebGLコンテキスト喪失時のみ）
+            // 🚀 Phase 1: 停止要求チェック
+            if (!this._running) {
+                console.log('🔴 レンダリング停止要求（_running=false）');
+                this.isRenderingActive = false;
+                return;
+            }
+            
+            // 🚀 Phase 1: WebGLコンテキスト状態確認（安全チェック）
             if (this.gl && this.gl.isContextLost()) {
-                console.error('❌ WebGLコンテキスト喪失・停止');
+                console.error('❌ WebGL Context Lost検出 - 停止・復旧待機');
+                this._lost = true;
+                this._running = false;
                 this.isRenderingActive = false;
                 return;
             }
@@ -665,63 +847,104 @@ export class SpinePreviewLayer {
             lastTime = now;
             
             try {
-                // 🚀 基本コンポーネントが存在する場合のみ描画実行
-                if (this.gl && this.spine && this.spine.renderer) {
-                    // 画面クリア
-                    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-                    
-                    // 🚀 キャラクターが存在する場合のみ描画
-                    if (this.characters.size > 0) {
-                        this.characters.forEach((character) => {
-                            // キャラクターの準備状態確認
-                            if (character.skeleton && character.animationState) {
-                                // アニメーション更新
-                                character.animationState.update(delta);
-                                character.animationState.apply(character.skeleton);
-                                character.skeleton.updateWorldTransform();
-                                
-                                // スケルトン描画
-                                this.spine.renderer.drawSkeleton(character.skeleton, false);
-                            }
-                        });
-                    }
-                }
+                // 🚀 Phase 1: レンダリング実行（renderAllCharactersメソッド活用）
+                this.renderAllCharacters(delta);
                 
             } catch (error) {
                 console.error('❌ レンダリングエラー:', error);
-                // 🚀 フリッカリング修正: エラー時も必ず継続
+                // 🚀 Phase 1: エラー時もrAF継続（設計仕様）
             }
             
-            // 🚀 フリッカリング修正: 条件に関係なく必ず次フレームを予約
-            this.renderLoopId = requestAnimationFrame(render);
+            // 🚀 Phase 1: 次フレーム予約（エラー時も継続）
+            this._rafId = requestAnimationFrame(render);
         };
         
-        // 初回フレーム開始
-        this.renderLoopId = requestAnimationFrame(render);
+        // 🚀 Phase 1: 初回フレーム開始
+        this._rafId = requestAnimationFrame(render);
     }
 
     /**
-     * 描画停止（安定化修正）
+     * 🚀 Phase 1: レンダリング停止（最適化版）
      */
     stopRenderLoop() {
-        this.isRenderingActive = false;
+        console.log('⏹️ Phase 1 レンダリングループ停止開始');
         
+        // 🚀 Phase 1: 稼働フラグ停止
+        this._running = false;
+        this.isRenderingActive = false; // 互換性維持
+        
+        // 🚀 Phase 1: rAFキャンセル（_rafId使用）
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = 0;
+        }
+        
+        // 🔧 互換性: 旧フラグもクリア
         if (this.renderLoopId) {
             cancelAnimationFrame(this.renderLoopId);
             this.renderLoopId = null;
         }
         
-        console.log('⏹️ 描画ループ停止');
+        console.log('✅ Phase 1 レンダリングループ停止完了');
     }
 
     /**
-     * リソース解放
+     * 🚀 Phase 1: 全キャラクターレンダリング実装
+     * 設計仕様: 分離されたレンダリングロジック
+     */
+    renderAllCharacters(delta) {
+        // 🚀 Phase 1: 基本コンポーネント存在確認
+        if (!this.gl || !this.spine || !this.spine.renderer) {
+            return; // レンダリング環境未準備
+        }
+        
+        // 🚀 Phase 1: 画面クリア
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        
+        // 🚀 Phase 1: キャラクター存在確認
+        if (this.characters.size === 0) {
+            return; // キャラクター未登録
+        }
+        
+        // 🚀 Phase 1: 全キャラクターのレンダリング
+        this.characters.forEach((character, characterId) => {
+            try {
+                // キャラクターの準備状態確認
+                if (character.skeleton && character.animationState) {
+                    // アニメーション更新
+                    character.animationState.update(delta);
+                    character.animationState.apply(character.skeleton);
+                    character.skeleton.updateWorldTransform();
+                    
+                    // スケルトン描画
+                    this.spine.renderer.drawSkeleton(character.skeleton, false);
+                }
+            } catch (error) {
+                console.error(`❌ ${characterId} レンダリングエラー:`, error);
+                // 🚀 Phase 1: 個別エラーは継続（他キャラクターに影響しない）
+            }
+        });
+    }
+
+    /**
+     * 🚀 Phase 1: リソース解放（最適化版）
      */
     dispose() {
+        console.log('🧹 Phase 1 リソース解放開始');
+        
+        // 🚀 Phase 1: レンダリング完全停止
         this.stopRenderLoop();
+        
+        // 🚀 Phase 1: フラグリセット
+        this._running = false;
+        this._lost = false;
+        this._rafId = 0;
         
         // キャラクターをクリア
         this.characters.clear();
+        
+        // 🚀 Phase 1: テクスチャアセット記録クリア
+        this._textureAssets.clear();
         
         // Canvasを削除
         if (this.canvas && this.canvas.parentNode) {
@@ -730,8 +953,9 @@ export class SpinePreviewLayer {
         
         // 🔧 安定化修正: 初期化状態リセット
         this.isInitialized = false;
+        this.isRenderingActive = false;
         
-        console.log('🧹 シンプルSpineプレビューレイヤー解放完了');
+        console.log('✅ Phase 1 シンプルSpineプレビューレイヤー解放完了');
     }
 
     /**
