@@ -245,6 +245,12 @@ export class SpinePreviewAssets {
         }
         
         const characterName = characterData.name || characterData.id;
+        console.log('🔍 characterName確認:', { 
+            characterName, 
+            characterDataName: characterData.name, 
+            characterDataId: characterData.id,
+            type: typeof characterName
+        });
         if (!characterName) {
             console.error('❌ キャラクター名が空です（assets module）:', characterData);
             return { success: false, error: 'キャラクター名が空です' };
@@ -270,46 +276,76 @@ export class SpinePreviewAssets {
         try {
             console.log(`🎭 Phase 2: ${characterName} 読み込み中...（AssetRegistry: ${useAssetRegistry}）（assets module）`);
             
-            // 🚀 Phase 2: AssetRegistry連携 vs フォールバックモード
-            let atlasPath, jsonPath, imagePath;
-            
-            if (useAssetRegistry && preparedAssetData) {
-                // 🚀 AssetRegistry統合モード: 絶対URL化済みデータを使用
-                atlasPath = preparedAssetData.atlas || preparedAssetData.atlasPath;
-                jsonPath = preparedAssetData.json || preparedAssetData.jsonPath;
-                
-                if (preparedAssetData.pngs && Array.isArray(preparedAssetData.pngs)) {
-                    imagePath = preparedAssetData.pngs[0];
-                } else {
-                    imagePath = preparedAssetData.texturePath;
-                }
-                
-                console.log('🚀 AssetRegistry統合モード - 絶対URL化済みデータ:', { atlasPath, jsonPath, imagePath });
-                
-            } else {
-                // 🔄 フォールバックモード: 従来のパス解決
-                if (characterData.atlasPath && characterData.jsonPath && characterData.texturePath) {
-                    // 絶対パスから相対パスへ変換
-                    atlasPath = this.convertToRelativePath(characterData.atlasPath);
-                    jsonPath = this.convertToRelativePath(characterData.jsonPath);
-                    imagePath = this.convertToRelativePath(characterData.texturePath);
-                    
-                    console.log('🔄 フォールバック: 絶対パスから相対パスへ変換:', { atlasPath, jsonPath, imagePath });
-                } else {
-                    // 最終フォールバック: 標準的なパス構成
-                    const basePath = `assets/spine/characters/${characterName}/`;
-                    atlasPath = `${basePath}${characterName}.atlas`;
-                    jsonPath = `${basePath}${characterName}.json`;
-                    imagePath = `${basePath}${characterName}.png`;
-                    
-                    console.log('🔄 フォールバック: 標準パスでフォールバック:', { atlasPath, jsonPath, imagePath });
-                }
+            // 🚀 Phase 2: characterName有効性の最終確認
+            if (!characterName || typeof characterName !== 'string') {
+                throw new Error(`無効なキャラクター名: ${characterName} (型: ${typeof characterName})`);
             }
+            
+            // 🚀 Phase 2: パス変数初期化（必ず文字列を保証）
+            let atlasPath = '';
+            let jsonPath = '';
+            let imagePath = '';
+            
+            // 🔄 フォールバックモード: 常に標準パス構成を使用（シンプル化）
+            console.log('🔍 標準パス生成モード開始');
+            console.log('🔍 characterName確認:', { characterName, type: typeof characterName });
+            
+            const basePath = `assets/spine/characters/${characterName}/`;
+            atlasPath = `${basePath}${characterName}.atlas`;
+            jsonPath = `${basePath}${characterName}.json`;
+            imagePath = `${basePath}${characterName}.png`;
+            
+            console.log('🔄 標準パス生成完了:', { atlasPath, jsonPath, imagePath });
+            console.log('🔍 生成されたパスの型確認:', {
+                atlasPathType: typeof atlasPath,
+                jsonPathType: typeof jsonPath,
+                imagePathType: typeof imagePath
+            });
             
             // v3成功パターン移植: AssetManager使用方法
             const assetManager = new spine.AssetManager(this.parentLayer.gl);
             
+            // 🚀 デバッグ: パス検証
             console.log('📁 アセット読み込み開始:', { atlasPath, jsonPath, imagePath });
+            console.log('🔍 パス検証:', {
+                atlasPathType: typeof atlasPath,
+                atlasPathValue: atlasPath,
+                jsonPathType: typeof jsonPath,
+                jsonPathValue: jsonPath,
+                imagePathType: typeof imagePath,
+                imagePathValue: imagePath
+            });
+            
+            // 🚀 Phase 2: 最終パス安全性チェック（強化版）
+            console.log('🔍 最終パス安全性チェック開始');
+            console.log('🔍 atlasPath完全検証:', { 
+                value: atlasPath, 
+                type: typeof atlasPath, 
+                length: atlasPath ? atlasPath.length : 'N/A',
+                isString: typeof atlasPath === 'string',
+                hasValue: atlasPath && atlasPath.length > 0
+            });
+            
+            // 型と値の強制確認
+            if (typeof atlasPath !== 'string' || !atlasPath || atlasPath.length === 0) {
+                console.error('❌ atlasPath検証失敗:', { 
+                    atlasPath, 
+                    type: typeof atlasPath, 
+                    characterName,
+                    basePath: `assets/spine/characters/${characterName}/`
+                });
+                throw new Error(`atlasPath生成失敗 - characterName: ${characterName}`);
+            }
+            if (typeof jsonPath !== 'string' || !jsonPath || jsonPath.length === 0) {
+                console.error('❌ jsonPath検証失敗:', { jsonPath, type: typeof jsonPath });
+                throw new Error(`jsonPath生成失敗 - characterName: ${characterName}`);
+            }
+            if (typeof imagePath !== 'string' || !imagePath || imagePath.length === 0) {
+                console.error('❌ imagePath検証失敗:', { imagePath, type: typeof imagePath });
+                throw new Error(`imagePath生成失敗 - characterName: ${characterName}`);
+            }
+            
+            console.log('✅ 全パス検証完了:', { atlasPath, jsonPath, imagePath });
             
             // 🚀 Phase 1保持: テクスチャアセット記録（Context Lost復旧用フォールバック）
             this._textureAssets.set(characterName, {
@@ -343,9 +379,18 @@ export class SpinePreviewAssets {
             await this.waitForAssetsSimple(assetManager);
             
             // v3成功パターン移植: Skeleton作成
+            console.log('🔍 require前のパス確認:', { atlasPath, jsonPath });
+            
             const atlas = assetManager.require(atlasPath);
+            console.log('✅ atlas取得成功:', atlas);
+            
             const skeletonJson = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
-            const skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonPath));
+            
+            const jsonData = assetManager.require(jsonPath);
+            console.log('✅ JSON取得成功:', jsonData);
+            
+            const skeletonData = skeletonJson.readSkeletonData(jsonData);
+            console.log('✅ skeletonData作成成功:', skeletonData);
             
             console.log('🦴 スケルトンデータ構築完了');
             

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>🚀 最小Spineテスト - 3モジュールのみ</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        #spine-canvas {
+            border: 2px solid #333;
+            background: transparent;
+            display: block;
+            margin: 20px auto;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007acc;
+            color: white;
+        }
+        
+        button:hover {
+            background: #005a9e;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .comparison {
+            margin: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 最小Spineテスト（3モジュールのみ）</h1>
+    
+    <div class="comparison">
+        <h3>📊 モジュール削減効果</h3>
+        <p><strong>従来システム:</strong> 21モジュール積み重なり</p>
+        <p><strong>最小システム:</strong> 3モジュールのみ</p>
+        <ul>
+            <li>✅ spine-webgl.js - WebGLライブラリ</li>
+            <li>✅ HTML5 Canvas - 基本Canvas</li>  
+            <li>✅ minimal-render.js - 最小描画ロジック</li>
+        </ul>
+    </div>
+
+    <canvas id="spine-canvas" width="800" height="600"></canvas>
+    
+    <div class="controls">
+        <button onclick="loadNezumi()">🐭 nezumi読み込み</button>
+        <button onclick="loadPurattokun()">🐱 purattokun読み込み</button>
+        <button onclick="clearCanvas()">🧹 クリア</button>
+        <button onclick="toggleBackground()">🎨 背景切り替え</button>
+    </div>
+    
+    <div id="status" class="status">
+        システム初期化中...
+    </div>
+
+    <!-- 🚀 モジュール1: Spine WebGLライブラリのみ -->
+    <script src="assets/spine/spine-webgl.js"></script>
+    
+    <!-- 🚀 モジュール3: 最小描画ロジック -->
+    <script>
+        // 🚀 最小実装開始
+        console.log('🚀 最小Spineシステム開始（3モジュールのみ）');
+        
+        // グローバル変数（最小限）
+        let canvas, gl, spine = {};
+        let currentCharacter = null;
+        let animationId = null;
+        let backgroundDark = false;
+        
+        // 🚀 初期化
+        async function initMinimalSpineSystem() {
+            updateStatus('WebGL初期化中...');
+            
+            // Canvas取得（モジュール2: HTML5 Canvas）
+            canvas = document.getElementById('spine-canvas');
+            
+            // 🚀 Web版完全統一WebGL設定（シンプル版）
+            const contextOptions = {
+                alpha: true,
+                premultipliedAlpha: false
+            };
+            
+            // WebGLコンテキスト取得（Web版フォールバック戦略）
+            gl = canvas.getContext('webgl2', contextOptions) || 
+                 canvas.getContext('webgl', contextOptions) || 
+                 canvas.getContext('experimental-webgl', contextOptions);
+            
+            if (!gl) {
+                throw new Error('WebGL not supported');
+            }
+            
+            console.log('✅ WebGL初期化完了:', gl.getParameter(gl.VERSION));
+            
+            // 🚀 S方式（ストレートα）設定のみ
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+            gl.clearColor(0.0, 0.0, 0.0, 0.0);
+            
+            // Spine WebGL待機
+            await waitForSpine();
+            
+            updateStatus('✅ 最小Spineシステム初期化完了');
+            console.log('✅ 最小システム準備完了 - 問題テスト可能');
+        }
+        
+        // Spine読み込み待機（最小版）
+        async function waitForSpine() {
+            return new Promise((resolve, reject) => {
+                let attempts = 0;
+                const maxAttempts = 50;
+                
+                const check = () => {
+                    if (typeof spine !== 'undefined' && spine.AssetManager) {
+                        console.log('✅ Spine WebGL読み込み完了（最小版）');
+                        resolve();
+                    } else if (attempts++ >= maxAttempts) {
+                        reject(new Error('Spine読み込みタイムアウト'));
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+        
+        // 🚀 最小キャラクター読み込み
+        async function loadCharacter(characterName) {
+            try {
+                updateStatus(`${characterName}読み込み中...`);
+                
+                // 既存キャラクタークリア
+                if (currentCharacter) {
+                    clearCanvas();
+                }
+                
+                // アセットパス（最小構成）
+                const basePath = `assets/spine/characters/${characterName}/`;
+                const assetManager = new spine.AssetManager(gl, basePath);
+                
+                // 基本アセット読み込み
+                assetManager.loadTextureAtlas(`${characterName}.atlas`);
+                assetManager.loadJson(`${characterName}.json`);
+                
+                // 読み込み完了待機
+                await waitForAssets(assetManager);
+                
+                // Skeleton構築（最小版）
+                const atlas = assetManager.require(`${characterName}.atlas`);
+                const skeletonData = assetManager.require(`${characterName}.json`);
+                
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeleton = new spine.Skeleton(skeletonJson.readSkeletonData(skeletonData));
+                
+                // 🚀 シンプル座標（中央配置）
+                skeleton.x = 0;
+                skeleton.y = 0;
+                skeleton.scaleX = skeleton.scaleY = 1.0;
+                
+                // アニメーション設定
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+                
+                if (skeleton.data.animations.length > 0) {
+                    animationState.setAnimation(0, skeleton.data.animations[0].name, true);
+                }
+                
+                skeleton.updateWorldTransform();
+                
+                // レンダラー準備
+                spine.renderer = new spine.SceneRenderer(canvas, gl);
+                
+                currentCharacter = {
+                    skeleton,
+                    animationState,
+                    name: characterName
+                };
+                
+                // レンダリング開始
+                startRendering();
+                
+                updateStatus(`✅ ${characterName}読み込み完了（最小版）`);
+                console.log(`✅ ${characterName}読み込み完了 - 問題検証開始`);
+                
+            } catch (error) {
+                console.error(`❌ ${characterName}読み込みエラー:`, error);
+                updateStatus(`❌ ${characterName}読み込み失敗: ${error.message}`);
+            }
+        }
+        
+        // アセット読み込み待機
+        function waitForAssets(assetManager) {
+            return new Promise((resolve, reject) => {
+                const check = () => {
+                    if (assetManager.isLoadingComplete()) {
+                        resolve();
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+        
+        // 🚀 最小レンダリング（問題検証用）
+        function startRendering() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            let lastTime = Date.now() / 1000;
+            
+            const render = () => {
+                if (!currentCharacter) return;
+                
+                const now = Date.now() / 1000;
+                const delta = now - lastTime;
+                lastTime = now;
+                
+                // 画面クリア
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                
+                try {
+                    // アニメーション更新
+                    currentCharacter.animationState.update(delta);
+                    currentCharacter.animationState.apply(currentCharacter.skeleton);
+                    currentCharacter.skeleton.updateWorldTransform();
+                    
+                    // 描画
+                    spine.renderer.drawSkeleton(currentCharacter.skeleton, false);
+                    
+                } catch (error) {
+                    console.error('❌ レンダリングエラー:', error);
+                }
+                
+                animationId = requestAnimationFrame(render);
+            };
+            
+            animationId = requestAnimationFrame(render);
+        }
+        
+        // コントロール関数
+        function loadNezumi() {
+            loadCharacter('nezumi');
+        }
+        
+        function loadPurattokun() {
+            loadCharacter('purattokun');
+        }
+        
+        function clearCanvas() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            currentCharacter = null;
+            if (gl) {
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+            updateStatus('キャンバスクリア完了');
+        }
+        
+        function toggleBackground() {
+            backgroundDark = !backgroundDark;
+            document.body.style.background = backgroundDark ? '#222' : '#f0f0f0';
+            updateStatus(`背景: ${backgroundDark ? '黒' : '白'}`);
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            console.log('📊 Status:', message);
+        }
+        
+        // 🚀 システム開始
+        window.addEventListener('DOMContentLoaded', () => {
+            initMinimalSpineSystem().catch(error => {
+                console.error('❌ 初期化エラー:', error);
+                updateStatus(`❌ 初期化失敗: ${error.message}`);
+            });
+        });
+        
+        console.log('🚀 最小Spineテストファイル読み込み完了');
+    </script>
+</body>
+</html>

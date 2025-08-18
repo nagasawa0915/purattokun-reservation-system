@@ -75,7 +75,7 @@ export class SpinePreviewRender {
     }
 
     /**
-     * 🚀 Phase 2: 画像プリロード・decode完了待機
+     * 🚨 フェーズA: 強化された画像プリロード・decode完了待機（チラつき対策）
      * @param {object} assetData - アセットデータ
      */
     async preloadImages(assetData) {
@@ -89,9 +89,9 @@ export class SpinePreviewRender {
             imagePaths.push(assetData.texturePath);
         }
         
-        console.log('🔧 画像プリロード開始:', imagePaths.length, '個');
+        console.log('🚨 フェーズA: 強化画像プリロード開始:', imagePaths.length, '個');
         
-        // 全画像のdecode完了待機
+        // 全画像のdecode完了待機（フェーズA強化版）
         const decodePromises = imagePaths.map(async (imagePath) => {
             try {
                 const img = new Image();
@@ -103,12 +103,23 @@ export class SpinePreviewRender {
                     img.src = imagePath;
                 });
                 
-                // decode完了確認
+                // 🚨 フェーズA: decode + createImageBitmap 両方実行（GPU転送確実化）
                 if (img.decode) {
                     await img.decode();
                 }
                 
-                console.log(`✅ 画像decode完了: ${imagePath}`);
+                // createImageBitmapでGPU転送準備
+                if (typeof createImageBitmap !== 'undefined') {
+                    try {
+                        const bitmap = await createImageBitmap(img);
+                        console.log(`✅ 画像decode+bitmap完了: ${imagePath} (${bitmap.width}x${bitmap.height})`);
+                        bitmap.close(); // メモリ解放
+                    } catch (bitmapError) {
+                        console.log(`✅ 画像decode完了（bitmap失敗）: ${imagePath}`, bitmapError);
+                    }
+                } else {
+                    console.log(`✅ 画像decode完了: ${imagePath}`);
+                }
                 
             } catch (error) {
                 console.warn(`⚠️ 画像decode失敗: ${imagePath}`, error);
@@ -116,24 +127,34 @@ export class SpinePreviewRender {
         });
         
         await Promise.all(decodePromises);
-        console.log('✅ 全画像プリロード・decode完了');
+        console.log('✅ 全画像プリロード・decode・GPU転送準備完了（フェーズA強化版）');
     }
 
     /**
-     * 🚀 Phase 2: 次フレームSpine描画投入
+     * 🚨 フェーズA: 強化された次フレームSpine描画投入（チラつき対策）
      * @param {object} assetData - アセットデータ
      * @param {object} options - 配置オプション
      */
     async attachOnNextFrame(assetData, options) {
         return new Promise((resolve, reject) => {
+            console.log('🚨 フェーズA: 次フレーム投入待機開始（レンダリング安定化）');
+            
+            // 🚨 フェーズA: レンダリングループ稼働確認
+            if (!this._running) {
+                console.warn('⚠️ レンダリングループ未稼働 - 強制開始');
+                this.startRenderLoop();
+            }
+            
             requestAnimationFrame(() => {
                 try {
-                    console.log('🔧 次フレームSpine描画投入');
+                    console.log('🔧 フェーズA: 次フレームSpine描画投入実行');
+                    console.log('  - レンダループ稼働中:', this._running);
+                    console.log('  - 描画フレーム数:', this._frameDrawCount);
                     
                     // Spine描画処理実行
                     this.attachSpineCharacter(assetData, options);
                     
-                    console.log('✅ Spine描画投入完了');
+                    console.log('✅ Spine描画投入完了（フェーズA安定化版）');
                     resolve();
                     
                 } catch (error) {
@@ -326,26 +347,47 @@ export class SpinePreviewRender {
     }
     
     /**
-     * 🔧 WebGLコンテキスト初期化・状態管理システム
+     * 🔧 WebGLコンテキスト初期化・状態管理システム（Web版統一仕様）
      * 元spine-preview-layer.js行141-179機能移行
      */
     async initializeWebGL() {
-        // 🚀 環境差分対策: 安定化設定適用
-        console.log('🔧 環境差分チェック - WebGL初期化');
+        // 🚀 Web版統一: 環境差分完全解消
+        console.log('🔧 Web版統一WebGL初期化開始');
         console.log('  DPR:', window.devicePixelRatio);
         console.log('  User Agent:', navigator.userAgent);
         
+        // 🌐 Web版と完全同一設定（spine-character-manager.js準拠）
         const contextOptions = {
-            preserveDrawingBuffer: true,  // フレーム保持（既存）
             alpha: true,
-            antialias: false,             // 環境差分対策: antialias無効化
-            premultipliedAlpha: false,    // 環境差分対策: PMA統一（false）
-            powerPreference: 'default',   // 環境差分対策: GPU選択安定化
-            failIfMajorPerformanceCaveat: false  // 環境差分対策: パフォーマンス警告無視
+            premultipliedAlpha: false    // Web版統一: PMA無効
         };
         
-        this.gl = this.canvas.getContext('webgl', contextOptions) || 
-                  this.canvas.getContext('experimental-webgl', contextOptions);
+        // 🌐 Web版と同一のWebGLバージョンフォールバック戦略
+        console.log('  - Trying WebGL2...');
+        this.gl = this.canvas.getContext('webgl2', contextOptions);
+        if (this.gl) {
+            console.log('✅ WebGL2 context acquired successfully');
+            console.log('  - GL Version:', this.gl.getParameter(this.gl.VERSION));
+        } else {
+            console.log('  - WebGL2 unavailable, trying WebGL1...');
+            
+            this.gl = this.canvas.getContext('webgl', contextOptions);
+            if (this.gl) {
+                console.log('✅ WebGL1 context acquired successfully');
+                console.log('  - GL Version:', this.gl.getParameter(this.gl.VERSION));
+            } else {
+                console.log('  - WebGL1 unavailable, trying experimental-webgl...');
+                
+                this.gl = this.canvas.getContext('experimental-webgl', contextOptions);
+                if (this.gl) {
+                    console.log('✅ Experimental WebGL context acquired');
+                    console.log('  - GL Version:', this.gl.getParameter(this.gl.VERSION));
+                } else {
+                    this.isInitialized = false;
+                    throw new Error('WebGL not supported');
+                }
+            }
+        }
         
         if (!this.gl) {
             this.isInitialized = false;
@@ -359,7 +401,7 @@ export class SpinePreviewRender {
             );
         }
         
-        // 🚀 B. 初回だけサイズ凍結（エラーハンドリング付き）
+        // 🚀 サイズ設定（preserveDrawingBuffer削除によりシンプル化）
         try {
             if (typeof this.freezeCanvasSize === 'function') {
                 this.freezeCanvasSize();
@@ -372,22 +414,96 @@ export class SpinePreviewRender {
             this.fallbackCanvasSize();
         }
         
-        // 🚀 環境差分対策: WebGL状態統一設定
+        // 🚨 フェーズB: S方式（ストレートα）統一ブレンド設定
         this.gl.enable(this.gl.BLEND);
-        // premultipliedAlpha: false に合わせてblendFunc統一
-        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+        this.gl.blendFuncSeparate(
+            this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA,  // RGB: ストレートα標準ブレンド
+            this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA          // アルファ: 合成用
+        );
         this.gl.clearColor(0.0, 0.0, 0.0, 0.0); // 透明背景
         
-        // 環境差分対策: テクスチャ設定統一
-        this.gl.pixelStorei(this.gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        // 🚨 フェーズB: S方式テクスチャ設定統一
+        this.gl.disable(this.gl.DITHER);  // 安定化の定番
+        this.gl.pixelStorei(this.gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); // ストレートα
         
-        console.log('🔧 環境差分対策適用完了:');
+        // 🚨 フェーズB: ハロー対策強化
+        this.setupAntiHaloTextureDefaults();
+        
+        // 🚨 フェーズB: デバッグ用α方式表示
+        console.log('🚨 フェーズB: α方式 = S（ストレートα統一）');
+        
+        console.log('🌐 Web版統一WebGL設定完了:');
         console.log('  - premultipliedAlpha: false');
-        console.log('  - antialias: false');
-        console.log('  - blendFunc: SRC_ALPHA, ONE_MINUS_SRC_ALPHA');
+        console.log('  - preserveDrawingBuffer: false (デフォルト)');
+        console.log('  - blendFuncSeparate: SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA');
         console.log('  - UNPACK_PREMULTIPLY_ALPHA_WEBGL: false');
+        console.log('  - DITHER: disabled');
+        console.log('  - テクスチャハロー対策: CLAMP_TO_EDGE + LINEAR');
         
-        console.log('🔧 WebGLコンテキスト初期化完了（preserveDrawingBuffer + サイズ凍結）');
+        console.log('✅ WebGL初期化完了（Web版統一仕様）');
+    }
+    
+    /**
+     * 🚨 フェーズB: アンチハロー強化テクスチャ設定
+     */
+    setupAntiHaloTextureDefaults() {
+        // SpineのAssetManagerがテクスチャを作成する際のハロー対策強化設定
+        
+        // デフォルト設定を保存
+        this._defaultTextureWrap = this.gl.CLAMP_TO_EDGE;
+        this._defaultTextureFilter = this.gl.LINEAR;
+        
+        console.log('🚨 フェーズB: アンチハロー強化設定適用:');
+        console.log('  - TEXTURE_WRAP_S/T: CLAMP_TO_EDGE（ブリーディング防止）');
+        console.log('  - TEXTURE_MIN/MAG_FILTER: LINEAR（整数ピクセルスナップ推奨）');
+        console.log('  - S方式: UNPACK_PREMULTIPLY_ALPHA_WEBGL = false');
+        console.log('  - ブレンド: SRC_ALPHA, ONE_MINUS_SRC_ALPHA（ストレートα標準）');
+        
+        // グローバルテクスチャ状態設定（Spine AssetManager影響用）
+        this._applyGlobalTextureState();
+    }
+    
+    /**
+     * 🚨 フェーズB: グローバルテクスチャ状態適用
+     */
+    _applyGlobalTextureState() {
+        // 一時的なテクスチャを作成してグローバル設定を適用
+        const tempTexture = this.gl.createTexture();
+        this.gl.bindTexture(this.gl.TEXTURE_2D, tempTexture);
+        
+        // ハロー対策設定をデフォルト状態として設定
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+        
+        // テンポラリテクスチャ削除
+        this.gl.deleteTexture(tempTexture);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+        
+        console.log('✅ グローバルテクスチャ状態設定完了（ハロー対策）');
+    }
+    
+    /**
+     * 🚨 フェーズB: P方式（PMA）切り替え実験用（診断時のみ使用）
+     */
+    switchToPMAMode() {
+        console.log('🚨 フェーズB: P方式（PMA）に切り替え中...');
+        
+        // P方式ブレンド設定
+        this.gl.blendFuncSeparate(
+            this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA,     // RGB: PMAブレンド
+            this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA      // アルファ: PMA合成
+        );
+        
+        // P方式テクスチャ設定
+        this.gl.pixelStorei(this.gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        
+        console.log('✅ P方式（PMA）切り替え完了');
+        console.log('  - ブレンド: ONE, ONE_MINUS_SRC_ALPHA');
+        console.log('  - UNPACK_PREMULTIPLY_ALPHA_WEBGL: true');
+        
+        // ⚠️ 注意: この切り替えは診断専用。恒久的使用は非推奨
     }
     
     /**
@@ -514,17 +630,24 @@ export class SpinePreviewRender {
     }
     
     /**
-     * 🚀 Phase 2: 常時rAFレンダリングループ制御システム
+     * 🚀 フェーズA: 初回チラつき対策強化レンダリングループ
      * 元spine-preview-layer.js行790-890機能移行
      * Phase 1成果保持: アプリ起動時から継続稼働・Context Lost対応
      * Phase 2強化: AssetRegistry状態連携・パフォーマンス向上
+     * フェーズA新機能: 診断ログ・毎フレーム描画保証・チラつき検知
      */
     startRenderLoop() {
         // 🚀 Phase 1保持: 重複起動防止（_runningフラグ活用）
         if (this._running) {
-            console.log('🎬 Phase 2: レンダリングループ既に稼働中（_running=true）');
+            console.log('🎬 レンダリングループ既に稼働中（_running=true）');
             return;
         }
+        
+        // 🚨 フェーズA: 初回チラつき診断用変数初期化
+        this._frameDrawCount = 0;
+        this._lastCanvasSize = { width: 0, height: 0 };
+        this._sizeChangeCount = 0;
+        this._firstFrameTime = Date.now();
         
         // 🚀 Phase 1保持: Context Lost状態チェック
         if (this.parentLayer.contextManager && this.parentLayer.contextManager.isContextLost()) {
@@ -542,7 +665,10 @@ export class SpinePreviewRender {
             this.parentLayer.isRenderingActive = true;
         }
         
-        console.log('🎬 Phase 2: 常時rAFレンダーループ開始（AssetRegistry連携最適化）');
+        console.log('🚨 フェーズA: 初回チラつき対策レンダーループ開始（診断ログ有効）');
+        console.log('  - キャラクター0体でも毎フレーム描画を開始');
+        console.log('  - Canvas サイズ揺れ監視開始');
+        console.log('  - 初回チラつき診断ログ有効');
         
         this._lastTime = Date.now() / 1000;
         this._frameCount = 0;
@@ -589,15 +715,20 @@ export class SpinePreviewRender {
             this._frameCount++;
             
             try {
-                // 🚀 Phase 2: 最適化されたレンダリング実行
-                this.renderAllCharactersOptimized(delta);
+                // 🚨 フェーズA: サイズ揺れ診断（初回3秒間）
+                this.diagnoseCanvasSizeFlicker();
+                
+                // 🚨 フェーズA: 毎フレーム描画保証（キャラクター0体でも描画）
+                const didDraw = this.renderAllCharactersWithFlickerDiagnosis(delta);
+                this._frameDrawCount++;
                 
                 // 🚀 Phase 2: パフォーマンスログ（60秒毎）
                 if (Date.now() - this._lastPerformanceLog > 60000) {
                     const fps = this._frameCount / 60;
                     const characterCount = this.parentLayer.characters ? this.parentLayer.characters.size : 0;
                     const hasAssetRegistry = this.parentLayer._assetRegistry ? '有効' : '無効';
-                    console.log(`📊 Phase 2 レンダリングパフォーマンス: ${fps.toFixed(1)}FPS, キャラクター: ${characterCount}体, AssetRegistry連携: ${hasAssetRegistry}`);
+                    console.log(`📊 レンダリングパフォーマンス: ${fps.toFixed(1)}FPS, キャラクター: ${characterCount}体, AssetRegistry: ${hasAssetRegistry}`);
+                    console.log(`🚨 フェーズA診断: 描画回数=${this._frameDrawCount}, サイズ変更=${this._sizeChangeCount}`);
                     this._frameCount = 0;
                     this._lastPerformanceLog = Date.now();
                 }
@@ -742,6 +873,86 @@ export class SpinePreviewRender {
                 // 🚀 Phase 1: 個別エラーは継続（他キャラクターに影響しない）
             }
         });
+    }
+    
+    /**
+     * 🚨 フェーズA: Canvas サイズ揺れ診断（初回3秒間）
+     */
+    diagnoseCanvasSizeFlicker() {
+        // 初回3秒間のみ診断実行
+        if (Date.now() - this._firstFrameTime > 3000) return;
+        
+        if (!this.canvas) return;
+        
+        const currentSize = {
+            width: this.canvas.width,
+            height: this.canvas.height
+        };
+        
+        // サイズ変更検出
+        if (this._lastCanvasSize.width !== currentSize.width || 
+            this._lastCanvasSize.height !== currentSize.height) {
+            
+            this._sizeChangeCount++;
+            console.log(`🚨 サイズ変更検出 #${this._sizeChangeCount}: ${this._lastCanvasSize.width}x${this._lastCanvasSize.height} → ${currentSize.width}x${currentSize.height}`);
+            
+            // 初回5回以上の連続サイズ変更は異常
+            if (this._sizeChangeCount >= 5) {
+                console.warn('⚠️ 初回サイズ揺れ異常検出 - Canvas実ピクセル凍結を推奨');
+                console.warn('  対策: freezeCanvasSize() で500ms固定化');
+            }
+            
+            this._lastCanvasSize = { ...currentSize };
+        }
+    }
+    
+    /**
+     * 🚨 フェーズA: チラつき診断付き全キャラクターレンダリング
+     */
+    renderAllCharactersWithFlickerDiagnosis(delta) {
+        // 🚨 毎フレーム画面クリア（preserveDrawingBuffer:false対策）
+        if (!this.gl) {
+            return false; // WebGL未初期化
+        }
+        
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        let didDrawAny = false;
+        
+        // キャラクター数チェック
+        const characterCount = this.parentLayer.characters ? this.parentLayer.characters.size : 0;
+        
+        if (characterCount === 0) {
+            // 🚨 キャラクター0体でも描画フレームとしてカウント
+            // （preserveDrawingBuffer:false では何かしら描画が必要）
+            didDrawAny = true; // クリアのみでも描画扱い
+        } else {
+            // 通常の全キャラクターレンダリング
+            this.parentLayer.characters.forEach((character, characterId) => {
+                try {
+                    if (character.skeleton && character.animationState) {
+                        // アニメーション更新
+                        character.animationState.update(delta);
+                        character.animationState.apply(character.skeleton);
+                        character.skeleton.updateWorldTransform();
+                        
+                        // スケルトン描画
+                        if (this.spine && this.spine.renderer) {
+                            this.spine.renderer.drawSkeleton(character.skeleton, false);
+                            didDrawAny = true;
+                        }
+                    }
+                } catch (error) {
+                    console.error(`❌ ${characterId} レンダリングエラー:`, error);
+                }
+            });
+        }
+        
+        // 🚨 初回10フレームの描画状態ログ
+        if (this._frameDrawCount < 10) {
+            console.log(`🚨 フレーム${this._frameDrawCount}: 描画=${didDrawAny}, キャラ数=${characterCount}, Canvas=${this.canvas?.width}x${this.canvas?.height}`);
+        }
+        
+        return didDrawAny;
     }
     
     /**

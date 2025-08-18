@@ -5,16 +5,17 @@
 
 import { UIManager } from './ui-manager.js';
 import { ProjectLoader } from './project-loader.js';
-import { SpineCharacterManager } from './spine-character-manager.js';
 import { PreviewManager } from './preview-manager.js';
 import { PackageExporter } from './package-exporter.js';
 import { SpinePreviewLayer } from './spine-preview-layer.js';
 import { Utils } from './utils.js';
 
-// ApplicationCore統合制御モジュール
+// 🚀 Phase 2統合モジュール
+import { SpineActorManager } from './SpineActorManager.js';
+
+// ApplicationCore統合制御モジュール（UI統合対象）
 import { UIController } from './UIController.js';
 import { ProjectFileManager } from './ProjectFileManager.js';
-import { SpineDisplayController } from './SpineDisplayController.js';
 
 export class DemoApp {
     constructor() {
@@ -30,7 +31,7 @@ export class DemoApp {
         // ApplicationCore統合制御は後で初期化
         this.uiController = null;
         this.projectFileManager = null;
-        this.spineDisplayController = null;
+        // 🚀 Phase 2統合: SpineDisplayController → SpineActorManager統合済み
         
         // 初期化開始
         this.initialize();
@@ -42,10 +43,12 @@ export class DemoApp {
     initializeBasicModules() {
         this.uiManager = new UIManager();
         this.projectLoader = new ProjectLoader();
-        this.spineCharacterManager = new SpineCharacterManager();
         this.previewManager = new PreviewManager();
         this.packageExporter = new PackageExporter();
         this.spinePreviewLayer = null; // 後で初期化
+        
+        // 🚀 Phase 2統合: SpineActorManager（2つのクラスを統合）
+        this.spineActorManager = new SpineActorManager(this);
     }
 
     /**
@@ -54,12 +57,11 @@ export class DemoApp {
     initializeApplicationCore() {
         this.uiController = new UIController(this);
         this.projectFileManager = new ProjectFileManager(this);
-        this.spineDisplayController = new SpineDisplayController(this);
         
         console.log('⚡ ApplicationCore統合制御依存注入完了:', {
             uiController: !!this.uiController,
             projectFileManager: !!this.projectFileManager,
-            spineDisplayController: !!this.spineDisplayController
+            spineActorManager: !!this.spineActorManager
         });
     }
 
@@ -104,11 +106,12 @@ export class DemoApp {
      * ApplicationCore統合制御非同期初期化
      */
     async initializeApplicationCoreAsync() {
-        if (this.spineDisplayController && typeof this.spineDisplayController.init === 'function') {
-            await this.spineDisplayController.init();
-            console.log('⚡ ApplicationCore統合制御非同期完了');
+        // 🚀 Phase 2統合: SpineActorManager初期化
+        if (this.spineActorManager && typeof this.spineActorManager.init === 'function') {
+            await this.spineActorManager.init();
+            console.log('⚡ SpineActorManager統合制御非同期完了');
         } else {
-            console.log('⚡ SpineDisplayController初期化スキップ（未定義）');
+            console.log('⚡ SpineActorManager初期化スキップ（未定義）');
         }
     }
 
@@ -123,8 +126,8 @@ export class DemoApp {
             elements.pageList
         );
         
-        // SpineCharacterManager設定
-        this.spineCharacterManager.setPreviewIframe(elements.previewIframe);
+        // 🚀 Phase 2統合: SpineActorManager設定
+        this.spineActorManager.setPreviewIframe(elements.previewIframe);
         
         // 保存データ読み込み
         await this.projectLoader.loadSavedPaths();
@@ -216,21 +219,21 @@ export class DemoApp {
      * ドロップゾーン設定 - SpineDisplayControllerに委譲
      */
     setupDropZone() {
-        this.spineDisplayController.setupDropZone();
+        this.spineActorManager.setupDropZone();
     }
 
     // ========== ApplicationCore移譲メソッド（API境界） ========== //
     
     async openFolder() { return await this.projectFileManager.openFolder(); }
-    async addSpineCharacterToPreview(characterData, x, y) { return await this.spineDisplayController.addSpineCharacterToPreview(characterData, x, y); }
-    addSpineCharacter() { return this.spineDisplayController.addSpineCharacter(); }
-    updateSpinePosition(position) { this.spineDisplayController.updateSpinePosition(position); }
+    async addSpineCharacterToPreview(characterData, x, y) { return await this.spineActorManager.addSpineCharacterToPreview(characterData, x, y); }
+    addSpineCharacter() { return this.spineActorManager.addSpineCharacter(); }
+    updateSpinePosition(position) { this.spineActorManager.updateSpinePosition(position); }
 
     /**
      * 位置保存・復元
      */
     savePosition() {
-        if (!this.spineCharacter && this.spineCharacterManager.getPlacedCharacters().length === 0) {
+        if (!this.spineCharacter && this.spineActorManager.getAllActors().length === 0) {
             this.uiManager.updateStatus('error', 'Spineキャラクターがありません');
             return;
         }
@@ -310,10 +313,10 @@ export class DemoApp {
 
     // ========== SpineDisplayController移譲メソッド（API境界） ========== //
     
-    async createSpineCharacterFromProject(characterData, x, y) { return await this.spineDisplayController.createSpineCharacterFromProject(characterData, x, y); }
-    async positionCharacterAtDropLocation(characterName, x, y) { return await this.spineDisplayController.positionCharacterAtDropLocation(characterName, x, y); }
-    async addBuiltInCharacter(characterName) { return await this.spineDisplayController.addBuiltInCharacter(characterName); }
-    clearAllCharacters() { return this.spineDisplayController.clearAllCharacters(); }
+    async createSpineCharacterFromProject(characterData, x, y) { return await this.spineActorManager.createSpineCharacterFromProject(characterData, x, y); }
+    async positionCharacterAtDropLocation(characterName, x, y) { return await this.spineActorManager.positionCharacterAtDropLocation(characterName, x, y); }
+    async addBuiltInCharacter(characterName) { return await this.spineActorManager.addBuiltInCharacter(characterName); }
+    clearAllCharacters() { return this.spineActorManager.clearAllCharacters(); }
 
     // ========== 状態管理システム ========== //
     
@@ -349,12 +352,15 @@ export class DemoApp {
         this.uiManager.clearSpineCharacterList();
         this.uiManager.disableButtons();
         this.previewManager.clearPreview();
-        this.spineCharacterManager.clearAllCharacters();
+        // 🚀 Phase 2統合: 全アクター削除
+        this.spineActorManager.getAllActors().forEach(actor => {
+            this.spineActorManager.detach(actor.id);
+        });
         
         // ApplicationCore統合制御リセット
         this.uiController.reset();
         this.projectFileManager.reset();
-        this.spineDisplayController.reset();
+        this.spineActorManager.reset();
         
         // 状態リセット
         this.spinePosition = { x: 100, y: 100 };
@@ -367,10 +373,10 @@ export class DemoApp {
     getDebugInfo() {
         return {
             spinePosition: { ...this.spinePosition },
-            placedCharacters: this.spineCharacterManager.getPlacedCharacters().length,
+            placedCharacters: this.spineActorManager.getAllActors().length,
             moduleStatus: {
-                basic: [this.uiManager, this.projectLoader, this.spineCharacterManager, this.previewManager, this.packageExporter].every(m => !!m),
-                applicationCore: [this.uiController, this.projectFileManager, this.spineDisplayController].every(m => !!m),
+                basic: [this.uiManager, this.projectLoader, this.spineActorManager, this.previewManager, this.packageExporter].every(m => !!m),
+                applicationCore: [this.uiController, this.projectFileManager, this.spineActorManager].every(m => !!m),
                 spine: !!this.spineCore && !!this.spineRenderer
             }
         };

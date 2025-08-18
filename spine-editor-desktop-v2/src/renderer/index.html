@@ -457,10 +457,10 @@
     <!-- 新しい統合システム -->
     <script type="module">
         import { DemoApp } from './app.js';
-        import { SpineDebug } from './js/spine-debug.js';
+        // import { SpineDebug } from './js/spine-debug.js'; // Phase1削除済み
         
         // デバッグシステム開始
-        SpineDebug.startDebugging();
+        // SpineDebug.startDebugging(); // Phase1削除済み
         
         // アプリ初期化（v3統合システム読み込み後）
         window.addEventListener('DOMContentLoaded', async () => {
