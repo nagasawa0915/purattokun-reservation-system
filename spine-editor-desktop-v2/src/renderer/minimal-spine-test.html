@@ -76,14 +76,16 @@
         <button onclick="loadPurattokun()">🐱 purattokun読み込み</button>
         <button onclick="clearCanvas()">🧹 クリア</button>
         <button onclick="toggleBackground()">🎨 背景切り替え</button>
+        <button onclick="diagnosticBlackEdge()" style="background: #dc3545;">🔍 黒縁診断</button>
+        <button onclick="testBlackEdgeFix()" style="background: #fd7e14;">🔬 黒縁修正実験</button>
     </div>
     
     <div id="status" class="status">
         システム初期化中...
     </div>
 
-    <!-- 🚀 モジュール1: Spine WebGLライブラリのみ -->
-    <script src="assets/spine/spine-webgl.js"></script>
+    <!-- 🚀 Phase 4: 動作確認済みSpine WebGLライブラリに切り替え -->
+    <script src="assets/spine/spine-webgl-working.js"></script>
     
     <!-- 🚀 モジュール3: 最小描画ロジック -->
     <script>
@@ -91,7 +93,7 @@
         console.log('🚀 最小Spineシステム開始（3モジュールのみ）');
         
         // グローバル変数（最小限）
-        let canvas, gl, spine = {};
+        let canvas, gl, spineRenderer = {};
         let currentCharacter = null;
         let animationId = null;
         let backgroundDark = false;
@@ -103,16 +105,14 @@
             // Canvas取得（モジュール2: HTML5 Canvas）
             canvas = document.getElementById('spine-canvas');
             
-            // 🚀 Web版完全統一WebGL設定（シンプル版）
+            // 🚀 Phase 7: 動作版と完全同一WebGL設定
             const contextOptions = {
                 alpha: true,
-                premultipliedAlpha: false
+                premultipliedAlpha: false // 動作版と同じ設定
             };
             
-            // WebGLコンテキスト取得（Web版フォールバック戦略）
-            gl = canvas.getContext('webgl2', contextOptions) || 
-                 canvas.getContext('webgl', contextOptions) || 
-                 canvas.getContext('experimental-webgl', contextOptions);
+            // 🚀 Phase 7: 動作版と完全同一（webglのみ使用）
+            gl = canvas.getContext('webgl', contextOptions);
             
             if (!gl) {
                 throw new Error('WebGL not supported');
@@ -120,11 +120,7 @@
             
             console.log('✅ WebGL初期化完了:', gl.getParameter(gl.VERSION));
             
-            // 🚀 S方式（ストレートα）設定のみ
-            gl.enable(gl.BLEND);
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-            gl.clearColor(0.0, 0.0, 0.0, 0.0);
+            // 🚀 Phase 7: 動作版のレンダリング設定は最小限のみ
             
             // Spine WebGL待機
             await waitForSpine();
@@ -174,9 +170,9 @@
                 // 読み込み完了待機
                 await waitForAssets(assetManager);
                 
-                // Skeleton構築（最小版）
-                const atlas = assetManager.require(`${characterName}.atlas`);
-                const skeletonData = assetManager.require(`${characterName}.json`);
+                // 🚀 Phase 7: 動作版と同一のアセット取得方法
+                const atlas = assetManager.get(`${characterName}.atlas`);
+                const skeletonData = assetManager.get(`${characterName}.json`);
                 
                 const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
                 const skeletonJson = new spine.SkeletonJson(atlasLoader);
@@ -197,8 +193,11 @@
                 
                 skeleton.updateWorldTransform();
                 
-                // レンダラー準備
-                spine.renderer = new spine.SceneRenderer(canvas, gl);
+                // 🚀 Phase 4: PMA対応SceneRenderer初期化（アセット=PMA、WebGL=Straight設定）
+                spineRenderer.instance = new spine.SceneRenderer(canvas, gl);
+                
+                // 🚀 Phase 6: 最小構成で安定性確保
+                console.log('✅ Phase 6: 基本設定で初期化完了（安定性最優先）');
                 
                 currentCharacter = {
                     skeleton,
@@ -218,12 +217,24 @@
             }
         }
         
-        // アセット読み込み待機
+        // 🚀 Phase 4: 強化されたアセット読み込み待機（完全待機）
         function waitForAssets(assetManager) {
             return new Promise((resolve, reject) => {
+                let attemptCount = 0;
+                const maxAttempts = 100; // 10秒待機
+                
                 const check = () => {
+                    attemptCount++;
+                    console.log(`📦 アセット読み込み確認 ${attemptCount}/${maxAttempts}`);
+                    
                     if (assetManager.isLoadingComplete()) {
-                        resolve();
+                        // 🚀 Phase 4: 追加安全待機（テクスチャ完全準備保証）
+                        setTimeout(() => {
+                            console.log('✅ アセット読み込み完了 + 安全待機完了');
+                            resolve();
+                        }, 500); // 500ms追加待機
+                    } else if (attemptCount >= maxAttempts) {
+                        reject(new Error('アセット読み込みタイムアウト'));
                     } else {
                         setTimeout(check, 100);
                     }
@@ -232,13 +243,15 @@
             });
         }
         
-        // 🚀 最小レンダリング（問題検証用）
+        // 🚀 Phase 4: フレーム安定化レンダリング（1フレーム表示問題対策）
         function startRendering() {
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
             
             let lastTime = Date.now() / 1000;
+            let frameCount = 0;
+            let isFirstFrame = true;
             
             const render = () => {
                 if (!currentCharacter) return;
@@ -246,9 +259,7 @@
                 const now = Date.now() / 1000;
                 const delta = now - lastTime;
                 lastTime = now;
-                
-                // 画面クリア
-                gl.clear(gl.COLOR_BUFFER_BIT);
+                frameCount++;
                 
                 try {
                     // アニメーション更新
@@ -256,8 +267,18 @@
                     currentCharacter.animationState.apply(currentCharacter.skeleton);
                     currentCharacter.skeleton.updateWorldTransform();
                     
+                    // 🚀 Phase 7: 動作版と完全同一のレンダリング手順
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    // カメラ設定
+                    spineRenderer.instance.camera.setViewport(canvas.width, canvas.height);
+                    
                     // 描画
-                    spine.renderer.drawSkeleton(currentCharacter.skeleton, false);
+                    spineRenderer.instance.begin();
+                    spineRenderer.instance.drawSkeleton(currentCharacter.skeleton, true);
+                    spineRenderer.instance.end();
                     
                 } catch (error) {
                     console.error('❌ レンダリングエラー:', error);
@@ -266,19 +287,20 @@
                 animationId = requestAnimationFrame(render);
             };
             
+            console.log('🎬 レンダリングループ開始（フレーム安定化版）');
             animationId = requestAnimationFrame(render);
         }
         
-        // コントロール関数
-        function loadNezumi() {
+        // 🚀 グローバルスコープに関数配置（HTMLから呼び出し可能）
+        window.loadNezumi = function() {
             loadCharacter('nezumi');
-        }
+        };
         
-        function loadPurattokun() {
+        window.loadPurattokun = function() {
             loadCharacter('purattokun');
-        }
+        };
         
-        function clearCanvas() {
+        window.clearCanvas = function() {
             if (animationId) {
                 cancelAnimationFrame(animationId);
                 animationId = null;
@@ -288,13 +310,82 @@
                 gl.clear(gl.COLOR_BUFFER_BIT);
             }
             updateStatus('キャンバスクリア完了');
-        }
+        };
         
-        function toggleBackground() {
+        window.toggleBackground = function() {
             backgroundDark = !backgroundDark;
             document.body.style.background = backgroundDark ? '#222' : '#f0f0f0';
             updateStatus(`背景: ${backgroundDark ? '黒' : '白'}`);
-        }
+        };
+        
+        // 🔍 Phase 5: 黒縁問題診断用関数追加
+        window.diagnosticBlackEdge = function() {
+            console.log('🔍 Phase 5: 黒縁問題診断開始');
+            
+            if (!currentCharacter) {
+                console.warn('⚠️ キャラクターが読み込まれていません');
+                return;
+            }
+            
+            // テクスチャ情報確認
+            const skeleton = currentCharacter.skeleton;
+            if (skeleton && skeleton.slots) {
+                console.log('📊 スロット・アタッチメント情報:');
+                skeleton.slots.forEach((slot, index) => {
+                    const attachment = slot.getAttachment();
+                    if (attachment && attachment.texture) {
+                        console.log(`  Slot ${index} (${slot.data.name}):`);
+                        console.log(`    - テクスチャサイズ: ${attachment.texture.image.width}x${attachment.texture.image.height}`);
+                        console.log(`    - UVs:`, attachment.uvs);
+                        console.log(`    - 座標:`, attachment.vertices);
+                        
+                        // WebGLテクスチャ状態確認
+                        const texture = attachment.texture;
+                        if (texture._texture) {
+                            console.log(`    - WebGLテクスチャID: ${texture._texture}`);
+                        }
+                    }
+                });
+            }
+            
+            // WebGL設定再確認
+            console.log('🔍 現在のWebGL設定:');
+            console.log('  - BLEND enabled:', gl.isEnabled(gl.BLEND));
+            console.log('  - Blend func:', gl.getParameter(gl.BLEND_SRC_RGB), gl.getParameter(gl.BLEND_DST_RGB));
+            console.log('  - UNPACK_PREMULTIPLY_ALPHA:', gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL));
+            console.log('  - Context attributes:', gl.getContextAttributes());
+            
+            updateStatus('🔍 黒縁診断完了 - コンソール参照');
+        };
+        
+        // 🔍 Phase 5: 実験的黒縁修正テスト
+        window.testBlackEdgeFix = function() {
+            console.log('🔬 Phase 5: 実験的黒縁修正開始');
+            
+            if (!currentCharacter || !gl) return;
+            
+            // 実験1: ブレンドモード変更テスト
+            console.log('🔬 実験1: ブレンドモード変更');
+            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // PMA用に戻す
+            
+            setTimeout(() => {
+                console.log('🔬 実験2: Straight Alphaに戻す');
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                
+                setTimeout(() => {
+                    console.log('🔬 実験3: ONE_MINUS_DST_ALPHAテスト');
+                    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA);
+                    
+                    setTimeout(() => {
+                        console.log('🔬 実験完了: 元に戻します');
+                        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                        updateStatus('🔬 黒縁修正実験完了');
+                    }, 2000);
+                }, 2000);
+            }, 2000);
+            
+            updateStatus('🔬 黒縁修正実験実行中...');
+        };
         
         function updateStatus(message) {
             document.getElementById('status').textContent = message;

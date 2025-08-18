@@ -351,15 +351,19 @@ export class SpinePreviewRender {
      * 元spine-preview-layer.js行141-179機能移行
      */
     async initializeWebGL() {
-        // 🚀 Web版統一: 環境差分完全解消
-        console.log('🔧 Web版統一WebGL初期化開始');
+        // 🚀 Phase 3: フリッカリング・輪郭問題根本解決
+        console.log('🔧 Phase 3: WebGL初期化・レンダリング問題解決版');
         console.log('  DPR:', window.devicePixelRatio);
         console.log('  User Agent:', navigator.userAgent);
         
-        // 🌐 Web版と完全同一設定（spine-character-manager.js準拠）
+        // 🚨 Phase 3: フリッカリング・輪郭黒化問題対策強化設定
         const contextOptions = {
             alpha: true,
-            premultipliedAlpha: false    // Web版統一: PMA無効
+            premultipliedAlpha: true,    // 🔧 Phase 3: 輪郭黒化問題対策（PMA有効）
+            preserveDrawingBuffer: true, // 🚨 Phase 3: 1フレーム表示問題対策（バッファ保持）
+            antialias: true,             // 🚀 Phase 3: 描画品質向上
+            depth: false,                // 🚀 Phase 3: Spine 2Dに不要・パフォーマンス向上
+            stencil: false               // 🚀 Phase 3: Spine基本機能に不要
         };
         
         // 🌐 Web版と同一のWebGLバージョンフォールバック戦略
@@ -414,29 +418,28 @@ export class SpinePreviewRender {
             this.fallbackCanvasSize();
         }
         
-        // 🚨 フェーズB: S方式（ストレートα）統一ブレンド設定
+        // 🚀 Phase 4: PMA矛盾解決 - アセット(pma:true) vs WebGL整合性確保
         this.gl.enable(this.gl.BLEND);
-        this.gl.blendFuncSeparate(
-            this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA,  // RGB: ストレートα標準ブレンド
-            this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA          // アルファ: 合成用
-        );
+        
+        // アセットがPMA（pma:true）のため、WebGL側でStraight Alpha処理
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA); // Straight Alpha用
         this.gl.clearColor(0.0, 0.0, 0.0, 0.0); // 透明背景
         
-        // 🚨 フェーズB: S方式テクスチャ設定統一
+        // WebGL側PMA無効でアセットPMAとの整合性確保
         this.gl.disable(this.gl.DITHER);  // 安定化の定番
-        this.gl.pixelStorei(this.gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); // ストレートα
+        this.gl.pixelStorei(this.gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); // WebGL PMA無効
         
         // 🚨 フェーズB: ハロー対策強化
         this.setupAntiHaloTextureDefaults();
         
-        // 🚨 フェーズB: デバッグ用α方式表示
-        console.log('🚨 フェーズB: α方式 = S（ストレートα統一）');
+        // 🚀 Phase 4: デバッグ用α方式表示（PMA矛盾解決版）
+        console.log('🚀 Phase 4: α方式矛盾解決 = アセット(PMA) + WebGL(Straight)');
         
-        console.log('🌐 Web版統一WebGL設定完了:');
-        console.log('  - premultipliedAlpha: false');
-        console.log('  - preserveDrawingBuffer: false (デフォルト)');
-        console.log('  - blendFuncSeparate: SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA');
-        console.log('  - UNPACK_PREMULTIPLY_ALPHA_WEBGL: false');
+        console.log('🚀 Phase 4: PMA矛盾解決WebGL設定完了:');
+        console.log('  - アセット側: pma:true（.atlasファイルで確認済み）');
+        console.log('  - WebGL側: premultipliedAlpha:true + UNPACK_PREMULTIPLY_ALPHA:false');
+        console.log('  - ブレンド: SRC_ALPHA, ONE_MINUS_SRC_ALPHA（Straight Alpha用）');
+        console.log('  - preserveDrawingBuffer: true（1フレーム表示問題対策継続）');
         console.log('  - DITHER: disabled');
         console.log('  - テクスチャハロー対策: CLAMP_TO_EDGE + LINEAR');
         
@@ -910,11 +913,12 @@ export class SpinePreviewRender {
      * 🚨 フェーズA: チラつき診断付き全キャラクターレンダリング
      */
     renderAllCharactersWithFlickerDiagnosis(delta) {
-        // 🚨 毎フレーム画面クリア（preserveDrawingBuffer:false対策）
+        // 🚀 Phase 3: preserveDrawingBuffer:true 対応・クリア最適化
         if (!this.gl) {
             return false; // WebGL未初期化
         }
         
+        // 🚀 Phase 3: バッファ保持モードでは必要時のみクリア（パフォーマンス向上）
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         let didDrawAny = false;
         
