@@ -85,6 +85,10 @@
             border-radius: 5px;
             background: #111;
             margin: 10px;
+            /* Phase 12-B: バウンディングボックス適正化のためのCSS設定 */
+            width: 400px;
+            height: 300px;
+            position: relative;
         }
         
         .controls {
@@ -218,6 +222,9 @@
             <canvas id="spine-canvas" width="800" height="600"></canvas>
             
             <div class="controls">
+                <!-- 編集モードコントロール -->
+                <button id="edit-mode-btn" onclick="toggleEditMode()" style="background: #2196F3;">🎯 編集モード開始</button>
+                <button id="bbox-btn" onclick="toggleBoundingBox()" style="background: #FF9800; display: none;">📦 バウンディングボックス表示</button>
                 <button onclick="clearAllCharacters()">🧹 全クリア</button>
                 <button onclick="showActorInfo()">📊 アクター情報</button>
                 <button onclick="testLoadNezumi()">🐭 nezumi直接読み込み</button>
@@ -239,6 +246,10 @@
 
     <!-- 動作確認済みSpine WebGLライブラリ -->
     <script src="assets/spine/spine-webgl-working.js"></script>
+    
+    <!-- v3配置システム統合 -->
+    <script src="spine-edit-core.js"></script>
+    <script src="spine-bounding-box-module.js"></script>
 
     <script>
         // 🚀 Phase 10-B: Electron版6モジュール統合システム
@@ -282,6 +293,9 @@
                 
                 // Phase 11-C: 保存された設定の自動復元
                 await restoreSavedSettings();
+                
+                // Phase 12-A: v3配置システム初期化
+                initializeSpineEditSystem();
                 
                 console.log('✅ Electron版6モジュール統合システム初期化完了');
                 updateStatus('✅ 初期化完了 - ドラッグ&ドロップでキャラクター配置可能');
@@ -900,6 +914,129 @@
             document.getElementById('status').textContent = message;
             console.log('📊 Status:', message);
         }
+        
+        // ========== Phase 12-A: v3配置システム統合 ========== //
+        
+        // v3配置システム初期化
+        function initializeSpineEditSystem() {
+            console.log('🎯 v3配置システム初期化開始');
+            
+            // SpineEditCoreが読み込まれていることを確認
+            if (typeof SpineEditSystem === 'undefined' || typeof initializeBaseLayer === 'undefined') {
+                console.error('❌ SpineEditCore未読み込み - spine-edit-core.jsを確認してください');
+                return false;
+            }
+            
+            console.log('✅ SpineEditCore読み込み確認済み');
+            updateStatus('🎯 v3配置システム準備完了 - 編集モードボタンを押して開始');
+            return true;
+        }
+        
+        // 編集モード切り替え
+        window.toggleEditMode = function() {
+            const btn = document.getElementById('edit-mode-btn');
+            
+            if (!SpineEditSystem.controlLayer.isEditMode) {
+                // 編集モード開始
+                startEditMode();
+                btn.textContent = '✅ 編集モード終了';
+                btn.style.background = '#f44336';
+                updateStatus('🎯 編集モード開始 - キャンバスをドラッグ・矢印キーで移動可能');
+            } else {
+                // 編集モード終了
+                endEditMode();
+                btn.textContent = '🎯 編集モード開始';
+                btn.style.background = '#2196F3';
+                updateStatus('✅ 編集モード終了 - 配置を保存しました');
+            }
+        };
+        
+        // 編集モード開始
+        function startEditMode() {
+            console.log('🎯 編集モード開始処理');
+            
+            // レイヤー初期化
+            if (!initializeBaseLayer()) {
+                console.error('❌ ベースレイヤー初期化失敗');
+                updateStatus('❌ 編集モード開始失敗 - キャンバスが見つかりません');
+                return;
+            }
+            
+            if (!initializeControlLayer()) {
+                console.error('❌ コントロールレイヤー初期化失敗');
+                updateStatus('❌ 編集モード開始失敗 - 制御システム初期化エラー');
+                return;
+            }
+            
+            // 座標系スワップ開始
+            const targetElement = SpineEditSystem.baseLayer.targetElement;
+            SpineEditSystem.coordinateSwap.enterEditMode(targetElement);
+            
+            // 編集モード有効化
+            SpineEditSystem.controlLayer.isEditMode = true;
+            
+            // キャンバスにスタイル追加（編集中であることを視覚的に表示）
+            targetElement.style.border = '2px dashed #2196F3';
+            targetElement.style.cursor = 'move';
+            
+            // バウンディングボックスボタンを表示
+            document.getElementById('bbox-btn').style.display = 'inline-block';
+            
+            console.log('✅ 編集モード開始完了');
+        }
+        
+        // 編集モード終了
+        function endEditMode() {
+            console.log('🎯 編集モード終了処理');
+            
+            const targetElement = SpineEditSystem.baseLayer.targetElement;
+            if (!targetElement) {
+                console.warn('⚠️ 対象要素が見つからないため、編集モード終了をスキップ');
+                return;
+            }
+            
+            // バウンディングボックスを非表示（存在する場合）
+            if (ModuleManager.hasModule('boundingBox')) {
+                ModuleManager.removeModule('boundingBox');
+            }
+            
+            // 座標系復元
+            SpineEditSystem.coordinateSwap.exitEditMode(targetElement);
+            
+            // 編集モード無効化
+            SpineEditSystem.controlLayer.isEditMode = false;
+            SpineEditSystem.controlLayer.isDragging = false;
+            
+            // 視覚的スタイルリセット
+            targetElement.style.border = '2px solid #4CAF50';
+            targetElement.style.cursor = 'default';
+            
+            // バウンディングボックスボタンを非表示
+            document.getElementById('bbox-btn').style.display = 'none';
+            
+            console.log('✅ 編集モード終了完了');
+        }
+        
+        // バウンディングボックス切り替え
+        window.toggleBoundingBox = function() {
+            const btn = document.getElementById('bbox-btn');
+            
+            if (!ModuleManager.hasModule('boundingBox')) {
+                // バウンディングボックス表示開始
+                const boundingBoxModule = createBoundingBoxModule();
+                if (ModuleManager.addModule('boundingBox', boundingBoxModule)) {
+                    btn.textContent = '❌ バウンディングボックス非表示';
+                    btn.style.background = '#f44336';
+                    updateStatus('📦 バウンディングボックス表示 - ハンドルでリサイズ・ドラッグで移動可能');
+                }
+            } else {
+                // バウンディングボックス非表示
+                ModuleManager.removeModule('boundingBox');
+                btn.textContent = '📦 バウンディングボックス表示';
+                btn.style.background = '#FF9800';
+                updateStatus('✅ バウンディングボックス非表示');
+            }
+        };
         
         console.log('🚀 Electron版6モジュール統合テストシステム準備完了');
     </script>

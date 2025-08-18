@@ -5,26 +5,223 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spine Editor v2.0 - Demo</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* システム選択画面のスタイル */
+        .system-selector {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .selector-header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .selector-header p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .system-options {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+        
+        .system-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 400px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border: 2px solid transparent;
+        }
+        
+        .system-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+        }
+        
+        .system-card.recommended {
+            border-color: #4CAF50;
+            background: linear-gradient(135deg, #f8fff8 0%, #ffffff 100%);
+        }
+        
+        .system-card.recommended:hover {
+            border-color: #45a049;
+            box-shadow: 0 16px 40px rgba(76, 175, 80, 0.2);
+        }
+        
+        .system-card.advanced:hover {
+            border-color: #2196F3;
+            box-shadow: 0 16px 40px rgba(33, 150, 243, 0.2);
+        }
+        
+        .recommended-badge {
+            position: absolute;
+            top: -8px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .system-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        .system-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .system-description {
+            text-align: left;
+        }
+        
+        .system-description p {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #555;
+        }
+        
+        .system-description ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        
+        .system-description li {
+            padding: 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .use-case {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #555;
+            text-align: center;
+        }
+        
+        .selector-footer {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .advanced-system {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .system-options {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .system-card {
+                width: 90%;
+                max-width: 400px;
+            }
+            
+            .selector-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
     
     <!-- Spine WebGL Library (Webアプリ版コピー - 動作確認済み) -->
     <script src="assets/spine/spine-webgl-working.js"></script>
 </head>
 <body>
     <div class="demo-container">
-        <!-- ヘッダー -->
-        <header class="demo-header">
-            <div>
-                <h1 class="demo-title">Spine Editor v2.0 Demo</h1>
+        <!-- システム選択メイン画面 -->
+        <div id="system-selector" class="system-selector">
+            <div class="selector-header">
+                <h1>🚀 Spine Editor v2.0</h1>
+                <p>用途に応じて適切なシステムを選択してください</p>
             </div>
-            <div class="demo-actions">
-                <button id="btn-open-folder" class="btn btn-primary">📁 フォルダを開く</button>
-                <button id="btn-load-spine-folder" class="btn">🎭 Spineフォルダ選択</button>
-                <button id="btn-export-package" class="btn" disabled>📦 パッケージ出力</button>
-                <button id="btn-preview-package" class="btn" disabled>👁️ プレビュー</button>
-                <button id="btn-electron-spine" class="btn" onclick="openElectronSpineSystem()" style="background: #FF6B6B;">🚀 統合システム</button>
-                <span id="status-indicator" class="status-indicator status-ready"></span>
+            
+            <div class="system-options">
+                <!-- 推奨: 軽量版統合システム -->
+                <div class="system-card recommended" onclick="openLightweightSystem()">
+                    <div class="system-icon">🚀</div>
+                    <h3>軽量版統合システム</h3>
+                    <div class="recommended-badge">推奨</div>
+                    <div class="system-description">
+                        <p><strong>Phase 11完了 - 最新システム</strong></p>
+                        <ul>
+                            <li>✅ 6モジュール統合アーキテクチャ</li>
+                            <li>✅ プロジェクト・Spineフォルダ管理</li>
+                            <li>✅ ドラッグ&ドロップキャラクター配置</li>
+                            <li>✅ 動作確認済みレンダリング</li>
+                            <li>✅ シンプル・高速・安定</li>
+                        </ul>
+                        <div class="use-case">💡 学習・実験・軽量制作に最適</div>
+                    </div>
+                </div>
+                
+                <!-- 高機能版システム -->
+                <div class="system-card advanced" onclick="openAdvancedSystem()">
+                    <div class="system-icon">🏢</div>
+                    <h3>高機能版システム</h3>
+                    <div class="system-description">
+                        <p><strong>Phase 1完成 - 商用制作ツール</strong></p>
+                        <ul>
+                            <li>🔧 4パネル統合UI</li>
+                            <li>📋 HTMLプレビュー機能</li>
+                            <li>📦 パッケージ出力・エクスポート</li>
+                            <li>🎯 バウンディングボックス編集</li>
+                            <li>⚙️ 高度な設定・カスタマイズ</li>
+                        </ul>
+                        <div class="use-case">💼 本格的商用制作・高度編集用</div>
+                    </div>
+                </div>
             </div>
-        </header>
+            
+            <div class="selector-footer">
+                <p>💡 いつでもシステム間の切り替えが可能です</p>
+            </div>
+        </div>
+
+        <!-- 従来システム（非表示） -->
+        <div id="advanced-system" class="advanced-system" style="display: none;">
+            <!-- ヘッダー -->
+            <header class="demo-header">
+                <div>
+                    <h1 class="demo-title">Spine Editor v2.0 - 高機能版</h1>
+                </div>
+                <div class="demo-actions">
+                    <button onclick="backToSelector()" class="btn">⬅️ システム選択に戻る</button>
+                    <button id="btn-open-folder" class="btn btn-primary">📁 フォルダを開く</button>
+                    <button id="btn-load-spine-folder" class="btn">🎭 Spineフォルダ選択</button>
+                    <button id="btn-export-package" class="btn" disabled>📦 パッケージ出力</button>
+                    <button id="btn-preview-package" class="btn" disabled>👁️ プレビュー</button>
+                    <span id="status-indicator" class="status-indicator status-ready"></span>
+                </div>
+            </header>
 
         <!-- 左パネル: プロジェクトローダー -->
         <div class="project-panel">
@@ -136,35 +333,74 @@
     
     <!-- Application -->
     
-    <!-- Electron統合システム制御 -->
+    <!-- システム選択制御 -->
     <script>
-        // Electron統合システムを開く
-        window.openElectronSpineSystem = async () => {
-            console.log('🚀 Electron統合システム起動中...');
+        // 軽量版統合システムを開く（推奨）
+        window.openLightweightSystem = async () => {
+            console.log('🚀 軽量版統合システム起動中...');
             
             try {
-                // 新しいウィンドウでElectron統合システムを開く
+                // 現在のウィンドウで統合システムに遷移（新ウィンドウを開かない）
                 const url = window.location.origin + '/electron-integrated-spine.html';
-                
-                if (window.electronAPI && window.electronAPI.openURL) {
-                    // Electronネイティブで新しいウィンドウを開く
-                    const result = await window.electronAPI.openURL(url);
-                    
-                    if (result.success) {
-                        console.log('✅ Electron統合システム起動成功');
-                    } else {
-                        console.error('❌ Electron統合システム起動失敗:', result.error);
-                    }
-                } else {
-                    // フォールバック: 通常のウィンドウで開く
-                    window.open(url, '_blank', 'width=1400,height=900');
-                }
+                window.location.href = url;
                 
             } catch (error) {
-                console.error('❌ Electron統合システム起動エラー:', error);
-                alert('統合システムの起動に失敗しました: ' + error.message);
+                console.error('❌ 軽量版統合システム起動エラー:', error);
+                alert('軽量版統合システムの起動に失敗しました: ' + error.message);
             }
         };
+        
+        // 高機能版システムを表示
+        window.openAdvancedSystem = () => {
+            console.log('🏢 高機能版システム表示中...');
+            
+            // システム選択画面を非表示
+            document.getElementById('system-selector').style.display = 'none';
+            
+            // 高機能版システムを表示
+            document.getElementById('advanced-system').style.display = 'block';
+            
+            // 従来システムの初期化
+            if (window.demoApp) {
+                console.log('✅ 既存DemoAppが存在 - 再初期化');
+            } else {
+                // DemoApp初期化（従来ロジック実行）
+                initializeAdvancedSystem();
+            }
+        };
+        
+        // システム選択に戻る
+        window.backToSelector = () => {
+            console.log('⬅️ システム選択画面に戻る');
+            
+            // 高機能版システムを非表示
+            document.getElementById('advanced-system').style.display = 'none';
+            
+            // システム選択画面を表示
+            document.getElementById('system-selector').style.display = 'block';
+        };
+        
+        // 高機能版システム初期化
+        function initializeAdvancedSystem() {
+            console.log('🚀 高機能版システム初期化開始');
+            
+            // 従来のDemoAppロジックを実行
+            if (typeof DemoApp !== 'undefined') {
+                window.demoApp = new DemoApp();
+                console.log('✅ DemoApp初期化完了');
+            } else {
+                console.warn('⚠️ DemoApp未定義 - モジュール読み込み待機中');
+                // モジュール読み込み完了後に初期化
+                setTimeout(() => {
+                    if (typeof DemoApp !== 'undefined') {
+                        window.demoApp = new DemoApp();
+                        console.log('✅ DemoApp遅延初期化完了');
+                    }
+                }, 1000);
+            }
+        }
+        
+        console.log('🎯 システム選択機能準備完了');
     </script>
     <script type="module">
         import { DemoApp } from './app.js';
