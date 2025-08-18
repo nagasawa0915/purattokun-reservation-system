@@ -21,6 +21,7 @@
                 <button id="btn-load-spine-folder" class="btn">🎭 Spineフォルダ選択</button>
                 <button id="btn-export-package" class="btn" disabled>📦 パッケージ出力</button>
                 <button id="btn-preview-package" class="btn" disabled>👁️ プレビュー</button>
+                <button id="btn-electron-spine" class="btn" onclick="openElectronSpineSystem()" style="background: #FF6B6B;">🚀 統合システム</button>
                 <span id="status-indicator" class="status-indicator status-ready"></span>
             </div>
         </header>
@@ -134,6 +135,37 @@
     <script src="js/spine-simple-v3.js"></script>
     
     <!-- Application -->
+    
+    <!-- Electron統合システム制御 -->
+    <script>
+        // Electron統合システムを開く
+        window.openElectronSpineSystem = async () => {
+            console.log('🚀 Electron統合システム起動中...');
+            
+            try {
+                // 新しいウィンドウでElectron統合システムを開く
+                const url = window.location.origin + '/electron-integrated-spine.html';
+                
+                if (window.electronAPI && window.electronAPI.openURL) {
+                    // Electronネイティブで新しいウィンドウを開く
+                    const result = await window.electronAPI.openURL(url);
+                    
+                    if (result.success) {
+                        console.log('✅ Electron統合システム起動成功');
+                    } else {
+                        console.error('❌ Electron統合システム起動失敗:', result.error);
+                    }
+                } else {
+                    // フォールバック: 通常のウィンドウで開く
+                    window.open(url, '_blank', 'width=1400,height=900');
+                }
+                
+            } catch (error) {
+                console.error('❌ Electron統合システム起動エラー:', error);
+                alert('統合システムの起動に失敗しました: ' + error.message);
+            }
+        };
+    </script>
     <script type="module">
         import { DemoApp } from './app.js';
         

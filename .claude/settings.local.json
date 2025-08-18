@@ -47,7 +47,14 @@
       "Bash(npm --version)",
       "Bash(jobs)",
       "WebSearch",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(git log:*)",
+      "Bash(timeout 5s npm start)",
+      "Bash(timeout 10s npm start)",
+      "Bash(timeout 15s npm start)",
+      "Bash(for file in *.js)",
+      "Bash(do echo \"[$file]\")",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
