@@ -191,6 +191,17 @@
             </div>
             
             <div class="module-info" style="margin-top: 15px;">
+                <h4>📁 Phase 11完了機能</h4>
+                <div style="font-size: 11px;">
+                    <div>✅ HTMLプロジェクト管理</div>
+                    <div>✅ Spineアセット管理</div>
+                    <div>✅ 自動ファイルスキャン</div>
+                    <div>✅ キャラクター自動検出</div>
+                    <div>✅ 履歴・設定保存</div>
+                </div>
+            </div>
+            
+            <div class="module-info" style="margin-top: 15px;">
                 <h4>⚡ Electron機能</h4>
                 <div style="font-size: 11px;">
                     <div>✅ ネイティブファイルダイアログ</div>
@@ -211,7 +222,8 @@
                 <button onclick="showActorInfo()">📊 アクター情報</button>
                 <button onclick="testLoadNezumi()">🐭 nezumi直接読み込み</button>
                 <button onclick="testLoadPurattokun()">🐱 purattokun直接読み込み</button>
-                <button onclick="openSpineFolder()">📁 Spineフォルダ選択</button>
+                <button onclick="openProjectFolder()">📁 プロジェクトフォルダ</button>
+                <button onclick="openSpineFolder()">🎭 Spineフォルダ選択</button>
                 <button onclick="exportProject()">💾 プロジェクト出力</button>
             </div>
             
@@ -267,6 +279,9 @@
                 
                 // Electronメニューハンドラー設定
                 setupElectronHandlers();
+                
+                // Phase 11-C: 保存された設定の自動復元
+                await restoreSavedSettings();
                 
                 console.log('✅ Electron版6モジュール統合システム初期化完了');
                 updateStatus('✅ 初期化完了 - ドラッグ&ドロップでキャラクター配置可能');
@@ -551,6 +566,60 @@
             console.log('✅ Electronハンドラー設定完了');
         }
         
+        // Phase 11-C: 保存された設定の自動復元
+        async function restoreSavedSettings() {
+            try {
+                // 保存されたプロジェクトパス復元
+                const savedProjectPath = localStorage.getItem('spine-editor-project-path');
+                const savedSpinePath = localStorage.getItem('spine-editor-spine-path');
+                
+                console.log('🔄 保存された設定を復元中:');
+                console.log('  - プロジェクトパス:', savedProjectPath);
+                console.log('  - Spineパス:', savedSpinePath);
+                
+                // プロジェクトフォルダ自動スキャン（パスが存在する場合）
+                if (savedProjectPath && window.electronAPI) {
+                    try {
+                        const exists = await window.electronAPI.fs.pathExists(savedProjectPath);
+                        if (exists) {
+                            console.log('✅ 保存されたプロジェクトパスが有効 - 自動スキャン実行');
+                            await scanProjectFolder(savedProjectPath);
+                        } else {
+                            console.warn('⚠️ 保存されたプロジェクトパスが無効:', savedProjectPath);
+                            localStorage.removeItem('spine-editor-project-path');
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ プロジェクトパス確認エラー:', error.message);
+                    }
+                }
+                
+                // Spineフォルダ自動スキャン（パスが存在する場合）
+                if (savedSpinePath && window.electronAPI) {
+                    try {
+                        const exists = await window.electronAPI.fs.pathExists(savedSpinePath);
+                        if (exists) {
+                            console.log('✅ 保存されたSpineパスが有効 - 自動スキャン実行');
+                            await scanSpineFolder(savedSpinePath);
+                        } else {
+                            console.warn('⚠️ 保存されたSpineパスが無効:', savedSpinePath);
+                            localStorage.removeItem('spine-editor-spine-path');
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Spineパス確認エラー:', error.message);
+                    }
+                }
+                
+                // 何らかの復元が成功した場合の通知
+                if (savedProjectPath || savedSpinePath) {
+                    updateStatus('🔄 前回のプロジェクト設定を復元しました');
+                }
+                
+            } catch (error) {
+                console.error('❌ 設定復元エラー:', error);
+                updateStatus(`❌ 設定復元失敗: ${error.message}`);
+            }
+        }
+        
         // UI関数
         window.clearAllCharacters = () => {
             if (electronSpineActorManager) {
@@ -592,12 +661,45 @@
                 
                 if (!result.canceled && result.filePaths.length > 0) {
                     const folderPath = result.filePaths[0];
-                    console.log('📁 フォルダ選択:', folderPath);
-                    updateStatus(`📁 フォルダ選択: ${folderPath}`);
+                    console.log('📁 Spineフォルダ選択:', folderPath);
+                    updateStatus(`📁 Spineフォルダ選択: ${folderPath}`);
+                    
+                    // Phase 11-B: Spineファイルスキャン
+                    await scanSpineFolder(folderPath);
                 }
             } catch (error) {
-                console.error('❌ フォルダ選択エラー:', error);
-                updateStatus(`❌ フォルダ選択失敗: ${error.message}`);
+                console.error('❌ Spineフォルダ選択エラー:', error);
+                updateStatus(`❌ Spineフォルダ選択失敗: ${error.message}`);
+            }
+        };
+        
+        // Phase 11-A: HTMLプロジェクトフォルダを開く機能
+        window.openProjectFolder = async () => {
+            if (!window.electronAPI) {
+                updateStatus('❌ Electron環境が必要です');
+                return;
+            }
+            
+            try {
+                const result = await window.electronAPI.fs.selectFolder({
+                    title: 'プロジェクトフォルダを選択',
+                    buttonLabel: 'フォルダ選択'
+                });
+                
+                if (!result.canceled && result.filePaths.length > 0) {
+                    const folderPath = result.filePaths[0];
+                    console.log('📁 プロジェクトフォルダ選択:', folderPath);
+                    updateStatus(`📁 プロジェクトフォルダ選択: ${folderPath}`);
+                    
+                    // HTMLファイルスキャン
+                    await scanProjectFolder(folderPath);
+                    
+                    // プロジェクトパス保存
+                    localStorage.setItem('spine-editor-project-path', folderPath);
+                }
+            } catch (error) {
+                console.error('❌ プロジェクトフォルダ選択エラー:', error);
+                updateStatus(`❌ プロジェクトフォルダ選択失敗: ${error.message}`);
             }
         };
         
@@ -636,6 +738,162 @@
                 updateStatus(`❌ プロジェクト保存失敗: ${error.message}`);
             }
         };
+        
+        // Phase 11-A: プロジェクトフォルダスキャン機能
+        async function scanProjectFolder(folderPath) {
+            try {
+                updateStatus('📁 プロジェクトファイル検索中...');
+                
+                // Electronファイルシステム経由でスキャン
+                const scanResult = await window.electronAPI.fs.scanDirectory(folderPath, ['.html']);
+                
+                if (scanResult.success) {
+                    const htmlFiles = scanResult.files.html || [];
+                    console.log(`✅ HTMLファイル ${htmlFiles.length}個発見:`, htmlFiles);
+                    
+                    updateProjectFilesList(htmlFiles);
+                    updateStatus(`✅ プロジェクトスキャン完了: HTMLファイル${htmlFiles.length}個発見`);
+                } else {
+                    console.error('❌ プロジェクトスキャンエラー:', scanResult.error);
+                    updateStatus(`❌ プロジェクトスキャン失敗: ${scanResult.error}`);
+                }
+            } catch (error) {
+                console.error('❌ プロジェクトスキャンエラー:', error);
+                updateStatus(`❌ プロジェクトスキャンエラー: ${error.message}`);
+            }
+        }
+        
+        // Phase 11-B: Spineフォルダスキャン機能
+        async function scanSpineFolder(folderPath) {
+            try {
+                updateStatus('🎭 Spineファイル検索中...');
+                
+                // Electronファイルシステム経由でスキャン
+                const scanResult = await window.electronAPI.fs.scanDirectory(folderPath, ['.json', '.atlas', '.png']);
+                
+                if (scanResult.success) {
+                    const files = scanResult.files;
+                    const jsonFiles = files.json || [];
+                    const atlasFiles = files.atlas || [];
+                    const pngFiles = files.png || [];
+                    
+                    console.log(`✅ Spineファイル発見: JSON ${jsonFiles.length}個, Atlas ${atlasFiles.length}個, PNG ${pngFiles.length}個`);
+                    
+                    // キャラクター自動検出
+                    const detectedCharacters = detectSpineCharacters(jsonFiles, atlasFiles);
+                    updateSpineCharactersList(detectedCharacters);
+                    
+                    updateStatus(`✅ Spineスキャン完了: キャラクター${detectedCharacters.length}個発見`);
+                    
+                    // Spineパス保存
+                    localStorage.setItem('spine-editor-spine-path', folderPath);
+                } else {
+                    console.error('❌ Spineスキャンエラー:', scanResult.error);
+                    updateStatus(`❌ Spineスキャン失敗: ${scanResult.error}`);
+                }
+            } catch (error) {
+                console.error('❌ Spineスキャンエラー:', error);
+                updateStatus(`❌ Spineスキャンエラー: ${error.message}`);
+            }
+        }
+        
+        // Spineキャラクター自動検出
+        function detectSpineCharacters(jsonFiles, atlasFiles) {
+            const characters = [];
+            const basenames = new Set();
+            
+            // JSON ファイルベースで検出
+            jsonFiles.forEach(jsonPath => {
+                const basename = jsonPath.replace(/\.[^/.]+$/, '').split(/[/\\]/).pop();
+                if (!basenames.has(basename)) {
+                    const atlasPath = atlasFiles.find(atlas => atlas.includes(basename + '.atlas'));
+                    if (atlasPath) {
+                        characters.push({
+                            name: basename,
+                            jsonPath: jsonPath,
+                            atlasPath: atlasPath,
+                            folder: jsonPath.substring(0, jsonPath.lastIndexOf('/'))
+                        });
+                        basenames.add(basename);
+                    }
+                }
+            });
+            
+            return characters;
+        }
+        
+        // プロジェクトファイル一覧更新
+        function updateProjectFilesList(htmlFiles) {
+            const characterList = document.querySelector('.character-list');
+            
+            // 既存の項目をクリア（組み込みキャラクターは保持）
+            const existingItems = characterList.querySelectorAll('.character-item[data-type="project"]');
+            existingItems.forEach(item => item.remove());
+            
+            // HTMLファイルを追加
+            htmlFiles.forEach(htmlPath => {
+                const fileName = htmlPath.split(/[/\\]/).pop();
+                const characterItem = document.createElement('div');
+                characterItem.className = 'character-item';
+                characterItem.setAttribute('data-type', 'project');
+                characterItem.setAttribute('data-path', htmlPath);
+                
+                characterItem.innerHTML = `
+                    <div class="character-icon">📄</div>
+                    <div>
+                        <div><strong>${fileName}</strong></div>
+                        <div style="font-size: 11px; color: #aaa;">HTMLファイル</div>
+                    </div>
+                `;
+                
+                // クリックでプレビュー
+                characterItem.addEventListener('click', () => {
+                    console.log('📄 HTMLファイル選択:', htmlPath);
+                    // 将来的にプレビュー機能を実装
+                });
+                
+                characterList.appendChild(characterItem);
+            });
+        }
+        
+        // Spineキャラクター一覧更新
+        function updateSpineCharactersList(characters) {
+            const characterList = document.querySelector('.character-list');
+            
+            // 既存のSpineキャラクター項目をクリア（組み込みキャラクターは保持）
+            const existingItems = characterList.querySelectorAll('.character-item[data-type="spine"]');
+            existingItems.forEach(item => item.remove());
+            
+            // 検出されたキャラクターを追加
+            characters.forEach(character => {
+                const characterItem = document.createElement('div');
+                characterItem.className = 'character-item';
+                characterItem.setAttribute('draggable', 'true');
+                characterItem.setAttribute('data-character', character.name);
+                characterItem.setAttribute('data-type', 'spine');
+                characterItem.setAttribute('data-folder', character.folder);
+                
+                // アイコンを選択
+                const icon = character.name.includes('nezumi') ? '🐭' : 
+                           character.name.includes('puratto') ? '🐱' : '🎭';
+                
+                characterItem.innerHTML = `
+                    <div class="character-icon">${icon}</div>
+                    <div>
+                        <div><strong>${character.name}</strong></div>
+                        <div style="font-size: 11px; color: #aaa;">ドラッグで配置</div>
+                    </div>
+                `;
+                
+                // ドラッグイベント設定
+                characterItem.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', character.name);
+                    console.log(`🔄 ドラッグ開始: ${character.name}`);
+                });
+                
+                characterList.appendChild(characterItem);
+            });
+        }
         
         // ステータス更新
         function updateStatus(message) {
