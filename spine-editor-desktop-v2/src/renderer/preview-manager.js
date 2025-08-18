@@ -4,6 +4,9 @@
  */
 
 import { Utils } from './utils.js';
+import { AbsoluteUrlResolver } from './utils/AssetUrlUtils.js';
+import { ImageDecodeWaiter } from './utils/ImageDecodeUtils.js';
+import { ContextRecoveryManager } from './utils/ContextRecoveryUtils.js';
 
 export class PreviewManager {
     constructor() {
@@ -11,25 +14,24 @@ export class PreviewManager {
         this.previewIframe = null;
         this.previewPlaceholder = null;
         this.pageListElement = null;
+        
+        // 🚀 AssetRegistry実装
+        this.assetRegistry = new AssetRegistry();
+        
+        // グローバル参照設定（下位互換性）
+        if (typeof window !== 'undefined') {
+            window.assetRegistry = this.assetRegistry;
+        }
     }
 
-    /**
-     * プレビュー要素を初期化
-     * @param {Element} iframe - プレビューiframe要素
-     * @param {Element} placeholder - プレビュープレースホルダー要素
-     * @param {Element} pageList - ページリスト要素
-     */
+    /** プレビュー要素を初期化 */
     initialize(iframe, placeholder, pageList) {
         this.previewIframe = iframe;
         this.previewPlaceholder = placeholder;
         this.pageListElement = pageList;
     }
 
-    /**
-     * プロジェクトファイルをアウトライナー方式で表示
-     * @param {Array} files - ファイルリスト
-     * @param {Function} onFileSelect - ファイル選択時のコールバック
-     */
+    /** アウトライナー表示 */
     renderOutlinerView(files, onFileSelect) {
         if (!this.pageListElement) {
             console.error('❌ ページリスト要素が初期化されていません');
@@ -57,12 +59,7 @@ export class PreviewManager {
         
     }
 
-    /**
-     * ファイルを階層別に整理
-     * @private
-     * @param {Array} files - ファイルリスト
-     * @returns {object} 階層化されたファイル構造
-     */
+    /** ファイル階層整理 */
     organizeFilesHierarchy(files) {
         const hierarchy = {
             root: [],
@@ -89,15 +86,7 @@ export class PreviewManager {
         return hierarchy;
     }
 
-    /**
-     * ファイルセクション作成（ルート用・フォルダ用）
-     * @private
-     * @param {string} title - セクションタイトル
-     * @param {Array} files - ファイルリスト
-     * @param {boolean} expanded - 初期展開状態
-     * @param {Function} onFileSelect - ファイル選択コールバック
-     * @returns {Element} セクション要素
-     */
+    /** ファイルセクション作成 */
     createFileSection(title, files, expanded = false, onFileSelect) {
         const section = document.createElement('div');
         section.className = 'file-section';
@@ -156,12 +145,7 @@ export class PreviewManager {
         return section;
     }
 
-    /**
-     * ファイル選択とプレビュー表示
-     * @param {object} file - ファイルオブジェクト
-     * @param {Element} element - 選択されたDOM要素
-     * @param {Function} onFileSelect - ファイル選択コールバック
-     */
+    /** ファイル選択とプレビュー表示 */
     selectFileWithPreview(file, element, onFileSelect) {
         // アウトライナー内の全ファイルアイテムから選択状態を削除
         if (this.pageListElement) {
@@ -182,10 +166,7 @@ export class PreviewManager {
         }
     }
 
-    /**
-     * HTMLプレビューを読み込み
-     * @param {object} file - ファイルオブジェクト
-     */
+    /** HTMLプレビュー読み込み */
     async loadHTMLPreview(file) {
         try {
             // 内蔵HTTPサーバー経由でのプレビュー（Spineアセット対応）
@@ -212,9 +193,7 @@ export class PreviewManager {
         }
     }
 
-    /**
-     * プレビュー表示を切り替え
-     */
+    /** プレビュー表示切り替え */
     showPreview() {
         if (this.previewPlaceholder) {
             this.previewPlaceholder.style.display = 'none';
@@ -233,11 +212,7 @@ export class PreviewManager {
         }
     }
 
-    /**
-     * プレビューエラー表示
-     * @param {string} fileName - ファイル名
-     * @param {string} errorMessage - エラーメッセージ
-     */
+    /** プレビューエラー表示 */
     showPreviewError(fileName, errorMessage) {
         if (this.previewPlaceholder) {
             this.previewPlaceholder.innerHTML = `
@@ -251,11 +226,7 @@ export class PreviewManager {
         this.hidePreview();
     }
 
-    /**
-     * フォールバック: シンプルなファイル一覧表示
-     * @param {Array} files - ファイルリスト
-     * @param {Function} onFileSelect - ファイル選択コールバック
-     */
+    /** シンプルファイル一覧表示 */
     renderFileListWithPreview(files, onFileSelect) {
         if (!this.pageListElement) {
             console.error('❌ ページリスト要素が初期化されていません');
@@ -284,10 +255,7 @@ export class PreviewManager {
         }
     }
 
-    /**
-     * インラインプレビュー表示（新しいウィンドウを開く代替）
-     * @param {string} html - HTML内容
-     */
+    /** インラインプレビュー表示 */
     showInlinePreview(html) {
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -302,17 +270,12 @@ export class PreviewManager {
         setTimeout(() => URL.revokeObjectURL(url), 30000);
     }
 
-    /**
-     * 現在選択されているファイルを取得
-     * @returns {object|null} 現在のファイル
-     */
+    /** 現在選択ファイル取得 */
     getCurrentPage() {
         return this.currentPage;
     }
 
-    /**
-     * プレビューをクリア
-     */
+    /** プレビュークリア */
     clearPreview() {
         this.currentPage = null;
         if (this.previewIframe) {
@@ -329,9 +292,7 @@ export class PreviewManager {
         }
     }
 
-    /**
-     * ファイルリストをクリア
-     */
+    /** ファイルリストクリア */
     clearFileList() {
         if (this.pageListElement) {
             this.pageListElement.innerHTML = '<div class="loading">HTMLファイルがありません</div>';
@@ -339,10 +300,7 @@ export class PreviewManager {
         this.currentPage = null;
     }
 
-    /**
-     * プレビューステータスを設定
-     * @param {string} message - ステータスメッセージ
-     */
+    /** プレビューステータス設定 */
     setPreviewStatus(message) {
         if (this.previewPlaceholder) {
             this.previewPlaceholder.textContent = message;
@@ -350,11 +308,7 @@ export class PreviewManager {
         }
     }
 
-    /**
-     * ドロップゾーンを設定
-     * @param {Element} dropZoneElement - ドロップゾーン要素
-     * @param {Function} onDrop - ドロップ時のコールバック
-     */
+    /** ドロップゾーン設定 */
     setupDropZone(dropZoneElement, onDrop) {
         if (!dropZoneElement) {
             console.warn('⚠️ ドロップゾーン要素が見つかりません');
@@ -382,19 +336,36 @@ export class PreviewManager {
             dropZoneElement.classList.remove('drag-over');
             
             try {
-                // ドラッグされたキャラクターデータを取得
-                const characterDataStr = e.dataTransfer.getData('application/json');
-                if (!characterDataStr) {
-                    console.warn('⚠️ ドロップデータが見つかりません');
+                // 軽量化ドロップデータ解析
+                const assetId = e.dataTransfer.getData('application/x-spine-asset-id') || 
+                               e.dataTransfer.getData('text/plain');
+                const sourceUI = e.dataTransfer.getData('application/x-source-ui');
+                
+                if (!assetId) {
+                    // レガシーフォーマットのフォールバック
+                    const legacyData = e.dataTransfer.getData('application/json');
+                    if (legacyData) {
+                        const parsed = JSON.parse(legacyData);
+                        const legacyAssetId = parsed.character?.id || parsed.id;
+                        if (legacyAssetId && onDrop) {
+                            console.log('📋 レガシードロップ処理 (preview-manager):', legacyAssetId);
+                            const rect = dropZoneElement.getBoundingClientRect();
+                            const dropX = e.clientX - rect.left;
+                            const dropY = e.clientY - rect.top;
+                            onDrop(parsed.character || parsed, dropX, dropY);
+                            return;
+                        }
+                    }
+                    console.warn('⚠️ 有効なドロップデータが見つかりません');
                     return;
                 }
                 
-                const characterData = JSON.parse(characterDataStr);
-                console.log('🎭 Dropped character data:', characterData);
+                console.log('💧 軽量ドロップ受信 (preview-manager):', { assetId, sourceUI });
                 
-                // データ整合性チェック
-                if (!characterData || !characterData.character) {
-                    console.error('❌ 無効なキャラクターデータ:', characterData);
+                // アセットレジストリからキャラクターデータを取得
+                const characterData = this.getCharacterDataByAssetId(assetId);
+                if (!characterData) {
+                    console.error('❌ アセットIDに対応するデータが見つかりません:', assetId);
                     return;
                 }
                 
@@ -405,14 +376,129 @@ export class PreviewManager {
                 
                 // コールバック実行
                 if (onDrop) {
-                    onDrop(characterData.character, dropX, dropY);
+                    onDrop(characterData, dropX, dropY);
                 }
                 
             } catch (error) {
-                console.error('❌ ドロップ処理エラー:', error);
+                console.error('❌ 軽量ドロップ処理エラー:', error);
             }
         });
         
         console.log('✅ ドロップゾーン設定完了');
+    }
+
+    /** アセットIDでキャラクターデータ取得 */
+    getCharacterDataByAssetId(assetId) {
+        console.log('🔍 アセットID解決要求:', assetId);
+        
+        // 新AssetRegistryから取得
+        const assetData = this.assetRegistry.getAssetById(assetId);
+        if (assetData) {
+            console.log('✅ AssetRegistryから取得成功:', assetId);
+            return assetData;
+        }
+        
+        // app.jsのプロジェクトデータから検索（フォールバック）
+        if (window.appInstance && window.appInstance.currentProject) {
+            const characters = window.appInstance.currentProject.spineCharacters || [];
+            console.log('🔍 プロジェクトデータから検索:', { assetId, availableCharacters: characters.map(c => ({ id: c.id, name: c.name })) });
+            
+            const found = characters.find(char => char.id === assetId || char.name === assetId);
+            if (found) {
+                console.log('✅ プロジェクトデータから取得成功、AssetRegistryに登録:', assetId);
+                // AssetRegistryに自動登録
+                this.assetRegistry.registerAsset(assetId, found);
+                return found;
+            }
+        }
+        
+        console.warn('⚠️ アセットIDが見つかりません (preview-manager):', {
+            assetId,
+            assetRegistryConnected: !!this.assetRegistry,
+            projectConnected: !!(window.appInstance && window.appInstance.currentProject),
+            availableAssets: this.assetRegistry ? this.assetRegistry.getAllAssetIds() : 'none'
+        });
+        return null;
+    }
+    
+    /** AssetRegistryインスタンス取得 */
+    getAssetRegistry() {
+        return this.assetRegistry;
+    }
+}
+
+/** AssetRegistry - Spineアセット管理システム */
+class AssetRegistry {
+    constructor() {
+        this.assets = new Map();
+        this.urlResolver = new AbsoluteUrlResolver();
+        this.decodeWaiter = new ImageDecodeWaiter();
+        this.contextRecovery = new ContextRecoveryManager();
+        
+        console.log('🚀 AssetRegistry初期化完了');
+    }
+    
+    /** アセット登録 */
+    registerAsset(assetId, assetData) {
+        try {
+            // 絶対URL化処理
+            const processedData = this.urlResolver.processAssetUrls(assetData);
+            
+            // decode待ち処理（画像系アセット）
+            this.decodeWaiter.queueAssetDecoding(assetId, processedData);
+            
+            // Context復旧用データ準備
+            this.contextRecovery.prepareRecoveryData(assetId, processedData);
+            
+            // アセット保存
+            this.assets.set(assetId, processedData);
+            
+            console.log('✅ アセット登録完了:', assetId);
+        } catch (error) {
+            console.error('❌ アセット登録エラー:', assetId, error);
+        }
+    }
+    
+    /** アセットIDでデータ取得 */
+    getAssetById(assetId) {
+        return this.assets.get(assetId) || null;
+    }
+    
+    /** 描画準備（spine-preview-layer連携用） */
+    async prepareAssetForRender(assetId) {
+        try {
+            const assetData = this.assets.get(assetId);
+            if (!assetData) {
+                throw new Error(`Asset not found: ${assetId}`);
+            }
+            
+            // decode待ち完了確認
+            await this.decodeWaiter.waitForAssetReady(assetId);
+            
+            return assetData;
+        } catch (error) {
+            console.error('❌ 描画準備エラー:', assetId, error);
+            throw error;
+        }
+    }
+    
+    /** 全アセット一覧取得 */
+    getAllAssets() {
+        return Array.from(this.assets.entries()).map(([id, data]) => ({ id, data }));
+    }
+    
+    /** 全アセットID一覧取得 */
+    getAllAssetIds() {
+        return Array.from(this.assets.keys());
+    }
+    
+    /** アセット存在確認 */
+    has(assetId) {
+        return this.assets.has(assetId);
+    }
+    
+    /** Context復旧実行 */
+    async performContextRecovery(gl) {
+        return this.contextRecovery.recoverAllAssets(gl);
     }
 }

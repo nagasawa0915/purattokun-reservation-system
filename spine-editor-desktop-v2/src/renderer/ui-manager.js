@@ -293,6 +293,187 @@ export class UIManager {
     }
 
     /**
+     * D&D軽量化: キャラクターデータからassetIdを抽出
+     * @param {object} characterData - キャラクターデータ
+     * @returns {string} assetId
+     */
+    extractAssetId(characterData) {
+        if (!characterData) {
+            console.warn('⚠️ 無効なキャラクターデータ');
+            return null;
+        }
+        
+        // characterData.character.id または characterData.id を取得
+        const assetId = characterData.character?.id || characterData.id || null;
+        
+        if (!assetId) {
+            console.warn('⚠️ assetIdが見つかりません:', characterData);
+        }
+        
+        return assetId;
+    }
+
+    /**
+     * D&D軽量化: ドラッグ開始時の軽量データ作成
+     * @param {object} characterData - キャラクターデータ
+     * @param {string} sourceUI - ソースUI識別子
+     * @returns {object} 軽量ドラッグデータ
+     */
+    createLightweightDragData(characterData, sourceUI = 'unknown') {
+        const assetId = this.extractAssetId(characterData);
+        
+        if (!assetId) {
+            console.error('❌ assetIdの抽出に失敗しました');
+            return null;
+        }
+        
+        const lightweightData = {
+            assetId: assetId,
+            sourceUI: sourceUI,
+            timestamp: Date.now()
+        };
+        
+        console.log('🎯 軽量ドラッグデータ作成:', lightweightData);
+        return lightweightData;
+    }
+
+    /**
+     * D&D軽量化: ドラッグ開始イベントの設定（軽量版）
+     * @param {HTMLElement} element - ドラッグ可能要素
+     * @param {object} characterData - キャラクターデータ
+     * @param {string} sourceUI - ソースUI識別子
+     */
+    setupLightweightDragStart(element, characterData, sourceUI = 'ui-manager') {
+        if (!element || !characterData) {
+            console.warn('⚠️ 無効な要素またはキャラクターデータ');
+            return;
+        }
+        
+        element.addEventListener('dragstart', (e) => {
+            const lightweightData = this.createLightweightDragData(characterData, sourceUI);
+            
+            if (!lightweightData) {
+                e.preventDefault();
+                return;
+            }
+            
+            // 軽量データのみを転送
+            e.dataTransfer.setData('text/plain', lightweightData.assetId);
+            e.dataTransfer.setData('application/x-spine-asset-id', lightweightData.assetId);
+            e.dataTransfer.setData('application/x-source-ui', lightweightData.sourceUI);
+            e.dataTransfer.effectAllowed = 'copy';
+            
+            console.log('🚀 軽量ドラッグ開始:', {
+                assetId: lightweightData.assetId,
+                sourceUI: lightweightData.sourceUI
+            });
+        });
+    }
+
+    /**
+     * D&D軽量化: ドロップデータの軽量解析
+     * @param {DataTransfer} dataTransfer - ドロップイベントのdataTransfer
+     * @returns {object} 解析されたドロップデータ
+     */
+    parseLightweightDropData(dataTransfer) {
+        try {
+            // 新しい軽量形式を優先
+            const assetId = dataTransfer.getData('application/x-spine-asset-id') || 
+                           dataTransfer.getData('text/plain');
+            const sourceUI = dataTransfer.getData('application/x-source-ui');
+            
+            if (assetId) {
+                console.log('📋 軽量ドロップデータ受信:', { assetId, sourceUI });
+                return {
+                    isLightweight: true,
+                    assetId: assetId,
+                    sourceUI: sourceUI || 'unknown'
+                };
+            }
+            
+            // レガシー形式のフォールバック
+            const legacyData = dataTransfer.getData('application/json');
+            if (legacyData) {
+                const parsed = JSON.parse(legacyData);
+                const assetId = this.extractAssetId(parsed);
+                
+                if (assetId) {
+                    console.log('📋 レガシードロップデータ変換:', { assetId });
+                    return {
+                        isLightweight: false,
+                        assetId: assetId,
+                        sourceUI: parsed.sourceUI || 'legacy',
+                        legacyData: parsed
+                    };
+                }
+            }
+            
+            return null;
+            
+        } catch (error) {
+            console.error('❌ ドロップデータ解析エラー:', error);
+            return null;
+        }
+    }
+
+    /**
+     * D&D軽量化: ドロップゾーンの設定（軽量版）
+     * @param {HTMLElement} dropZone - ドロップゾーン要素
+     * @param {function} onDrop - ドロップ時のコールバック(assetId, dropX, dropY, sourceUI)
+     */
+    setupLightweightDropZone(dropZone, onDrop) {
+        if (!dropZone || typeof onDrop !== 'function') {
+            console.warn('⚠️ 無効なドロップゾーンまたはコールバック');
+            return;
+        }
+        
+        // ドラッグオーバー処理
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            dropZone.classList.add('drag-over');
+        });
+        
+        // ドラッグリーブ処理
+        dropZone.addEventListener('dragleave', (e) => {
+            // 子要素へのドラッグリーブを無視
+            if (!dropZone.contains(e.relatedTarget)) {
+                dropZone.classList.remove('drag-over');
+            }
+        });
+        
+        // ドロップ処理
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const dropData = this.parseLightweightDropData(e.dataTransfer);
+            
+            if (!dropData) {
+                console.warn('⚠️ 有効なドロップデータが見つかりません');
+                return;
+            }
+            
+            // ドロップ位置計算
+            const rect = dropZone.getBoundingClientRect();
+            const dropX = e.clientX - rect.left;
+            const dropY = e.clientY - rect.top;
+            
+            console.log('💧 軽量ドロップ処理:', {
+                assetId: dropData.assetId,
+                sourceUI: dropData.sourceUI,
+                position: { x: dropX, y: dropY },
+                isLightweight: dropData.isLightweight
+            });
+            
+            // コールバック実行
+            onDrop(dropData.assetId, dropX, dropY, dropData.sourceUI);
+        });
+        
+        console.log('✅ 軽量ドロップゾーン設定完了');
+    }
+
+    /**
      * 要素の存在チェック
      * @param {string} elementId - 要素ID
      * @returns {boolean} 要素が存在するかどうか
@@ -343,6 +524,53 @@ export class UIManager {
         }
 
         return allValid;
+    }
+
+    /**
+     * D&D軽量化: アセット管理システムとの連携
+     * @param {string} assetId - アセットID
+     * @returns {object|null} アセットデータ
+     */
+    getAssetDataById(assetId) {
+        // preview-managerやapp.jsのアセットレジストリから取得
+        // この実装は呼び出し側で提供されるアセット取得関数に依存
+        
+        console.log('🔍 アセットデータ取得要求:', assetId);
+        
+        // グローバルアセットレジストリが存在する場合
+        if (window.assetRegistry && typeof window.assetRegistry.getAssetById === 'function') {
+            const assetData = window.assetRegistry.getAssetById(assetId);
+            if (assetData) return assetData;
+        }
+        
+        // app.jsのプロジェクトデータから検索
+        if (window.appInstance && window.appInstance.currentProject) {
+            const characters = window.appInstance.currentProject.spineCharacters || [];
+            return characters.find(char => char.id === assetId);
+        }
+        
+        console.warn('⚠️ アセットレジストリが見つかりません');
+        return null;
+    }
+
+    /**
+     * D&D軽量化: レガシーシステムとの互換性確保
+     * @param {string} assetId - アセットID
+     * @returns {object} レガシー形式のキャラクターデータ
+     */
+    convertToLegacyFormat(assetId) {
+        const assetData = this.getAssetDataById(assetId);
+        
+        if (!assetData) {
+            console.error('❌ アセットデータが見つかりません:', assetId);
+            return null;
+        }
+        
+        // レガシーシステム互換形式に変換
+        return {
+            character: assetData,
+            sourceUI: 'lightweight-converted'
+        };
     }
 
     /**

@@ -258,65 +258,8 @@ export class SpineEditorCore {
     } catch (error) {
       console.error('❌ Failed to initialize SpinePreviewLayer:', error);
       this.spinePreviewLayer = null;
-      // フォールバック処理
-      await this.initSpineWebGLRenderer();
-    }
-  }
-
-  /**
-   * SpineWebGLRenderer初期化
-   */
-  async initSpineWebGLRenderer() {
-    if (typeof SpineWebGLRenderer === 'undefined') {
-      console.warn('⚠️ SpineWebGLRenderer not found, using fallback');
-      return;
-    }
-    
-    try {
-      const viewport = document.getElementById('spine-viewport');
-      if (!viewport) {
-        throw new Error('spine-viewport element not found');
-      }
-      
-      // SpineWebGLRenderer インスタンス作成
-      this.spineRenderer = new SpineWebGLRenderer(viewport);
-      
-      // ベースキャラクター（ぷらっとくん）を読み込み
-      await this.loadBaseCharacter();
-      
-      console.log('✅ SpineWebGLRenderer initialized');
-      
-    } catch (error) {
-      console.error('❌ Failed to initialize SpineWebGLRenderer:', error);
-      // フォールバック処理
-      this.spineRenderer = null;
-    }
-  }
-
-  /**
-   * ベースキャラクター読み込み（ぷらっとくん）
-   */
-  async loadBaseCharacter() {
-    if (!this.spineRenderer) return;
-    
-    try {
-      // ベースキャラクター設定
-      const baseCharacterConfig = {
-        name: 'purattokun',
-        atlasPath: 'assets/spine/characters/purattokun/purattokun.atlas',
-        jsonPath: 'assets/spine/characters/purattokun/purattokun.json',
-        position: { x: 200, y: 200 },
-        scale: { x: 0.5, y: 0.5 }
-      };
-      
-      await this.spineRenderer.loadCharacter(baseCharacterConfig);
-      
-      console.log('✅ Base character (purattokun) loaded');
-      this.utils.setStatus('Base character loaded successfully');
-      
-    } catch (error) {
-      console.error('❌ Failed to load base character:', error);
-      this.utils.setStatus('Warning: Base character could not be loaded', 'warning');
+      // 注記: SpineWebGLRenderer機能はspine-preview-layer.jsに統合済み
+      console.log('✅ Spine機能は spine-preview-layer.js で提供されます');
     }
   }
 

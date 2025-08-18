@@ -1,5 +1,9 @@
 /**
- * Spine WebGL Renderer v2.0 - デスクトップアプリ統合版
+ * 🗃️ DEPRECATED - Spine WebGL Renderer v2.0 - デスクトップアプリ統合版
+ * 2025-08-18: 描画機能をspine-preview-layer.jsに集約済み
+ * 
+ * このファイルは廃止されました。代わりに以下を使用してください：
+ * - spine-preview-layer.js: WebGL描画、Context復旧、常時rAFレンダーループ
  * 
  * 目的: 実際のSpineキャラクター（ぷらっとくん等）の表示・アニメーション再生
  * 技術: Spine WebGL 4.1.24固定・フォールバック機能・メモリ管理

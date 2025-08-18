@@ -294,11 +294,29 @@ export class SpineCharacterManager {
                 // TODO: キャラクター詳細表示
             });
             
-            // ドラッグ開始イベント
+            // ドラッグ開始イベント（軽量化版）
             item.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('application/json', JSON.stringify(character));
+                // 軽量化: assetIdのみを転送
+                const assetId = character.id || character.name || `character-${Date.now()}`;
+                
+                e.dataTransfer.setData('text/plain', assetId);
+                e.dataTransfer.setData('application/x-spine-asset-id', assetId);
+                e.dataTransfer.setData('application/x-source-ui', 'spine-character-manager');
                 e.dataTransfer.effectAllowed = 'copy';
                 item.classList.add('dragging');
+                
+                console.log('🚀 軽量ドラッグ開始 (spine-character-manager):', {
+                    characterName: character.name,
+                    assetId: assetId
+                });
+                
+                // アセットレジストリに登録（参照用）
+                if (window.assetRegistry && typeof window.assetRegistry.registerAsset === 'function') {
+                    window.assetRegistry.registerAsset(assetId, character);
+                    console.log('✅ AssetRegistry登録完了:', assetId);
+                } else {
+                    console.warn('⚠️ AssetRegistryが利用できません:', assetId);
+                }
             });
             
             // ドラッグ終了イベント
