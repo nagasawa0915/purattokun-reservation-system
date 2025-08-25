@@ -1,0 +1,434 @@
+{
+  "dragInteractions": [
+    {
+      "name": "基本ドラッグ操作",
+      "input": {
+        "interactionType": "drag",
+        "targetId": "test_drag_001",
+        "eventData": {
+          "startPosition": { "x": 100, "y": 100 },
+          "clientX": 150,
+          "clientY": 120,
+          "deltaX": 50,
+          "deltaY": 20
+        },
+        "config": {
+          "sensitivity": 1.0,
+          "boundaries": { "minX": 0, "maxX": 1200, "minY": 0, "maxY": 800 }
+        }
+      },
+      "expectedOutput": {
+        "type": "drag",
+        "result": {
+          "deltaX": 50,
+          "deltaY": 20,
+          "newPosition": { "x": 150, "y": 120 },
+          "isValid": true
+        }
+      }
+    },
+    {
+      "name": "境界制限付きドラッグ",
+      "input": {
+        "interactionType": "drag",
+        "targetId": "test_drag_002",
+        "eventData": {
+          "startPosition": { "x": 1150, "y": 750 },
+          "clientX": 1300,
+          "clientY": 900,
+          "deltaX": 150,
+          "deltaY": 150
+        },
+        "config": {
+          "sensitivity": 1.0,
+          "boundaries": { "minX": 0, "maxX": 1200, "minY": 0, "maxY": 800 }
+        }
+      },
+      "expectedOutput": {
+        "result": {
+          "newPosition": { "x": 1200, "y": 800 },
+          "isValid": false
+        }
+      }
+    },
+    {
+      "name": "高感度ドラッグ",
+      "input": {
+        "interactionType": "drag",
+        "targetId": "test_drag_003",
+        "eventData": {
+          "startPosition": { "x": 200, "y": 200 },
+          "clientX": 220,
+          "clientY": 210,
+          "deltaX": 20,
+          "deltaY": 10
+        },
+        "config": {
+          "sensitivity": 2.5
+        }
+      },
+      "expectedOutput": {
+        "result": {
+          "deltaX": 50,
+          "deltaY": 25
+        }
+      }
+    }
+  ],
+  "keyboardInteractions": [
+    {
+      "name": "矢印キー左移動（通常）",
+      "input": {
+        "interactionType": "keyboard",
+        "targetId": "test_key_001",
+        "eventData": {
+          "key": "ArrowLeft",
+          "shiftKey": false,
+          "currentPosition": { "x": 200, "y": 150 }
+        },
+        "config": {
+          "sensitivity": 1.0,
+          "moveAmount": 5
+        }
+      },
+      "expectedOutput": {
+        "type": "keyboard",
+        "result": {
+          "key": "ArrowLeft",
+          "deltaX": -5,
+          "deltaY": 0,
+          "isShiftPressed": false
+        }
+      }
+    },
+    {
+      "name": "矢印キー左移動（Shift押下）",
+      "input": {
+        "interactionType": "keyboard",
+        "targetId": "test_key_002",
+        "eventData": {
+          "key": "ArrowLeft",
+          "shiftKey": true,
+          "currentPosition": { "x": 200, "y": 150 }
+        },
+        "config": {
+          "sensitivity": 1.0,
+          "moveAmount": 5
+        }
+      },
+      "expectedOutput": {
+        "type": "keyboard",
+        "result": {
+          "key": "ArrowLeft",
+          "deltaX": -50,
+          "deltaY": 0,
+          "isShiftPressed": true,
+          "moveAmount": 50
+        }
+      }
+    },
+    {
+      "name": "制御キー（Escape）",
+      "input": {
+        "interactionType": "keyboard",
+        "targetId": "test_key_003",
+        "eventData": {
+          "key": "Escape"
+        }
+      },
+      "expectedOutput": {
+        "type": "keyboard_control",
+        "result": {
+          "key": "Escape",
+          "action": "cancel",
+          "controlType": "control"
+        }
+      }
+    },
+    {
+      "name": "矢印キー上移動（境界制限）",
+      "input": {
+        "interactionType": "keyboard",
+        "targetId": "test_key_004",
+        "eventData": {
+          "key": "ArrowUp",
+          "shiftKey": true,
+          "currentPosition": { "x": 100, "y": 20 }
+        },
+        "config": {
+          "sensitivity": 1.0,
+          "moveAmount": 5,
+          "boundaries": { "minX": 0, "maxX": 1200, "minY": 0, "maxY": 800 }
+        }
+      },
+      "expectedOutput": {
+        "result": {
+          "newPosition": { "x": 100, "y": 0 },
+          "isValid": false
+        }
+      }
+    }
+  ],
+  "clickInteractions": [
+    {
+      "name": "基本クリック",
+      "input": {
+        "interactionType": "click",
+        "targetId": "test_click_001",
+        "eventData": {
+          "clientX": 300,
+          "clientY": 250,
+          "button": 0
+        },
+        "config": {
+          "containerSize": { "width": 1200, "height": 800 }
+        }
+      },
+      "expectedOutput": {
+        "type": "click",
+        "result": {
+          "position": {
+            "x": 0.25,
+            "y": 0.3125,
+            "absoluteX": 300,
+            "absoluteY": 250
+          },
+          "clickType": "single_click"
+        }
+      }
+    },
+    {
+      "name": "ダブルクリック",
+      "input": {
+        "interactionType": "click",
+        "targetId": "test_click_002",
+        "eventData": {
+          "clientX": 400,
+          "clientY": 300,
+          "button": 0
+        },
+        "config": {
+          "containerSize": { "width": 1200, "height": 800 }
+        },
+        "previousClick": {
+          "timestamp": "CURRENT_TIME - 200"
+        }
+      },
+      "expectedOutput": {
+        "result": {
+          "clickType": "double_click",
+          "effect": {
+            "action": "activate",
+            "intensity": 2.0
+          }
+        }
+      }
+    },
+    {
+      "name": "右クリック",
+      "input": {
+        "interactionType": "click",
+        "targetId": "test_click_003",
+        "eventData": {
+          "clientX": 500,
+          "clientY": 400,
+          "button": 2
+        }
+      },
+      "expectedOutput": {
+        "type": "click",
+        "result": {
+          "clickType": "single_click"
+        }
+      }
+    }
+  ],
+  "touchInteractions": [
+    {
+      "name": "タップジェスチャー",
+      "input": {
+        "interactionType": "touch",
+        "targetId": "test_touch_001",
+        "eventData": {
+          "clientX": 200,
+          "clientY": 150,
+          "deltaX": 5,
+          "deltaY": 3,
+          "pressure": 0.8
+        }
+      },
+      "expectedOutput": {
+        "type": "tap",
+        "result": {
+          "position": { "x": 200, "y": 150 },
+          "isDoubleTap": false,
+          "pressure": 0.8
+        }
+      }
+    },
+    {
+      "name": "スワイプ右ジェスチャー",
+      "input": {
+        "interactionType": "touch",
+        "targetId": "test_touch_002",
+        "eventData": {
+          "clientX": 400,
+          "clientY": 300,
+          "deltaX": 120,
+          "deltaY": 10,
+          "pressure": 0.9,
+          "startTime": "CURRENT_TIME - 200"
+        }
+      },
+      "expectedOutput": {
+        "type": "swipe",
+        "result": {
+          "direction": "right",
+          "deltaX": 120,
+          "deltaY": 10,
+          "distance": 120.4,
+          "isValid": true
+        }
+      }
+    },
+    {
+      "name": "スワイプ上ジェスチャー",
+      "input": {
+        "interactionType": "touch",
+        "targetId": "test_touch_003",
+        "eventData": {
+          "clientX": 300,
+          "clientY": 200,
+          "deltaX": 5,
+          "deltaY": -80,
+          "startTime": "CURRENT_TIME - 150"
+        }
+      },
+      "expectedOutput": {
+        "type": "swipe",
+        "result": {
+          "direction": "up",
+          "deltaX": 5,
+          "deltaY": -80,
+          "distance": 80.2
+        }
+      }
+    },
+    {
+      "name": "ダブルタップ",
+      "input": {
+        "interactionType": "touch",
+        "targetId": "test_touch_004",
+        "eventData": {
+          "clientX": 250,
+          "clientY": 200,
+          "deltaX": 2,
+          "deltaY": 1
+        },
+        "previousTap": {
+          "timestamp": "CURRENT_TIME - 300"
+        }
+      },
+      "expectedOutput": {
+        "type": "tap",
+        "result": {
+          "isDoubleTap": true
+        }
+      }
+    }
+  ],
+  "boundaryTestCases": [
+    {
+      "name": "境界内の有効な位置",
+      "position": { "x": 600, "y": 400 },
+      "boundaries": { "minX": 0, "maxX": 1200, "minY": 0, "maxY": 800 },
+      "expectedValid": true,
+      "expectedClamped": { "x": 600, "y": 400 }
+    },
+    {
+      "name": "X軸最大値超過",
+      "position": { "x": 1300, "y": 400 },
+      "boundaries": { "minX": 0, "maxX": 1200, "minY": 0, "maxY": 800 },
+      "expectedValid": false,
+      "expectedClamped": { "x": 1200, "y": 400 }
+    },
+    {
+      "name": "Y軸最小値未満",
+      "position": { "x": 600, "y": -50 },
+      "boundaries": { "minX": 0, "maxX": 1200, "minY": 0, "maxY": 800 },
+      "expectedValid": false,
+      "expectedClamped": { "x": 600, "y": 0 }
+    },
+    {
+      "name": "両軸とも境界外",
+      "position": { "x": -100, "y": 900 },
+      "boundaries": { "minX": 0, "maxX": 1200, "minY": 0, "maxY": 800 },
+      "expectedValid": false,
+      "expectedClamped": { "x": 0, "y": 800 }
+    }
+  ],
+  "sensitivityTestCases": [
+    {
+      "name": "感度1.0（標準）",
+      "originalDelta": { "x": 50, "y": 30 },
+      "sensitivity": 1.0,
+      "expectedDelta": { "x": 50, "y": 30 }
+    },
+    {
+      "name": "感度2.5（高感度）",
+      "originalDelta": { "x": 20, "y": 10 },
+      "sensitivity": 2.5,
+      "expectedDelta": { "x": 50, "y": 25 }
+    },
+    {
+      "name": "感度0.5（低感度）",
+      "originalDelta": { "x": 100, "y": 60 },
+      "sensitivity": 0.5,
+      "expectedDelta": { "x": 50, "y": 30 }
+    },
+    {
+      "name": "感度0.1（精密）",
+      "originalDelta": { "x": 10, "y": 10 },
+      "sensitivity": 0.1,
+      "expectedDelta": { "x": 1, "y": 1 }
+    }
+  ],
+  "gestureTestCases": [
+    {
+      "name": "スワイプ方向判定：右",
+      "deltaX": 100,
+      "deltaY": 10,
+      "expectedDirection": "right"
+    },
+    {
+      "name": "スワイプ方向判定：左",
+      "deltaX": -80,
+      "deltaY": 5,
+      "expectedDirection": "left"
+    },
+    {
+      "name": "スワイプ方向判定：上",
+      "deltaX": 5,
+      "deltaY": -90,
+      "expectedDirection": "up"
+    },
+    {
+      "name": "スワイプ方向判定：下",
+      "deltaX": -5,
+      "deltaY": 70,
+      "expectedDirection": "down"
+    },
+    {
+      "name": "タップ判定（小さな移動）",
+      "deltaX": 3,
+      "deltaY": 2,
+      "expectedType": "tap"
+    },
+    {
+      "name": "スワイプ判定（大きな移動）",
+      "deltaX": 60,
+      "deltaY": 20,
+      "expectedType": "swipe"
+    }
+  ]
+}

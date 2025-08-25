@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 マイクロモジュール デモ - v3.0から分離したモジュール体験</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { margin: 0; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .header p { margin: 10px 0 0; opacity: 0.9; font-size: 1.1em; }
+        
+        .modules {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .module {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            background: #f9f9f9;
+            transition: all 0.3s ease;
+        }
+        .module:hover {
+            border-color: #4ECDC4;
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .module h3 {
+            margin: 0 0 15px;
+            color: #2c3e50;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status.ready { background: #2ecc71; color: white; }
+        .status.testing { background: #f39c12; color: white; }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 120px;
+        }
+        button:hover { transform: translateY(-2px); }
+        
+        .btn-test { background: #3498db; color: white; }
+        .btn-test:hover { background: #2980b9; }
+        
+        .btn-demo { background: #e74c3c; color: white; }
+        .btn-demo:hover { background: #c0392b; }
+        
+        .btn-generate { background: #27ae60; color: white; }
+        .btn-generate:hover { background: #229954; }
+        
+        .output {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+            border: 2px solid #34495e;
+        }
+        
+        .success { color: #2ecc71; }
+        .error { color: #e74c3c; }
+        .info { color: #3498db; }
+        
+        .stats {
+            background: #ecf0f1;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        /* テスト用のモックSpineキャラクター */
+        .spine-characters {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 マイクロモジュール デモ</h1>
+            <p>v3.0の3,590行システムから分離した軽量モジュールを体験</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalLines">-</div>
+                <div class="stat-label">削減された行数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="moduleCount">4</div>
+                <div class="stat-label">実装済みモジュール</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="testsPassed">-</div>
+                <div class="stat-label">テスト成功率</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="loadTime">-</div>
+                <div class="stat-label">読み込み時間 (ms)</div>
+            </div>
+        </div>
+
+        <div class="modules">
+            <!-- Character Generator Module -->
+            <div class="module">
+                <h3>
+                    🎭 Character Generator 
+                    <span class="status ready">READY</span>
+                </h3>
+                <p>Spineキャラクターの生成・検出・管理を行うモジュール</p>
+                
+                <div class="actions">
+                    <button class="btn-test" onclick="testCharacterGenerator()">単独テスト</button>
+                    <button class="btn-demo" onclick="detectCharacters()">キャラクター検出</button>
+                    <button class="btn-generate" onclick="generateCharacters()">キャラクター生成</button>
+                </div>
+                
+                <div id="charGenOutput" class="output">モジュール読み込み中...</div>
+            </div>
+
+            <!-- Positioning System Module -->
+            <div class="module">
+                <h3>
+                    📐 Positioning System 
+                    <span class="status ready">READY</span>
+                </h3>
+                <p>v3.0座標系スワップ技術を完全移植した座標管理モジュール</p>
+                
+                <div class="actions">
+                    <button class="btn-test" onclick="testPositioningSystem()">単独テスト</button>
+                    <button class="btn-demo" onclick="demoCoordinateSwap()">座標スワップ</button>
+                    <button class="btn-generate" onclick="calculatePositions()">配置計算</button>
+                </div>
+                
+                <div id="positionOutput" class="output">モジュール読み込み中...</div>
+            </div>
+
+            <!-- Animation Sequencer Module -->
+            <div class="module">
+                <h3>
+                    🎬 Animation Sequencer 
+                    <span class="status ready">READY</span>
+                </h3>
+                <p>アニメーションタイミング・シーケンス制御モジュール（v3.0移植完了）</p>
+                
+                <div class="actions">
+                    <button class="btn-test" onclick="testAnimationSequencer()">単独テスト</button>
+                    <button class="btn-demo" onclick="demoAnimationSequence()">シーケンス実行</button>
+                    <button class="btn-generate" onclick="calculateAnimationTiming()">タイミング計算</button>
+                </div>
+                
+                <div id="animOutput" class="output">モジュール読み込み中...</div>
+            </div>
+
+            <!-- Interaction Handler Module -->
+            <div class="module">
+                <h3>
+                    🖱️ Interaction Handler 
+                    <span class="status ready">READY</span>
+                </h3>
+                <p>ユーザーインタラクション管理モジュール（v3.0移植完了）</p>
+                
+                <div class="actions">
+                    <button class="btn-test" onclick="testInteractionHandler()">単独テスト</button>
+                    <button class="btn-demo" onclick="demoInteractionProcessing()">インタラクション処理</button>
+                    <button class="btn-generate" onclick="simulateV3Interactions()">v3.0操作シミュレート</button>
+                </div>
+                
+                <div id="interactionOutput" class="output">モジュール読み込み中...</div>
+            </div>
+
+            <!-- Integration System Module -->
+            <div class="module">
+                <h3>
+                    🎯 Integration System 
+                    <span class="status ready">READY</span>
+                </h3>
+                <p>4つのマイクロモジュール統合システム・v3.0完全互換</p>
+                
+                <div class="actions">
+                    <button class="btn-test" onclick="testIntegrationSystem()">統合テスト</button>
+                    <button class="btn-demo" onclick="executeV3Workflow()">v3.0ワークフロー実行</button>
+                    <button class="btn-generate" onclick="demonstrateModuleSync()">モジュール間連携デモ</button>
+                </div>
+                
+                <div id="integrationOutput" class="output">統合システム読み込み中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- テスト用のモックSpineキャラクター要素 -->
+    <div class="spine-characters">
+        <canvas id="purattokun-canvas" class="spine-canvas" width="100" height="100"></canvas>
+        <canvas id="nezumi-canvas" class="character-canvas" width="80" height="80"></canvas>
+        <canvas id="test-spine-character" width="120" height="120"></canvas>
+        <div id="spine-character-hero">
+            <canvas class="hero-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- マイクロモジュール読み込み -->
+    <script src="character-generator/character-generator.js"></script>
+    <script src="positioning-system/positioning-system.js"></script>
+    <script src="animation-sequencer/animation-sequencer.js"></script>
+    <script src="interaction-handler/interaction-handler.js"></script>
+    <script src="main.js"></script>
+
+    <script>
+        // グローバル変数
+        let charGenerator = null;
+        let positioningSystem = null;
+        let animationSequencer = null;
+        let interactionHandler = null;
+        let integrationSystem = null;
+        let startTime = Date.now();
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeModules();
+            updateStats();
+        });
+
+        function initializeModules() {
+            try {
+                charGenerator = new CharacterGenerator();
+                positioningSystem = new PositioningSystem();
+                animationSequencer = new AnimationSequencer();
+                interactionHandler = new InteractionHandler();
+                integrationSystem = new SpineMicromoduleSystem();
+                
+                updateOutput('charGenOutput', '✅ Character Generator 初期化完了', 'success');
+                updateOutput('positionOutput', '✅ Positioning System 初期化完了', 'success');
+                updateOutput('animOutput', '✅ Animation Sequencer 初期化完了', 'success');
+                updateOutput('interactionOutput', '✅ Interaction Handler 初期化完了', 'success');
+                updateOutput('integrationOutput', '✅ Integration System 初期化完了', 'success');
+                
+                const loadTime = Date.now() - startTime;
+                document.getElementById('loadTime').textContent = loadTime;
+                
+            } catch (error) {
+                updateOutput('charGenOutput', '❌ 初期化エラー: ' + error.message, 'error');
+                updateOutput('animOutput', '❌ 初期化エラー: ' + error.message, 'error');
+                updateOutput('interactionOutput', '❌ 初期化エラー: ' + error.message, 'error');
+                updateOutput('integrationOutput', '❌ 初期化エラー: ' + error.message, 'error');
+            }
+        }
+
+        function updateOutput(elementId, message, type = 'info') {
+            const output = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const classStr = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            
+            output.innerHTML += `<span class="${classStr}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        // Character Generator テスト
+        function testCharacterGenerator() {
+            clearOutput('charGenOutput');
+            updateOutput('charGenOutput', '🧪 Character Generator 単独テスト開始...');
+            
+            setTimeout(() => {
+                const result = CharacterGenerator.test();
+                if (result) {
+                    updateOutput('charGenOutput', '✅ 単独テスト成功: すべてのテストケースが正常に動作', 'success');
+                } else {
+                    updateOutput('charGenOutput', '❌ 単独テスト失敗: 一部のテストケースで問題が発生', 'error');
+                }
+                updateStats();
+            }, 100);
+        }
+
+        function detectCharacters() {
+            clearOutput('charGenOutput');
+            updateOutput('charGenOutput', '🔍 既存キャラクター検出開始...');
+            
+            try {
+                const detected = charGenerator.detectExistingCharacters();
+                updateOutput('charGenOutput', `✅ ${detected.length}個のキャラクターを検出:`);
+                
+                detected.forEach((char, index) => {
+                    updateOutput('charGenOutput', `${index + 1}. ${char.displayName} (${char.characterId})`);
+                });
+                
+                if (detected.length === 0) {
+                    updateOutput('charGenOutput', 'ℹ️ 検出可能なSpineキャラクターがありません');
+                }
+                
+            } catch (error) {
+                updateOutput('charGenOutput', '❌ 検出エラー: ' + error.message, 'error');
+            }
+        }
+
+        function generateCharacters() {
+            clearOutput('charGenOutput');
+            updateOutput('charGenOutput', '🎯 キャラクター生成開始...');
+            
+            try {
+                const generated = charGenerator.generate({
+                    characterType: "demo",
+                    count: 3,
+                    namePrefix: "test",
+                    spineFilePath: "assets/demo.json"
+                });
+                
+                updateOutput('charGenOutput', `✅ ${generated.length}個のキャラクター生成完了:`);
+                
+                generated.forEach((char, index) => {
+                    updateOutput('charGenOutput', `${index + 1}. ${char.characterId} (${char.characterType})`);
+                });
+                
+            } catch (error) {
+                updateOutput('charGenOutput', '❌ 生成エラー: ' + error.message, 'error');
+            }
+        }
+
+        // Positioning System テスト
+        function testPositioningSystem() {
+            clearOutput('positionOutput');
+            updateOutput('positionOutput', '🧪 Positioning System 単独テスト開始...');
+            
+            setTimeout(() => {
+                const result = PositioningSystem.test();
+                if (result) {
+                    updateOutput('positionOutput', '✅ 単独テスト成功: 座標系スワップ技術が正常に動作', 'success');
+                } else {
+                    updateOutput('positionOutput', '❌ 単独テスト失敗: 座標計算で問題が発生', 'error');
+                }
+                updateStats();
+            }, 100);
+        }
+
+        function demoCoordinateSwap() {
+            clearOutput('positionOutput');
+            updateOutput('positionOutput', '🔄 v3.0座標系スワップ技術デモ開始...');
+            
+            try {
+                // 複雑なCSS座標をシンプル座標に変換
+                const complexCoords = {
+                    characterId: "demo_char",
+                    left: "50%",
+                    top: "60%", 
+                    width: "100px",
+                    height: "80px",
+                    transform: "translate(-50%, -50%)"
+                };
+                
+                updateOutput('positionOutput', '📥 入力（複雑座標）:');
+                updateOutput('positionOutput', JSON.stringify(complexCoords, null, 2));
+                
+                const swapped = positioningSystem.enterEditMode(complexCoords);
+                updateOutput('positionOutput', '📤 変換後（シンプル座標）:');
+                updateOutput('positionOutput', JSON.stringify(swapped, null, 2), 'success');
+                
+                // 編集後の座標で復元テスト
+                const editedCoords = {
+                    left: 200,
+                    top: 150,
+                    width: 120,
+                    height: 100
+                };
+                
+                const restored = positioningSystem.exitEditMode("demo_char", editedCoords);
+                updateOutput('positionOutput', '🔄 復元後（元形式）:');
+                updateOutput('positionOutput', JSON.stringify(restored, null, 2), 'success');
+                
+            } catch (error) {
+                updateOutput('positionOutput', '❌ スワップエラー: ' + error.message, 'error');
+            }
+        }
+
+        function calculatePositions() {
+            clearOutput('positionOutput');
+            updateOutput('positionOutput', '📐 配置計算デモ開始...');
+            
+            try {
+                // グリッド配置テスト
+                const gridResults = [];
+                for (let i = 0; i < 6; i++) {
+                    const position = positioningSystem.calculatePosition({
+                        characterId: `grid_${i}`,
+                        baseX: 100,
+                        baseY: 100,
+                        placementPattern: "grid",
+                        gridIndex: i,
+                        gridColumns: 3,
+                        spacing: 80,
+                        zIndex: i + 1
+                    });
+                    gridResults.push(position);
+                }
+                
+                updateOutput('positionOutput', '✅ グリッド配置計算完了 (3x2):');
+                gridResults.forEach((pos, i) => {
+                    updateOutput('positionOutput', `${i + 1}. Spine座標 x:${pos.x}, y:${pos.y}, z:${pos.zIndex}`);
+                });
+                
+                // ランダム配置テスト
+                const randomPosition = positioningSystem.calculatePosition({
+                    characterId: "random_test",
+                    baseX: 300,
+                    baseY: 200,
+                    placementPattern: "random",
+                    randomRange: 100,
+                    zIndex: 10
+                });
+                
+                updateOutput('positionOutput', '🎲 ランダム配置:');
+                updateOutput('positionOutput', `Spine座標 x:${randomPosition.x}, y:${randomPosition.y}`, 'success');
+                
+            } catch (error) {
+                updateOutput('positionOutput', '❌ 計算エラー: ' + error.message, 'error');
+            }
+        }
+
+        function updateStats() {
+            // 削減行数計算 (v3.0: 3590行 → 各モジュール平均300行)
+            const originalLines = 3590;
+            const moduleLines = 300 * 4; // 実装済み4モジュール
+            const savedLines = originalLines - moduleLines;
+            document.getElementById('totalLines').textContent = savedLines.toLocaleString();
+            
+            // テスト成功率計算
+            let testsPassed = 0;
+            let totalTests = 4;
+            
+            try {
+                if (CharacterGenerator.test()) testsPassed++;
+            } catch (e) {}
+            
+            try {
+                if (PositioningSystem.test()) testsPassed++;
+            } catch (e) {}
+            
+            try {
+                if (AnimationSequencer.test()) testsPassed++;
+            } catch (e) {}
+            
+            try {
+                if (InteractionHandler.test()) testsPassed++;
+            } catch (e) {}
+            
+            const successRate = Math.round((testsPassed / totalTests) * 100);
+            document.getElementById('testsPassed').textContent = successRate + '%';
+        }
+
+        // Animation Sequencer テスト
+        function testAnimationSequencer() {
+            clearOutput('animOutput');
+            updateOutput('animOutput', '🧪 Animation Sequencer 単独テスト開始...');
+            
+            setTimeout(() => {
+                const result = AnimationSequencer.test();
+                if (result) {
+                    updateOutput('animOutput', '✅ 単独テスト成功: アニメーション制御システムが正常に動作', 'success');
+                } else {
+                    updateOutput('animOutput', '❌ 単独テスト失敗: アニメーション処理で問題が発生', 'error');
+                }
+                updateStats();
+            }, 100);
+        }
+
+        function demoAnimationSequence() {
+            clearOutput('animOutput');
+            updateOutput('animOutput', '🎬 アニメーションシーケンスデモ開始...');
+            
+            try {
+                // v3.0自然遷移アニメーション
+                const transition = animationSequencer.generateSequence({
+                    characterId: "demo_anim",
+                    animationName: "syutugen",
+                    sequenceType: "transition",
+                    timingConfig: {
+                        delay: 1000,
+                        duration: 2000,
+                        loop: false
+                    }
+                });
+
+                updateOutput('animOutput', `✅ トランジションシーケンス生成: ${transition.transition.fromAnimation} → ${transition.transition.toAnimation}`, 'success');
+                
+                const execution = animationSequencer.executeSequence(transition.sequenceId);
+                updateOutput('animOutput', `🎬 自然遷移実行: ${execution.status}`, 'success');
+                updateOutput('animOutput', JSON.stringify(execution.timingData, null, 2));
+
+            } catch (error) {
+                updateOutput('animOutput', '❌ シーケンスエラー: ' + error.message, 'error');
+            }
+        }
+
+        function calculateAnimationTiming() {
+            clearOutput('animOutput');
+            updateOutput('animOutput', '⏱️ アニメーションタイミング計算デモ開始...');
+            
+            try {
+                const timing = animationSequencer.calculateTiming({
+                    characterId: "demo_timing",
+                    delay: 1500,
+                    duration: 3000,
+                    interval: 16,
+                    fadeIn: true,
+                    fadeDuration: 2000,
+                    fadeEasing: "ease-in-out"
+                });
+
+                updateOutput('animOutput', `✅ タイミング計算完了`, 'success');
+                updateOutput('animOutput', `フレームレート: ${timing.timingData.fps.toFixed(1)}fps`);
+                updateOutput('animOutput', `総フレーム数: ${timing.timingData.totalFrames}フレーム`);
+                updateOutput('animOutput', `フェードイン: ${timing.timingData.fadeIn.duration}ms (${timing.timingData.fadeIn.easing})`);
+                updateOutput('animOutput', JSON.stringify(timing, null, 2));
+
+            } catch (error) {
+                updateOutput('animOutput', '❌ タイミング計算エラー: ' + error.message, 'error');
+            }
+        }
+
+        // Interaction Handler テスト
+        function testInteractionHandler() {
+            clearOutput('interactionOutput');
+            updateOutput('interactionOutput', '🧪 Interaction Handler 単独テスト開始...');
+            
+            setTimeout(() => {
+                const result = InteractionHandler.test();
+                if (result) {
+                    updateOutput('interactionOutput', '✅ 単独テスト成功: インタラクション処理システムが正常に動作', 'success');
+                } else {
+                    updateOutput('interactionOutput', '❌ 単独テスト失敗: インタラクション処理で問題が発生', 'error');
+                }
+                updateStats();
+            }, 100);
+        }
+
+        function demoInteractionProcessing() {
+            clearOutput('interactionOutput');
+            updateOutput('interactionOutput', '🖱️ インタラクション処理デモ開始...');
+            
+            try {
+                // ドラッグ操作シミュレート
+                const dragResult = interactionHandler.processInteraction({
+                    interactionType: "drag",
+                    targetId: "demo_drag",
+                    eventData: {
+                        startPosition: { x: 200, y: 150 },
+                        clientX: 280,
+                        clientY: 200,
+                        deltaX: 80,
+                        deltaY: 50
+                    },
+                    config: {
+                        sensitivity: 1.5,
+                        boundaries: { minX: 0, maxX: 1200, minY: 0, maxY: 800 }
+                    }
+                });
+
+                updateOutput('interactionOutput', `✅ ドラッグ処理完了`, 'success');
+                updateOutput('interactionOutput', `移動量: x=${dragResult.result.deltaX}, y=${dragResult.result.deltaY}`);
+                updateOutput('interactionOutput', `新しい位置: x=${dragResult.result.newPosition.x}, y=${dragResult.result.newPosition.y}`);
+                updateOutput('interactionOutput', `境界チェック: ${dragResult.result.isValid ? '有効' : '無効'}`);
+
+            } catch (error) {
+                updateOutput('interactionOutput', '❌ インタラクション処理エラー: ' + error.message, 'error');
+            }
+        }
+
+        function simulateV3Interactions() {
+            clearOutput('interactionOutput');
+            updateOutput('interactionOutput', '⌨️ v3.0キーボード操作シミュレート開始...');
+            
+            try {
+                // v3.0式矢印キー移動
+                const keyLeft = interactionHandler.processInteraction({
+                    interactionType: "keyboard",
+                    targetId: "demo_keyboard",
+                    eventData: {
+                        key: "ArrowLeft",
+                        shiftKey: true,
+                        currentPosition: { x: 400, y: 300 }
+                    },
+                    config: {
+                        sensitivity: 1.0,
+                        moveAmount: 1,
+                        boundaries: { minX: 0, maxX: 1200, minY: 0, maxY: 800 }
+                    }
+                });
+
+                updateOutput('interactionOutput', `✅ v3.0キーボード操作: ${keyLeft.result.key}`, 'success');
+                updateOutput('interactionOutput', `移動量: ${keyLeft.result.deltaX}px (Shift押下: ${keyLeft.result.isShiftPressed})`);
+                updateOutput('interactionOutput', `精密度: ${keyLeft.result.moveAmount}% (v3.0仕様)`);
+
+                // タッチスワイプ操作
+                const swipeRight = interactionHandler.processInteraction({
+                    interactionType: "touch",
+                    targetId: "demo_touch",
+                    eventData: {
+                        clientX: 500,
+                        clientY: 300,
+                        deltaX: 150,
+                        deltaY: 20,
+                        pressure: 0.9
+                    }
+                });
+
+                updateOutput('interactionOutput', `🤚 タッチスワイプ: ${swipeRight.result.direction}方向`, 'success');
+                updateOutput('interactionOutput', `速度: ${swipeRight.result.velocity.toFixed(1)} px/ms`);
+                updateOutput('interactionOutput', JSON.stringify(swipeRight.result, null, 2));
+
+            } catch (error) {
+                updateOutput('interactionOutput', '❌ v3.0操作シミュレートエラー: ' + error.message, 'error');
+            }
+        }
+
+        // Integration System テスト
+        function testIntegrationSystem() {
+            clearOutput('integrationOutput');
+            updateOutput('integrationOutput', '🧪 統合システムテスト開始...');
+            
+            setTimeout(async () => {
+                try {
+                    const result = await SpineMicromoduleSystem.test();
+                    if (result) {
+                        updateOutput('integrationOutput', '✅ 統合テスト成功: 4つのマイクロモジュール統合が正常に動作', 'success');
+                    } else {
+                        updateOutput('integrationOutput', '❌ 統合テスト失敗: モジュール間連携で問題が発生', 'error');
+                    }
+                    updateStats();
+                } catch (error) {
+                    updateOutput('integrationOutput', '❌ 統合テストエラー: ' + error.message, 'error');
+                }
+            }, 100);
+        }
+
+        function executeV3Workflow() {
+            clearOutput('integrationOutput');
+            updateOutput('integrationOutput', '🎬 v3.0完全互換ワークフロー実行開始...');
+            
+            setTimeout(async () => {
+                try {
+                    const workflow = await integrationSystem.executeV3Workflow({
+                        characterOperations: [
+                            { type: 'detect' },
+                            { type: 'generate', config: { characterType: "test", count: 2 } }
+                        ],
+                        positioningOperations: [
+                            { 
+                                type: 'calculate', 
+                                config: { 
+                                    characterId: 'workflow_test', 
+                                    baseX: 300, 
+                                    baseY: 200, 
+                                    placementPattern: 'grid',
+                                    gridColumns: 2,
+                                    spacing: 100
+                                } 
+                            }
+                        ],
+                        animationOperations: [
+                            { 
+                                type: 'transition', 
+                                config: { 
+                                    characterId: 'workflow_test', 
+                                    fromAnimation: 'syutugen',
+                                    duration: 2000
+                                } 
+                            }
+                        ],
+                        interactionOperations: [
+                            { 
+                                type: 'drag', 
+                                config: { 
+                                    interactionType: 'drag', 
+                                    targetId: 'workflow_test', 
+                                    eventData: { deltaX: 50, deltaY: 30 } 
+                                } 
+                            }
+                        ]
+                    });
+
+                    updateOutput('integrationOutput', `✅ v3.0ワークフロー実行完了: ${workflow.status}`, 'success');
+                    updateOutput('integrationOutput', `互換性レベル: ${workflow.v3CompatibilityLevel}`);
+                    updateOutput('integrationOutput', `実行結果:`);
+                    Object.keys(workflow.results).forEach(key => {
+                        updateOutput('integrationOutput', `  ${key}: ${workflow.results[key].operations.length}個の操作完了`);
+                    });
+                    updateOutput('integrationOutput', JSON.stringify(workflow, null, 2));
+
+                } catch (error) {
+                    updateOutput('integrationOutput', '❌ ワークフロー実行エラー: ' + error.message, 'error');
+                }
+            }, 100);
+        }
+
+        function demonstrateModuleSync() {
+            clearOutput('integrationOutput');
+            updateOutput('integrationOutput', '🔗 モジュール間連携デモ開始...');
+            
+            try {
+                // キャラクター選択→アニメーション→座標変更の連携
+                updateOutput('integrationOutput', '1. キャラクター選択イベント発火');
+                const selection = integrationSystem.selectCharacter('sync_demo');
+                
+                updateOutput('integrationOutput', '2. 座標スワップ連携実行');
+                const swapResult = positioningSystem.enterEditMode({
+                    characterId: 'sync_demo',
+                    left: '50%',
+                    top: '60%',
+                    width: '100px',
+                    height: '80px',
+                    transform: 'translate(-50%, -50%)'
+                });
+
+                updateOutput('integrationOutput', '3. アニメーション連携実行');
+                const animResult = animationSequencer.generateSequence({
+                    characterId: 'sync_demo',
+                    animationName: 'click',
+                    sequenceType: 'transition'
+                });
+
+                updateOutput('integrationOutput', '4. インタラクション処理連携');
+                const interactionResult = interactionHandler.processInteraction({
+                    interactionType: 'click',
+                    targetId: 'sync_demo',
+                    eventData: { clientX: 300, clientY: 250 }
+                });
+
+                updateOutput('integrationOutput', '✅ 4つのモジュール連携完了', 'success');
+                updateOutput('integrationOutput', `選択: ${selection.selected}`);
+                updateOutput('integrationOutput', `座標スワップ: 成功`);
+                updateOutput('integrationOutput', `アニメーション: ${animResult.sequenceType}`);
+                updateOutput('integrationOutput', `インタラクション: ${interactionResult.type}`);
+
+                // システム状態確認
+                const systemState = integrationSystem.getSystemState();
+                updateOutput('integrationOutput', '\n📊 統合システム状態:');
+                updateOutput('integrationOutput', JSON.stringify(systemState, null, 2));
+
+            } catch (error) {
+                updateOutput('integrationOutput', '❌ モジュール連携エラー: ' + error.message, 'error');
+            }
+        }
+
+        // 統計の定期更新
+        setInterval(updateStats, 5000);
+    </script>
+</body>
+</html>

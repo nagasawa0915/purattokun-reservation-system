@@ -43,6 +43,13 @@ function createBoundingBoxModule() {
             this.removeEventListeners();
             this.isActive = false;
             
+            // 🔧 座標系スワップ終了処理を追加
+            if (SpineEditSystem.coordinateSwap && SpineEditSystem.coordinateSwap.isSwapped) {
+                console.log('🔄 座標系スワップ終了処理実行');
+                const targetElement = SpineEditSystem.baseLayer.targetElement;
+                SpineEditSystem.coordinateSwap.exitEditMode(targetElement);
+            }
+            
             // プレビューボックス再表示
             if (MultiCharacterManager && MultiCharacterManager.updatePreviewBoxes) {
                 MultiCharacterManager.updatePreviewBoxes();

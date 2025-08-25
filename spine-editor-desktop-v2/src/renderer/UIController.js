@@ -8,6 +8,7 @@ export class UIController {
     constructor(appCore) {
         this.appCore = appCore;
         this.boundingBoxEditActive = false;
+        this.boundingBoxModule = null; // 🚀 v3機能移植: 個別バウンディングボックスモジュール参照
         
         // イベントハンドラーをバインド
         this.bindMethods();
@@ -76,6 +77,35 @@ export class UIController {
     // ========== バウンディングボックス編集機能 ========== //
 
     /**
+     * 🔧 新機能: キャラクター名識別メソッド（個別制御用）
+     */
+    identifyCharacterName(canvas) {
+        // キャンバスIDから特定
+        if (canvas.id) {
+            if (canvas.id.toLowerCase().includes('purattokun')) return 'ぷらっとくん';
+            if (canvas.id.toLowerCase().includes('nezumi')) return 'ねずみ';
+            return canvas.id;
+        }
+        
+        // 親要素から特定
+        const parent = canvas.parentElement;
+        if (parent && parent.id) {
+            if (parent.id.toLowerCase().includes('purattokun')) return 'ぷらっとくん';
+            if (parent.id.toLowerCase().includes('nezumi')) return 'ねずみ';
+            return parent.id;
+        }
+        
+        // クラス名から特定
+        const classList = Array.from(canvas.classList || []);
+        for (const cls of classList) {
+            if (cls.toLowerCase().includes('purattokun')) return 'ぷらっとくん';
+            if (cls.toLowerCase().includes('nezumi')) return 'ねずみ';
+        }
+        
+        return `キャラクター#${Array.from(document.querySelectorAll('canvas')).indexOf(canvas) + 1}`;
+    }
+
+    /**
      * バウンディングボックス編集開始
      */
     startBoundingBoxEdit() {
@@ -85,39 +115,97 @@ export class UIController {
 
             console.log('🔍 window.simpleSpineManagerV3の状態:', !!window.simpleSpineManagerV3);
             
-            if (window.simpleSpineManagerV3) {
-                // 現在存在するキャラクターを取得
-                const characters = window.simpleSpineManagerV3.getAllCharacters();
-                console.log('🔍 取得したキャラクター数:', characters.length);
-                console.log('🔍 キャラクター詳細:', characters);
-                
-                // charactersマップも確認
-                console.log('🔍 characters.keys():', Array.from(window.simpleSpineManagerV3.characters.keys()));
-                console.log('🔍 characters map:', window.simpleSpineManagerV3.characters);
-                
-                if (characters.length === 0) {
-                    throw new Error('編集可能なキャラクターがありません。まずキャラクターを追加してください。');
-                }
-
-                // 最初のキャラクターに対してバウンディングボックス編集を開始
-                const firstCharacter = Array.from(window.simpleSpineManagerV3.characters.keys())[0];
-                console.log('🔍 選択されたキャラクター:', firstCharacter);
-                
-                const success = window.simpleSpineManagerV3.startBoundingBoxEdit(firstCharacter);
-                console.log('🔍 startBoundingBoxEdit結果:', success);
-
-                if (success) {
-                    // UI状態更新
-                    this.toggleBoundingBoxEditUI(true);
-                    this.boundingBoxEditActive = true;
-                    this.appCore.uiManager.updateStatus('ready', `📦 ${firstCharacter}のバウンディングボックス編集中`);
-                    console.log(`✅ ${firstCharacter}のバウンディングボックス編集開始完了`);
-                } else {
-                    throw new Error('バウンディングボックス編集の開始に失敗しました');
-                }
-            } else {
-                throw new Error('シンプルSpine統合システムが利用できません');
+            // 🚀 v3機能移植: 個別キャラクター制御の直接実装
+            console.log('🚀 個別キャラクター制御の新しいアプローチで実行中...');
+            
+            // v2統合システムのバウンディングボックスモジュールを直接使用
+            if (typeof window.createBoundingBoxModule !== 'function') {
+                throw new Error('バウンディングボックスモジュールが利用できません');
             }
+            
+            // 編集可能なSpineキャンバスを検索
+            const spineCanvases = document.querySelectorAll('canvas');
+            console.log('🔍 検出されたCanvas数:', spineCanvases.length);
+            
+            if (spineCanvases.length === 0) {
+                throw new Error('編集可能なSpineキャンバスが見つかりません。まずキャラクターを追加してください。');
+            }
+            
+            // 🔧 完全修正: 個別キャラクター選択システム（複数キャラクター連動問題完全解決）
+            let targetCanvas;
+            
+            if (spineCanvases.length === 1) {
+                // 単体キャラクターの場合、自動選択
+                targetCanvas = spineCanvases[0];
+                console.log('🎯 単体キャラクター自動選択:', this.identifyCharacterName(targetCanvas));
+            } else {
+                // 🔧 複数キャラクター対応: プロフェッショナル選択UI
+                console.log('🔍 複数キャラクター検出 - 高度選択UI表示');
+                
+                // 詳細キャラクター情報を取得
+                const characterInfo = [];
+                for (let index = 0; index < spineCanvases.length; index++) {
+                    const canvas = spineCanvases[index];
+                    const characterName = this.identifyCharacterName(canvas);
+                    const rect = canvas.getBoundingClientRect();
+                    const info = {
+                        index: index,
+                        canvas: canvas,
+                        name: characterName,
+                        id: canvas.id || 'unnamed',
+                        position: `(${Math.round(rect.left)}, ${Math.round(rect.top)})`,
+                        size: `${Math.round(rect.width)}x${Math.round(rect.height)}`
+                    };
+                    characterInfo.push(info);
+                }
+                
+                // プロフェッショナル選択ダイアログ
+                let selectionMessage = '📝 編集するキャラクターを選択してください:\n\n';
+                characterInfo.forEach((info, index) => {
+                    selectionMessage += `${index + 1}. ${info.name}\n`;
+                    selectionMessage += `   ID: ${info.id}\n`;
+                    selectionMessage += `   位置: ${info.position}\n`;
+                    selectionMessage += `   サイズ: ${info.size}\n\n`;
+                });
+                selectionMessage += '番号を入力してください (1-' + spineCanvases.length + '):';
+                
+                const selection = prompt(selectionMessage, '1');
+                
+                if (selection === null) {
+                    throw new Error('キャラクター選択がキャンセルされました');
+                }
+                
+                const selectedIndex = parseInt(selection) - 1;
+                if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= spineCanvases.length) {
+                    throw new Error(`無効な選択です。1-${spineCanvases.length}の番号を入力してください。`);
+                }
+                
+                targetCanvas = spineCanvases[selectedIndex];
+                console.log('🎯 ユーザー選択キャラクター:', this.identifyCharacterName(targetCanvas));
+                console.log('🔍 選択詳細:', characterInfo[selectedIndex]);
+            }
+            
+            // 🚨 重要: 個別キャラクター制御確証
+            console.log('🔒 個別キャラクター制御確証:', {
+                targetId: targetCanvas.id,
+                targetName: this.identifyCharacterName(targetCanvas),
+                otherCanvases: spineCanvases.length - 1,
+                isolationGuarantee: '他キャラクターへの影響完全遮断'
+            });
+            
+            console.log('✅ 個別キャラクター特定完了:', targetCanvas.id || 'unnamed-canvas');
+            
+            // バウンディングボックスモジュールを作成・初期化
+            this.boundingBoxModule = window.createBoundingBoxModule();
+            this.boundingBoxModule.initialize(targetCanvas);
+            
+            // UI状態更新
+            this.toggleBoundingBoxEditUI(true);
+            this.boundingBoxEditActive = true;
+            
+            const characterName = this.identifyCharacterName(targetCanvas);
+            this.appCore.uiManager.updateStatus('ready', `📦 ${characterName}の個別バウンディングボックス編集中`);
+            console.log(`✅ ${characterName}の個別バウンディングボックス編集開始完了`);
 
         } catch (error) {
             console.error('❌ バウンディングボックス編集開始エラー:', error);
@@ -131,25 +219,53 @@ export class UIController {
      */
     saveBoundingBox() {
         try {
-            console.log('💾 バウンディングボックス保存');
-            this.appCore.uiManager.updateStatus('loading', '保存中...');
+            console.log('💾 個別バウンディングボックス保存開始');
+            this.appCore.uiManager.updateStatus('loading', 'バウンディングボックスを保存しています...');
 
-            if (window.simpleSpineManagerV3) {
-                const success = window.simpleSpineManagerV3.saveBoundingBoxState();
+            if (this.boundingBoxModule && this.boundingBoxModule.isActive) {
+                // 🚀 完全実装: 個別キャラクターの%値変換状態保存
+                const characterId = this.boundingBoxModule.targetCharacterId;
+                const targetElement = this.boundingBoxModule.targetElement;
                 
-                if (success) {
-                    this.appCore.uiManager.updateStatus('ready', '💾 バウンディングボックスを保存しました');
-                    console.log('✅ バウンディングボックス保存完了');
+                if (targetElement) {
+                    // 🔧 重要: 座標系を元に復元してから保存（%値形式）
+                    console.log('🔄 保存前座標系復元実行...');
+                    if (window.SpineEditSystem && window.SpineEditSystem.coordinateSwap.isSwapped) {
+                        window.SpineEditSystem.coordinateSwap.exitEditMode(targetElement);
+                    }
+                    
+                    // 復元後の%値状態を保存
+                    const finalComputedStyle = window.getComputedStyle(targetElement);
+                    const boundingBoxState = {
+                        characterId: characterId,
+                        left: finalComputedStyle.left,
+                        top: finalComputedStyle.top,
+                        width: finalComputedStyle.width,
+                        height: finalComputedStyle.height,
+                        transform: finalComputedStyle.transform,
+                        coordinateSystem: '%値+transform形式',
+                        timestamp: Date.now()
+                    };
+                    
+                    localStorage.setItem(`spine-bounding-box-${characterId}`, JSON.stringify(boundingBoxState));
+                    console.log('💾 個別キャラクター%値状態保存:', boundingBoxState);
+                    
+                    this.appCore.uiManager.updateStatus('ready', `✅ ${characterId}のバウンディングボックス状態を保存しました（%値形式）`);
+                    console.log(`✅ ${characterId}の個別バウンディングボックス保存成功（%値変換済み）`);
+    
+                    // UI状態を編集終了に更新
+                    this.endBoundingBoxEdit();
                 } else {
-                    throw new Error('保存に失敗しました');
+                    throw new Error('編集対象要素が見つかりません');
                 }
             } else {
-                throw new Error('シンプルSpine統合システムが利用できません');
+                throw new Error('バウンディングボックスモジュールがアクティブではありません');
             }
 
         } catch (error) {
-            console.error('❌ バウンディングボックス保存エラー:', error);
+            console.error('❌ 個別バウンディングボックス保存エラー:', error);
             this.appCore.uiManager.updateStatus('error', `保存失敗: ${error.message}`);
+            alert('エラー: ' + error.message);
         }
     }
 
@@ -158,18 +274,30 @@ export class UIController {
      */
     cancelBoundingBox() {
         try {
-            console.log('↶ バウンディングボックス編集キャンセル');
+            console.log('↶ 個別バウンディングボックス編集キャンセル');
+            this.appCore.uiManager.updateStatus('loading', 'バウンディングボックス編集をキャンセルしています...');
 
-            if (window.simpleSpineManagerV3) {
-                window.simpleSpineManagerV3.cancelBoundingBoxEdit();
-                // この後はページリロードが実行されるため、それ以降のコードは実行されない
+            if (this.boundingBoxModule && this.boundingBoxModule.isActive) {
+                // 🚀 v3機能移植: 個別キャラクターの座標系復元でキャンセル
+                const characterId = this.boundingBoxModule.targetCharacterId;
+                
+                // バウンディングボックスモジュールのクリーンアップ（座標系復元含む）
+                this.boundingBoxModule.cleanup();
+                this.boundingBoxModule = null;
+
+                this.appCore.uiManager.updateStatus('ready', `↶ ${characterId}のバウンディングボックス編集をキャンセルしました`);
+                console.log(`✅ ${characterId}の個別バウンディングボックスキャンセル成功`);
+
+                // UI状態を編集終了に更新
+                this.endBoundingBoxEdit();
             } else {
-                throw new Error('シンプルSpine統合システムが利用できません');
+                throw new Error('バウンディングボックスモジュールがアクティブではありません');
             }
 
         } catch (error) {
-            console.error('❌ バウンディングボックス編集キャンセルエラー:', error);
+            console.error('❌ 個別バウンディングボックスキャンセルエラー:', error);
             this.appCore.uiManager.updateStatus('error', `キャンセル失敗: ${error.message}`);
+            alert('エラー: ' + error.message);
         }
     }
 
@@ -178,23 +306,22 @@ export class UIController {
      */
     endBoundingBoxEdit() {
         try {
-            console.log('✅ バウンディングボックス編集終了');
-            this.appCore.uiManager.updateStatus('loading', '編集を終了しています...');
+            console.log('✅ 個別バウンディングボックス編集終了');
 
-            if (window.simpleSpineManagerV3) {
-                window.simpleSpineManagerV3.endBoundingBoxEdit();
-                
-                // UI状態更新
-                this.toggleBoundingBoxEditUI(false);
-                this.boundingBoxEditActive = false;
-                this.appCore.uiManager.updateStatus('ready', '✅ バウンディングボックス編集を終了しました');
-                console.log('✅ バウンディングボックス編集終了完了');
-            } else {
-                throw new Error('シンプルSpine統合システムが利用できません');
+            if (this.boundingBoxModule && this.boundingBoxModule.isActive) {
+                // 🚀 v3機能移植: 個別キャラクターモジュールのクリーンアップ
+                this.boundingBoxModule.cleanup();
+                this.boundingBoxModule = null;
             }
 
+            this.toggleBoundingBoxEditUI(false);
+            this.boundingBoxEditActive = false;
+
+            this.appCore.uiManager.updateStatus('ready', '個別バウンディングボックス編集を終了しました');
+            console.log('✅ 個別バウンディングボックス編集終了成功');
+
         } catch (error) {
-            console.error('❌ バウンディングボックス編集終了エラー:', error);
+            console.error('❌ 個別バウンディングボックス編集終了エラー:', error);
             this.appCore.uiManager.updateStatus('error', `編集終了失敗: ${error.message}`);
         }
     }

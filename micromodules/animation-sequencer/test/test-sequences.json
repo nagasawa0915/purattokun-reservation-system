@@ -1,0 +1,233 @@
+{
+  "testSequences": [
+    {
+      "name": "基本待機アニメーション",
+      "input": {
+        "characterId": "test_001",
+        "animationName": "taiki",
+        "sequenceType": "single",
+        "timingConfig": {
+          "delay": 0,
+          "duration": 3000,
+          "loop": true
+        }
+      },
+      "expectedOutput": {
+        "animationName": "taiki",
+        "sequenceType": "single",
+        "timing": {
+          "loop": true,
+          "duration": 3000
+        }
+      }
+    },
+    {
+      "name": "出現→待機トランジション",
+      "input": {
+        "characterId": "test_002",
+        "animationName": "syutugen",
+        "sequenceType": "transition",
+        "timingConfig": {
+          "delay": 1500,
+          "duration": 2000,
+          "loop": false
+        }
+      },
+      "expectedOutput": {
+        "sequenceType": "transition",
+        "transition": {
+          "fromAnimation": "syutugen",
+          "toAnimation": "taiki",
+          "transitionType": "appearance"
+        }
+      }
+    },
+    {
+      "name": "ダメージ→待機トランジション",
+      "input": {
+        "characterId": "test_003",
+        "animationName": "yarare",
+        "sequenceType": "transition",
+        "timingConfig": {
+          "delay": 0,
+          "duration": 1200,
+          "loop": false
+        }
+      },
+      "expectedOutput": {
+        "sequenceType": "transition",
+        "transition": {
+          "fromAnimation": "yarare",
+          "toAnimation": "taiki",
+          "transitionType": "damage"
+        }
+      }
+    },
+    {
+      "name": "チェーンアニメーション",
+      "input": {
+        "characterId": "test_004",
+        "sequenceType": "chain",
+        "chain": [
+          { "animationName": "syutugen", "duration": 2000 },
+          { "animationName": "click", "duration": 1000 },
+          { "animationName": "taiki", "duration": 3000, "loop": true }
+        ]
+      },
+      "expectedOutput": {
+        "sequenceType": "chain",
+        "chain": [
+          { "animationName": "syutugen", "duration": 2000, "loop": false },
+          { "animationName": "click", "duration": 1000, "loop": false },
+          { "animationName": "taiki", "duration": 3000, "loop": true }
+        ]
+      }
+    },
+    {
+      "name": "フェードイン付きアニメーション",
+      "input": {
+        "characterId": "test_005",
+        "animationName": "taiki",
+        "sequenceType": "single",
+        "timingConfig": {
+          "delay": 0,
+          "duration": 3000,
+          "loop": true
+        },
+        "fadeIn": true,
+        "fadeDelay": 1000,
+        "fadeDuration": 2000
+      },
+      "expectedOutput": {
+        "animationName": "taiki",
+        "fadeIn": true,
+        "fadeDelay": 1000,
+        "fadeDuration": 2000
+      }
+    }
+  ],
+  "timingTestCases": [
+    {
+      "name": "基本タイミング計算",
+      "input": {
+        "characterId": "timing_001",
+        "delay": 500,
+        "duration": 2000,
+        "interval": 16
+      },
+      "expectedOutput": {
+        "timingData": {
+          "delay": 500,
+          "duration": 2000,
+          "interval": 16,
+          "totalFrames": 125,
+          "fps": 62.5
+        }
+      }
+    },
+    {
+      "name": "フェード効果タイミング",
+      "input": {
+        "characterId": "timing_002",
+        "delay": 1000,
+        "duration": 3000,
+        "fadeIn": true,
+        "fadeDelay": 500,
+        "fadeDuration": 1500,
+        "fadeEasing": "ease-out"
+      },
+      "expectedOutput": {
+        "timingData": {
+          "fadeIn": {
+            "delay": 500,
+            "duration": 1500,
+            "easing": "ease-out"
+          }
+        }
+      }
+    },
+    {
+      "name": "高フレームレートタイミング",
+      "input": {
+        "characterId": "timing_003",
+        "delay": 0,
+        "duration": 1000,
+        "interval": 8
+      },
+      "expectedOutput": {
+        "timingData": {
+          "interval": 8,
+          "totalFrames": 125,
+          "fps": 125
+        }
+      }
+    }
+  ],
+  "progressTestCases": [
+    {
+      "name": "進行率計算テスト1",
+      "startTime": 1692345678000,
+      "currentTime": 1692345679000,
+      "delay": 500,
+      "duration": 2000,
+      "expectedProgress": 0.25
+    },
+    {
+      "name": "進行率計算テスト2",
+      "startTime": 1692345678000,
+      "currentTime": 1692345681000,
+      "delay": 1000,
+      "duration": 2000,
+      "expectedProgress": 1.0
+    },
+    {
+      "name": "遅延中の進行率",
+      "startTime": 1692345678000,
+      "currentTime": 1692345678300,
+      "delay": 500,
+      "duration": 2000,
+      "expectedProgress": 0.0
+    }
+  ],
+  "edgeCases": [
+    {
+      "name": "継続時間0のアニメーション",
+      "input": {
+        "characterId": "edge_001",
+        "animationName": "instant",
+        "timingConfig": {
+          "delay": 0,
+          "duration": 0,
+          "loop": false
+        }
+      },
+      "expectedBehavior": "即座に完了"
+    },
+    {
+      "name": "無限ループアニメーション",
+      "input": {
+        "characterId": "edge_002",
+        "animationName": "taiki",
+        "timingConfig": {
+          "delay": 0,
+          "duration": 3000,
+          "loop": true
+        }
+      },
+      "expectedBehavior": "無限継続"
+    },
+    {
+      "name": "存在しないアニメーション名",
+      "input": {
+        "characterId": "edge_003",
+        "animationName": "nonexistent",
+        "timingConfig": {
+          "delay": 0,
+          "duration": 1000,
+          "loop": false
+        }
+      },
+      "expectedBehavior": "デフォルト設定で実行"
+    }
+  ]
+}

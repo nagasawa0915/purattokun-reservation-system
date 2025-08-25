@@ -13,6 +13,8 @@ function createBoundingBoxModule() {
         boundingBox: null,
         handles: [],
         isActive: false,
+        targetElement: null, // 🚀 v3機能移植: 対象要素の参照保持
+        targetCharacterId: null, // 🚀 v3機能移植: 個別キャラクター特定用
         dragState: {
             isDragging: false,
             startPos: { x: 0, y: 0 },
@@ -21,27 +23,57 @@ function createBoundingBoxModule() {
             operation: null
         },
         
-        // モジュール初期化
+        // モジュール初期化（個別キャラクター対応強化）
         initialize: function(targetElement) {
-            console.log('🔧 バウンディングボックス初期化');
+            console.log('🔧 バウンディングボックス初期化（個別キャラクター制御）');
             
-            // 🔧 NEW: 座標系が確実にスワップされていることを確認
+            // 🚀 v3機能移植: 個別キャラクター特定
+            this.targetElement = targetElement;
+            this.targetCharacterId = this.identifyCharacter(targetElement);
+            console.log(`🎯 対象キャラクター特定: ${this.targetCharacterId}`);
+            
+            // 🔧 座標系スワップ機能：複雑座標系（%値+transform）→シンプル座標系（px値のみ）
             if (!SpineEditSystem.coordinateSwap.isSwapped) {
-                console.warn('⚠️ 座標系未スワップ検出 - 強制スワップ実行');
+                console.log('🔄 座標系スワップ開始: 複雑座標系→シンプル座標系');
                 SpineEditSystem.coordinateSwap.enterEditMode(targetElement);
             }
             
             this.createBoundingBox(targetElement);
             this.setupEventListeners();
+            this.setupKeyboardShortcuts(); // 🚀 v3機能移植: ショートカットキー
             this.isActive = true;
         },
         
-        // モジュールクリーンアップ
+        // モジュールクリーンアップ（個別キャラクター対応強化）
         cleanup: function() {
-            console.log('🧹 バウンディングボックスクリーンアップ');
+            console.log(`🧹 バウンディングボックスクリーンアップ（${this.targetCharacterId}）`);
             this.removeBoundingBox();
             this.removeEventListeners();
+            this.removeKeyboardShortcuts(); // 🚀 v3機能移植: ショートカットキー削除
             this.isActive = false;
+            
+            // 🔧 座標系復元機能：シンプル座標系（px値のみ）→元の複雑座標系（%値+transform）
+            if (this.targetElement && SpineEditSystem.coordinateSwap.isSwapped) {
+                console.log('🔄 座標系復元開始: シンプル座標系→元の複雑座標系');
+                SpineEditSystem.coordinateSwap.exitEditMode(this.targetElement);
+            }
+        },
+        
+        // 🛡️ skeleton座標保護機能
+        protectSkeletonCoordinates: function(characterId, targetElement) {
+            try {
+                // Spineキャラクターのskeleton情報を取得・保護
+                if (window.spineSkeletonDebug) {
+                    for (const [name, skeleton] of window.spineSkeletonDebug) {
+                        if (name.includes(characterId) || characterId.includes(name)) {
+                            SpineEditSystem.skeletonProtection.backupSkeletonCoords(characterId, skeleton);
+                            break;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ skeleton座標保護でエラー（編集は継続）:', error);
+            }
         },
         
         // バウンディングボックス作成（Electron版）
@@ -102,12 +134,16 @@ function createBoundingBoxModule() {
         // ハンドル作成
         createHandles: function() {
             const handleConfigs = [
-                // 角ハンドル（○印）- 対角中心拡縮
+                // 角ハンドル（リサイズ用）
                 { position: 'nw', type: 'corner', cursor: 'nw-resize', opposite: 'se' },
                 { position: 'ne', type: 'corner', cursor: 'ne-resize', opposite: 'sw' },
                 { position: 'sw', type: 'corner', cursor: 'sw-resize', opposite: 'ne' },
-                { position: 'se', type: 'corner', cursor: 'se-resize', opposite: 'nw' }
-                // エッジハンドル削除：辺は直接クリック可能にする
+                { position: 'se', type: 'corner', cursor: 'se-resize', opposite: 'nw' },
+                // 辺ハンドル（一方向リサイズ用）
+                { position: 'n', type: 'edge', cursor: 'n-resize', opposite: 's' },
+                { position: 'e', type: 'edge', cursor: 'e-resize', opposite: 'w' },
+                { position: 's', type: 'edge', cursor: 's-resize', opposite: 'n' },
+                { position: 'w', type: 'edge', cursor: 'w-resize', opposite: 'e' }
             ];
             
             handleConfigs.forEach(config => {
@@ -116,119 +152,88 @@ function createBoundingBoxModule() {
                 handle.dataset.position = config.position;
                 handle.dataset.cursor = config.cursor;
                 handle.dataset.opposite = config.opposite;
+                handle.dataset.type = config.type;
                 
-                // 角ハンドルスタイル（○印）
+                // ハンドルスタイル
+                const isCorner = config.type === 'corner';
                 handle.style.cssText = `
                     position: absolute;
                     background: #fff;
-                    border: 2px solid #007acc;
+                    border: 2px solid #667eea;
                     pointer-events: all;
-                    z-index: 10000;
+                    z-index: 10001;
                     cursor: ${config.cursor};
-                    width: 12px; 
-                    height: 12px; 
-                    border-radius: 50%; 
-                    margin: -6px 0 0 -6px;
+                    width: ${isCorner ? '12px' : '8px'};
+                    height: ${isCorner ? '12px' : '8px'};
+                    border-radius: ${isCorner ? '50%' : '2px'};
+                    transition: all 0.1s ease;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
                 `;
                 
                 // ハンドル位置設定
-                this.positionHandle(handle, config.position);
+                this.positionHandle(handle, config.position, config.type);
+                
+                // ホバー効果
+                handle.addEventListener('mouseenter', () => {
+                    handle.style.background = '#667eea';
+                    handle.style.transform = 'scale(1.2)';
+                });
+                
+                handle.addEventListener('mouseleave', () => {
+                    handle.style.background = '#fff';
+                    handle.style.transform = 'scale(1)';
+                });
                 
                 this.boundingBox.appendChild(handle);
                 this.handles.push({ element: handle, config });
             });
             
-            // 辺のクリック領域作成（見えない・クリック可能）
-            this.createEdgeClickAreas();
         },
         
-        // ハンドル位置設定: transform重複を避けた安全な位置指定
-        positionHandle: function(handle, position) {
-            // シンプルな配置でtransform重複を回避
-            switch(position) {
-                case 'nw': 
-                    handle.style.top = '0'; 
-                    handle.style.left = '0'; 
-                    break;
-                case 'ne': 
-                    handle.style.top = '0'; 
-                    handle.style.right = '0'; 
-                    handle.style.marginRight = '-6px';
-                    break;
-                case 'sw': 
-                    handle.style.bottom = '0'; 
-                    handle.style.left = '0'; 
-                    handle.style.marginBottom = '-6px';
-                    break;
-                case 'se': 
-                    handle.style.bottom = '0'; 
-                    handle.style.right = '0'; 
-                    handle.style.margin = '0 -6px -6px 0';
-                    break;
-            }
-        },
-        
-        // 辺のクリック領域作成
-        createEdgeClickAreas: function() {
-            const edgeConfigs = [
-                { position: 'n', cursor: 'n-resize', opposite: 's' },
-                { position: 'e', cursor: 'e-resize', opposite: 'w' },
-                { position: 's', cursor: 's-resize', opposite: 'n' },
-                { position: 'w', cursor: 'w-resize', opposite: 'e' }
-            ];
-            
-            edgeConfigs.forEach(config => {
-                const edgeArea = document.createElement('div');
-                edgeArea.className = 'bbox-edge-area';
-                edgeArea.dataset.position = config.position;
-                edgeArea.dataset.cursor = config.cursor;
-                edgeArea.dataset.opposite = config.opposite;
-                edgeArea.dataset.type = 'edge';
-                
-                // 辺のクリック領域スタイル（見えない・クリック可能）
-                edgeArea.style.cssText = `
-                    position: absolute;
-                    background: transparent;
-                    pointer-events: all;
-                    z-index: 9999;
-                    cursor: ${config.cursor};
-                `;
-                
-                // 辺領域の位置とサイズ設定
-                this.positionEdgeArea(edgeArea, config.position);
-                
-                this.boundingBox.appendChild(edgeArea);
-            });
-        },
-        
-        // 辺領域の位置設定
-        positionEdgeArea: function(edgeArea, position) {
-            const edgeWidth = 8; // クリック領域の幅
+        // ハンドル位置設定
+        positionHandle: function(handle, position, type) {
+            const offset = type === 'corner' ? -6 : -4;
             
             switch(position) {
-                case 'n': // 上辺
-                    edgeArea.style.top = `-${edgeWidth/2}px`;
-                    edgeArea.style.left = '0';
-                    edgeArea.style.width = '100%';
-                    edgeArea.style.height = `${edgeWidth}px`;
+                case 'nw':
+                    handle.style.top = '0';
+                    handle.style.left = '0';
+                    handle.style.margin = `${offset}px 0 0 ${offset}px`;
                     break;
-                case 'e': // 右辺
-                    edgeArea.style.top = '0';
-                    edgeArea.style.right = `-${edgeWidth/2}px`;
-                    edgeArea.style.width = `${edgeWidth}px`;
-                    edgeArea.style.height = '100%';
+                case 'ne':
+                    handle.style.top = '0';
+                    handle.style.right = '0';
+                    handle.style.margin = `${offset}px ${offset}px 0 0`;
                     break;
-                case 's': // 下辺
-                    edgeArea.style.bottom = `-${edgeWidth/2}px`;
-                    edgeArea.style.left = '0';
-                    edgeArea.style.width = '100%';
-                    edgeArea.style.height = `${edgeWidth}px`;
+                case 'sw':
+                    handle.style.bottom = '0';
+                    handle.style.left = '0';
+                    handle.style.margin = `0 0 ${offset}px ${offset}px`;
                     break;
-                case 'w': // 左辺
-                    edgeArea.style.top = '0';
-                    edgeArea.style.left = `-${edgeWidth/2}px`;
-                    edgeArea.style.width = `${edgeWidth}px`;
-                    edgeArea.style.height = '100%';
+                case 'se':
+                    handle.style.bottom = '0';
+                    handle.style.right = '0';
+                    handle.style.margin = `0 ${offset}px ${offset}px 0`;
+                    break;
+                case 'n':
+                    handle.style.top = '0';
+                    handle.style.left = '50%';
+                    handle.style.transform = `translateX(-50%) translateY(${offset}px)`;
+                    break;
+                case 'e':
+                    handle.style.right = '0';
+                    handle.style.top = '50%';
+                    handle.style.transform = `translateY(-50%) translateX(${-offset}px)`;
+                    break;
+                case 's':
+                    handle.style.bottom = '0';
+                    handle.style.left = '50%';
+                    handle.style.transform = `translateX(-50%) translateY(${-offset}px)`;
+                    break;
+                case 'w':
+                    handle.style.left = '0';
+                    handle.style.top = '50%';
+                    handle.style.transform = `translateY(-50%) translateX(${offset}px)`;
                     break;
             }
         },
@@ -274,28 +279,28 @@ function createBoundingBoxModule() {
         handleMouseDown: function(event) {
             const target = event.target;
             
-            // 角ハンドルクリック判定
+            // ハンドルクリック判定（角ハンドル・辺ハンドル統合）
             if (target.classList.contains('bbox-handle')) {
                 this.startHandleOperation(event, target);
             } 
-            // 辺エリアクリック判定
-            else if (target.classList.contains('bbox-edge-area')) {
-                this.startEdgeOperation(event, target);
-            }
             // 中央移動エリアクリック判定
             else if (target.classList.contains('bbox-center-area')) {
                 this.startMoveOperation(event);
             }
         },
         
-        // 角ハンドル操作開始（対角中心拡縮）
+        // ハンドル操作開始（角・辺ハンドル統合）
         startHandleOperation: function(event, handle) {
             this.dragState.isDragging = true;
-            this.dragState.operation = 'corner-resize';
+            
+            // ハンドルタイプを取得して操作モードを決定
+            const handleType = handle.dataset.type || 'corner'; // type未設定時は角ハンドルとみなす
+            this.dragState.operation = handleType === 'corner' ? 'corner-resize' : 'edge-resize';
+            
             this.dragState.activeHandle = handle;
             this.dragState.startPos = { x: event.clientX, y: event.clientY };
             
-            const targetElement = SpineEditSystem.baseLayer.targetElement;
+            const targetElement = this.targetElement;
             const computedStyle = window.getComputedStyle(targetElement);
             
             // CSS値での初期状態を記録（座標系統一）
@@ -306,76 +311,11 @@ function createBoundingBoxModule() {
                 height: parseFloat(computedStyle.height)
             };
             
-            // 対角点を固定点として記録
-            const position = handle.dataset.position;
-            this.dragState.fixedPoint = this.getOppositeCornerPoint(position);
+            document.body.style.cursor = handle.dataset.cursor;
+            console.log(`🎯 ${handleType} ハンドル操作開始:`, handle.dataset.position);
             
             event.preventDefault();
             event.stopPropagation();
-        },
-        
-        // 辺操作開始（反対側中心拡縮）
-        startEdgeOperation: function(event, edgeArea) {
-            this.dragState.isDragging = true;
-            this.dragState.operation = 'edge-resize';
-            this.dragState.activeHandle = edgeArea;
-            this.dragState.startPos = { x: event.clientX, y: event.clientY };
-            
-            const targetElement = SpineEditSystem.baseLayer.targetElement;
-            const computedStyle = window.getComputedStyle(targetElement);
-            
-            // CSS値での初期状態を記録（座標系統一）
-            this.dragState.startElementRect = {
-                left: parseFloat(computedStyle.left),
-                top: parseFloat(computedStyle.top),
-                width: parseFloat(computedStyle.width),
-                height: parseFloat(computedStyle.height)
-            };
-            
-            // 反対側の辺を固定点として記録
-            const position = edgeArea.dataset.position;
-            this.dragState.fixedEdge = this.getOppositeEdge(position);
-            
-            event.preventDefault();
-            event.stopPropagation();
-        },
-        
-        // 固定点計算の改善: getBoundingClientRect()で正確な位置取得
-        getOppositeCornerPoint: function(position) {
-            const targetElement = SpineEditSystem.baseLayer.targetElement;
-            const rect = targetElement.getBoundingClientRect();
-            const parentRect = targetElement.parentElement.getBoundingClientRect();
-            
-            // transform: translate(-50%, -50%)を考慮した実際の要素境界を取得
-            let fixedPoint;
-            switch(position) {
-                case 'nw': fixedPoint = { x: rect.right - parentRect.left, y: rect.bottom - parentRect.top }; break; // SE角
-                case 'ne': fixedPoint = { x: rect.left - parentRect.left, y: rect.bottom - parentRect.top }; break; // SW角
-                case 'sw': fixedPoint = { x: rect.right - parentRect.left, y: rect.top - parentRect.top }; break; // NE角
-                case 'se': fixedPoint = { x: rect.left - parentRect.left, y: rect.top - parentRect.top }; break; // NW角
-            }
-            
-            console.log('🔧 修正済み固定点:', { position, fixedPoint, rect, parentRect });
-            return fixedPoint;
-        },
-        
-        // 反対側の辺座標取得: 親要素基準統一、transform考慮
-        getOppositeEdge: function(position) {
-            const rect = this.dragState.startElementRect;
-            const targetElement = SpineEditSystem.baseLayer.targetElement;
-            
-            // CSS座標系とJavaScript座標系の整合性を確保
-            let oppositeEdge;
-            switch(position) {
-                case 'n': oppositeEdge = { type: 'horizontal', value: rect.top + rect.height }; break; // 下辺
-                case 'e': oppositeEdge = { type: 'vertical', value: rect.left }; break; // 左辺
-                case 's': oppositeEdge = { type: 'horizontal', value: rect.top }; break; // 上辺
-                case 'w': oppositeEdge = { type: 'vertical', value: rect.left + rect.width }; break; // 右辺
-                default: oppositeEdge = { type: 'horizontal', value: rect.top };
-            }
-            
-            console.log('🔧 反対辺計算:', { position, oppositeEdge, rect });
-            return oppositeEdge;
         },
         
         // 移動操作開始
@@ -384,7 +324,7 @@ function createBoundingBoxModule() {
             this.dragState.operation = 'move';
             this.dragState.startPos = { x: event.clientX, y: event.clientY };
             
-            const targetElement = SpineEditSystem.baseLayer.targetElement;
+            const targetElement = this.targetElement;
             const computedStyle = window.getComputedStyle(targetElement);
             this.dragState.startElementRect = {
                 left: parseFloat(computedStyle.left),
@@ -411,37 +351,43 @@ function createBoundingBoxModule() {
             
             if (this.dragState.operation === 'move') {
                 this.performMove(deltaX, deltaY);
-            } else if (this.dragState.operation === 'corner-resize') {
+            } else if (this.dragState.operation === 'corner-resize' || this.dragState.operation === 'edge-resize') {
                 this.performCornerResize(deltaX, deltaY, modifiers);
-            } else if (this.dragState.operation === 'edge-resize') {
-                this.performEdgeResize(deltaX, deltaY, modifiers);
             }
         },
         
-        // 移動実行
+        // 移動実行（%値変換の核心）
         performMove: function(deltaX, deltaY) {
-            const targetElement = SpineEditSystem.baseLayer.targetElement;
+            const targetElement = this.targetElement;
             const parentRect = targetElement.parentElement.getBoundingClientRect();
             
+            // 🔧 重要：px座標で計算してから%値に変換
             const newLeft = this.dragState.startElementRect.left + deltaX;
             const newTop = this.dragState.startElementRect.top + deltaY;
             
+            // 🔧 重要：px値から%値への変換
             const newLeftPercent = SpineEditSystem.coords.pxToPercent(newLeft, parentRect.width);
             const newTopPercent = SpineEditSystem.coords.pxToPercent(newTop, parentRect.height);
             
+            // 🔧 重要：%値で設定（座標系スワップ中でも%値使用）
             targetElement.style.left = newLeftPercent + '%';
             targetElement.style.top = newTopPercent + '%';
             
+            // 🔧 重要：skeleton座標は基本的に触らない
+            // skeleton座標の強制リセットは絶対に禁止
+            
             this.updateBoundingBoxPosition(targetElement);
+            
+            console.log(`📐 移動処理: delta(${deltaX}, ${deltaY}) → (${newLeftPercent}%, ${newTopPercent}%)`);
         },
         
-        // 角リサイズ実行（修飾キー対応）
+        // 角リサイズ実行（完全な対角固定拡縮実装）
         performCornerResize: function(deltaX, deltaY, modifiers) {
-            const targetElement = SpineEditSystem.baseLayer.targetElement;
+            const targetElement = this.targetElement;
             const handle = this.dragState.activeHandle;
             const position = handle.dataset.position;
             
-            console.log('🔧 シンプル座標系でのリサイズ開始:', { deltaX, deltaY, position, modifiers });
+            console.log('🔧 対角固定リサイズ開始:', { deltaX, deltaY, position, modifiers });
             
             // 座標系完全統一: 全てgetBoundingClientRectベースで統一
             const rect = targetElement.getBoundingClientRect();
@@ -493,7 +439,7 @@ function createBoundingBoxModule() {
                 newTop = centerY - newHeight / 2;
                 
             } else {
-                // 通常の対角固定拡縮
+                // 🎯 対角固定拡縮
                 
                 // 対角固定点を取得
                 let fixedX, fixedY;
@@ -502,6 +448,10 @@ function createBoundingBoxModule() {
                     case 'ne': fixedX = currentLeft; fixedY = currentTop + currentHeight; break;                // SW角固定
                     case 'sw': fixedX = currentLeft + currentWidth; fixedY = currentTop; break;                 // NE角固定
                     case 'se': fixedX = currentLeft; fixedY = currentTop; break;                                // NW角固定
+                    case 'n': fixedX = currentLeft + currentWidth / 2; fixedY = currentTop + currentHeight; break; // 下辺中央固定
+                    case 'e': fixedX = currentLeft; fixedY = currentTop + currentHeight / 2; break;             // 左辺中央固定
+                    case 's': fixedX = currentLeft + currentWidth / 2; fixedY = currentTop; break;             // 上辺中央固定
+                    case 'w': fixedX = currentLeft + currentWidth; fixedY = currentTop + currentHeight / 2; break; // 右辺中央固定
                 }
                 
                 // 基本的なサイズ計算
@@ -529,39 +479,69 @@ function createBoundingBoxModule() {
                 }
                 
                 // 対角固定での位置計算
-                newLeft = Math.min(currentMouseX, fixedX);
-                newTop = Math.min(currentMouseY, fixedY);
-                
-                // Shiftキー使用時の位置補正
-                if (modifiers.shift) {
-                    // 縦横比調整後のサイズを反映した位置補正
-                    switch(position) {
-                        case 'nw':
-                            newLeft = fixedX - newWidth;
-                            newTop = fixedY - newHeight;
-                            break;
-                        case 'ne':
-                            newLeft = fixedX;
-                            newTop = fixedY - newHeight;
-                            break;
-                        case 'sw':
-                            newLeft = fixedX - newWidth;
-                            newTop = fixedY;
-                            break;
-                        case 'se':
-                            newLeft = fixedX;
-                            newTop = fixedY;
-                            break;
+                if (position.includes('corner') || ['nw', 'ne', 'sw', 'se'].includes(position)) {
+                    newLeft = Math.min(currentMouseX, fixedX);
+                    newTop = Math.min(currentMouseY, fixedY);
+                    
+                    // Shiftキー使用時の位置補正
+                    if (modifiers.shift) {
+                        switch(position) {
+                            case 'nw':
+                                newLeft = fixedX - newWidth;
+                                newTop = fixedY - newHeight;
+                                break;
+                            case 'ne':
+                                newLeft = fixedX;
+                                newTop = fixedY - newHeight;
+                                break;
+                            case 'sw':
+                                newLeft = fixedX - newWidth;
+                                newTop = fixedY;
+                                break;
+                            case 'se':
+                                newLeft = fixedX;
+                                newTop = fixedY;
+                                break;
+                        }
+                    }
+                } else {
+                    // 辺の場合は片側のみ変更
+                    newLeft = currentLeft;
+                    newTop = currentTop;
+                    
+                    if (position === 'n' || position === 's') {
+                        newLeft = fixedX - newWidth / 2;
+                        if (position === 'n') newTop = fixedY - newHeight;
+                    } else {
+                        newTop = fixedY - newHeight / 2;
+                        if (position === 'w') newLeft = fixedX - newWidth;
                     }
                 }
             }
             
-            // 画面内チェック（親要素基準）
+            // 🔧 修正：境界チェックを緩和（対角固定を優先）
             const parentWidth = parentRect.width;
             const parentHeight = parentRect.height;
+            const margin = 10; // 10pxのマージンを許可
             
-            if (newLeft < 0 || newTop < 0 || newLeft + newWidth > parentWidth || newTop + newHeight > parentHeight) {
-                console.warn('🚨 親要素外配置検出、適用をスキップ');
+            // 最小サイズとマージンを考慮した境界チェック
+            if (newLeft < -margin || newTop < -margin || 
+                newLeft + newWidth > parentWidth + margin || 
+                newTop + newHeight > parentHeight + margin ||
+                newWidth < 20 || newHeight < 20) {
+                console.warn('🚨 境界制限により適用をスキップ（マージン考慮）');
+                console.log('🚨 境界チェック詳細:', { 
+                    newLeft, newTop, newWidth, newHeight,
+                    parentWidth, parentHeight, margin,
+                    checks: {
+                        leftOK: newLeft >= -margin,
+                        topOK: newTop >= -margin,
+                        rightOK: newLeft + newWidth <= parentWidth + margin,
+                        bottomOK: newTop + newHeight <= parentHeight + margin,
+                        widthOK: newWidth >= 20,
+                        heightOK: newHeight >= 20
+                    }
+                });
                 return;
             }
             
@@ -574,85 +554,22 @@ function createBoundingBoxModule() {
             // DOM更新を確実に反映させる
             targetElement.offsetHeight; // 強制リフロー
             
-            console.log('✅ 修飾キー対応リサイズ完了:', {
+            console.log('✅ 対角固定リサイズ完了:', {
+                operation: modifiers.ctrl || modifiers.alt ? 'center-fixed' : 'diagonal-fixed',
                 modifiers,
-                left: newLeft + 'px',
-                top: newTop + 'px', 
-                width: newWidth + 'px',
-                height: newHeight + 'px'
+                position,
+                result: {
+                    left: newLeft + 'px',
+                    top: newTop + 'px', 
+                    width: newWidth + 'px',
+                    height: newHeight + 'px'
+                }
             });
             
             // バウンディングボックス位置更新
             this.updateBoundingBoxPosition(targetElement);
         },
         
-        // 辺拡縮実行（反対側中心）
-        performEdgeResize: function(deltaX, deltaY, modifiers) {
-            const targetElement = SpineEditSystem.baseLayer.targetElement;
-            const parentRect = targetElement.parentElement.getBoundingClientRect();
-            const edgeArea = this.dragState.activeHandle;
-            const position = edgeArea.dataset.position;
-            const fixedEdge = this.dragState.fixedEdge;
-            
-            // 初期値
-            let newWidth = this.dragState.startElementRect.width;
-            let newHeight = this.dragState.startElementRect.height;
-            let newLeft = this.dragState.startElementRect.left;
-            let newTop = this.dragState.startElementRect.top;
-            
-            // 辺に応じた拡縮計算（反対側固定）
-            if (position === 'n') {
-                // 上辺：下辺を固定
-                newHeight = fixedEdge.value - (this.dragState.startElementRect.top + deltaY);
-                newTop = fixedEdge.value - newHeight;
-            } else if (position === 's') {
-                // 下辺：上辺を固定
-                newHeight = (this.dragState.startElementRect.top + this.dragState.startElementRect.height + deltaY) - fixedEdge.value;
-            } else if (position === 'w') {
-                // 左辺：右辺を固定
-                newWidth = fixedEdge.value - (this.dragState.startElementRect.left + deltaX);
-                newLeft = fixedEdge.value - newWidth;
-            } else if (position === 'e') {
-                // 右辺：左辺を固定
-                newWidth = (this.dragState.startElementRect.left + this.dragState.startElementRect.width + deltaX) - fixedEdge.value;
-            }
-            
-            // 最小サイズ制限
-            newWidth = Math.max(20, newWidth);
-            newHeight = Math.max(20, newHeight);
-            
-            // Shiftキー処理: 辺操作時の縦横比保持機能追加
-            if (modifiers.shift) {
-                const aspectRatio = this.dragState.startElementRect.width / this.dragState.startElementRect.height;
-                
-                if (position === 'n' || position === 's') {
-                    // 縦方向の変更時、横幅を調整
-                    newWidth = newHeight * aspectRatio;
-                    newLeft = this.dragState.startElementRect.left + (this.dragState.startElementRect.width - newWidth) / 2;
-                } else if (position === 'w' || position === 'e') {
-                    // 横方向の変更時、高さを調整
-                    newHeight = newWidth / aspectRatio;
-                    newTop = this.dragState.startElementRect.top + (this.dragState.startElementRect.height - newHeight) / 2;
-                }
-                
-                console.log('🔧 Shiftキー縦横比保持:', { aspectRatio, newWidth, newHeight, newLeft, newTop });
-            }
-            
-            console.log('🔧 辺拡縮最終計算:', { position, newLeft, newTop, newWidth, newHeight });
-            
-            // %に変換して適用
-            const newLeftPercent = SpineEditSystem.coords.pxToPercent(newLeft, parentRect.width);
-            const newTopPercent = SpineEditSystem.coords.pxToPercent(newTop, parentRect.height);
-            const newWidthPercent = SpineEditSystem.coords.pxToPercent(newWidth, parentRect.width);
-            const newHeightPercent = SpineEditSystem.coords.pxToPercent(newHeight, parentRect.height);
-            
-            targetElement.style.left = newLeftPercent + '%';
-            targetElement.style.top = newTopPercent + '%';
-            targetElement.style.width = newWidthPercent + '%';
-            targetElement.style.height = newHeightPercent + '%';
-            
-            this.updateBoundingBoxPosition(targetElement);
-        },
         
         // マウスアップ処理
         handleMouseUp: function(event) {
@@ -681,8 +598,174 @@ function createBoundingBoxModule() {
                 this.boundingBox = null;
                 this.handles = [];
             }
+        },
+        
+        // 🚀 v3機能移植: キャラクター特定機能
+        identifyCharacter: function(element) {
+            // 要素のIDやクラスから特定
+            if (element.id) {
+                return element.id;
+            }
+            
+            // canvasの場合、親要素から特定
+            if (element.tagName === 'CANVAS') {
+                const parent = element.parentElement;
+                if (parent && parent.id) {
+                    return parent.id;
+                }
+            }
+            
+            // キャラクタータイプの推定
+            const classList = Array.from(element.classList || []);
+            for (const cls of classList) {
+                if (cls.includes('purattokun') || cls.includes('nezumi')) {
+                    return cls;
+                }
+            }
+            
+            return 'unknown-character';
+        },
+        
+        // 🚀 v3機能移植: ショートカットキー設定
+        setupKeyboardShortcuts: function() {
+            this.keydownHandler = this.handleKeyDown.bind(this);
+            document.addEventListener('keydown', this.keydownHandler);
+            console.log('⌨️ ショートカットキー設定完了（矢印キー移動）');
+        },
+        
+        // 🚀 v3機能移植: ショートカットキー削除
+        removeKeyboardShortcuts: function() {
+            if (this.keydownHandler) {
+                document.removeEventListener('keydown', this.keydownHandler);
+                this.keydownHandler = null;
+                console.log('⌨️ ショートカットキー削除完了');
+            }
+        },
+        
+        // 🚀 v3機能移植: キーボード操作ハンドラー（矢印キー移動）
+        handleKeyDown: function(event) {
+            if (!this.isActive || !this.targetElement) return;
+            
+            // 矢印キーのみ処理
+            const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+            if (!arrowKeys.includes(event.code)) return;
+            
+            event.preventDefault();
+            
+            // 修飾キーによる移動量調整
+            let stepSize = 1; // 基本移動量（1px）
+            if (event.shiftKey) stepSize = 10; // Shift: 10px
+            if (event.ctrlKey || event.metaKey) stepSize = 0.1; // Ctrl/Cmd: 0.1px（精密移動）
+            
+            const computedStyle = window.getComputedStyle(this.targetElement);
+            const currentLeft = parseFloat(computedStyle.left) || 0;
+            const currentTop = parseFloat(computedStyle.top) || 0;
+            
+            let newLeft = currentLeft;
+            let newTop = currentTop;
+            
+            // 方向別の移動処理
+            switch (event.code) {
+                case 'ArrowLeft':
+                    newLeft = currentLeft - stepSize;
+                    break;
+                case 'ArrowRight':
+                    newLeft = currentLeft + stepSize;
+                    break;
+                case 'ArrowUp':
+                    newTop = currentTop - stepSize;
+                    break;
+                case 'ArrowDown':
+                    newTop = currentTop + stepSize;
+                    break;
+            }
+            
+            // 位置更新（px値で直接設定）
+            this.targetElement.style.left = newLeft + 'px';
+            this.targetElement.style.top = newTop + 'px';
+            
+            // バウンディングボックス位置も同期
+            this.updateBoundingBoxPosition(this.targetElement);
+            
+            console.log(`⌨️ ${this.targetCharacterId}: 矢印キー移動 (${event.code}, ${stepSize}px)`);
+        },
+        
+        // 🧪 テスト・デバッグ機能
+        debugInfo: function() {
+            if (!this.isActive || !this.targetElement) {
+                console.log('❌ バウンディングボックス非アクティブ');
+                return;
+            }
+            
+            const targetElement = this.targetElement;
+            const computedStyle = window.getComputedStyle(targetElement);
+            const rect = targetElement.getBoundingClientRect();
+            const parentRect = targetElement.parentElement.getBoundingClientRect();
+            
+            console.group('🔍 バウンディングボックス詳細情報');
+            console.log('📋 基本情報:', {
+                characterId: this.targetCharacterId,
+                isActive: this.isActive,
+                isDragging: this.dragState.isDragging
+            });
+            console.log('📐 CSS座標:', {
+                left: computedStyle.left,
+                top: computedStyle.top,
+                width: computedStyle.width,
+                height: computedStyle.height,
+                transform: computedStyle.transform
+            });
+            console.log('📊 実際の描画位置:', {
+                screenLeft: rect.left,
+                screenTop: rect.top,
+                parentRelativeLeft: rect.left - parentRect.left,
+                parentRelativeTop: rect.top - parentRect.top,
+                width: rect.width,
+                height: rect.height
+            });
+            console.log('🔄 座標系状態:', {
+                isSwapped: SpineEditSystem.coordinateSwap.isSwapped,
+                hasBackup: !!SpineEditSystem.coordinateSwap.backup.left
+            });
+            
+            // skeleton座標確認
+            if (window.spineSkeletonDebug) {
+                for (const [name, skeleton] of window.spineSkeletonDebug) {
+                    if (name.includes(this.targetCharacterId)) {
+                        console.log('🦴 Skeleton座標:', {
+                            name: name,
+                            x: skeleton.x,
+                            y: skeleton.y,
+                            scaleX: skeleton.scaleX,
+                            scaleY: skeleton.scaleY
+                        });
+                        break;
+                    }
+                }
+            }
+            console.groupEnd();
+        },
+        
+        // 🧪 修飾キーテスト機能
+        testModifierKeys: function() {
+            console.group('🎮 修飾キーテスト実行');
+            console.log('📋 修飾キー対応一覧:');
+            console.log('  - Shift: 縦横比保持リサイズ');
+            console.log('  - Ctrl: 中心固定リサイズ (Windows)');
+            console.log('  - Alt: 中心固定リサイズ (Mac)');
+            console.log('  - Ctrl+Shift: 中心固定+縦横比保持');
+            console.log('  - Alt+Shift: 中心固定+縦横比保持');
+            console.log('');
+            console.log('🎯 テスト手順:');
+            console.log('  1. 角ハンドルを各修飾キーと組み合わせてドラッグ');
+            console.log('  2. 辺ハンドルを各修飾キーと組み合わせてドラッグ');
+            console.log('  3. コンソールで動作ログを確認');
+            console.groupEnd();
         }
     };
+    
+    // グローバルアクセス（デバッグ用）
+    window.SpineEditSystem = SpineEditSystem;
     
     console.log('✅ バウンディングボックスモジュール作成完了');
     return module;
