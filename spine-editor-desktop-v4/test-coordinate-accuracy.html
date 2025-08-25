@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>座標精度テスト - Spine Editor v4.0</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            margin: 20px;
+            background: #f8f9fa;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .summary {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .test-point {
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Spine Editor v4.0 - 座標精度テスト</h1>
+    
+    <div class="test-container">
+        <h2>📐 CoordinateUtils 精度テスト</h2>
+        <div id="coordinate-test-results"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>🎯 テストポイント可視化</h2>
+        <canvas id="test-canvas" width="640" height="360"></canvas>
+        <div class="test-grid" id="test-points-grid"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 DPR対応テスト</h2>
+        <div id="dpr-test-results"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>⚡ パフォーマンステスト</h2>
+        <div id="performance-test-results"></div>
+    </div>
+
+    <!-- TypeScript/JavaScriptファイルを読み込み -->
+    <script>
+        // CoordinateUtils のJavaScript移植版
+        class CoordinateUtils {
+            static domToSpine(domPoint, canvasSize) {
+                return {
+                    x: domPoint.x - canvasSize.width / 2,
+                    y: canvasSize.height / 2 - domPoint.y
+                };
+            }
+
+            static spineToDom(spinePoint, canvasSize) {
+                return {
+                    x: spinePoint.x + canvasSize.width / 2,
+                    y: canvasSize.height / 2 - spinePoint.y
+                };
+            }
+
+            static testRoundTripAccuracy(originalPoint, canvasSize) {
+                const spinePoint = this.domToSpine(originalPoint, canvasSize);
+                const backToDom = this.spineToDom(spinePoint, canvasSize);
+                
+                const dx = backToDom.x - originalPoint.x;
+                const dy = backToDom.y - originalPoint.y;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            static snapToGrid(point, gridSize) {
+                if (gridSize <= 0) return point;
+                return {
+                    x: Math.round(point.x / gridSize) * gridSize,
+                    y: Math.round(point.y / gridSize) * gridSize
+                };
+            }
+
+            static distance(pointA, pointB) {
+                const dx = pointB.x - pointA.x;
+                const dy = pointB.y - pointA.y;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+        }
+
+        // テストケース定義
+        const TEST_CASES = [
+            { name: "左上角", point: { x: 0, y: 0 }, expected: "原点変換" },
+            { name: "中央", point: { x: 320, y: 180 }, expected: "Spine原点(0,0)" },
+            { name: "右下角", point: { x: 640, y: 360 }, expected: "最大座標" },
+            { name: "第1象限", point: { x: 480, y: 90 }, expected: "正の領域" },
+            { name: "第3象限", point: { x: 160, y: 270 }, expected: "負の領域" },
+            { name: "小数点1", point: { x: 100.5, y: 200.7 }, expected: "亜ピクセル精度" },
+            { name: "小数点2", point: { x: 255.3, y: 128.9 }, expected: "端数処理" },
+            { name: "境界近傍", point: { x: 1, y: 1 }, expected: "境界値" },
+            { name: "境界近傍", point: { x: 639, y: 359 }, expected: "境界値" },
+            { name: "極小値", point: { x: 0.1, y: 0.1 }, expected: "極小座標" }
+        ];
+
+        const CANVAS_SIZE = { width: 640, height: 360 };
+
+        // メインテスト実行
+        function runCoordinateTests() {
+            const resultsContainer = document.getElementById('coordinate-test-results');
+            let allPassed = true;
+            let totalError = 0;
+            let maxError = 0;
+
+            resultsContainer.innerHTML = '<div class="info">🔄 テスト実行中...</div>';
+
+            setTimeout(() => {
+                let html = '';
+                
+                TEST_CASES.forEach((testCase, index) => {
+                    const error = CoordinateUtils.testRoundTripAccuracy(testCase.point, CANVAS_SIZE);
+                    const passed = error < 1.0; // 1px以内
+                    
+                    totalError += error;
+                    maxError = Math.max(maxError, error);
+                    
+                    if (!passed) allPassed = false;
+                    
+                    html += `
+                        <div class="test-result ${passed ? 'pass' : 'fail'}">
+                            ${passed ? '✅' : '❌'} ${testCase.name}: 
+                            (${testCase.point.x}, ${testCase.point.y}) 
+                            誤差: ${error.toFixed(6)}px
+                            ${passed ? '' : ' ⚠️ 基準超過'}
+                        </div>
+                    `;
+                });
+
+                const avgError = totalError / TEST_CASES.length;
+                
+                html += `
+                    <div class="summary ${allPassed ? 'pass' : 'fail'}">
+                        📊 総合結果: ${allPassed ? '✅ 全テスト合格' : '❌ 失敗あり'}
+                    </div>
+                    <div class="info">
+                        📈 平均誤差: ${avgError.toFixed(6)}px<br>
+                        📈 最大誤差: ${maxError.toFixed(6)}px<br>
+                        📈 基準: 1.0px以内
+                    </div>
+                `;
+                
+                resultsContainer.innerHTML = html;
+            }, 100);
+        }
+
+        // 可視化テスト
+        function drawTestPoints() {
+            const canvas = document.getElementById('test-canvas');
+            const ctx = canvas.getContext('2d');
+            const grid = document.getElementById('test-points-grid');
+            
+            // キャンバスクリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // グリッド描画
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // 中央線
+            ctx.strokeStyle = '#007bff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width/2, 0);
+            ctx.lineTo(canvas.width/2, canvas.height);
+            ctx.moveTo(0, canvas.height/2);
+            ctx.lineTo(canvas.width, canvas.height/2);
+            ctx.stroke();
+            
+            // テストポイント描画
+            let gridHtml = '';
+            TEST_CASES.forEach((testCase, index) => {
+                const point = testCase.point;
+                const spineCoord = CoordinateUtils.domToSpine(point, CANVAS_SIZE);
+                const error = CoordinateUtils.testRoundTripAccuracy(point, CANVAS_SIZE);
+                
+                // 点を描画
+                ctx.fillStyle = error < 1.0 ? '#28a745' : '#dc3545';
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // ラベル
+                ctx.fillStyle = '#333';
+                ctx.font = '10px monospace';
+                ctx.fillText(`${index + 1}`, point.x + 6, point.y - 6);
+                
+                // グリッド情報
+                gridHtml += `
+                    <div class="test-point">
+                        <strong>${index + 1}. ${testCase.name}</strong><br>
+                        DOM: (${point.x}, ${point.y})<br>
+                        Spine: (${spineCoord.x.toFixed(1)}, ${spineCoord.y.toFixed(1)})<br>
+                        誤差: ${error.toFixed(4)}px
+                    </div>
+                `;
+            });
+            
+            grid.innerHTML = gridHtml;
+        }
+
+        // DPRテスト
+        function runDPRTest() {
+            const resultsContainer = document.getElementById('dpr-test-results');
+            const dpr = window.devicePixelRatio || 1;
+            
+            const testPoint = { x: 100, y: 100 };
+            const physicalPoint = {
+                x: testPoint.x * dpr,
+                y: testPoint.y * dpr
+            };
+            const backToCss = {
+                x: physicalPoint.x / dpr,
+                y: physicalPoint.y / dpr
+            };
+            
+            const dprError = CoordinateUtils.distance(testPoint, backToCss);
+            
+            resultsContainer.innerHTML = `
+                <div class="info">
+                    🖥️ Device Pixel Ratio: ${dpr}<br>
+                    📱 CSS → 物理 → CSS 変換テスト
+                </div>
+                <div class="test-result ${dprError < 0.001 ? 'pass' : 'fail'}">
+                    ${dprError < 0.001 ? '✅' : '❌'} DPR変換精度: ${dprError.toFixed(6)}px
+                </div>
+            `;
+        }
+
+        // パフォーマンステスト
+        function runPerformanceTest() {
+            const resultsContainer = document.getElementById('performance-test-results');
+            
+            resultsContainer.innerHTML = '<div class="info">🔄 性能テスト実行中...</div>';
+            
+            setTimeout(() => {
+                const iterations = 10000;
+                const testPoint = { x: 320, y: 180 };
+                
+                const startTime = performance.now();
+                for (let i = 0; i < iterations; i++) {
+                    CoordinateUtils.testRoundTripAccuracy(testPoint, CANVAS_SIZE);
+                }
+                const endTime = performance.now();
+                
+                const totalTime = endTime - startTime;
+                const timePerOp = totalTime / iterations;
+                
+                resultsContainer.innerHTML = `
+                    <div class="test-result ${timePerOp < 0.01 ? 'pass' : 'fail'}">
+                        ⚡ ${iterations.toLocaleString()}回変換: ${totalTime.toFixed(2)}ms
+                    </div>
+                    <div class="test-result ${timePerOp < 0.01 ? 'pass' : 'fail'}">
+                        ⚡ 1回あたり: ${(timePerOp * 1000).toFixed(3)}µs
+                        ${timePerOp < 0.01 ? '(良好)' : '(要改善)'}
+                    </div>
+                `;
+            }, 100);
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🧪 座標精度テスト開始');
+            
+            runCoordinateTests();
+            drawTestPoints();
+            runDPRTest();
+            runPerformanceTest();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最小プロトタイプ - Spine Editor v4.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #2d2d2d;
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app-container {
+            display: grid;
+            grid-template-areas: 
+                "toolbar toolbar toolbar"
+                "outliner preview properties"
+                "outliner preview properties";
+            grid-template-columns: 250px 1fr 250px;
+            grid-template-rows: 50px 1fr;
+            height: 100vh;
+        }
+        
+        .toolbar {
+            grid-area: toolbar;
+            background: #1e1e1e;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .toolbar button {
+            background: #404040;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .toolbar button:hover {
+            background: #505050;
+        }
+        
+        .toolbar button.primary {
+            background: #007acc;
+        }
+        
+        .toolbar button.primary:hover {
+            background: #1a8cff;
+        }
+        
+        .outliner {
+            grid-area: outliner;
+            background: #252525;
+            border-right: 1px solid #404040;
+            padding: 12px;
+            overflow-y: auto;
+        }
+        
+        .preview {
+            grid-area: preview;
+            background: #1a1a1a;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .properties {
+            grid-area: properties;
+            background: #252525;
+            border-left: 1px solid #404040;
+            padding: 12px;
+            overflow-y: auto;
+        }
+        
+        .panel-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .file-tree {
+            font-size: 12px;
+        }
+        
+        .file-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+        
+        .file-item:hover {
+            background: #404040;
+        }
+        
+        .file-item.selected {
+            background: #007acc;
+        }
+        
+        .property-group {
+            margin-bottom: 16px;
+        }
+        
+        .property-label {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #cccccc;
+        }
+        
+        .property-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .property-row label {
+            font-size: 11px;
+            width: 20px;
+            color: #999999;
+        }
+        
+        .property-input {
+            background: #404040;
+            border: 1px solid #606060;
+            color: white;
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            width: 60px;
+        }
+        
+        .property-input:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+        
+        .preview-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid #404040;
+            background: #f0f0f0;
+        }
+        
+        .status-bar {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            font-size: 11px;
+            color: #888888;
+        }
+        
+        .drag-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #007acc;
+            border: 1px solid #ffffff;
+            border-radius: 50%;
+            cursor: move;
+            z-index: 1000;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #888888;
+            font-size: 14px;
+        }
+        
+        .error {
+            color: #ff6b6b;
+        }
+        
+        .success {
+            color: #51cf66;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ツールバー -->
+        <div class="toolbar">
+            <button id="btn-select-hp">HPフォルダ選択</button>
+            <button id="btn-select-spine">Spineフォルダ選択</button>
+            <button id="btn-save" class="primary">保存</button>
+            <button id="btn-export">エクスポート</button>
+            <span id="project-status">プロジェクト未選択</span>
+        </div>
+        
+        <!-- アウトライナー -->
+        <div class="outliner">
+            <div class="panel-title">📁 アウトライナー</div>
+            <div id="file-tree" class="file-tree">
+                <div class="loading">フォルダを選択してください</div>
+            </div>
+        </div>
+        
+        <!-- プレビューエリア -->
+        <div class="preview">
+            <canvas id="preview-canvas" class="preview-canvas" width="640" height="360"></canvas>
+            <div class="status-bar" id="status-bar">準備完了</div>
+        </div>
+        
+        <!-- プロパティパネル -->
+        <div class="properties">
+            <div class="panel-title">🎛️ プロパティ</div>
+            
+            <div class="property-group">
+                <div class="property-label">位置</div>
+                <div class="property-row">
+                    <label>X</label>
+                    <input type="number" class="property-input" id="prop-x" value="0" step="1">
+                </div>
+                <div class="property-row">
+                    <label>Y</label>
+                    <input type="number" class="property-input" id="prop-y" value="0" step="1">
+                </div>
+            </div>
+            
+            <div class="property-group">
+                <div class="property-label">スケール</div>
+                <div class="property-row">
+                    <label>X</label>
+                    <input type="number" class="property-input" id="prop-scale-x" value="1.0" step="0.1">
+                </div>
+                <div class="property-row">
+                    <label>Y</label>
+                    <input type="number" class="property-input" id="prop-scale-y" value="1.0" step="0.1">
+                </div>
+            </div>
+            
+            <div class="property-group">
+                <div class="property-label">回転</div>
+                <div class="property-row">
+                    <label>°</label>
+                    <input type="number" class="property-input" id="prop-rotation" value="0" step="1">
+                </div>
+            </div>
+            
+            <div class="property-group">
+                <div class="property-label">Z順</div>
+                <div class="property-row">
+                    <label>Z</label>
+                    <input type="number" class="property-input" id="prop-z-index" value="0" step="1">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 簡易プロジェクト管理
+        class MinimalProjectManager {
+            constructor() {
+                this.project = null;
+                this.selectedCharacter = null;
+                this.characters = new Map();
+                this.init();
+            }
+            
+            init() {
+                this.bindEvents();
+                this.updateStatus('プロトタイプ準備完了');
+            }
+            
+            bindEvents() {
+                // フォルダ選択（モック）
+                document.getElementById('btn-select-hp').addEventListener('click', () => {
+                    this.selectHPFolder();
+                });
+                
+                document.getElementById('btn-select-spine').addEventListener('click', () => {
+                    this.selectSpineFolder();
+                });
+                
+                // 保存・エクスポート
+                document.getElementById('btn-save').addEventListener('click', () => {
+                    this.saveProject();
+                });
+                
+                document.getElementById('btn-export').addEventListener('click', () => {
+                    this.exportProject();
+                });
+                
+                // プロパティ変更
+                ['prop-x', 'prop-y', 'prop-scale-x', 'prop-scale-y', 'prop-rotation', 'prop-z-index'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', (e) => {
+                        this.updateCharacterProperty(id.replace('prop-', ''), e.target.value);
+                    });
+                });
+                
+                // キャンバスクリック
+                document.getElementById('preview-canvas').addEventListener('click', (e) => {
+                    this.handleCanvasClick(e);
+                });
+            }
+            
+            selectHPFolder() {
+                // モック: HPフォルダ選択
+                this.updateStatus('HPフォルダ: D:/example/homepage');
+                this.updateFileTree([
+                    { name: 'index.html', type: 'file' },
+                    { name: 'assets', type: 'folder' },
+                    { name: 'css', type: 'folder' }
+                ]);
+            }
+            
+            selectSpineFolder() {
+                // モック: Spineフォルダ選択
+                this.updateStatus('Spineフォルダ: D:/example/spine-assets');
+                this.addMockCharacters();
+            }
+            
+            addMockCharacters() {
+                // テスト用キャラクター追加
+                const testCharacter = {
+                    id: 'nezumi#1',
+                    name: 'nezumi',
+                    transform: { x: 320, y: 180, scaleX: 1.0, scaleY: 1.0, rotation: 0 },
+                    zIndex: 0
+                };
+                
+                this.characters.set('nezumi#1', testCharacter);
+                this.drawMockCharacter(testCharacter);
+                this.updateFileTree([
+                    { name: 'characters', type: 'folder' },
+                    { name: '📂 nezumi', type: 'character', id: 'nezumi#1' },
+                    { name: '  └ nezumi.json', type: 'file' },
+                    { name: '  └ nezumi.atlas', type: 'file' },
+                    { name: '  └ nezumi.png', type: 'file' }
+                ]);
+                
+                this.selectCharacter('nezumi#1');
+            }
+            
+            drawMockCharacter(character) {
+                const canvas = document.getElementById('preview-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // キャンバスクリア
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // グリッド描画
+                this.drawGrid(ctx, canvas);
+                
+                // キャラクター代替表示（矩形）
+                const { x, y, scaleX, scaleY, rotation } = character.transform;
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(rotation * Math.PI / 180);
+                ctx.scale(scaleX, scaleY);
+                
+                // キャラクター代替矩形
+                ctx.fillStyle = '#007acc40';
+                ctx.strokeStyle = '#007acc';
+                ctx.lineWidth = 2;
+                ctx.fillRect(-30, -40, 60, 80);
+                ctx.strokeRect(-30, -40, 60, 80);
+                
+                // 名前表示
+                ctx.fillStyle = '#007acc';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(character.name, 0, 50);
+                
+                ctx.restore();
+                
+                // ドラッグハンドル
+                this.drawDragHandle(x, y);
+            }
+            
+            drawGrid(ctx, canvas) {
+                ctx.strokeStyle = '#404040';
+                ctx.lineWidth = 1;
+                
+                // 縦線
+                for (let x = 0; x <= canvas.width; x += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                
+                // 横線
+                for (let y = 0; y <= canvas.height; y += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+                
+                // 中央線
+                ctx.strokeStyle = '#007acc';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(canvas.width/2, 0);
+                ctx.lineTo(canvas.width/2, canvas.height);
+                ctx.moveTo(0, canvas.height/2);
+                ctx.lineTo(canvas.width, canvas.height/2);
+                ctx.stroke();
+            }
+            
+            drawDragHandle(x, y) {
+                const handle = document.createElement('div');
+                handle.className = 'drag-handle';
+                handle.style.left = `${x - 4}px`;
+                handle.style.top = `${y - 4}px`;
+                
+                const preview = document.querySelector('.preview');
+                // 既存のハンドルを削除
+                preview.querySelectorAll('.drag-handle').forEach(h => h.remove());
+                preview.appendChild(handle);
+                
+                this.makeDraggable(handle);
+            }
+            
+            makeDraggable(handle) {
+                let isDragging = false;
+                let startX, startY;
+                
+                handle.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    startX = e.clientX - handle.offsetLeft;
+                    startY = e.clientY - handle.offsetTop;
+                    e.preventDefault();
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    const x = e.clientX - startX;
+                    const y = e.clientY - startY;
+                    
+                    handle.style.left = `${x}px`;
+                    handle.style.top = `${y}px`;
+                    
+                    // キャラクター位置更新
+                    if (this.selectedCharacter) {
+                        const character = this.characters.get(this.selectedCharacter);
+                        character.transform.x = x + 4;
+                        character.transform.y = y + 4;
+                        this.updatePropertiesPanel(character);
+                        this.drawMockCharacter(character);
+                    }
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+            }
+            
+            selectCharacter(characterId) {
+                this.selectedCharacter = characterId;
+                const character = this.characters.get(characterId);
+                if (character) {
+                    this.updatePropertiesPanel(character);
+                }
+                
+                // アウトライナーでハイライト
+                document.querySelectorAll('.file-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                const item = document.querySelector(`[data-id="${characterId}"]`);
+                if (item) {
+                    item.classList.add('selected');
+                }
+            }
+            
+            updatePropertiesPanel(character) {
+                const { x, y, scaleX, scaleY, rotation } = character.transform;
+                document.getElementById('prop-x').value = Math.round(x);
+                document.getElementById('prop-y').value = Math.round(y);
+                document.getElementById('prop-scale-x').value = scaleX;
+                document.getElementById('prop-scale-y').value = scaleY;
+                document.getElementById('prop-rotation').value = rotation;
+                document.getElementById('prop-z-index').value = character.zIndex;
+            }
+            
+            updateCharacterProperty(property, value) {
+                if (!this.selectedCharacter) return;
+                
+                const character = this.characters.get(this.selectedCharacter);
+                if (!character) return;
+                
+                const numValue = parseFloat(value) || 0;
+                
+                switch (property) {
+                    case 'x':
+                        character.transform.x = numValue;
+                        break;
+                    case 'y':
+                        character.transform.y = numValue;
+                        break;
+                    case 'scale-x':
+                        character.transform.scaleX = numValue;
+                        break;
+                    case 'scale-y':
+                        character.transform.scaleY = numValue;
+                        break;
+                    case 'rotation':
+                        character.transform.rotation = numValue;
+                        break;
+                    case 'z-index':
+                        character.zIndex = numValue;
+                        break;
+                }
+                
+                this.drawMockCharacter(character);
+            }
+            
+            updateFileTree(items) {
+                const tree = document.getElementById('file-tree');
+                let html = '';
+                
+                items.forEach(item => {
+                    const attrs = item.id ? `data-id="${item.id}"` : '';
+                    html += `<div class="file-item" ${attrs}>${item.name}</div>`;
+                });
+                
+                tree.innerHTML = html;
+                
+                // クリックイベント追加
+                tree.querySelectorAll('.file-item[data-id]').forEach(item => {
+                    item.addEventListener('click', () => {
+                        this.selectCharacter(item.dataset.id);
+                    });
+                });
+            }
+            
+            handleCanvasClick(e) {
+                const canvas = e.target;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                console.log(`Canvas clicked at: (${Math.round(x)}, ${Math.round(y)})`);
+            }
+            
+            saveProject() {
+                const projectData = {
+                    version: 1,
+                    characters: Array.from(this.characters.values())
+                };
+                
+                console.log('💾 プロジェクト保存:', projectData);
+                this.updateStatus('プロジェクト保存完了', 'success');
+                
+                // ローカルストレージに保存（テスト用）
+                localStorage.setItem('spine-editor-v4-project', JSON.stringify(projectData));
+            }
+            
+            exportProject() {
+                console.log('📦 エクスポート開始...');
+                this.updateStatus('エクスポート処理中...');
+                
+                setTimeout(() => {
+                    this.updateStatus('エクスポート完了 → dist/index.html', 'success');
+                }, 1000);
+            }
+            
+            updateStatus(message, type = '') {
+                const status = document.getElementById('project-status');
+                status.textContent = message;
+                status.className = type;
+                
+                const statusBar = document.getElementById('status-bar');
+                statusBar.textContent = message;
+            }
+        }
+        
+        // アプリケーション初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Spine Editor v4.0 - 最小プロトタイプ開始');
+            new MinimalProjectManager();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PAGE_TITLE}}</title>
+    <style>
+        /* 基本リセット */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        
+        /* Spineキャンバス用基本スタイル */
+        .spine-canvas {
+            position: absolute;
+            pointer-events: auto;
+            image-rendering: pixelated; /* ピクセルアート対応 */
+        }
+        
+        /* プレビュー用ユーティリティ */
+        .spine-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* デバッグ用境界線（本番では非表示） */
+        .debug-bounds {
+            position: absolute;
+            border: 1px dashed rgba(255, 0, 0, 0.3);
+            pointer-events: none;
+            display: none; /* 本番時は非表示 */
+        }
+        
+        /* ローディング表示 */
+        .spine-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* エラー表示 */
+        .spine-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #cc0000;
+            font-size: 14px;
+            text-align: center;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <!-- メインコンテンツエリア -->
+    <div class="spine-container" id="spine-container">
+        <!-- Spineキャンバスがここに動的に挿入されます -->
+        <div class="spine-loading" id="loading">Spineアニメーション読み込み中...</div>
+    </div>
+
+    <!-- Spine WebGL ランタイム -->
+    <script src="./lib/spine-webgl.js"></script>
+    
+    <!-- 配置データ（エクスポート時に埋め込み） -->
+    <script>
+        // エクスポート時にproject.jsonの内容がここに埋め込まれます
+        window.SPINE_PLACEMENT_DATA = {{PLACEMENT_DATA}};
+    </script>
+    
+    <!-- 最小Spineブートストラップ -->
+    <script>
+        class MinimalSpineLoader {
+            constructor() {
+                this.app = null;
+                this.characters = new Map();
+                this.loadingElement = document.getElementById('loading');
+                this.containerElement = document.getElementById('spine-container');
+                
+                this.init();
+            }
+            
+            async init() {
+                try {
+                    // Spine WebGL 初期化
+                    await this.initSpineWebGL();
+                    
+                    // 配置データから各キャラクターを読み込み
+                    await this.loadCharacters();
+                    
+                    // ローディング表示を削除
+                    this.hideLoading();
+                    
+                    console.log('✅ Spine配置システム初期化完了');
+                } catch (error) {
+                    console.error('❌ Spine初期化エラー:', error);
+                    this.showError(error.message);
+                }
+            }
+            
+            async initSpineWebGL() {
+                const canvas = document.createElement('canvas');
+                canvas.width = window.SPINE_PLACEMENT_DATA.page.canvas.width;
+                canvas.height = window.SPINE_PLACEMENT_DATA.page.canvas.height;
+                
+                // キャンバスを中央配置
+                canvas.style.position = 'absolute';
+                canvas.style.top = '50%';
+                canvas.style.left = '50%';
+                canvas.style.transform = 'translate(-50%, -50%)';
+                canvas.className = 'spine-canvas';
+                
+                this.containerElement.appendChild(canvas);
+                
+                // Spine WebGL アプリケーション作成
+                this.app = new spine.SpineCanvas(canvas, {
+                    pathPrefix: './assets/',
+                    alpha: true,
+                    backgroundColor: '#00000000' // 透明背景
+                });
+                
+                // エラーハンドリング
+                this.app.onError = (error) => {
+                    throw new Error(`Spine WebGL エラー: ${error}`);
+                };
+            }
+            
+            async loadCharacters() {
+                const characters = window.SPINE_PLACEMENT_DATA.characters;
+                
+                for (const character of characters) {
+                    try {
+                        await this.loadSingleCharacter(character);
+                    } catch (error) {
+                        console.warn(`キャラクター読み込み失敗: ${character.id}`, error);
+                        // 1体のエラーでも他は継続
+                    }
+                }
+            }
+            
+            async loadSingleCharacter(character) {
+                const { spine: spineInfo, transform, animation, display } = character;
+                
+                // アセットを読み込み
+                const skeletonData = await this.app.loadSkeleton(spineInfo.name, spineInfo.skeleton);
+                
+                if (!skeletonData) {
+                    throw new Error(`スケルトンデータの読み込み失敗: ${spineInfo.skeleton}`);
+                }
+                
+                // Spine オブジェクト作成
+                const skeleton = new spine.Skeleton(skeletonData);
+                const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                
+                // 位置・スケール・回転を設定
+                skeleton.x = transform.x;
+                skeleton.y = this.flipY(transform.y); // Y軸反転
+                skeleton.scaleX = transform.scaleX;
+                skeleton.scaleY = transform.scaleY;
+                
+                // 回転（度数法からラジアンに変換）
+                if (transform.rotation !== 0) {
+                    skeleton.getRootBone().rotation = transform.rotation;
+                }
+                
+                // アニメーション設定
+                if (animation.name && skeletonData.findAnimation(animation.name)) {
+                    animationState.setAnimation(0, animation.name, animation.loop);
+                    
+                    // 再生速度
+                    if (animation.speed) {
+                        animationState.timeScale = animation.speed;
+                    }
+                }
+                
+                // 表示設定
+                skeleton.color.a = display.alpha;
+                
+                // Spine アプリケーションに追加
+                this.app.skeleton = skeleton;
+                this.app.state = animationState;
+                
+                // キャラクター管理に追加
+                this.characters.set(character.id, {
+                    skeleton,
+                    animationState,
+                    character
+                });
+                
+                console.log(`✅ キャラクター読み込み完了: ${character.id}`);
+            }
+            
+            flipY(y) {
+                // DOM座標からSpine座標へのY軸反転
+                const canvasHeight = window.SPINE_PLACEMENT_DATA.page.canvas.height;
+                return canvasHeight - y;
+            }
+            
+            hideLoading() {
+                if (this.loadingElement) {
+                    this.loadingElement.style.display = 'none';
+                }
+            }
+            
+            showError(message) {
+                if (this.loadingElement) {
+                    this.loadingElement.className = 'spine-error';
+                    this.loadingElement.innerHTML = `
+                        <div>⚠️ エラーが発生しました</div>
+                        <div style="margin-top: 8px; font-size: 12px;">${message}</div>
+                    `;
+                }
+            }
+        }
+        
+        // DOM読み込み完了後に初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            new MinimalSpineLoader();
+        });
+        
+        // デバッグ用グローバル関数
+        window.getSpineCharacters = () => {
+            return Array.from(window.spineLoader?.characters.keys() || []);
+        };
+    </script>
+</body>
+</html>
