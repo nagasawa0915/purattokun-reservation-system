@@ -18,6 +18,28 @@
 - **外部依存ゼロ**: 他モジュール・グローバル変数への依存禁止
 - **完全クリーンアップ**: cleanup()による状態完全復元保証
 
+## 📁 プロジェクト構成・配置ルール
+
+### ファイル配置規則
+**マイクロモジュール専用フォルダ**: `/micromodules/`
+
+```
+/purattokun-reservation-system/
+├── micromodules/                    ← マイクロモジュール専用フォルダ
+│   ├── PureSpineLoader.js          ← Spine読み込み専用
+│   ├── PurePositionManager.js      ← 座標計算専用
+│   ├── PureBoundingBox.js          ← バウンディングボックス専用
+│   └── (将来のマイクロモジュール)
+├── index2-micromodule-experiment.html  ← 実験環境
+└── docs/micromodules/マイクロモジュール実験記録_Phase1.md
+```
+
+### 配置理由・方針
+- **独立性保証**: 他システムファイルとの混在を避け、責務を明確化
+- **再利用性向上**: 専用フォルダによりマイクロモジュール群の管理・移植が容易
+- **拡張性確保**: 新しいマイクロモジュール追加時の配置場所統一
+- **v4移植準備**: フォルダ単位での移植・統合作業を効率化
+
 ## 🧪 実装マイクロモジュール
 
 ### 1. PureSpineLoader.js（302行）
@@ -122,10 +144,30 @@ Position calculation result: {
 3. **完全復元パターン**: `cleanup()`による状態管理
 4. **単独テストパターン**: `static test()`による品質保証
 
+### 3. PureBoundingBox.js（新規実装）
+**責務**: バウンディングボックス表示・基本ドラッグ専用
+
+**技術仕様**:
+```javascript
+class PureBoundingBox {
+    constructor(input)           // 設定受け取り（canvas, spineData, position）
+    async execute(options)       // バウンディングボックス実行
+    show() / hide()             // 表示/非表示制御
+    getState()                  // 現在状態（bounds, dragState等）
+    cleanup()                   // 完全復元
+}
+```
+
+**解決する機能要件**: バウンディングボックス表示・ドラッグ操作
+- **8点ハンドル**: 四隅＋四辺中央でのリサイズ操作
+- **ドラッグ移動**: 中央部ドラッグによる位置移動
+- **リアルタイム更新**: マウス・タッチ操作に対応
+- **完全クリーンアップ**: DOM要素・イベントハンドラの完全削除
+
 ### 次期実装候補
 - **PureStorageManager**: データ永続化専用（localStorage等）
-- **PureBoundingBox**: UI表示・基本ドラッグ専用
 - **PureAnimationController**: アニメーション再生専用
+- **PureExportManager**: パッケージ出力専用
 
 ## 📊 実装統計
 
@@ -133,7 +175,8 @@ Position calculation result: {
 |-----------|------|------|-----------|---------|
 | PureSpineLoader | 302行 | Spine読み込み | ✅ | ✅ |
 | PurePositionManager | 309行 | 座標計算 | ✅ | ✅ |
-| **合計** | **611行** | **分離完了** | **✅** | **✅** |
+| PureBoundingBox | 504行 | バウンディングボックス | 🔄 | ✅ |
+| **合計** | **1,115行** | **分離完了** | **🔄** | **✅** |
 
 ## 🏆 実験成功要因
 

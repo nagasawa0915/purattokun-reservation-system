@@ -52,12 +52,10 @@ const SpineEditSystem = {
         
         // 編集開始時：複雑な座標系をシンプルな絶対座標に変換
         enterEditMode: function(element) {
-            console.log('🔄 座標系スワップ開始 - 複雑座標→シンプル座標');
+            console.log('🔄 座標系スワップ開始 - 瞬間移動防止版');
             
-            // 現在の描画位置を正確に取得
-            const rect = element.getBoundingClientRect();
-            
-            // 元の座標系を完全バックアップ
+            // 🎯 瞬間移動完全防止：位置変更を行わない
+            // 元の座標系を完全バックアップ（位置変更なし）
             this.backup = {
                 left: element.style.left,
                 top: element.style.top,
@@ -66,24 +64,13 @@ const SpineEditSystem = {
                 transform: element.style.transform
             };
             
-            console.log('💾 元座標系をバックアップ:', this.backup);
+            console.log('💾 元座標系をバックアップ（位置変更なし）:', this.backup);
+            console.log('✅ 瞬間移動防止：キャラクター位置はそのまま維持');
             
-            // シンプルな絶対座標に変換（transform除去）
-            element.style.left = rect.left + 'px';
-            element.style.top = rect.top + 'px';
-            element.style.width = rect.width + 'px';
-            element.style.height = rect.height + 'px';
-            element.style.transform = 'none'; // 重要：transform競合を完全排除
-            
+            // 🎯 位置変更なし：編集可能状態の設定のみ
             this.isSwapped = true;
             
-            console.log('✅ シンプル座標に変換完了:', {
-                left: rect.left + 'px',
-                top: rect.top + 'px',
-                width: rect.width + 'px',
-                height: rect.height + 'px',
-                transform: 'none'
-            });
+            console.log('✅ 編集モード開始完了 - 瞬間移動なし');
         },
         
         // 編集終了時：シンプル座標を元の複雑な座標系に変換
@@ -342,9 +329,19 @@ const ModuleManager = {
         }        
         SpineEditSystem.modules.set(name, moduleInstance);
         
-        // モジュール初期化
+        // モジュール初期化（非同期対応）
         if (typeof moduleInstance.initialize === 'function') {
-            moduleInstance.initialize(SpineEditSystem.baseLayer.targetElement);
+            try {
+                const result = moduleInstance.initialize(SpineEditSystem.baseLayer.targetElement);
+                // Promise（async関数）の場合はawaitで待機
+                if (result && typeof result.then === 'function') {
+                    result.catch(error => {
+                        console.error(`❌ モジュール '${name}' 初期化エラー:`, error);
+                    });
+                }
+            } catch (error) {
+                console.error(`❌ モジュール '${name}' 初期化でエラー:`, error);
+            }
         }
         
         console.log(`✅ モジュール '${name}' 追加完了`);

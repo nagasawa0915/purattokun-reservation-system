@@ -58,6 +58,12 @@ function createBoundingBoxModule() {
             const characterName = MultiCharacterManager.activeCharacter ? 
                 MultiCharacterManager.activeCharacter.name : 'Unknown';
             
+            // 座標を整数化（1px誤差防止）
+            const boundingLeft = Math.round(rect.left - parentRect.left);
+            const boundingTop = Math.round(rect.top - parentRect.top);
+            const boundingWidth = Math.round(rect.width);
+            const boundingHeight = Math.round(rect.height);
+            
             // バウンディングボックス本体（選択中は実線、より目立つ色）
             this.boundingBox = document.createElement('div');
             this.boundingBox.id = 'spine-bounding-box';
@@ -67,10 +73,10 @@ function createBoundingBoxModule() {
                 background: rgba(0, 122, 204, 0.15);
                 pointer-events: none;
                 z-index: 9999;
-                left: ${rect.left - parentRect.left}px;
-                top: ${rect.top - parentRect.top}px;
-                width: ${rect.width}px;
-                height: ${rect.height}px;
+                left: ${boundingLeft}px;
+                top: ${boundingTop}px;
+                width: ${boundingWidth}px;
+                height: ${boundingHeight}px;
                 box-shadow: 0 0 8px rgba(0, 122, 204, 0.3);
             `;
             
@@ -567,11 +573,20 @@ function createBoundingBoxModule() {
                 return;
             }
             
-            // 座標をpx値として直接適用
-            targetElement.style.left = newLeft + 'px';
-            targetElement.style.top = newTop + 'px';
-            targetElement.style.width = newWidth + 'px';
-            targetElement.style.height = newHeight + 'px';
+            // 【修正5】座標をpx値として整数化して直接適用（1px誤差解消）
+            const finalLeft = Math.round(newLeft);
+            const finalTop = Math.round(newTop);
+            const finalWidth = Math.round(newWidth);
+            const finalHeight = Math.round(newHeight);
+            
+            targetElement.style.left = finalLeft + 'px';
+            targetElement.style.top = finalTop + 'px';
+            targetElement.style.width = finalWidth + 'px';
+            targetElement.style.height = finalHeight + 'px';
+            
+            console.log('🎯 1px誤差解消済み最終座標:', {
+                finalLeft, finalTop, finalWidth, finalHeight
+            });
             
             // DOM更新を確実に反映させる
             targetElement.offsetHeight; // 強制リフロー
@@ -665,15 +680,25 @@ function createBoundingBoxModule() {
             this.dragState.activeHandle = null;
         },
         
-        // バウンディングボックス位置更新
+        // 【修正4】バウンディングボックス位置更新: Math.round()で整数化して1px誤差解消
         updateBoundingBoxPosition: function(targetElement) {
             const rect = targetElement.getBoundingClientRect();
             const parentRect = targetElement.parentElement.getBoundingClientRect();
             
-            this.boundingBox.style.left = (rect.left - parentRect.left) + 'px';
-            this.boundingBox.style.top = (rect.top - parentRect.top) + 'px';
-            this.boundingBox.style.width = rect.width + 'px';
-            this.boundingBox.style.height = rect.height + 'px';
+            // DOM要素配置前に整数化（1px誤差解消）
+            const boundingLeft = Math.round(rect.left - parentRect.left);
+            const boundingTop = Math.round(rect.top - parentRect.top);
+            const boundingWidth = Math.round(rect.width);
+            const boundingHeight = Math.round(rect.height);
+            
+            this.boundingBox.style.left = boundingLeft + 'px';
+            this.boundingBox.style.top = boundingTop + 'px';
+            this.boundingBox.style.width = boundingWidth + 'px';
+            this.boundingBox.style.height = boundingHeight + 'px';
+            
+            console.log('🎯 1px誤差解消済み座標更新:', {
+                boundingLeft, boundingTop, boundingWidth, boundingHeight
+            });
         },
         
         // バウンディングボックス削除
