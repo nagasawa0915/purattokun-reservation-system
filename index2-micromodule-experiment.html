@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 マイクロモジュール実験版 - Spineキャラクター</title>
+    <style>
+        /* 基本リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 🔑 重要：シーンコンテナ（レスポンシブ基準） */
+        .scene-container {
+            position: relative;           /* 子要素の絶対位置基準 */
+            width: 100%;                 /* 画面幅に合わせる */
+            max-width: 1200px;           /* 最大幅制限 */
+            margin: 0 auto;              /* 中央寄せ */
+            background: white;           
+            border-radius: 10px;         
+            overflow: hidden;            /* はみ出し防止 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 🎯 重要：背景画像（基準となる要素） */
+        .background-image {
+            width: 100%;                 /* コンテナ幅に合わせる */
+            height: auto;                /* 縦横比維持 */
+            display: block;              /* inline要素の隙間除去 */
+        }
+
+        /* 🎮 重要：Spineキャラクター用Canvas（ぷらっとくん） */
+        #purattokun-canvas {
+            position: absolute;          /* 背景画像上に重ねる */
+            left: 35%;                   /* 背景画像基準の位置（調整可能） */
+            top: 75%;                    /* 背景画像基準の位置（調整可能） */
+            transform: translate(-50%, -50%); /* 中央寄せ */
+            width: 25%;                  /* 🔑 背景画像と同じ比例拡縮 */
+            aspect-ratio: 3/2;           /* 🔑 縦横比固定（潰れ防止） */
+            z-index: 10;                 /* 前面表示 */
+            display: none;               /* 初期は非表示（JS読み込み後に表示） */
+            cursor: pointer;             /* クリック可能表示 */
+        }
+
+        /* 🎮 重要：Spineキャラクター用Canvas（ねずみ） */
+        #nezumi-canvas {
+            position: absolute;
+            left: 60%;
+            top: 45%;
+            transform: translate(-50%, -50%);
+            width: 20%;
+            aspect-ratio: 3/2;
+            z-index: 11;
+            display: none;
+            cursor: pointer;
+        }
+
+        /* 💫 フォールバック画像（ぷらっとくん） */
+        #purattokun-fallback {
+            position: absolute;          /* Canvas位置と同期 */
+            left: 35%;                   /* Canvasと同じ位置 */
+            top: 75%;                    /* Canvasと同じ位置 */
+            transform: translate(-50%, -50%);
+            width: 10%;                  /* 🔑 背景画像と同じ比例拡縮 */
+            aspect-ratio: 1/1;           /* 正方形維持 */
+            object-fit: contain;         /* 画像比率維持 */
+            z-index: 10;
+            display: block;              /* 初期表示（Spine成功時に非表示化） */
+            cursor: pointer;
+        }
+
+        /* 💫 フォールバック画像（ねずみ） */
+        #nezumi-fallback {
+            position: absolute;
+            left: 60%;
+            top: 45%;
+            transform: translate(-50%, -50%);
+            width: 8%;
+            aspect-ratio: 1/1;
+            object-fit: contain;
+            z-index: 11;
+            display: block;
+            cursor: pointer;
+        }
+
+        /* 🧪 実験用デバッグパネル */
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        .debug-panel h3 {
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+
+        .debug-panel .status {
+            margin: 5px 0;
+        }
+
+        .debug-panel .success { color: #4CAF50; }
+        .debug-panel .error { color: #f44336; }
+        .debug-panel .warning { color: #ff9800; }
+    </style>
+</head>
+<body>
+    <div class="scene-container">
+        <!-- 背景画像（基準となる要素） -->
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        
+        <!-- Spineキャラクター（ぷらっとくん） -->
+        <canvas id="purattokun-canvas" width="300" height="200" data-spine-character="true" data-character-name="purattokun"></canvas>
+        
+        <!-- Spineキャラクター（ねずみ） -->
+        <canvas id="nezumi-canvas" width="300" height="200" data-spine-character="true" data-character-name="nezumi"></canvas>
+        
+        <!-- フォールバック画像（ぷらっとくん） -->
+        <img src="assets/images/purattokunn.png" alt="ぷらっとくん" id="purattokun-fallback" data-spine-character="true" data-character-name="purattokun">
+        
+        <!-- フォールバック画像（ねずみ） -->
+        <img src="assets/images/nezumi.png" alt="ねずみ" id="nezumi-fallback" data-spine-character="true" data-character-name="nezumi">
+    </div>
+
+    <!-- 🧪 実験用デバッグパネル -->
+    <div class="debug-panel">
+        <h3>🧪 マイクロモジュール実験</h3>
+        <div id="debug-status"></div>
+        <div style="margin-top: 10px; font-size: 10px;">
+            F12コンソールで詳細確認可能
+        </div>
+    </div>
+
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    
+    <!-- 🧪 マイクロモジュール群 -->
+    <script src="PureSpineLoader.js"></script>
+    <script src="PurePositionManager.js"></script>
+    
+    <script>
+        // 🎯 マイクロモジュール実験システム
+        const debugStatus = document.getElementById('debug-status');
+        const spineCharacters = {};
+        
+        function updateDebugStatus(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${className}`;
+            statusDiv.innerHTML = `[${timestamp.split(':').slice(0,2).join(':')}] ${message}`;
+            
+            debugStatus.appendChild(statusDiv);
+            
+            // 最大10行まで表示
+            while (debugStatus.children.length > 10) {
+                debugStatus.removeChild(debugStatus.firstChild);
+            }
+            
+            console.log(`[MICRO] ${message}`);
+        }
+
+        // 🎯 従来の初期化関数（比較用）
+        async function initTraditionalCharacter(config) {
+            try {
+                updateDebugStatus(`🔄 従来方式: ${config.id} 初期化開始`, 'info');
+                
+                const canvas = document.getElementById(config.canvasId);
+                const fallback = document.getElementById(config.fallbackId);
+                
+                if (!canvas || !fallback) {
+                    throw new Error(`要素が見つかりません: ${config.canvasId} または ${config.fallbackId}`);
+                }
+
+                const gl = canvas.getContext("webgl", { alpha: true });
+                if (!gl) {
+                    throw new Error("WebGL未対応");
+                }
+
+                // Spine WebGLの読み込み待ち
+                await waitForSpine();
+
+                // アセットマネージャー
+                const assetManager = new spine.AssetManager(gl, config.basePath);
+                assetManager.loadTextureAtlas(config.atlasFile);
+                assetManager.loadJson(config.jsonFile);
+
+                await waitForAssets(assetManager);
+
+                // Spineスケルトン構築
+                const atlas = assetManager.get(config.atlasFile);
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(
+                    assetManager.get(config.jsonFile)
+                );
+
+                const skeleton = new spine.Skeleton(skeletonData);
+                
+                // キャラクター位置設定
+                skeleton.x = 0;
+                skeleton.y = config.positionY;
+                skeleton.scaleX = skeleton.scaleY = config.scale;
+
+                // アニメーション設定
+                const animationStateData = new spine.AnimationStateData(skeleton.data);
+                const animationState = new spine.AnimationState(animationStateData);
+
+                // デフォルトアニメーション開始
+                startDefaultAnimation(animationState, skeleton, config.id);
+
+                // レンダラー
+                const renderer = new spine.SceneRenderer(canvas, gl);
+
+                // 描画ループ
+                let lastTime = Date.now() / 1000;
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+
+                    requestAnimationFrame(render);
+                }
+                render();
+
+                // 成功時：Canvas表示、フォールバック非表示
+                canvas.style.display = "block";
+                fallback.style.display = "none";
+
+                // キャラクター情報を保存
+                spineCharacters[config.id] = {
+                    canvas, fallback, skeleton, animationState, renderer, config,
+                    animations: skeleton.data.animations.map(anim => anim.name),
+                    loadMethod: 'traditional'
+                };
+
+                updateDebugStatus(`✅ 従来方式: ${config.id} 成功`, 'success');
+
+            } catch (error) {
+                updateDebugStatus(`❌ 従来方式: ${config.id} 失敗 - ${error.message}`, 'error');
+                console.error(`従来方式 ${config.id} 初期化失敗:`, error);
+            }
+        }
+
+        // 🧪 PureSpineLoader を使った初期化関数（実験用・WebGL統一対応）
+        async function initMicroModuleCharacter(config) {
+            try {
+                updateDebugStatus(`🧪 マイクロ方式: ${config.id} 初期化開始`, 'info');
+                
+                const canvas = document.getElementById(config.canvasId);
+                const fallback = document.getElementById(config.fallbackId);
+                
+                if (!canvas || !fallback) {
+                    throw new Error(`要素が見つかりません: ${config.canvasId} または ${config.fallbackId}`);
+                }
+
+                // 🔗 WebGLコンテキストを先に作成（重要：PureSpineLoaderと共有）
+                const gl = canvas.getContext("webgl", { alpha: true });
+                if (!gl) {
+                    throw new Error("WebGL未対応");
+                }
+                updateDebugStatus(`🔗 ${config.id}: WebGLコンテキスト作成完了`, 'info');
+
+                // 🧪 PureSpineLoader マイクロモジュール使用
+                const loaderConfig = {
+                    basePath: config.basePath,
+                    atlasPath: config.atlasFile,
+                    jsonPath: config.jsonFile,
+                    scale: config.scale
+                };
+
+                updateDebugStatus(`🔧 ${config.id}: PureSpineLoader 作成`, 'info');
+                const loader = new PureSpineLoader(loaderConfig);
+                
+                updateDebugStatus(`📥 ${config.id}: execute() with WebGL統一実行中...`, 'info');
+                const loadResult = await loader.execute(gl);  // 🔑 WebGLコンテキストを渡す
+                
+                if (!loadResult.loaded) {
+                    throw new Error(`PureSpineLoader読み込み失敗: ${loadResult.error}`);
+                }
+
+                updateDebugStatus(`📦 ${config.id}: Spineデータ取得成功 (WebGL: ${loadResult.spineData.usedExternalGL ? '統一' : '分離'})`, 'success');
+                
+                // PureSpineLoaderから取得したデータを使用
+                const spineData = loadResult.spineData;
+                const skeleton = spineData.skeleton;
+                const animationState = new spine.AnimationState(spineData.animationStateData);
+
+                // キャラクター位置設定（PureSpineLoaderで設定されたscaleは保持）
+                skeleton.x = 0;
+                skeleton.y = config.positionY;
+
+                // デフォルトアニメーション開始
+                startDefaultAnimation(animationState, skeleton, config.id);
+
+                // WebGLレンダラー（同じWebGLコンテキスト使用）
+                const renderer = new spine.SceneRenderer(canvas, gl);
+
+                // 描画ループ
+                let lastTime = Date.now() / 1000;
+                function render() {
+                    const now = Date.now() / 1000;
+                    const delta = now - lastTime;
+                    lastTime = now;
+
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, true);
+                    renderer.end();
+
+                    requestAnimationFrame(render);
+                }
+                render();
+
+                // 成功時：Canvas表示、フォールバック非表示
+                canvas.style.display = "block";
+                fallback.style.display = "none";
+
+                // キャラクター情報を保存
+                spineCharacters[config.id] = {
+                    canvas, fallback, skeleton, animationState, renderer, config,
+                    animations: spineData.animations,
+                    loadMethod: 'micromodule',
+                    loader: loader,  // 🧪 後でcleanup()するため保持
+                    loadStats: {
+                        animationCount: spineData.animationCount,
+                        slotCount: spineData.slotCount
+                    }
+                };
+
+                updateDebugStatus(`✅ マイクロ方式: ${config.id} 成功 (${spineData.animationCount}アニメ)`, 'success');
+
+            } catch (error) {
+                updateDebugStatus(`❌ マイクロ方式: ${config.id} 失敗 - ${error.message}`, 'error');
+                console.error(`マイクロ方式 ${config.id} 初期化失敗:`, error);
+            }
+        }
+
+        // 🎯 メイン初期化関数
+        async function initSpineCharacters() {
+            updateDebugStatus('🚀 マイクロモジュール実験開始', 'success');
+            
+            // キャラクター設定
+            const characterConfigs = [
+                {
+                    id: 'purattokun',
+                    canvasId: 'purattokun-canvas',
+                    fallbackId: 'purattokun-fallback',
+                    basePath: './assets/spine/characters/purattokun/',
+                    atlasFile: 'purattokun.atlas',
+                    jsonFile: 'purattokun.json',
+                    scale: 0.55,
+                    positionY: -100
+                },
+                {
+                    id: 'nezumi',
+                    canvasId: 'nezumi-canvas',
+                    fallbackId: 'nezumi-fallback',
+                    basePath: './assets/spine/characters/nezumi/',
+                    atlasFile: 'nezumi.atlas',
+                    jsonFile: 'nezumi.json',
+                    scale: 0.45,
+                    positionY: -80
+                }
+            ];
+
+            try {
+                // 🧪 実験：purattokun はマイクロモジュール、nezumi は従来方式
+                updateDebugStatus('📋 実験設定: purattokun=マイクロ, nezumi=従来', 'info');
+                
+                // 並列初期化
+                await Promise.all([
+                    initMicroModuleCharacter(characterConfigs[0]),    // purattokun
+                    initTraditionalCharacter(characterConfigs[1])     // nezumi
+                ]);
+                
+                updateDebugStatus('🎯 両方式比較完了', 'success');
+                updateDebugStatus(`📊 成功キャラ数: ${Object.keys(spineCharacters).length}/2`, 'info');
+                
+                // 結果比較
+                for (const [id, character] of Object.entries(spineCharacters)) {
+                    const method = character.loadMethod;
+                    const stats = character.loadStats || {};
+                    updateDebugStatus(`📈 ${id}: ${method} (${character.animations.length}アニメ)`, 'info');
+                }
+                
+                // グローバル関数追加（デバッグ用）
+                window.microExperiment = {
+                    characters: spineCharacters,
+                    cleanupMicroModule: (characterId) => {
+                        const character = spineCharacters[characterId];
+                        if (character && character.loader && character.loader.cleanup) {
+                            const result = character.loader.cleanup();
+                            updateDebugStatus(`🧹 ${characterId} cleanup: ${result}`, result ? 'success' : 'error');
+                            return result;
+                        }
+                        return false;
+                    },
+                    testPureMicroModule: () => {
+                        return PureSpineLoader.test();
+                    },
+                    // 🧪 PurePositionManager実験機能
+                    testPositionManager: () => {
+                        updateDebugStatus('📐 PurePositionManager テスト開始', 'info');
+                        return PurePositionManager.test();
+                    },
+                    createPositionManager: (containerWidth = 800, containerHeight = 600) => {
+                        const manager = new PurePositionManager({
+                            containerWidth,
+                            containerHeight,
+                            scale: 1.0,
+                            offsetX: 0,
+                            offsetY: 0
+                        });
+                        updateDebugStatus(`📐 PurePositionManager 作成 (${containerWidth}x${containerHeight})`, 'success');
+                        return manager;
+                    },
+                    calculatePosition: (x, y, scale = 1.0) => {
+                        const manager = window.microExperiment.createPositionManager();
+                        const result = manager.execute({ x, y });
+                        updateDebugStatus(`📊 座標計算: (${x},${y}) → 完了`, 'info');
+                        console.log('Position calculation result:', result);
+                        return result;
+                    }
+                };
+
+            } catch (error) {
+                updateDebugStatus(`❌ 初期化全体失敗: ${error.message}`, 'error');
+            }
+        }
+
+        function startDefaultAnimation(animationState, skeleton, characterId) {
+            // 簡略版：基本的なアニメーション開始
+            let defaultAnimation = null;
+            
+            if (characterId === 'purattokun') {
+                if (skeleton.data.findAnimation("taiki")) {
+                    defaultAnimation = "taiki";
+                }
+            } else if (characterId === 'nezumi') {
+                if (skeleton.data.findAnimation("search")) {
+                    defaultAnimation = "search";
+                }
+            }
+            
+            if (defaultAnimation) {
+                updateDebugStatus(`🎬 ${characterId}: ${defaultAnimation} 開始`, 'info');
+                animationState.setAnimation(0, defaultAnimation, true);
+            }
+        }
+
+        // ユーティリティ関数
+        async function waitForSpine() {
+            return new Promise((resolve, reject) => {
+                let checkCount = 0;
+                const maxChecks = 50;
+
+                const checkSpine = () => {
+                    checkCount++;
+                    if (typeof spine !== "undefined") {
+                        resolve();
+                    } else if (checkCount >= maxChecks) {
+                        reject(new Error("Spine WebGL読み込みタイムアウト"));
+                    } else {
+                        setTimeout(checkSpine, 100);
+                    }
+                };
+
+                checkSpine();
+            });
+        }
+
+        async function waitForAssets(assetManager) {
+            return new Promise((resolve, reject) => {
+                let checkCount = 0;
+                const maxChecks = 50;
+
+                const checkAssets = () => {
+                    checkCount++;
+                    if (assetManager.isLoadingComplete()) {
+                        resolve();
+                    } else if (checkCount >= maxChecks) {
+                        reject(new Error("アセット読み込みタイムアウト"));
+                    } else {
+                        setTimeout(checkAssets, 100);
+                    }
+                };
+
+                checkAssets();
+            });
+        }
+
+        // 初期化実行
+        window.addEventListener("load", () => {
+            updateDebugStatus('🌐 実験ページ準備完了', 'success');
+            setTimeout(initSpineCharacters, 500);
+        });
+    </script>
+</body>
+</html>
