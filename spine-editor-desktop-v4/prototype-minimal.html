@@ -147,6 +147,96 @@
             border-color: #007acc;
         }
         
+        .property-select {
+            background: #404040;
+            border: 1px solid #606060;
+            color: white;
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            width: 100px;
+        }
+        
+        .property-select:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+        
+        .layer-controls {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        
+        .layer-btn {
+            background: #404040;
+            border: 1px solid #606060;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        
+        .layer-btn:hover {
+            background: #505050;
+        }
+        
+        .character-layers {
+            font-size: 12px;
+        }
+        
+        .layer-item {
+            background: #353535;
+            border: 1px solid #505050;
+            border-radius: 4px;
+            margin: 4px 0;
+            padding: 8px;
+            cursor: grab;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .layer-item:hover {
+            background: #404040;
+        }
+        
+        .layer-item.selected {
+            background: #007acc;
+            border-color: #1a8cff;
+        }
+        
+        .layer-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        
+        .layer-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        
+        .layer-name {
+            font-weight: 600;
+            font-size: 12px;
+        }
+        
+        .layer-animation {
+            font-size: 10px;
+            color: #aaaaaa;
+            margin-top: 2px;
+        }
+        
+        .layer-z {
+            font-size: 10px;
+            color: #888888;
+            background: #2d2d2d;
+            padding: 2px 6px;
+            border-radius: 8px;
+        }
+        
         .preview-canvas {
             position: absolute;
             top: 50%;
@@ -163,6 +253,52 @@
             font-size: 11px;
             color: #888888;
         }
+        
+        .bounding-box {
+            position: absolute;
+            border: 2px solid #007acc;
+            background: rgba(0, 122, 204, 0.1);
+            cursor: move;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 0 12px rgba(0, 122, 204, 0.3);
+            transition: all 0.1s ease;
+        }
+        
+        .bounding-box.active {
+            display: block;
+        }
+        
+        .bounding-box:hover {
+            background: rgba(0, 122, 204, 0.15);
+            box-shadow: 0 0 16px rgba(0, 122, 204, 0.4);
+        }
+        
+        .bounding-box-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #007acc;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            z-index: 1001;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.1s ease;
+        }
+        
+        .bounding-box-handle:hover {
+            background: #1a8cff;
+            transform: scale(1.2);
+        }
+        
+        .handle-nw { top: -6px; left: -6px; cursor: nw-resize; }
+        .handle-ne { top: -6px; right: -6px; cursor: ne-resize; }
+        .handle-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .handle-se { bottom: -6px; right: -6px; cursor: se-resize; }
+        .handle-n { top: -6px; left: 50%; margin-left: -6px; cursor: n-resize; }
+        .handle-s { bottom: -6px; left: 50%; margin-left: -6px; cursor: s-resize; }
+        .handle-w { top: 50%; left: -6px; margin-top: -6px; cursor: w-resize; }
+        .handle-e { top: 50%; right: -6px; margin-top: -6px; cursor: e-resize; }
         
         .drag-handle {
             position: absolute;
@@ -199,16 +335,17 @@
         <div class="toolbar">
             <button id="btn-select-hp">HPフォルダ選択</button>
             <button id="btn-select-spine">Spineフォルダ選択</button>
-            <button id="btn-save" class="primary">保存</button>
-            <button id="btn-export">エクスポート</button>
+            <button id="btn-quick-save" class="primary">⚡ Quick Save (Ctrl+S)</button>
+            <button id="btn-project-save">💾 Project Save</button>
+            <button id="btn-export">📦 Export</button>
             <span id="project-status">プロジェクト未選択</span>
         </div>
         
         <!-- アウトライナー -->
         <div class="outliner">
-            <div class="panel-title">📁 アウトライナー</div>
-            <div id="file-tree" class="file-tree">
-                <div class="loading">フォルダを選択してください</div>
+            <div class="panel-title">🎭 キャラクター & レイヤー</div>
+            <div id="character-layers" class="character-layers">
+                <div class="loading">Spineフォルダを選択してください</div>
             </div>
         </div>
         
@@ -255,22 +392,39 @@
             </div>
             
             <div class="property-group">
+                <div class="property-label">アニメーション</div>
+                <div class="property-row">
+                    <select class="property-select" id="prop-animation">
+                        <option value="idle">idle</option>
+                        <option value="walk">walk</option>
+                        <option value="run">run</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="property-group">
                 <div class="property-label">Z順</div>
                 <div class="property-row">
                     <label>Z</label>
                     <input type="number" class="property-input" id="prop-z-index" value="0" step="1">
+                </div>
+                <div class="layer-controls">
+                    <button class="layer-btn" id="btn-bring-forward">↑ 前へ</button>
+                    <button class="layer-btn" id="btn-send-backward">↓ 後ろへ</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // 簡易プロジェクト管理
-        class MinimalProjectManager {
+        // 改善版プロジェクト管理
+        class ImprovedProjectManager {
             constructor() {
                 this.project = null;
                 this.selectedCharacter = null;
                 this.characters = new Map();
+                this.availableAnimations = new Map(); // キャラクターごとのアニメーション一覧
+                this.isDirty = false; // 未保存の変更があるか
                 this.init();
             }
             
@@ -289,20 +443,48 @@
                     this.selectSpineFolder();
                 });
                 
-                // 保存・エクスポート
-                document.getElementById('btn-save').addEventListener('click', () => {
-                    this.saveProject();
+                // 2段階保存システム
+                document.getElementById('btn-quick-save').addEventListener('click', () => {
+                    this.quickSave();
+                });
+                
+                document.getElementById('btn-project-save').addEventListener('click', () => {
+                    this.projectSave();
                 });
                 
                 document.getElementById('btn-export').addEventListener('click', () => {
                     this.exportProject();
                 });
                 
+                // キーボードショートカット
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 's') {
+                        e.preventDefault();
+                        this.quickSave();
+                    }
+                });
+                
                 // プロパティ変更
                 ['prop-x', 'prop-y', 'prop-scale-x', 'prop-scale-y', 'prop-rotation', 'prop-z-index'].forEach(id => {
                     document.getElementById(id).addEventListener('input', (e) => {
                         this.updateCharacterProperty(id.replace('prop-', ''), e.target.value);
+                        this.markDirty();
                     });
+                });
+                
+                // アニメーション選択
+                document.getElementById('prop-animation').addEventListener('change', (e) => {
+                    this.updateCharacterAnimation(e.target.value);
+                    this.markDirty();
+                });
+                
+                // レイヤーコントロール
+                document.getElementById('btn-bring-forward').addEventListener('click', () => {
+                    this.bringForward();
+                });
+                
+                document.getElementById('btn-send-backward').addEventListener('click', () => {
+                    this.sendBackward();
                 });
                 
                 // キャンバスクリック
@@ -322,31 +504,53 @@
             }
             
             selectSpineFolder() {
-                // モック: Spineフォルダ選択
-                this.updateStatus('Spineフォルダ: D:/example/spine-assets');
-                this.addMockCharacters();
+                // 実際のSpineフォルダ選択準備
+                this.updateStatus('Spineフォルダ選択準備中...');
+                this.initializeSpineSystem();
             }
             
-            addMockCharacters() {
-                // テスト用キャラクター追加
-                const testCharacter = {
-                    id: 'nezumi#1',
-                    name: 'nezumi',
-                    transform: { x: 320, y: 180, scaleX: 1.0, scaleY: 1.0, rotation: 0 },
-                    zIndex: 0
-                };
+            initializeSpineSystem() {
+                // 実Spineシステム初期化
+                console.log('🎯 実Spineシステム初期化開始');
                 
-                this.characters.set('nezumi#1', testCharacter);
-                this.drawMockCharacter(testCharacter);
-                this.updateFileTree([
-                    { name: 'characters', type: 'folder' },
-                    { name: '📂 nezumi', type: 'character', id: 'nezumi#1' },
-                    { name: '  └ nezumi.json', type: 'file' },
-                    { name: '  └ nezumi.atlas', type: 'file' },
-                    { name: '  └ nezumi.png', type: 'file' }
-                ]);
+                // プレビューキャンバスの準備
+                this.setupSpineCanvas();
                 
-                this.selectCharacter('nezumi#1');
+                // Spine WebGLライブラリの読み込み準備
+                this.loadSpineLibrary();
+            }
+            
+            setupSpineCanvas() {
+                const preview = document.querySelector('.preview');
+                
+                // 既存のcanvasがあれば削除
+                const existingCanvas = preview.querySelector('canvas');
+                if (existingCanvas) {
+                    existingCanvas.remove();
+                }
+                
+                // Spine用WebGLキャンバス作成
+                const canvas = document.createElement('canvas');
+                canvas.id = 'spine-webgl-canvas';
+                canvas.width = preview.clientWidth;
+                canvas.height = preview.clientHeight;
+                canvas.style.cssText = `
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: transparent;
+                `;
+                
+                preview.appendChild(canvas);
+                console.log('✅ Spine WebGLキャンバス準備完了');
+            }
+            
+            loadSpineLibrary() {
+                // TODO: 実際のSpine WebGLライブラリ読み込み
+                console.log('📚 Spine WebGLライブラリ読み込み準備...');
+                this.updateStatus('実Spineデータ読み込み準備完了');
             }
             
             drawMockCharacter(character) {
@@ -491,6 +695,155 @@
                 document.getElementById('prop-scale-y').value = scaleY;
                 document.getElementById('prop-rotation').value = rotation;
                 document.getElementById('prop-z-index').value = character.zIndex;
+                
+                // アニメーション選択を更新
+                const animationSelect = document.getElementById('prop-animation');
+                const availableAnims = this.availableAnimations.get(character.name) || ['idle'];
+                
+                // オプションを動的更新
+                animationSelect.innerHTML = '';
+                availableAnims.forEach(anim => {
+                    const option = document.createElement('option');
+                    option.value = anim;
+                    option.textContent = anim;
+                    option.selected = anim === character.animation;
+                    animationSelect.appendChild(option);
+                });
+            }
+            
+            // 全キャラクターを再描画
+            redrawAllCharacters() {
+                // Z順でソートして描画
+                const sortedCharacters = Array.from(this.characters.values())
+                    .sort((a, b) => a.zIndex - b.zIndex);
+                
+                // キャンバスクリア
+                const canvas = document.getElementById('preview-canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // グリッド描画
+                this.drawGrid(ctx, canvas);
+                
+                // 各キャラクターを順番に描画
+                sortedCharacters.forEach(character => {
+                    this.drawMockCharacter(character, false); // バウンディングボックスなし
+                });
+                
+                // 選択中キャラクターのバウンディングボックスを最後に描画
+                if (this.selectedCharacter) {
+                    const selected = this.characters.get(this.selectedCharacter);
+                    if (selected) {
+                        this.drawBoundingBox(selected);
+                    }
+                }
+            }
+            
+            // バウンディングボックス描画
+            drawBoundingBox(character) {
+                const preview = document.querySelector('.preview');
+                
+                // 既存のバウンディングボックスを削除
+                preview.querySelectorAll('.bounding-box').forEach(box => box.remove());
+                
+                const { x, y, scaleX, scaleY, rotation } = character.transform;
+                
+                // バウンディングボックス作成
+                const boundingBox = document.createElement('div');
+                boundingBox.className = 'bounding-box active';
+                
+                // キャラクターの実際のサイズに合わせて調整
+                const width = 60 * Math.abs(scaleX);
+                const height = 80 * Math.abs(scaleY);
+                
+                // プレビューエリア内の相対座標で配置（キャラクターの位置と完全同期）
+                const previewRect = preview.getBoundingClientRect();
+                const centerX = previewRect.width / 2;
+                const centerY = previewRect.height / 2;
+                
+                // キャラクターの中心座標からバウンディングボックスの左上座標を計算
+                const boxLeft = centerX + x - width/2;
+                const boxTop = centerY + y - height/2;
+                
+                boundingBox.style.left = `${boxLeft}px`;
+                boundingBox.style.top = `${boxTop}px`;
+                boundingBox.style.width = `${width}px`;
+                boundingBox.style.height = `${height}px`;
+                boundingBox.style.transform = `rotate(${rotation}deg)`;
+                
+                // 8つのリサイズハンドル追加
+                const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+                handles.forEach(position => {
+                    const handle = document.createElement('div');
+                    handle.className = `bounding-box-handle handle-${position}`;
+                    boundingBox.appendChild(handle);
+                });
+                
+                preview.appendChild(boundingBox);
+                
+                // バウンディングボックスのドラッグイベント
+                this.makeBoundingBoxDraggable(boundingBox, character);
+            }
+            
+            // バウンディングボックスをドラッグ可能にする
+            makeBoundingBoxDraggable(boundingBox, character) {
+                let isDragging = false;
+                let startMouseX, startMouseY;
+                let startCharacterX, startCharacterY;
+                
+                boundingBox.addEventListener('mousedown', (e) => {
+                    if (e.target === boundingBox) {
+                        isDragging = true;
+                        
+                        // プレビューエリア基準の座標系でドラッグ開始位置を記録
+                        const preview = document.querySelector('.preview');
+                        const previewRect = preview.getBoundingClientRect();
+                        
+                        startMouseX = e.clientX - previewRect.left;
+                        startMouseY = e.clientY - previewRect.top;
+                        startCharacterX = character.transform.x;
+                        startCharacterY = character.transform.y;
+                        
+                        e.preventDefault();
+                        
+                        // ドラッグ中の視覚フィードバック
+                        boundingBox.style.opacity = '0.8';
+                    }
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    // プレビューエリア基準の現在マウス位置
+                    const preview = document.querySelector('.preview');
+                    const previewRect = preview.getBoundingClientRect();
+                    const currentMouseX = e.clientX - previewRect.left;
+                    const currentMouseY = e.clientY - previewRect.top;
+                    
+                    // プレビュー中心基準の座標系での移動量を計算
+                    const deltaX = currentMouseX - startMouseX;
+                    const deltaY = currentMouseY - startMouseY;
+                    
+                    // キャラクター座標を更新
+                    character.transform.x = startCharacterX + deltaX;
+                    character.transform.y = startCharacterY + deltaY;
+                    
+                    // リアルタイム更新
+                    this.updatePropertiesPanel(character);
+                    this.redrawAllCharacters();
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        
+                        // ドラッグ終了の視覚フィードバックをリセット
+                        boundingBox.style.opacity = '1';
+                        
+                        this.markDirty();
+                        console.log(`🎯 キャラクター ${character.name} を移動: (${character.transform.x.toFixed(1)}, ${character.transform.y.toFixed(1)})`);
+                    }
+                });
             }
             
             updateCharacterProperty(property, value) {
@@ -522,24 +875,60 @@
                         break;
                 }
                 
-                this.drawMockCharacter(character);
+                this.redrawAllCharacters();
             }
             
-            updateFileTree(items) {
-                const tree = document.getElementById('file-tree');
-                let html = '';
+            updateCharacterLayers() {
+                const layersContainer = document.getElementById('character-layers');
                 
-                items.forEach(item => {
-                    const attrs = item.id ? `data-id="${item.id}"` : '';
-                    html += `<div class="file-item" ${attrs}>${item.name}</div>`;
+                // Z順でソート（高い順）
+                const sortedCharacters = Array.from(this.characters.values())
+                    .sort((a, b) => b.zIndex - a.zIndex);
+                
+                let html = '';
+                sortedCharacters.forEach(character => {
+                    const isSelected = character.id === this.selectedCharacter;
+                    html += `
+                        <div class="layer-item ${isSelected ? 'selected' : ''}" 
+                             data-id="${character.id}" 
+                             draggable="true">
+                            <div class="layer-info">
+                                <div class="layer-name">🎭 ${character.name}</div>
+                                <div class="layer-animation">🎬 ${character.animation || 'idle'}</div>
+                            </div>
+                            <div class="layer-z">Z: ${character.zIndex}</div>
+                        </div>
+                    `;
                 });
                 
-                tree.innerHTML = html;
+                layersContainer.innerHTML = html;
                 
-                // クリックイベント追加
-                tree.querySelectorAll('.file-item[data-id]').forEach(item => {
+                // イベント追加
+                layersContainer.querySelectorAll('.layer-item').forEach(item => {
+                    // クリック選択
                     item.addEventListener('click', () => {
                         this.selectCharacter(item.dataset.id);
+                    });
+                    
+                    // ドラッグ&ドロップ（Z順変更）
+                    item.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', item.dataset.id);
+                        item.classList.add('dragging');
+                    });
+                    
+                    item.addEventListener('dragend', () => {
+                        item.classList.remove('dragging');
+                    });
+                    
+                    item.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                    });
+                    
+                    item.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        const draggedId = e.dataTransfer.getData('text/plain');
+                        const targetId = item.dataset.id;
+                        this.reorderLayers(draggedId, targetId);
                     });
                 });
             }
@@ -553,16 +942,48 @@
                 console.log(`Canvas clicked at: (${Math.round(x)}, ${Math.round(y)})`);
             }
             
-            saveProject() {
+            // 未保存状態管理
+            markDirty() {
+                this.isDirty = true;
+                this.updateStatus('未保存の変更あり ⚠️', 'error');
+            }
+            
+            // Quick Save（座標のみ）
+            quickSave() {
+                const characterData = Array.from(this.characters.values()).map(char => ({
+                    id: char.id,
+                    transform: { ...char.transform },
+                    zIndex: char.zIndex,
+                    animation: char.animation
+                }));
+                
+                console.log('⚡ Quick Save実行:', characterData);
+                this.updateStatus('配置データ保存完了 ⚡', 'success');
+                this.isDirty = false;
+                
+                // ローカルストレージに配置データ保存
+                localStorage.setItem('spine-editor-v4-placement', JSON.stringify(characterData));
+            }
+            
+            // Project Save（全体保存）
+            projectSave() {
                 const projectData = {
                     version: 1,
-                    characters: Array.from(this.characters.values())
+                    project: {
+                        name: 'Spine Project v4',
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString()
+                    },
+                    characters: Array.from(this.characters.values()),
+                    availableAnimations: Object.fromEntries(this.availableAnimations),
+                    meta: { isDirty: this.isDirty }
                 };
                 
-                console.log('💾 プロジェクト保存:', projectData);
-                this.updateStatus('プロジェクト保存完了', 'success');
+                console.log('💾 Project Save実行:', projectData);
+                this.updateStatus('プロジェクト全体保存完了 💾', 'success');
+                this.isDirty = false;
                 
-                // ローカルストレージに保存（テスト用）
+                // ローカルストレージに全データ保存
                 localStorage.setItem('spine-editor-v4-project', JSON.stringify(projectData));
             }
             
@@ -573,6 +994,68 @@
                 setTimeout(() => {
                     this.updateStatus('エクスポート完了 → dist/index.html', 'success');
                 }, 1000);
+            }
+            
+            // アニメーション変更
+            updateCharacterAnimation(animationName) {
+                if (!this.selectedCharacter) return;
+                
+                const character = this.characters.get(this.selectedCharacter);
+                if (character) {
+                    character.animation = animationName;
+                    console.log(`🎬 ${character.name} アニメーション変更: ${animationName}`);
+                    this.updateCharacterLayers(); // レイヤー表示を更新
+                }
+            }
+            
+            // レイヤー順序: 前へ
+            bringForward() {
+                if (!this.selectedCharacter) return;
+                
+                const character = this.characters.get(this.selectedCharacter);
+                if (character) {
+                    character.zIndex++;
+                    this.updatePropertiesPanel(character);
+                    this.updateCharacterLayers();
+                    this.redrawAllCharacters();
+                    this.markDirty();
+                }
+            }
+            
+            // レイヤー順序: 後ろへ
+            sendBackward() {
+                if (!this.selectedCharacter) return;
+                
+                const character = this.characters.get(this.selectedCharacter);
+                if (character) {
+                    character.zIndex--;
+                    this.updatePropertiesPanel(character);
+                    this.updateCharacterLayers();
+                    this.redrawAllCharacters();
+                    this.markDirty();
+                }
+            }
+            
+            // ドラッグ&ドロップによるレイヤー順序変更
+            reorderLayers(draggedId, targetId) {
+                if (draggedId === targetId) return;
+                
+                const draggedChar = this.characters.get(draggedId);
+                const targetChar = this.characters.get(targetId);
+                
+                if (draggedChar && targetChar) {
+                    // ターゲットのZ値を取得し、ドラッグされたキャラをその上に配置
+                    draggedChar.zIndex = targetChar.zIndex + 1;
+                    
+                    console.log(`🔄 レイヤー順序変更: ${draggedChar.name} → Z:${draggedChar.zIndex}`);
+                    
+                    this.updateCharacterLayers();
+                    this.redrawAllCharacters();
+                    this.markDirty();
+                    
+                    // ドラッグされたキャラクターを選択
+                    this.selectCharacter(draggedId);
+                }
             }
             
             updateStatus(message, type = '') {
@@ -587,8 +1070,8 @@
         
         // アプリケーション初期化
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Spine Editor v4.0 - 最小プロトタイプ開始');
-            new MinimalProjectManager();
+            console.log('🚀 Spine Editor v4.0 - 改善版プロトタイプ開始');
+            new ImprovedProjectManager();
         });
     </script>
 </body>
