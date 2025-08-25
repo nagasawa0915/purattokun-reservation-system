@@ -149,9 +149,16 @@
     <!-- Spine WebGL Runtime -->
     <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
     
-    <!-- 🧪 マイクロモジュール群 -->
-    <script src="PureSpineLoader.js"></script>
-    <script src="PurePositionManager.js"></script>
+    <!-- 🧪 マイクロモジュール群 v2.0 -->
+    <!-- Type A: 基礎モジュール -->
+    <script src="micromodules/core/PurePositionManager.js"></script>
+    
+    <!-- Type B: 機能モジュール -->
+    <script src="micromodules/features/PureSpineEditor.js"></script>
+    
+    <!-- v1.0実験モジュール（参考用） -->
+    <script src="micromodules/experimental/PureSpineLoader.js"></script>
+    <script src="micromodules/experimental/PureBoundingBox.js"></script>
     
     <script>
         // 🎯 マイクロモジュール実験システム
@@ -456,6 +463,115 @@
                         updateDebugStatus(`📊 座標計算: (${x},${y}) → 完了`, 'info');
                         console.log('Position calculation result:', result);
                         return result;
+                    },
+                    // 🧪 PureBoundingBox実験機能
+                    testBoundingBox: (characterId = 'purattokun') => {
+                        updateDebugStatus('📦 PureBoundingBox テスト開始', 'info');
+                        const character = spineCharacters[characterId];
+                        if (!character) {
+                            updateDebugStatus(`❌ キャラクター ${characterId} が見つかりません`, 'error');
+                            return null;
+                        }
+                        
+                        const canvas = character.canvas;
+                        const spineData = {
+                            skeleton: character.skeleton,
+                            bounds: {x: 0, y: 0, width: canvas.width, height: canvas.height}
+                        };
+                        const position = {
+                            x: canvas.offsetLeft,
+                            y: canvas.offsetTop,
+                            width: canvas.offsetWidth,
+                            height: canvas.offsetHeight
+                        };
+                        
+                        try {
+                            const boundingBox = new PureBoundingBox({
+                                canvasElement: canvas,
+                                spineData: spineData,
+                                position: position
+                            });
+                            
+                            boundingBox.execute({visible: true}).then(result => {
+                                updateDebugStatus(`✅ PureBoundingBox: ${characterId} 表示成功`, 'success');
+                                console.log('PureBoundingBox result:', result);
+                                
+                                // 10秒後に自動クリーンアップ
+                                setTimeout(() => {
+                                    boundingBox.cleanup();
+                                    updateDebugStatus(`🧹 PureBoundingBox: ${characterId} 自動クリーンアップ`, 'info');
+                                }, 10000);
+                            });
+                            
+                            return boundingBox;
+                        } catch (error) {
+                            updateDebugStatus(`❌ PureBoundingBox: ${error.message}`, 'error');
+                            return null;
+                        }
+                    },
+                    // PureBoundingBox単独テスト
+                    testPureBoundingBox: () => {
+                        return PureBoundingBox.test();
+                    },
+                    
+                    // 🎯 PureSpineEditor実験機能（v2.0統合モジュール）
+                    testSpineEditor: (characterId = 'purattokun') => {
+                        updateDebugStatus('🎯 PureSpineEditor テスト開始', 'info');
+                        
+                        const character = spineCharacters[characterId];
+                        if (!character) {
+                            updateDebugStatus(`❌ キャラクター ${characterId} が見つかりません`, 'error');
+                            return null;
+                        }
+                        
+                        const config = {
+                            basePath: character.config.basePath,
+                            atlasPath: character.config.atlasFile,
+                            jsonPath: character.config.jsonFile,
+                            canvasElement: character.canvas,
+                            initialPosition: {x: 0, y: 0}, // 中央基準での相対位置
+                            initialScale: 0.8,
+                            showBoundingBox: true,
+                            defaultAnimation: character.config.id === 'purattokun' ? 'taiki' : 'search'
+                        };
+                        
+                        try {
+                            const spineEditor = new PureSpineEditor(config);
+                            
+                            spineEditor.loadSpine().then(result => {
+                                if (result.success) {
+                                    updateDebugStatus(`✅ PureSpineEditor: ${characterId} 読み込み成功`, 'success');
+                                    
+                                    // 2秒後にバウンディングボックス表示
+                                    setTimeout(() => {
+                                        if (spineEditor.showBoundingBox()) {
+                                            updateDebugStatus(`📦 PureSpineEditor: ${characterId} 編集モード開始`, 'success');
+                                        }
+                                    }, 2000);
+                                    
+                                    // 15秒後に自動クリーンアップ
+                                    setTimeout(() => {
+                                        spineEditor.cleanup();
+                                        updateDebugStatus(`🧹 PureSpineEditor: ${characterId} 自動クリーンアップ`, 'info');
+                                    }, 15000);
+                                    
+                                } else {
+                                    updateDebugStatus(`❌ PureSpineEditor: ${result.error}`, 'error');
+                                }
+                            });
+                            
+                            return spineEditor;
+                            
+                        } catch (error) {
+                            updateDebugStatus(`❌ PureSpineEditor: ${error.message}`, 'error');
+                            return null;
+                        }
+                    },
+                    
+                    // PureSpineEditor単独テスト
+                    testPureSpineEditor: () => {
+                        updateDebugStatus('🧪 PureSpineEditor 単独テスト実行', 'info');
+                        return PureSpineEditor.test();
                     }
                 };
 

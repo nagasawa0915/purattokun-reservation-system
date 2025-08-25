@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>座標書き込み競合診断テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .canvas-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 20px auto;
+            border: 2px solid #ddd;
+            background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                        linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                        linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        #spine-canvas {
+            position: absolute;
+            border: 1px solid #ff6b6b;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .primary { background: #ff6b6b; color: white; }
+        .secondary { background: #4ecdc4; color: white; }
+        .warning { background: #ffa726; color: white; }
+        .danger { background: #e74c3c; color: white; }
+        
+        .log-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #ff6b6b;
+        }
+        .instructions {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #4caf50;
+            margin-bottom: 20px;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+        .instructions ol {
+            margin: 10px 0;
+        }
+        .instructions li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 PureSpineEditor 座標書き込み競合診断システム</h1>
+        
+        <div class="instructions">
+            <h3>📖 診断手順</h3>
+            <ol>
+                <li>「Spine読み込み」ボタンでPureSpineEditorを初期化</li>
+                <li>「監視開始」ボタンで座標書き込み監視を開始</li>
+                <li>「バウンディングボックス表示」で瞬間移動問題を再現</li>
+                <li>「診断レポート」で座標競合を分析</li>
+                <li>F12コンソールで詳細ログを確認</li>
+            </ol>
+        </div>
+        
+        <div class="controls">
+            <button class="primary" onclick="loadSpineEditor()">📚 Spine読み込み</button>
+            <button class="secondary" onclick="startMonitoring()">🔍 監視開始</button>
+            <button class="warning" onclick="showBoundingBox()">📦 バウンディングボックス表示</button>
+            <button class="danger" onclick="generateReport()">📊 診断レポート</button>
+            <button class="secondary" onclick="stopMonitoring()">🛑 監視停止</button>
+            <button class="primary" onclick="runFullDiagnosis()">⚡ 一括診断実行</button>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="spine-canvas" width="400" height="300" style="left: 200px; top: 150px;"></canvas>
+        </div>
+        
+        <div class="log-panel">
+            <h3>📋 ログ表示</h3>
+            <div id="log-output">F12コンソールを開いて詳細ログを確認してください。</div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL -->
+    <script src="assets/js/libs/spine-webgl.js"></script>
+    
+    <!-- 座標監視システム -->
+    <script src="coordinate-monitoring-system.js"></script>
+    
+    <!-- PureSpineEditor -->
+    
+    <!-- 診断統合システム -->
+    <script src="diagnosis-integration.js"></script>
+    <script src="micromodules/features/PureSpineEditor.js"></script>
+    
+    <script>
+        let spineEditor = null;
+        let logOutput = null;
+
+        window.onload = function() {
+            logOutput = document.getElementById('log-output');
+            addLog('📋 座標書き込み競合診断システム準備完了');
+            addLog('💡 まず「Spine読み込み」ボタンを押してください');
+        };
+
+        function addLog(message) {
+            if (logOutput) {
+                const timestamp = new Date().toLocaleTimeString();
+                logOutput.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+                logOutput.scrollTop = logOutput.scrollHeight;
+            }
+            console.log(message);
+        }
+
+        async function loadSpineEditor() {
+            try {
+                addLog('🚀 PureSpineEditor初期化開始...');
+                
+                const canvas = document.getElementById('spine-canvas');
+                const config = {
+                    basePath: "assets/spine/characters/purattokun/",
+                    atlasPath: "purattokun.atlas",
+                    jsonPath: "purattokun.json",
+                    canvasElement: canvas,
+                    initialPosition: {x: 0, y: 0},
+                    initialScale: 0.8,
+                    defaultAnimation: "taiki",
+                    animationLoop: true
+                };
+
+                spineEditor = new PureSpineEditor(config);
+                const result = await spineEditor.loadSpine();
+                
+                if (result.success) {
+                    addLog('✅ Spine読み込み完了 - 監視準備OK');
+                } else {
+                    addLog(`❌ Spine読み込み失敗: ${result.error}`);
+                }
+            } catch (error) {
+                addLog(`❌ エラー: ${error.message}`);
+            }
+        }
+
+        function startMonitoring() {
+            if (!spineEditor) {
+                addLog('❌ まずSpineを読み込んでください');
+                return;
+            }
+            
+            if (window.startCoordinateMonitoring(spineEditor)) {
+                addLog('🔍 座標書き込み監視開始');
+            } else {
+                addLog('❌ 監視開始に失敗しました');
+            }
+        }
+
+        function showBoundingBox() {
+            if (!spineEditor) {
+                addLog('❌ まずSpineを読み込んでください');
+                return;
+            }
+            
+            addLog('📦 バウンディングボックス表示中... 瞬間移動監視');
+            spineEditor.showBoundingBox();
+        }
+
+        function generateReport() {
+            const report = window.getCoordinateReport();
+            if (report) {
+                addLog(`📊 診断完了: 総書き込み${report.totalWrites}件, 競合${report.conflicts}件`);
+                addLog('💡 詳細はF12コンソールを確認してください');
+            } else {
+                addLog('❌ レポート生成失敗 - 監視が開始されていません');
+            }
+        }
+
+        function stopMonitoring() {
+            if (window.stopCoordinateMonitoring()) {
+                addLog('🛑 監視停止');
+            } else {
+                addLog('⚠️ 監視は開始されていません');
+            }
+        }
+
+        function runFullDiagnosis() {
+            if (!spineEditor) {
+                addLog('❌ まずSpineを読み込んでください');
+                return;
+            }
+            
+            addLog('⚡ 一括診断開始...');
+            window.diagnoseCoordinateConflict(spineEditor);
+            
+            setTimeout(() => {
+                addLog('✅ 一括診断完了 - F12コンソールで詳細を確認');
+            }, 4000);
+        }
+
+        // キーボードショートカット
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        loadSpineEditor();
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        runFullDiagnosis();
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        generateReport();
+                        break;
+                }
+            }
+        });
+        
+        addLog('⌨️ ショートカット: Ctrl+1=読み込み, Ctrl+2=一括診断, Ctrl+3=レポート');
+    </script>
+</body>
+</html>

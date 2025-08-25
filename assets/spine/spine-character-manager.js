@@ -438,20 +438,22 @@ class SpineCharacterManager {
             const animationState = new spine.AnimationState(new spine.AnimationStateData(skeleton.data));
             console.log('🎭 DEBUG: AnimationState created');
 
-            // 🎯 統一座標システム: Skeleton座標を固定値（Canvas中央）に統一
-            console.log('📍 統一座標システム: Skeleton座標を固定値に設定...');
+            // 🚀 シンプル化革命実装（⭐⭐⭐⭐⭐ 確実に有効・推奨）
+            // docs/troubleshooting/Spine座標系ドラッグ問題解決記録.md より
+            console.log('🚀 シンプル化革命: Skeleton座標を0,0に固定設定...');
             
-            // Skeletonは常にCanvas中央に固定（統一座標システム）
-            skeleton.x = canvas.width / 2;    // Canvas中央X（統一）
-            skeleton.y = canvas.height / 2;   // Canvas中央Y（統一）
+            // Skeletonは常に(0,0)に固定（シンプル化革命）
+            skeleton.x = 0;                   // 固定：座標競合防止
+            skeleton.y = 0;                   // 固定：座標競合防止
             skeleton.scaleX = skeleton.scaleY = 1.0; // スケールは1.0固定（CSS側で制御）
             
-            console.log('📍 統一座標システム適用完了:');
-            console.log('  - Skeleton x:', skeleton.x, '（Canvas中央X）');
-            console.log('  - Skeleton y:', skeleton.y, '（Canvas中央Y）'); 
+            console.log('🚀 シンプル化革命適用完了:');
+            console.log('  - Skeleton x:', skeleton.x, '（固定値0）');
+            console.log('  - Skeleton y:', skeleton.y, '（固定値0）'); 
             console.log('  - Scale:', skeleton.scaleX, '（固定値・CSS側制御）');
             console.log('  - 🎯 位置制御: CSS left/top のみ');
             console.log('  - 🎯 サイズ制御: CSS width/height のみ');
+            console.log('  - 🚀 効果: 座標レイヤー競合完全排除・全環境対応');
             
             // Skeletonの初期状態を設定
             skeleton.setToSetupPose();

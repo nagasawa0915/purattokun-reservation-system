@@ -4,6 +4,49 @@
 
 console.log('🚀 Spine編集システム v3.0 - Phase 2 モジュール化版読み込み開始（修正版）');
 
+// ========== レイアウト確定待ちユーティリティ ========== //
+/**
+ * レイアウト確定レース問題解決用関数
+ * F12の有無に関係なく、レイアウトが完全に確定するまで待機
+ */
+async function afterLayoutStable() {
+    console.log('⏳ レイアウト確定待機開始...');
+    await new Promise(r => requestAnimationFrame(r));
+    await new Promise(r => requestAnimationFrame(r)); // 2フレーム待つ
+    console.log('✅ レイアウト確定完了');
+}
+
+// 🔍 座標上書き監視システム（デバッグ用）
+function setupCoordinateMonitoring(element) {
+    console.log('🔍 座標上書き監視開始:', element.id);
+    
+    const mo = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.attributeName === 'style') {
+                console.debug(`[座標上書き検出] ${element.id}.style =`, element.style.cssText);
+                console.debug('[上書き元スタック]', new Error().stack.split('\n')[2]);
+            }
+        });
+    });
+    
+    mo.observe(element, { 
+        attributes: true, 
+        attributeFilter: ['style'] 
+    });
+    
+    // DPR/サイズ情報ログ
+    console.table({
+        '要素ID': element.id,
+        'DPR': window.devicePixelRatio,
+        'CSS幅': element.clientWidth + 'px',
+        'CSS高': element.clientHeight + 'px',
+        'バッファ幅': element.width || 'N/A',
+        'バッファ高': element.height || 'N/A'
+    });
+    
+    return mo;
+}
+
 // ========== 重要な変数の事前宣言 ========== //
 // Temporal Dead Zone回避のため、使用前に宣言
 let globalClickHandler = null;
@@ -611,17 +654,18 @@ function createBoundingBoxModule() {
             operation: null
         },
         
-        // モジュール初期化
-        initialize: function(targetElement) {
+        // モジュール初期化（レイアウト確定待ち対応）
+        initialize: async function(targetElement) {
             console.log('🔧 バウンディングボックス初期化');
             
             // 🔧 NEW: 座標系が確実にスワップされていることを確認
             if (!SpineEditSystem.coordinateSwap.isSwapped) {
                 console.warn('⚠️ 座標系未スワップ検出 - 強制スワップ実行');
-                SpineEditSystem.coordinateSwap.enterEditMode(targetElement);
+                console.log('🚫 enterEditMode呼び出しを完全無効化 - 瞬間移動防止');
+                // SpineEditSystem.coordinateSwap.enterEditMode(targetElement); // 完全無効化
             }
             
-            this.createBoundingBox(targetElement);
+            await this.createBoundingBox(targetElement);
             this.setupEventListeners();
             this.isActive = true;
         },
@@ -639,8 +683,11 @@ function createBoundingBoxModule() {
             }
         },
         
-        // バウンディングボックス作成（複数キャラクター対応）
-        createBoundingBox: function(targetElement) {
+        // バウンディングボックス作成（複数キャラクター対応・レイアウト確定待ち対応）
+        createBoundingBox: async function(targetElement) {
+            // レイアウト確定レース問題対策 - F12の有無に関係なく正確な座標取得
+            await afterLayoutStable();
+            
             const rect = targetElement.getBoundingClientRect();
             const parentRect = targetElement.parentElement.getBoundingClientRect();
             
@@ -1304,7 +1351,20 @@ function startEditMode() {
     
     // 🔧 座標系を編集モードに切り替え（競合回避の核心）
     const targetElement = SpineEditSystem.baseLayer.targetElement;
-    SpineEditSystem.coordinateSwap.enterEditMode(targetElement);
+    
+    // 🔧 レイアウト確定を待ってから座標処理実行（F12問題対策・改良版）
+    console.log('🎯 レイアウト確定待ち後に座標処理実行 - レイアウト確定レース問題解決');
+    afterLayoutStable().then(() => {
+        console.log('🔧 レイアウト確定後の座標処理開始');
+        if (SpineEditSystem.coordinateSwap && typeof SpineEditSystem.coordinateSwap.enterEditMode === 'function') {
+            SpineEditSystem.coordinateSwap.enterEditMode(targetElement);
+            console.log('✅ 座標モード切り替え完了');
+        } else {
+            console.warn('⚠️ coordinateSwap.enterEditMode関数が利用できません');
+        }
+    }).catch(error => {
+        console.error('❌ レイアウト確定待ち処理でエラー:', error);
+    });
     
     // 視覚的フィードバック（最小限）
     targetElement.style.outline = '2px dashed #007acc';
@@ -1408,7 +1468,8 @@ function saveCurrentState() {
     
     // 座標系を編集モードに戻す
     if (SpineEditSystem.coordinateSwap) {
-        SpineEditSystem.coordinateSwap.enterEditMode(targetElement);
+        console.log('🚫 enterEditMode呼び出しを完全無効化 - 瞬間移動防止');
+        // SpineEditSystem.coordinateSwap.enterEditMode(targetElement); // 完全無効化
     }
     
     // 新しい汎用データ構造で保存
@@ -1441,7 +1502,8 @@ function saveCurrentState() {
         // 🔧 編集中の要素の座標系を編集モードに戻す
         const currentTarget = SpineEditSystem.baseLayer.targetElement;
         if (currentTarget && SpineEditSystem.coordinateSwap) {
-            SpineEditSystem.coordinateSwap.enterEditMode(currentTarget);
+            console.log('🚫 enterEditMode呼び出しを完全無効化 - 瞬間移動防止');
+            // SpineEditSystem.coordinateSwap.enterEditMode(currentTarget); // 完全無効化
         }
         
         return true;
@@ -1452,7 +1514,8 @@ function saveCurrentState() {
         // 🔧 エラー時も編集中の要素の座標系を編集モードに戻す
         const currentTarget = SpineEditSystem.baseLayer.targetElement;
         if (currentTarget && SpineEditSystem.coordinateSwap) {
-            SpineEditSystem.coordinateSwap.enterEditMode(currentTarget);
+            console.log('🚫 enterEditMode呼び出しを完全無効化 - 瞬間移動防止');
+            // SpineEditSystem.coordinateSwap.enterEditMode(currentTarget); // 完全無効化
         }
         
         return false;
