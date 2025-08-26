@@ -31,6 +31,8 @@ class PureBoundingBoxBounds {
      * 🎯 v2完全互換: リサイズ計算
      */
     calculateResize(deltaX, deltaY, handleType) {
+        // handleTypeをクラスプロパティとして保存
+        this.currentHandleType = handleType;
         const dragState = this.core.dragState;
         
         let newBounds = {
@@ -114,18 +116,71 @@ class PureBoundingBoxBounds {
     applyModifierKeys(bounds) {
         const dragState = this.core.dragState;
         
-        // Shift: 等比スケール
+        // Shift: 等比スケール（辺ハンドル対応）
         if (dragState.modifierKeys.shift) {
             const aspectRatio = dragState.startBoundsWidth / dragState.startBoundsHeight;
             
-            // より大きな変化を基準とする
-            const widthChange = Math.abs(bounds.width - dragState.startBoundsWidth);
-            const heightChange = Math.abs(bounds.height - dragState.startBoundsHeight);
+            // ハンドルタイプを取得（クラスプロパティまたはdragTypeから）
+            const currentHandle = this.currentHandleType || dragState.dragType.replace('resize-', '');
             
-            if (widthChange > heightChange) {
-                bounds.height = bounds.width / aspectRatio;
+            if (currentHandle === 'n') {
+                // 上辺ハンドル: 下辺を固定点として等比スケール
+                const heightChange = dragState.startBoundsHeight - bounds.height;
+                const newWidth = (dragState.startBoundsHeight - heightChange) * aspectRatio;
+                const widthDiff = newWidth - dragState.startBoundsWidth;
+                
+                bounds.width = newWidth;
+                bounds.x = dragState.startBoundsX - widthDiff / 2; // 中央揃え
+                // yは既に計算済み（上辺ハンドルの動作）
+                
+            } else if (currentHandle === 's') {
+                // 下辺ハンドル: 上辺を固定点として等比スケール
+                const newWidth = bounds.height * aspectRatio;
+                const widthDiff = newWidth - dragState.startBoundsWidth;
+                
+                bounds.width = newWidth;
+                bounds.x = dragState.startBoundsX - widthDiff / 2; // 中央揃え
+                // yは固定（上辺が固定点）
+                bounds.y = dragState.startBoundsY;
+                
+            } else if (currentHandle === 'w') {
+                // 左辺ハンドル: 右辺を固定点として等比スケール
+                const widthChange = dragState.startBoundsWidth - bounds.width;
+                const newHeight = (dragState.startBoundsWidth - widthChange) / aspectRatio;
+                const heightDiff = newHeight - dragState.startBoundsHeight;
+                
+                bounds.height = newHeight;
+                bounds.y = dragState.startBoundsY - heightDiff / 2; // 中央揃え
+                // xは既に計算済み（左辺ハンドルの動作）
+                
+            } else if (currentHandle === 'e') {
+                // 右辺ハンドル: 左辺を固定点として等比スケール
+                const newHeight = bounds.width / aspectRatio;
+                const heightDiff = newHeight - dragState.startBoundsHeight;
+                
+                bounds.height = newHeight;
+                bounds.y = dragState.startBoundsY - heightDiff / 2; // 中央揃え
+                // xは固定（左辺が固定点）
+                bounds.x = dragState.startBoundsX;
+                
             } else {
-                bounds.width = bounds.height * aspectRatio;
+                // 角ハンドル: 従来通りの等比スケール
+                const widthChange = Math.abs(bounds.width - dragState.startBoundsWidth);
+                const heightChange = Math.abs(bounds.height - dragState.startBoundsHeight);
+                
+                if (widthChange > heightChange) {
+                    const newHeight = bounds.width / aspectRatio;
+                    if (bounds.y !== dragState.startBoundsY) {
+                        bounds.y = dragState.startBoundsY + dragState.startBoundsHeight - newHeight;
+                    }
+                    bounds.height = newHeight;
+                } else {
+                    const newWidth = bounds.height * aspectRatio;
+                    if (bounds.x !== dragState.startBoundsX) {
+                        bounds.x = dragState.startBoundsX + dragState.startBoundsWidth - newWidth;
+                    }
+                    bounds.width = newWidth;
+                }
             }
         }
         
