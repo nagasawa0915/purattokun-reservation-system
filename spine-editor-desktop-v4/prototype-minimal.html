@@ -339,6 +339,115 @@
             margin-bottom: 16px;
         }
         
+        /* アウトライナー構造 */
+        .outliner-section {
+            border-bottom: 1px solid #404040;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .outliner-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        /* HTMLファイル一覧 */
+        .html-file-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .html-file-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            margin-bottom: 2px;
+            font-size: 12px;
+            color: #cccccc;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .html-file-item:hover {
+            background: #404040;
+        }
+        
+        .html-file-item.selected {
+            background: #007acc;
+            color: white;
+        }
+        
+        .html-file-icon {
+            font-size: 14px;
+        }
+        
+        /* Spineキャラクター一覧 */
+        .spine-character-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .spine-character-folder {
+            margin-bottom: 8px;
+        }
+        
+        .spine-character-header {
+            padding: 4px 8px;
+            background: #404040;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .spine-character-header:hover {
+            background: #505050;
+        }
+        
+        .spine-character-toggle {
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .spine-character-toggle.expanded {
+            transform: rotate(90deg);
+        }
+        
+        .spine-animation-list {
+            padding-left: 16px;
+            margin-top: 4px;
+        }
+        
+        .spine-animation-item {
+            padding: 3px 8px;
+            margin-bottom: 2px;
+            font-size: 11px;
+            color: #aaaaaa;
+            cursor: grab;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .spine-animation-item:hover {
+            background: #353535;
+            color: #ffffff;
+        }
+        
+        .spine-animation-item:active {
+            cursor: grabbing;
+        }
+        
+        .spine-animation-icon {
+            font-size: 12px;
+        }
+        
         .property-label {
             font-size: 11px;
             font-weight: 600;
@@ -1120,21 +1229,19 @@ if (typeof window !== 'undefined') {
         
         <!-- アウトライナー -->
         <div class="outliner">
-            <div class="panel-title">📁 アウトライナー</div>
-            
-            <!-- HPファイル一覧 -->
-            <div class="property-group">
-                <div class="property-label">📄 HP / .html ファイル</div>
-                <div id="hp-file-list" class="file-tree">
-                    <div class="loading">HPフォルダを選択してください</div>
+            <!-- HP（HTML）セクション（上部） -->
+            <div class="outliner-section">
+                <div class="panel-title">📄 HP (HTML)</div>
+                <div id="html-files" class="html-file-list">
+                    <div class="loading">HTMLファイルを読み込んでください</div>
                 </div>
             </div>
             
-            <!-- キャラクターアニメーション一覧 -->
-            <div class="property-group">
-                <div class="property-label">🎭 Characters / Animations</div>
-                <div id="character-animation-tree" class="file-tree">
-                    <div class="loading">Spineフォルダを選択してください</div>
+            <!-- Spineセクション（下部） -->
+            <div class="outliner-section">
+                <div class="panel-title">🎭 Spine</div>
+                <div id="spine-characters" class="spine-character-list">
+                    <div class="loading">Spineキャラクターを読み込んでください</div>
                 </div>
             </div>
         </div>
@@ -1147,19 +1254,8 @@ if (typeof window !== 'undefined') {
         
         <!-- プロパティパネル -->
         <div class="properties">
-            <!-- レイヤー管理セクション -->
-            <div class="property-group">
-                <div class="panel-title">📚 レイヤー管理</div>
-                <div id="character-layers" class="character-layers">
-                    <div class="loading">キャラクターを読み込んでください</div>
-                </div>
-                <div class="layer-controls">
-                    <button class="layer-btn" id="btn-move-layer-up">↑ Up</button>
-                    <button class="layer-btn" id="btn-move-layer-down">↓ Down</button>
-                </div>
-            </div>
-            
-            <div class="panel-title">🎛️ インスペクター</div>
+            <!-- インスペクターセクション（上部） -->
+            <div class="panel-title">🔍 インスペクター</div>
             
             <!-- 選択オブジェクト情報 -->
             <div class="property-group">
@@ -1269,6 +1365,18 @@ if (typeof window !== 'undefined') {
                 <div class="property-row">
                     <button class="layer-btn" id="btn-toggle-visibility">👁️ Show/Hide</button>
                     <button class="layer-btn" id="btn-lock-object">🔒 Lock</button>
+                </div>
+            </div>
+            
+            <!-- レイヤー管理セクション（下部） -->
+            <div class="panel-title">📚 レイヤー管理</div>
+            <div class="property-group">
+                <div id="character-layers" class="character-layers">
+                    <div class="loading">キャラクターを読み込んでください</div>
+                </div>
+                <div class="layer-controls">
+                    <button class="layer-btn" id="btn-move-layer-up">↑ Up</button>
+                    <button class="layer-btn" id="btn-move-layer-down">↓ Down</button>
                 </div>
             </div>
         </div>
@@ -2101,6 +2209,7 @@ if (typeof window !== 'undefined') {
                 // モックデータでファイルツリー更新
                 this.currentProject = 'HP';
                 this.updateFileTree(mockHtmlFiles);
+                this.updateSpineCharacters(); // Spineキャラクター一覧も表示
                 this.updateStatus(`✅ デモファイル読み込み完了: ${mockHtmlFiles.length} HTMLファイル`);
                 
                 console.log('✅ モックHPフォルダ選択完了');
@@ -2111,57 +2220,136 @@ if (typeof window !== 'undefined') {
             // セキュリティ上の理由により、実際のフォルダ選択は無効化
             // デモ用途のため、モックシステムを使用
             
-            // v2パターン: アウトライナーUIでファイルツリー表示
+            // 新アウトライナー構造: HTMLファイル一覧表示
             updateFileTree(files) {
-                console.log('📁 ファイルツリー更新:', files);
+                console.log('📁 HTMLファイル一覧更新:', files);
                 
-                const outliner = document.querySelector('.outliner');
-                if (!outliner) {
-                    console.error('❌ アウトライナー要素が見つかりません');
+                const htmlFilesList = document.getElementById('html-files');
+                if (!htmlFilesList) {
+                    console.error('❌ HTML files list要素が見つかりません');
                     return;
                 }
                 
-                // 既存のファイル一覧をクリア
-                outliner.innerHTML = '<h3>アウトライナー</h3>';
-                
-                if (!files || files.length === 0) {
-                    outliner.innerHTML += '<p class="no-files">ファイルがありません</p>';
-                    return;
-                }
-                
-                // HPフォルダセクション作成
-                const hpSection = document.createElement('div');
-                hpSection.className = 'file-section';
-                hpSection.innerHTML = `
-                    <div class="section-header">
-                        📁 HP
-                    </div>
-                    <div class="file-list" id="hp-file-list"></div>
-                `;
-                outliner.appendChild(hpSection);
-                
-                // HTMLファイル一覧表示
-                const fileList = hpSection.querySelector('.file-list');
-                files.forEach(file => {
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'file-item';
-                    fileItem.innerHTML = `📄 ${file.name}`;
-                    fileItem.dataset.filePath = file.path;
+                if (files && files.length > 0) {
+                    // HTMLファイルのみフィルタリング
+                    const htmlFiles = files.filter(file => 
+                        file.name.toLowerCase().endsWith('.html') || 
+                        file.name.toLowerCase().endsWith('.htm')
+                    );
                     
-                    // クリックイベント: プレビュー表示
-                    fileItem.addEventListener('click', () => {
-                        this.previewHtmlFile(file);
+                    if (htmlFiles.length > 0) {
+                        htmlFilesList.innerHTML = htmlFiles.map(file => `
+                            <div class="html-file-item" data-file-name="${file.name}" data-file-path="${file.path || ''}">
+                                <span class="html-file-icon">📄</span>
+                                <span class="html-file-name">${file.name}</span>
+                            </div>
+                        `).join('');
                         
-                        // アクティブ状態更新
-                        document.querySelectorAll('.file-item').forEach(item => 
-                            item.classList.remove('active'));
-                        fileItem.classList.add('active');
+                        // クリックイベント追加
+                        htmlFilesList.querySelectorAll('.html-file-item').forEach(item => {
+                            item.addEventListener('click', () => {
+                                // 既存の選択状態をクリア
+                                htmlFilesList.querySelectorAll('.html-file-item').forEach(i => {
+                                    i.classList.remove('selected');
+                                });
+                                
+                                // 新しい選択状態を設定
+                                item.classList.add('selected');
+                                
+                                // 対応するファイルオブジェクトを見つける
+                                const fileName = item.dataset.fileName;
+                                const file = htmlFiles.find(f => f.name === fileName);
+                                
+                                if (file) {
+                                    this.previewHtmlFile(file);
+                                    console.log('📄 HTMLファイル選択:', file.name);
+                                }
+                            });
+                        });
+                    } else {
+                        htmlFilesList.innerHTML = '<div class="loading">HTMLファイルが見つかりません</div>';
+                    }
+                } else {
+                    htmlFilesList.innerHTML = '<div class="loading">HTMLファイルを読み込んでください</div>';
+                }
+                
+                console.log('✅ HTMLファイル一覧更新完了');
+            }
+            
+            // Spineキャラクター一覧表示
+            updateSpineCharacters() {
+                console.log('🎭 Spineキャラクター一覧更新');
+                
+                const spineCharactersList = document.getElementById('spine-characters');
+                if (!spineCharactersList) {
+                    console.error('❌ Spine characters list要素が見つかりません');
+                    return;
+                }
+                
+                // サンプルキャラクター（実際の実装ではSpineフォルダから取得）
+                const characters = [
+                    { name: 'purattokun', animations: ['idle', 'walk', 'run', 'jump', 'attack'] },
+                    { name: 'nezumi', animations: ['idle', 'walk', 'run', 'jump'] }
+                ];
+                
+                spineCharactersList.innerHTML = characters.map(character => `
+                    <div class="spine-character-folder">
+                        <div class="spine-character-header" data-character="${character.name}">
+                            <span class="spine-character-toggle">▶</span>
+                            <span class="spine-character-icon">🎭</span>
+                            <span class="spine-character-name">${character.name}</span>
+                        </div>
+                        <div class="spine-animation-list" style="display: none;">
+                            ${character.animations.map(anim => `
+                                <div class="spine-animation-item" 
+                                     draggable="true" 
+                                     data-character="${character.name}" 
+                                     data-animation="${anim}">
+                                    <span class="spine-animation-icon">🎬</span>
+                                    <span class="spine-animation-name">${anim}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                
+                // フォルダ展開/折りたたみイベント
+                spineCharactersList.querySelectorAll('.spine-character-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        const folder = header.parentNode;
+                        const animList = folder.querySelector('.spine-animation-list');
+                        const toggle = header.querySelector('.spine-character-toggle');
+                        
+                        if (animList.style.display === 'none') {
+                            animList.style.display = 'block';
+                            toggle.textContent = '▼';
+                            toggle.classList.add('expanded');
+                        } else {
+                            animList.style.display = 'none';
+                            toggle.textContent = '▶';
+                            toggle.classList.remove('expanded');
+                        }
                     });
-                    
-                    fileList.appendChild(fileItem);
                 });
                 
-                console.log('✅ アウトライナー更新完了:', files.length, 'ファイル');
+                // ドラッグ&ドロップイベント
+                spineCharactersList.querySelectorAll('.spine-animation-item').forEach(item => {
+                    item.addEventListener('dragstart', (e) => {
+                        const characterName = item.dataset.character;
+                        const animationName = item.dataset.animation;
+                        
+                        // ドラッグデータ設定
+                        e.dataTransfer.setData('text/plain', JSON.stringify({
+                            type: 'spine-animation',
+                            character: characterName,
+                            animation: animationName
+                        }));
+                        
+                        console.log('🎬 アニメーションドラッグ開始:', characterName, animationName);
+                    });
+                });
+                
+                console.log('✅ Spineキャラクター一覧更新完了');
             }
             
             // ファイルツリークリア
