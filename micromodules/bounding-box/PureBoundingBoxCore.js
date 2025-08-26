@@ -66,22 +66,27 @@ class PureBoundingBoxCore {
     enterEditingMode() {
         if (this.swapState.currentMode === 'editing') return;
         
-        // 現在のTransformを保存
-        this.swapState.originalTransform = {...this.transform};
+        console.log('🔄 座標系スワップ開始 - 瞬間移動防止版');
         
-        // v2正確パターン: 要素の現在のスタイル値からboundsを取得
         const element = this.config.targetElement;
-        const computedStyle = window.getComputedStyle(element);
         
-        this.bounds = {
-            x: parseInt(computedStyle.left) || 0,
-            y: parseInt(computedStyle.top) || 0,
-            width: parseInt(computedStyle.width) || 100,
-            height: parseInt(computedStyle.height) || 100
+        // 🎯 瞬間移動完全防止：位置変更を行わない
+        // 元の座標系を完全バックアップ（位置変更なし）
+        this.swapState.originalTransform = {
+            left: element.style.left,
+            top: element.style.top,
+            width: element.style.width,
+            height: element.style.height,
+            transform: element.style.transform
         };
         
+        console.log('💾 元座標系をバックアップ（位置変更なし）:', this.swapState.originalTransform);
+        console.log('✅ 瞬間移動防止：キャラクター位置はそのまま維持');
+        
+        // 🎯 位置変更なし：編集可能状態の設定のみ
         this.swapState.currentMode = 'editing';
-        console.log('🔄 編集モード進入: Transform → Bounds');
+        
+        console.log('✅ 編集モード開始完了 - 瞬間移動なし');
     }
     
     /**
@@ -90,20 +95,37 @@ class PureBoundingBoxCore {
     exitEditingMode() {
         if (this.swapState.currentMode === 'idle') return;
         
-        // v2互換: boundsの結果をtransformに反映
-        this.transform.x = this.bounds.x;
-        this.transform.y = this.bounds.y;
+        console.log('🔄 座標系復元開始: px座標系 → %座標系');
         
-        // 要素のスタイルを最終的な位置に更新
         const element = this.config.targetElement;
-        element.style.left = this.bounds.x + 'px';
-        element.style.top = this.bounds.y + 'px';
-        element.style.width = this.bounds.width + 'px';
-        element.style.height = this.bounds.height + 'px';
+        
+        // 🎯 編集後の絶対座標を取得
+        const editedRect = element.getBoundingClientRect();
+        const parentRect = element.parentElement.getBoundingClientRect();
+        
+        // 🔧 従来システム互換: px座標を%座標+transformに変換
+        const newLeftPercent = ((editedRect.left + editedRect.width/2 - parentRect.left) / parentRect.width) * 100;
+        const newTopPercent = ((editedRect.top + editedRect.height/2 - parentRect.top) / parentRect.height) * 100;
+        const newWidthPercent = (editedRect.width / parentRect.width) * 100;
+        const newHeightPercent = (editedRect.height / parentRect.height) * 100;
+        
+        // 🎯 元の形式（%値 + transform）で適用
+        element.style.left = newLeftPercent.toFixed(1) + '%';
+        element.style.top = newTopPercent.toFixed(1) + '%';
+        element.style.width = newWidthPercent.toFixed(1) + '%';
+        element.style.height = newHeightPercent.toFixed(1) + '%';
+        element.style.transform = 'translate(-50%, -50%)'; // transform復元
+        
+        console.log('✅ %座標系復元完了:', {
+            left: newLeftPercent.toFixed(1) + '%',
+            top: newTopPercent.toFixed(1) + '%',
+            width: newWidthPercent.toFixed(1) + '%',
+            height: newHeightPercent.toFixed(1) + '%',
+            transform: 'translate(-50%, -50%)'
+        });
         
         this.swapState.currentMode = 'idle';
         this.swapState.originalTransform = null;
-        console.log('🔄 編集モード終了: Bounds → Transform');
     }
     
     /**

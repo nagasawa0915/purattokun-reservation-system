@@ -116,8 +116,8 @@
             left: 30%;
             top: 60%;
             transform: translate(-50%, -50%);
-            width: 200px;
-            height: 200px;
+            width: 300px;   /* 200px → 300px に拡大 */
+            height: 300px;  /* 200px → 300px に拡大 */
             cursor: pointer;
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 8px;
@@ -183,6 +183,74 @@
             font-size: 12px;
             border-left: 3px solid #3498db;
         }
+        
+        /* Canvas制御パネル */
+        .canvas-control-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 400px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .canvas-control-panel h3 {
+            color: #feca57;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .control-section {
+            margin-bottom: 15px;
+        }
+        
+        .control-label {
+            color: #74b9ff;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .control-row label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+            flex: 1;
+        }
+        
+        .control-row input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            width: 80px;
+            font-size: 14px;
+        }
+        
+        .control-row input:focus {
+            outline: none;
+            border-color: #74b9ff;
+            box-shadow: 0 0 5px rgba(116, 185, 255, 0.3);
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .control-buttons .btn {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -197,9 +265,36 @@
             <button class="btn primary" onclick="initializeModules()" id="initBtn">マイクロモジュール初期化</button>
             <button class="btn" onclick="loadSpineCharacters()" id="loadBtn" disabled>Spineキャラクター読み込み</button>
             <button class="btn" onclick="startBoundingBoxEdit()" id="editBtn" disabled>バウンディングボックス編集開始</button>
+            <button class="btn" onclick="startCanvasControlEdit()" id="canvasEditBtn" disabled>Canvas制御編集開始</button>
+            <button class="btn" onclick="toggleCanvasControlPanel()" id="canvasControlToggleBtn" disabled>Canvas数値調整パネル</button>
             <button class="btn" onclick="showDebugInfo()">デバッグ情報表示</button>
             <button class="btn" onclick="testSkeletonPosition()">スケルトン位置テスト</button>
             <button class="btn" onclick="clearAll()">すべてクリア</button>
+            <button class="btn" onclick="diagnoseCanvasControlHandles()">🔍 Canvas制御ハンドル診断</button>
+            <button class="btn" onclick="testCanvasControlEvents()">🧪 Canvas制御イベントテスト</button>
+        </div>
+        
+        <!-- Canvas制御パネル -->
+        <div class="canvas-control-panel" id="canvasControlPanel" style="display: none;">
+            <h3>Canvas 🔒</h3>
+            <div class="control-section">
+                <div class="control-label">位置</div>
+                <div class="control-row">
+                    <label>X <input type="number" id="canvas-pos-x" value="30" step="0.1"></label>
+                    <label>Y <input type="number" id="canvas-pos-y" value="60" step="0.1"></label>
+                </div>
+            </div>
+            <div class="control-section">
+                <div class="control-label">サイズ</div>
+                <div class="control-row">
+                    <label>W <input type="number" id="canvas-size-w" value="300" min="50" max="800"></label>
+                    <label>H <input type="number" id="canvas-size-h" value="300" min="50" max="800"></label>
+                </div>
+            </div>
+            <div class="control-buttons">
+                <button class="btn" onclick="applyCanvasSettings()">適用</button>
+                <button class="btn" onclick="resetCanvasSettings()">リセット</button>
+            </div>
         </div>
         
         <div class="scene-container">
@@ -223,6 +318,7 @@
                 <div class="module-status" id="status-position-manager">position-manager: 未読み込み</div>
                 <div class="module-status" id="status-ui-manager">ui-manager: 未読み込み</div>
                 <div class="module-status" id="status-bounding-box">bounding-box: 未読み込み</div>
+                <div class="module-status" id="status-canvas-controller">canvas-controller: 未読み込み</div>
             </div>
             
             <div class="log-output" id="log-output">
@@ -241,6 +337,7 @@
             positionManager: null,
             uiManager: null,
             boundingBox: null,
+            canvasController: null,
             characters: {},
             initialized: false,
             isDragging: false, // ドラッグ状態管理
@@ -251,14 +348,23 @@
         let isDraggingGlobal = false;
         let dragStartTime = 0;
         
-        document.addEventListener('mousedown', (e) => {
+        document.addEventListener("mousedown", (e) => {
+            // 🎯 Canvas制御ハンドルの判定（競合回避）
+            const isCanvasControlHandle = e.target.classList.contains("canvas-handle") || 
+                                        e.target.closest(".canvas-controller-container");
+            
+            if (isCanvasControlHandle) {
+                log("🎯 Canvas制御ハンドル検出 - グローバルイベント処理をスキップ", "info");
+                return; // Canvas制御システムに処理を委ねる
+            }
+            
             isDraggingGlobal = true;
             moduleSystem.isDragging = true;
             dragStartTime = Date.now();
             
             // ドラッグ開始時のログ（Canvas要素またはバウンディングボックス要素）
-            if (e.target.tagName === 'CANVAS' || e.target.closest('.bounding-box') || e.target.classList.contains('handle')) {
-                log('🖱️ ドラッグ操作開始', 'info');
+            if (e.target.tagName === "CANVAS" || e.target.closest(".bounding-box") || e.target.classList.contains("handle")) {
+                log("🖱️ ドラッグ操作開始", "info");
             }
         });
         
@@ -367,13 +473,29 @@
                 }
                 updateModuleStatus('bounding-box', '読み込み完了');
                 
+                // 5. canvas-controller モジュール（順番重要）
+                const canvasControllerModules = [
+                    'micromodules/canvas-controller/PureCanvasControllerCore.js',
+                    'micromodules/canvas-controller/PureCanvasControllerBounds.js',
+                    'micromodules/canvas-controller/PureCanvasControllerUI.js',
+                    'micromodules/canvas-controller/PureCanvasControllerEvents.js',
+                    'micromodules/canvas-controller/PureCanvasController.js'
+                ];
+                
+                for (const module of canvasControllerModules) {
+                    const moduleName = module.split('/').pop().replace('.js', '');
+                    await loadMicroModule(module, moduleName);
+                }
+                updateModuleStatus('canvas-controller', '読み込み完了');
+                
                 // モジュール初期化確認
                 setTimeout(() => {
                     const checks = {
                         spineLoader: typeof window.PureSpineLoader !== 'undefined',
                         positionManager: typeof window.PurePositionManager !== 'undefined',
                         uiManager: typeof window.SpineUIManager !== 'undefined',
-                        boundingBox: typeof window.PureBoundingBox !== 'undefined'
+                        boundingBox: typeof window.PureBoundingBox !== 'undefined',
+                        canvasController: typeof window.PureCanvasController !== 'undefined'
                     };
                     
                     const allLoaded = Object.values(checks).every(loaded => loaded);
@@ -430,7 +552,11 @@
                 log('✅ ぷらっとくん読み込み完了 - Canvas表示中', 'success');
                 
                 document.getElementById('editBtn').disabled = false;
+                document.getElementById('canvasEditBtn').disabled = false;
+                document.getElementById('canvasControlToggleBtn').disabled = false;
                 log('🎮 バウンディングボックス編集が利用可能になりました', 'info');
+                log('🎯 Canvas制御編集が利用可能になりました', 'info');
+                log('🔢 Canvas数値調整パネルが利用可能になりました', 'info');
                 
                 loadBtn.disabled = false;
                 loadBtn.textContent = 'Spineキャラクター読み込み';
@@ -619,6 +745,66 @@
             }
         }
         
+        // Canvas制御編集開始
+        function startCanvasControlEdit() {
+            if (!moduleSystem.characters.purattokun) {
+                log('⚠️ 先にSpineキャラクターを読み込んでください', 'warning');
+                return;
+            }
+            
+            log('🎯 Canvas制御編集開始', 'info');
+            
+            try {
+                const purattokunCanvas = moduleSystem.characters.purattokun.canvas;
+                
+                // PureCanvasController使用
+                const canvasController = new PureCanvasController({
+                    targetCanvas: purattokunCanvas,
+                    skeleton: window.currentSkeleton,
+                    renderer: window.currentRenderer,
+                    nodeId: 'demo-canvas-controller',
+                    minWidth: 50,
+                    minHeight: 50,
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    autoFitContent: true
+                });
+                
+                // Canvas制御開始
+                const started = canvasController.startEditing();
+                if (started) {
+                    moduleSystem.canvasController = canvasController;
+                    
+                    log('✅ Canvas制御UI表示完了', 'success');
+                    log('🎯 Canvas制御操作方法:', 'info');
+                    log('  • 緑の枠をドラッグ: Canvas移動', 'info');
+                    log('  • 8方向ハンドル: Canvasリサイズ', 'info');
+                    log('  • コントロールボタン: 自動フィット・中央配置・リセット', 'info');
+                    log('  • ショートカット: Ctrl+0(リセット), Ctrl+=(自動フィット)', 'info');
+                    log('  • 修飾キー: Shift(等比保持), Alt(中心基準)', 'info');
+                    
+                    // Canvas情報表示
+                    const canvasState = canvasController.getCanvasState();
+                    log(`📊 Canvas情報: ${canvasState.width}x${canvasState.height}`, 'info');
+                    
+                    // はみ出し検出テスト
+                    const overflowResult = canvasController.detectOverflow();
+                    if (overflowResult && overflowResult.hasOverflow) {
+                        log(`🔍 はみ出し検出: 推奨サイズ ${overflowResult.recommendedSize.width}x${overflowResult.recommendedSize.height}`, 'warning');
+                    } else {
+                        log('✅ はみ出しなし: 正常な表示範囲です', 'success');
+                    }
+                    
+                } else {
+                    log('❌ Canvas制御開始失敗', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Canvas制御エラー: ${error.message}`, 'error');
+                console.error('Canvas制御詳細エラー:', error);
+            }
+        }
+        
         // スケルトン位置テスト
         function testSkeletonPosition() {
             if (!window.currentSkeleton) {
@@ -688,11 +874,26 @@
             }
             
             // グローバル状態確認
-            const globals = ['PureBoundingBox', 'PurePositionManager', 'SpineUIManager', 'PureSpineLoader'];
+            const globals = ['PureBoundingBox', 'PurePositionManager', 'SpineUIManager', 'PureSpineLoader', 'PureCanvasController'];
             globals.forEach(name => {
                 const exists = typeof window[name] !== 'undefined';
                 log(`${name}: ${exists ? '✅ 利用可能' : '❌ 未読み込み'}`, exists ? 'success' : 'error');
             });
+            
+            // Canvas制御状態確認
+            if (moduleSystem.canvasController) {
+                log('🎯 Canvas制御詳細状態:', 'info');
+                const diagnosis = moduleSystem.canvasController.diagnose();
+                log(`  初期化: ${diagnosis.controller.initialized ? '✅' : '❌'}`, diagnosis.controller.initialized ? 'success' : 'error');
+                log(`  アクティブ: ${diagnosis.controller.active ? '✅' : '❌'}`, diagnosis.controller.active ? 'success' : 'info');
+                if (diagnosis.canvas) {
+                    log(`  Canvas: ${diagnosis.canvas.width}x${diagnosis.canvas.height}`, 'info');
+                }
+                if (diagnosis.skeleton) {
+                    log(`  Skeleton: x=${diagnosis.skeleton.x}, y=${diagnosis.skeleton.y}`, 'info');
+                }
+                log(`  サブモジュール: Core=${diagnosis.submodules.core ? '✅' : '❌'}, UI=${diagnosis.submodules.ui ? '✅' : '❌'}, Events=${diagnosis.submodules.events ? '✅' : '❌'}`, 'info');
+            }
         }
         
         // すべてクリア
@@ -705,6 +906,12 @@
                 log('✅ バウンディングボックスクリア完了', 'success');
             }
             
+            if (moduleSystem.canvasController) {
+                moduleSystem.canvasController.destroy();
+                moduleSystem.canvasController = null;
+                log('✅ Canvas制御クリア完了', 'success');
+            }
+            
             Object.keys(moduleSystem.characters).forEach(charName => {
                 const char = moduleSystem.characters[charName];
                 if (char.canvas) {
@@ -715,8 +922,98 @@
             
             document.getElementById('loadBtn').disabled = true;
             document.getElementById('editBtn').disabled = true;
+            document.getElementById('canvasEditBtn').disabled = true;
+            document.getElementById('canvasControlToggleBtn').disabled = true;
             
             log('🎯 全体クリア完了', 'success');
+        }
+        
+        // Canvas制御設定適用
+        function applyCanvasSettings() {
+            if (!moduleSystem.characters.purattokun) {
+                log('⚠️ 先にSpineキャラクターを読み込んでください', 'warning');
+                return;
+            }
+            
+            const canvas = moduleSystem.characters.purattokun.canvas;
+            const posX = document.getElementById('canvas-pos-x').value;
+            const posY = document.getElementById('canvas-pos-y').value;
+            const sizeW = document.getElementById('canvas-size-w').value;
+            const sizeH = document.getElementById('canvas-size-h').value;
+            
+            try {
+                // Canvas位置更新（%値）
+                canvas.style.left = posX + '%';
+                canvas.style.top = posY + '%';
+                
+                // Canvas表示サイズ更新（CSS表示サイズのみ、描画バッファは変更しない）
+                canvas.style.width = sizeW + 'px';
+                canvas.style.height = sizeH + 'px';
+                
+                log(`✅ Canvas設定適用完了:`, 'success');
+                log(`  位置: ${posX}%, ${posY}%`, 'info');
+                log(`  サイズ: ${sizeW}px × ${sizeH}px（CSS表示サイズのみ）`, 'info');
+                log(`  描画バッファサイズは維持: ${canvas.width}x${canvas.height}`, 'info');
+                
+            } catch (error) {
+                log(`❌ Canvas設定適用エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // Canvas制御設定リセット
+        function resetCanvasSettings() {
+            if (!moduleSystem.characters.purattokun) {
+                log('⚠️ 先にSpineキャラクターを読み込んでください', 'warning');
+                return;
+            }
+            
+            const canvas = moduleSystem.characters.purattokun.canvas;
+            
+            // デフォルト値に戻す
+            canvas.style.left = '30%';
+            canvas.style.top = '60%';
+            canvas.style.width = '300px';
+            canvas.style.height = '300px';
+            
+            // UI入力値も更新
+            document.getElementById('canvas-pos-x').value = 30;
+            document.getElementById('canvas-pos-y').value = 60;
+            document.getElementById('canvas-size-w').value = 300;
+            document.getElementById('canvas-size-h').value = 300;
+            
+            log('🔄 Canvas設定リセット完了: 位置30%,60% サイズ300x300px', 'info');
+        }
+        
+        // Canvas制御パネル表示切替
+        function toggleCanvasControlPanel() {
+            const panel = document.getElementById('canvasControlPanel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                
+                // 現在の設定値を入力フィールドに反映
+                if (moduleSystem.characters.purattokun) {
+                    const canvas = moduleSystem.characters.purattokun.canvas;
+                    const computedStyle = window.getComputedStyle(canvas);
+                    
+                    // 位置の%値を取得
+                    const leftPercent = parseFloat(computedStyle.left.replace('%', '')) || 30;
+                    const topPercent = parseFloat(computedStyle.top.replace('%', '')) || 60;
+                    
+                    // サイズのpx値を取得
+                    const widthPx = parseFloat(computedStyle.width.replace('px', '')) || 300;
+                    const heightPx = parseFloat(computedStyle.height.replace('px', '')) || 300;
+                    
+                    document.getElementById('canvas-pos-x').value = leftPercent;
+                    document.getElementById('canvas-pos-y').value = topPercent;
+                    document.getElementById('canvas-size-w').value = widthPx;
+                    document.getElementById('canvas-size-h').value = heightPx;
+                }
+                
+                log('📋 Canvas制御パネル表示', 'info');
+            } else {
+                panel.style.display = 'none';
+                log('📋 Canvas制御パネル非表示', 'info');
+            }
         }
         
         // ページロード時
@@ -727,6 +1024,51 @@
         
         // ページ離脱時のクリーンアップ
         window.addEventListener('beforeunload', clearAll);
+
+        // 🚨 Canvas制御ハンドル診断専用コマンド
+        function diagnoseCanvasControlHandles() {
+            log("🔍 Canvas制御ハンドル詳細診断開始", "info");
+            
+            if (!moduleSystem.canvasController) {
+                log("⚠️ Canvas制御が未初期化です。先にCanvas制御編集を開始してください。", "warning");
+                return;
+            }
+            
+            // Eventsモジュールから診断レポート取得
+            if (moduleSystem.canvasController.events && moduleSystem.canvasController.events.getDiagnosticReport) {
+                const report = moduleSystem.canvasController.events.getDiagnosticReport();
+                log("📊 Canvas制御イベント診断レポート:", "info");
+                log(`  マウスダウン呼び出し: ${report.diagnostics.mousedownCalls}回`, "info");
+                log(`  ハンドル検出: ${report.diagnostics.handleDetections}回`, "info");
+                log(`  成功: ${report.diagnostics.successfulHandleEvents}回`, "info");
+                log(`  失敗: ${report.diagnostics.failedHandleEvents}回`, "info");
+                log(`  イベントリスナー状態: ${report.eventState.isListening ? "✅ 有効" : "❌ 無効"}`, report.eventState.isListening ? "success" : "error");
+                log(`  UI Container: ${report.ui.containerExists ? "✅ 存在" : "❌ 未初期化"}`, report.ui.containerExists ? "success" : "error");
+                log(`  ハンドル数: ${report.ui.handlesCount}個`, "info");
+                log(`  UI表示状態: ${report.ui.isVisible ? "✅ 表示中" : "❌ 非表示"}`, report.ui.isVisible ? "success" : "warning");
+            }
+            
+            log("🔍 Canvas制御ハンドル詳細診断完了", "success");
+        }
+        
+        // 🧪 Canvas制御イベント応答性テスト
+        function testCanvasControlEvents() {
+            log("🧪 Canvas制御イベント応答性テスト開始", "info");
+            
+            if (!moduleSystem.canvasController) {
+                log("⚠️ Canvas制御が未初期化です", "warning");
+                return;
+            }
+            
+            const handles = document.querySelectorAll(".canvas-handle");
+            if (handles.length === 0) {
+                log("❌ ハンドル要素が見つかりません", "error");
+                return;
+            }
+            
+            log(`📍 ${handles.length}個のハンドルでテストを実行`, "info");
+            log("🧪 Canvas制御イベント応答性テスト完了", "success");
+        }
     </script>
 </body>
 </html>

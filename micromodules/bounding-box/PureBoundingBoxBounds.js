@@ -197,41 +197,20 @@ class PureBoundingBoxBounds {
     }
     
     /**
-     * boundsを要素に適用（Spine Canvas対応版）
+     * boundsを要素に適用（従来システム完全互換版）
      */
     applyBoundsToElement(bounds) {
         const element = this.core.config.targetElement;
         if (!element) return;
         
-        // 🎯 Spine Canvas要素の検出
-        const isSpineCanvas = element.tagName === 'CANVAS' && 
-                             (element.id.includes('spine') || element.id.includes('canvas'));
-        
-        if (isSpineCanvas) {
-            // Spine Canvas専用：相対座標系を使用
-            const parentRect = element.parentElement.getBoundingClientRect();
-            const relativeX = ((bounds.x / parentRect.width) * 100).toFixed(2);
-            const relativeY = ((bounds.y / parentRect.height) * 100).toFixed(2);
-            const relativeWidth = ((bounds.width / parentRect.width) * 100).toFixed(2);
-            const relativeHeight = ((bounds.height / parentRect.height) * 100).toFixed(2);
-            
-            element.style.position = 'absolute';
-            element.style.left = relativeX + '%';
-            element.style.top = relativeY + '%';
-            element.style.width = relativeWidth + '%';
-            element.style.height = relativeHeight + '%';
-            
-            // ドラッグ終了時のみログ出力（ドラッグ中の大量ログ防止）
-            if (!this.core.dragState.isDragging) {
-                console.log(`🎯 Spine Canvas座標適用: ${relativeX}%, ${relativeY}%, ${relativeWidth}%, ${relativeHeight}%`);
-            }
-        } else {
-            // 通常要素：ピクセル座標系を使用
+        // 🎯 従来システム完全互換: 編集中は純粋px座標系で処理
+        if (this.core.dragState.isDragging) {
             element.style.position = 'absolute';
             element.style.left = bounds.x + 'px';
             element.style.top = bounds.y + 'px';
             element.style.width = bounds.width + 'px';
             element.style.height = bounds.height + 'px';
+            // transform は enterEditingMode() で元のまま維持
         }
         
         // coreの状態更新
