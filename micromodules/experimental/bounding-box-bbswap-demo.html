@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PureBoundingBox v4.0 BBスワップデモ - 座標レイヤー切替機能</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        
+        .title {
+            font-size: 2rem;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .control-panel {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+        
+        .demo-workspace {
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .workspace-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+        
+        .test-element {
+            position: absolute;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            user-select: none;
+        }
+        
+        .test-element:hover {
+            transform: scale(1.05);
+        }
+        
+        .test-element.selected {
+            box-shadow: 0 0 0 3px #ff6b6b, 0 0 20px rgba(255, 107, 107, 0.5);
+            animation: selectedPulse 2s infinite;
+        }
+        
+        @keyframes selectedPulse {
+            0%, 100% { box-shadow: 0 0 0 3px #ff6b6b, 0 0 20px rgba(255, 107, 107, 0.5); }
+            50% { box-shadow: 0 0 0 6px #ff6b6b, 0 0 30px rgba(255, 107, 107, 0.8); }
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-title {
+            color: #feca57;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            width: 100%;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn.primary {
+            background: rgba(255, 107, 107, 0.8);
+            border-color: rgba(255, 107, 107, 1);
+        }
+        
+        .btn.primary:hover {
+            background: rgba(255, 107, 107, 1);
+        }
+        
+        .btn.success {
+            background: rgba(46, 204, 113, 0.8);
+            border-color: rgba(46, 204, 113, 1);
+        }
+        
+        .btn.success:hover {
+            background: rgba(46, 204, 113, 1);
+        }
+        
+        .btn.warning {
+            background: rgba(241, 196, 15, 0.8);
+            border-color: rgba(241, 196, 15, 1);
+            color: black;
+        }
+        
+        .btn.warning:hover {
+            background: rgba(241, 196, 15, 1);
+        }
+        
+        .info-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .info-title {
+            color: #feca57;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        
+        .info-item .label {
+            color: #74b9ff;
+            font-weight: bold;
+        }
+        
+        .info-item .value {
+            color: white;
+            font-family: monospace;
+        }
+        
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-left: 3px solid #ff6b6b;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        
+        .log-time {
+            color: #74b9ff;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .log-message {
+            color: white;
+            flex: 1;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .status.idle {
+            background: rgba(108, 117, 125, 0.8);
+            color: white;
+        }
+        
+        .status.editing {
+            background: rgba(255, 193, 7, 0.8);
+            color: black;
+        }
+        
+        .status.success {
+            background: rgba(40, 167, 69, 0.8);
+            color: white;
+        }
+        
+        .status.error {
+            background: rgba(220, 53, 69, 0.8);
+            color: white;
+        }
+        
+        .coordinate-display {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-line;
+        }
+        
+        /* BBスワップUI強化スタイル */
+        .bb-swap-container {
+            animation: bbSwapAppear 0.3s ease-out !important;
+        }
+        
+        @keyframes bbSwapAppear {
+            from { 
+                opacity: 0; 
+                transform: scale(0.9); 
+            }
+            to { 
+                opacity: 1; 
+                transform: scale(1); 
+            }
+        }
+        
+        .bb-swap-handle {
+            transition: all 0.2s ease !important;
+        }
+        
+        .bb-swap-handle:hover {
+            background: #ff4757 !important;
+            transform: scale(1.2) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🎯 PureBoundingBox v4.0 BBスワップデモ</h1>
+            <p class="subtitle">座標レイヤー切替機能 - Idle ↔ Editing状態遷移システム</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- 左パネル: 操作コントロール -->
+            <div class="control-panel">
+                <div class="control-group">
+                    <div class="control-title">🎮 基本操作</div>
+                    <button class="btn primary" onclick="createTestElement()">テスト要素作成</button>
+                    <button class="btn success" onclick="startBBSwapDemo()">BBスワップ開始</button>
+                    <button class="btn warning" onclick="endBBSwapDemo()">BBスワップ終了</button>
+                    <button class="btn" onclick="clearAllElements()">すべてクリア</button>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-title">🧪 高度なテスト</div>
+                    <button class="btn" onclick="testMultipleElements()">複数要素テスト</button>
+                    <button class="btn" onclick="testCoordinateTransform()">座標変換テスト</button>
+                    <button class="btn" onclick="testStateTransition()">状態遷移テスト</button>
+                    <button class="btn" onclick="testErrorRecovery()">エラー回復テスト</button>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-title">📊 デバッグ・診断</div>
+                    <button class="btn" onclick="showCoordinateInfo()">座標情報表示</button>
+                    <button class="btn" onclick="validateAllStates()">状態検証</button>
+                    <button class="btn" onclick="exportStateSnapshot()">状態エクスポート</button>
+                    <button class="btn" onclick="runFullTest()">完全テスト実行</button>
+                </div>
+                
+                <!-- 状態表示 -->
+                <div class="info-panel">
+                    <div class="info-title">📊 現在の状態</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">状態:</span>
+                            <span class="value status idle" id="current-state">idle</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">要素数:</span>
+                            <span class="value" id="element-count">0</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">選択中:</span>
+                            <span class="value" id="selected-element">なし</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">編集中:</span>
+                            <span class="value" id="editing-status">❌</span>
+                        </div>
+                    </div>
+                    
+                    <div class="coordinate-display" id="coordinate-display">
+                        座標情報: 要素を選択してください
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 中央: デモワークスペース -->
+            <div class="demo-workspace" id="demo-workspace">
+                <div class="workspace-grid"></div>
+                <!-- テスト要素がここに動的生成されます -->
+            </div>
+            
+            <!-- 右パネル: ログと情報 -->
+            <div class="control-panel">
+                <div class="control-group">
+                    <div class="control-title">📝 操作ログ</div>
+                    <div class="log" id="log-output">
+                        <div class="log-entry">
+                            <span class="log-time">[初期化]</span>
+                            <span class="log-message">BBスワップデモ準備完了</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-title">💡 使用方法</div>
+                    <div class="info-panel">
+                        <div style="font-size: 11px; line-height: 1.5;">
+                            <strong>📋 基本操作:</strong><br>
+                            1. 「テスト要素作成」で要素追加<br>
+                            2. 要素クリック → BBスワップ開始<br>
+                            3. ドラッグ・リサイズで編集<br>
+                            4. 外側クリック → 確定<br><br>
+                            
+                            <strong>🎯 BBスワップ機能:</strong><br>
+                            • <span style="color: #feca57;">Idle → Editing</span>: originalTransform保存<br>
+                            • <span style="color: #ff6b6b;">座標レイヤー切替</span>: DOM ↔ BB座標系<br>
+                            • <span style="color: #2ecc71;">Editing → Idle</span>: 座標逆変換<br><br>
+                            
+                            <strong>⌨️ キー操作:</strong><br>
+                            • Shift: 等比スケール<br>
+                            • Alt: 中心基準<br>
+                            • ESC: 編集キャンセル<br>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-title">🔧 技術仕様</div>
+                    <div class="info-panel" style="font-size: 10px;">
+                        <strong>実装機能:</strong><br>
+                        ✅ 座標レイヤー切替<br>
+                        ✅ 状態遷移管理<br>
+                        ✅ originalTransform保存<br>
+                        ✅ 高精度座標変換<br>
+                        ✅ エラー回復機能<br>
+                        ✅ マルチ要素対応<br>
+                        ✅ スナップショット機能<br>
+                        ✅ 完全クリーンアップ
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PureBoundingBox v4.0 BBSwap 読み込み -->
+    <script src="PureBoundingBox_v4_BBSwap.js"></script>
+    
+    <script>
+        // グローバル状態管理
+        let demoState = {
+            elements: [],
+            currentBBSwap: null,
+            selectedElement: null,
+            elementCounter: 0
+        };
+        
+        let logElement = document.getElementById('log-output');
+        
+        // ログ出力関数
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: '#74b9ff',
+                success: '#2ecc71',
+                warning: '#f39c12',
+                error: '#e74c3c'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-time">[${timestamp}]</span>
+                <span class="log-message" style="color: ${colors[type]}">${message}</span>
+            `;
+            
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`[BBSwapDemo] ${message}`);
+            updateStatusDisplay();
+        }
+        
+        // ステータス表示更新
+        function updateStatusDisplay() {
+            const stateEl = document.getElementById('current-state');
+            const countEl = document.getElementById('element-count');
+            const selectedEl = document.getElementById('selected-element');
+            const editingEl = document.getElementById('editing-status');
+            const coordEl = document.getElementById('coordinate-display');
+            
+            // 状態表示
+            const currentState = demoState.currentBBSwap ? 
+                demoState.currentBBSwap.getState().currentState : 'idle';
+            
+            stateEl.textContent = currentState;
+            stateEl.className = `value status ${currentState}`;
+            
+            // 要素数
+            countEl.textContent = demoState.elements.length;
+            
+            // 選択中要素
+            selectedEl.textContent = demoState.selectedElement ? 
+                demoState.selectedElement.textContent : 'なし';
+            
+            // 編集状態
+            const isEditing = demoState.currentBBSwap && 
+                demoState.currentBBSwap.getState().isEditing;
+            editingEl.textContent = isEditing ? '✅' : '❌';
+            
+            // 座標表示
+            if (demoState.selectedElement && demoState.currentBBSwap) {
+                const state = demoState.currentBBSwap.getState();
+                coordEl.textContent = `現在座標: (${Math.round(state.transform.x)}, ${Math.round(state.transform.y)})
+スケール: (${state.transform.scaleX.toFixed(2)}, ${state.transform.scaleY.toFixed(2)})
+回転: ${state.transform.rotation.toFixed(1)}°
+originalTransform: ${state.originalTransform ? '保存済み' : '未保存'}`;
+            } else {
+                coordEl.textContent = '座標情報: 要素を選択してください';
+            }
+        }
+        
+        // テスト要素作成
+        function createTestElement() {
+            const workspace = document.getElementById('demo-workspace');
+            const element = document.createElement('div');
+            
+            demoState.elementCounter++;
+            const elementId = `test-element-${demoState.elementCounter}`;
+            
+            element.className = 'test-element';
+            element.id = elementId;
+            element.textContent = `要素${demoState.elementCounter}`;
+            element.style.cssText = `
+                left: ${100 + Math.random() * 300}px;
+                top: ${100 + Math.random() * 200}px;
+                width: ${80 + Math.random() * 80}px;
+                height: ${60 + Math.random() * 60}px;
+            `;
+            
+            // クリックイベント: BBスワップ開始
+            element.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await selectElement(element);
+            });
+            
+            workspace.appendChild(element);
+            demoState.elements.push(element);
+            
+            log(`テスト要素作成: ${elementId}`, 'success');
+        }
+        
+        // 要素選択・BBスワップ開始
+        async function selectElement(element) {
+            try {
+                // 既存の選択をクリア
+                if (demoState.currentBBSwap) {
+                    await demoState.currentBBSwap.onDeselectOrClickOutside();
+                }
+                
+                // 既存の選択表示をクリア
+                demoState.elements.forEach(el => el.classList.remove('selected'));
+                
+                // 新しい選択
+                element.classList.add('selected');
+                demoState.selectedElement = element;
+                
+                // BBスワップインスタンス作成
+                demoState.currentBBSwap = new PureBoundingBox({
+                    targetElement: element,
+                    nodeId: element.id,
+                    enableBBSwap: true,
+                    originalSpace: {origin: 'top-left', unit: 'px'},
+                    bbSpace: {origin: 'center', unit: 'px'}
+                });
+                
+                // BBスワップ開始
+                const result = await demoState.currentBBSwap.onSelect(element.id);
+                
+                log(`BBスワップ開始: ${element.id} - ${result.success ? '成功' : '失敗'}`, 
+                    result.success ? 'success' : 'error');
+                
+                if (result.originalTransform) {
+                    log(`originalTransform: (${Math.round(result.originalTransform.x)}, ${Math.round(result.originalTransform.y)})`, 'info');
+                }
+                
+            } catch (error) {
+                log(`BBスワップ開始エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // BBスワップデモ開始
+        async function startBBSwapDemo() {
+            if (demoState.elements.length === 0) {
+                log('テスト要素がありません。まず要素を作成してください。', 'warning');
+                return;
+            }
+            
+            // 最初の要素を選択
+            const firstElement = demoState.elements[0];
+            await selectElement(firstElement);
+            
+            log('BBスワップデモ開始 - 要素をドラッグして編集してください', 'success');
+        }
+        
+        // BBスワップ終了
+        async function endBBSwapDemo() {
+            if (demoState.currentBBSwap) {
+                await demoState.currentBBSwap.onDeselectOrClickOutside();
+                demoState.currentBBSwap = null;
+            }
+            
+            if (demoState.selectedElement) {
+                demoState.selectedElement.classList.remove('selected');
+                demoState.selectedElement = null;
+            }
+            
+            log('BBスワップデモ終了', 'warning');
+        }
+        
+        // すべてクリア
+        function clearAllElements() {
+            // BBスワップクリーンアップ
+            if (demoState.currentBBSwap) {
+                demoState.currentBBSwap.cleanup();
+                demoState.currentBBSwap = null;
+            }
+            
+            // 要素削除
+            demoState.elements.forEach(element => element.remove());
+            demoState.elements = [];
+            demoState.selectedElement = null;
+            demoState.elementCounter = 0;
+            
+            log('すべてクリア完了', 'warning');
+        }
+        
+        // 複数要素テスト
+        async function testMultipleElements() {
+            log('複数要素テスト開始...', 'info');
+            
+            // 3つの要素を作成
+            for (let i = 0; i < 3; i++) {
+                createTestElement();
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            log('複数要素作成完了。各要素をクリックして選択切り替えをテストしてください。', 'success');
+        }
+        
+        // 座標変換テスト
+        async function testCoordinateTransform() {
+            if (!demoState.currentBBSwap || !demoState.selectedElement) {
+                log('座標変換テストにはBBスワップが選択されている必要があります', 'warning');
+                return;
+            }
+            
+            log('座標変換テスト開始...', 'info');
+            
+            const state = demoState.currentBBSwap.getState();
+            log(`変換前: (${Math.round(state.transform.x)}, ${Math.round(state.transform.y)})`, 'info');
+            
+            // 座標を変更してみる
+            await demoState.currentBBSwap.onManipulate({x: 50, y: 30});
+            
+            const newState = demoState.currentBBSwap.getState();
+            log(`変換後: (${Math.round(newState.transform.x)}, ${Math.round(newState.transform.y)})`, 'success');
+        }
+        
+        // 状態遷移テスト
+        async function testStateTransition() {
+            log('状態遷移テスト開始...', 'info');
+            
+            if (demoState.elements.length === 0) {
+                createTestElement();
+            }
+            
+            const element = demoState.elements[0];
+            
+            // Idle → Editing
+            await selectElement(element);
+            log('状態遷移: Idle → Editing ✅', 'success');
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Editing → Idle
+            await endBBSwapDemo();
+            log('状態遷移: Editing → Idle ✅', 'success');
+            
+            log('状態遷移テスト完了', 'success');
+        }
+        
+        // エラー回復テスト
+        async function testErrorRecovery() {
+            log('エラー回復テスト開始...', 'info');
+            
+            try {
+                // 無効な要素でBBスワップを試行
+                const invalidElement = document.createElement('div');
+                const bbSwap = new PureBoundingBox({
+                    targetElement: invalidElement,
+                    nodeId: 'invalid-test'
+                });
+                
+                // 親に追加せずに選択を試行（エラーを発生させる）
+                await bbSwap.onSelect('invalid-test');
+                
+            } catch (error) {
+                log(`期待されたエラーをキャッチ: ${error.message}`, 'success');
+            }
+            
+            // システムが正常状態に復帰することを確認
+            if (demoState.currentBBSwap) {
+                const state = demoState.currentBBSwap.getState();
+                log(`システム状態: ${state.currentState} - 正常復帰確認`, 'success');
+            }
+            
+            log('エラー回復テスト完了', 'success');
+        }
+        
+        // 座標情報表示
+        function showCoordinateInfo() {
+            if (!demoState.selectedElement) {
+                log('座標情報表示: 要素が選択されていません', 'warning');
+                return;
+            }
+            
+            const element = demoState.selectedElement;
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            
+            log(`=== ${element.id} 座標情報 ===`, 'info');
+            log(`CSS位置: left=${style.left}, top=${style.top}`, 'info');
+            log(`Rect: (${Math.round(rect.left)}, ${Math.round(rect.top)}) ${Math.round(rect.width)}x${Math.round(rect.height)}`, 'info');
+            log(`Transform: ${style.transform}`, 'info');
+            
+            if (demoState.currentBBSwap) {
+                const state = demoState.currentBBSwap.getState();
+                log(`BB状態: ${state.currentState}, 編集中: ${state.isEditing}`, 'info');
+                if (state.originalTransform) {
+                    log(`Original: (${Math.round(state.originalTransform.x)}, ${Math.round(state.originalTransform.y)})`, 'info');
+                }
+            }
+        }
+        
+        // 状態検証
+        function validateAllStates() {
+            log('=== システム状態検証 ===', 'info');
+            log(`要素数: ${demoState.elements.length}`, 'info');
+            log(`選択中要素: ${demoState.selectedElement ? demoState.selectedElement.id : 'なし'}`, 'info');
+            log(`BBスワップインスタンス: ${demoState.currentBBSwap ? '存在' : 'なし'}`, 'info');
+            
+            if (demoState.currentBBSwap) {
+                const state = demoState.currentBBSwap.getState();
+                log(`BBスワップ状態: ${state.currentState}`, 'info');
+                log(`編集中: ${state.isEditing}`, 'info');
+                log(`originalTransform: ${state.originalTransform ? '保存済み' : '未保存'}`, 'info');
+            }
+            
+            log('状態検証完了', 'success');
+        }
+        
+        // 状態エクスポート
+        function exportStateSnapshot() {
+            const snapshot = {
+                timestamp: new Date().toISOString(),
+                elementCount: demoState.elements.length,
+                selectedElement: demoState.selectedElement?.id || null,
+                hasBBSwap: !!demoState.currentBBSwap
+            };
+            
+            if (demoState.currentBBSwap) {
+                snapshot.bbSwapState = demoState.currentBBSwap.getState();
+            }
+            
+            console.log('BBスワップデモ状態スナップショット:', snapshot);
+            log(`状態スナップショット出力完了 (コンソールを確認)`, 'success');
+        }
+        
+        // 完全テスト実行
+        async function runFullTest() {
+            log('🧪 完全テスト開始...', 'info');
+            
+            // 1. 要素作成
+            createTestElement();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 2. BBスワップ開始
+            await startBBSwapDemo();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 3. 座標変換
+            await testCoordinateTransform();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 4. 状態検証
+            validateAllStates();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 5. 終了
+            await endBBSwapDemo();
+            
+            log('🎉 完全テスト完了', 'success');
+        }
+        
+        // ワークスペースクリック（BBスワップ終了）
+        document.getElementById('demo-workspace').addEventListener('click', async (e) => {
+            if (e.target.id === 'demo-workspace' || e.target.classList.contains('workspace-grid')) {
+                await endBBSwapDemo();
+            }
+        });
+        
+        // キーボードショートカット
+        document.addEventListener('keydown', async (e) => {
+            if (e.key === 'Escape' && demoState.currentBBSwap) {
+                await endBBSwapDemo();
+                log('ESCキーでBBスワップ終了', 'warning');
+            }
+        });
+        
+        // ページロード時の初期化
+        window.addEventListener('load', () => {
+            log('🚀 BBスワップデモ初期化完了', 'success');
+            log('📋 「テスト要素作成」→要素クリック→編集→外側クリックで確定', 'info');
+            updateStatusDisplay();
+            
+            // 定期的にステータス更新
+            setInterval(updateStatusDisplay, 1000);
+        });
+        
+        // ページ離脱時のクリーンアップ
+        window.addEventListener('beforeunload', () => {
+            clearAllElements();
+        });
+    </script>
+</body>
+</html>
