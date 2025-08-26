@@ -69,7 +69,7 @@ class PureBoundingBoxEvents {
         document.addEventListener('keydown', this.boundHandlers.keyDown);
         document.addEventListener('keyup', this.boundHandlers.keyUp);
         
-        console.log('🖱️ ドラッグ開始:', this.core.dragState.dragType);
+        console.log('📡 イベント登録完了');
     }
     
     /**

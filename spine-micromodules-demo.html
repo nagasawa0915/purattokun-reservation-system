@@ -242,12 +242,50 @@
             uiManager: null,
             boundingBox: null,
             characters: {},
-            initialized: false
+            initialized: false,
+            isDragging: false, // ドラッグ状態管理
+            lastDragLog: 0 // 最後のドラッグ関連ログ時刻
         };
         
-        // ログ出力
+        // ドラッグ状態検知用のイベントリスナー
+        let isDraggingGlobal = false;
+        let dragStartTime = 0;
+        
+        document.addEventListener('mousedown', (e) => {
+            isDraggingGlobal = true;
+            moduleSystem.isDragging = true;
+            dragStartTime = Date.now();
+            
+            // ドラッグ開始時のログ（Canvas要素またはバウンディングボックス要素）
+            if (e.target.tagName === 'CANVAS' || e.target.closest('.bounding-box') || e.target.classList.contains('handle')) {
+                log('🖱️ ドラッグ操作開始', 'info');
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isDraggingGlobal) {
+                const dragDuration = Date.now() - dragStartTime;
+                isDraggingGlobal = false;
+                moduleSystem.isDragging = false;
+                
+                // ドラッグ終了時のログ（100ms以上のドラッグのみ）
+                if (dragDuration > 100) {
+                    log(`🖱️ ドラッグ操作完了 (${dragDuration}ms)`, 'success');
+                }
+            }
+        });
+        
+        // ログ出力（ドラッグ中の過度な出力を制限）
         function log(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
+            const now = Date.now();
+            
+            // ドラッグ中はログ出力を完全に停止（success、error、warning、ドラッグ関連以外）
+            if (isDraggingGlobal && type === 'info' && 
+                !message.includes('ドラッグ') && !message.includes('バウンディングボックス')) {
+                return; // ドラッグ中のinfoログを完全無効化
+            }
+            
             const colors = {
                 info: '#3498db',
                 success: '#2ecc71',
@@ -475,6 +513,7 @@
             let lastTime = Date.now();
             let debugFrameCount = 0; // デバッグ用フレームカウンター
             let isResized = false; // リサイズフラグ
+            let lastResizeLog = 0; // 最後のリサイズログ時刻
             
             function render() {
                 const now = Date.now();
@@ -492,10 +531,15 @@
                     skeleton.x = 0;
                     skeleton.y = 0;
                     isResized = true;
-                    log(`📐 Canvas リサイズ: ${canvas.width}x${canvas.height}, skeleton位置維持: x=${skeleton.x}, y=${skeleton.y} (0,0=正常)`, 'info');
+                    
+                    // ドラッグ中はログ出力を完全に無効化
+                    if (!isDraggingGlobal && now - lastResizeLog > 500) {
+                        log(`📐 Canvas リサイズ: ${canvas.width}x${canvas.height}, skeleton位置維持: x=${skeleton.x}, y=${skeleton.y} (0,0=正常)`, 'info');
+                        lastResizeLog = now;
+                    }
                 }
                 
-                // 初期5フレームのデバッグ情報出力
+                // 初期5フレームのデバッグ情報出力（初期化時のみ）
                 if (debugFrameCount < 5) {
                     log(`🎯 フレーム${debugFrameCount + 1}: skeleton.x=${skeleton.x}, skeleton.y=${skeleton.y}, canvas=${canvas.width}x${canvas.height}`, 'info');
                     debugFrameCount++;
@@ -518,8 +562,8 @@
                 camera.position.y = canvas.height / 2; // Canvas中央にカメラ配置
                 camera.setViewport(canvas.width, canvas.height);
                 
-                // リサイズ時の追加デバッグ情報
-                if (isResized) {
+                // リサイズ時の追加デバッグ情報（ドラッグ中は無効化）
+                if (isResized && !isDraggingGlobal && now - lastResizeLog <= 100) {
                     log(`🎮 カメラ設定: position=(${camera.position.x}, ${camera.position.y}), viewport=${canvas.width}x${canvas.height}`, 'info');
                     isResized = false;
                 }

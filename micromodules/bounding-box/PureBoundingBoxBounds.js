@@ -221,7 +221,10 @@ class PureBoundingBoxBounds {
             element.style.width = relativeWidth + '%';
             element.style.height = relativeHeight + '%';
             
-            console.log(`🎯 Spine Canvas座標適用: ${relativeX}%, ${relativeY}%, ${relativeWidth}%, ${relativeHeight}%`);
+            // ドラッグ終了時のみログ出力（ドラッグ中の大量ログ防止）
+            if (!this.core.dragState.isDragging) {
+                console.log(`🎯 Spine Canvas座標適用: ${relativeX}%, ${relativeY}%, ${relativeWidth}%, ${relativeHeight}%`);
+            }
         } else {
             // 通常要素：ピクセル座標系を使用
             element.style.position = 'absolute';
