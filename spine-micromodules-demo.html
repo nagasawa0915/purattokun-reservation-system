@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 マイクロモジュール統合Spineデモ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .demo-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            margin: 0 auto 20px auto;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn.primary {
+            background: rgba(255, 107, 107, 0.8);
+            border-color: rgba(255, 107, 107, 1);
+        }
+        
+        .btn.primary:hover {
+            background: rgba(255, 107, 107, 1);
+        }
+        
+        .scene-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        /* ぷらっとくんCanvas */
+        #demo-purattokun-canvas {
+            position: absolute;
+            left: 30%;
+            top: 60%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            display: block; /* 初期表示に変更 */
+        }
+        
+        /* ねずみCanvas */
+        #demo-nezumi-canvas {
+            position: absolute;
+            left: 70%;
+            top: 40%;
+            transform: translate(-50%, -50%);
+            width: 180px;
+            height: 180px;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            display: block; /* 初期表示に変更 */
+        }
+        
+        .status-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .status-title {
+            color: #feca57;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .module-status {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .module-status.loaded {
+            background: rgba(46, 204, 113, 0.3);
+            border-left: 3px solid #2ecc71;
+        }
+        
+        .module-status.error {
+            background: rgba(231, 76, 60, 0.3);
+            border-left: 3px solid #e74c3c;
+        }
+        
+        .log-output {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-left: 3px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 class="title">🎯 マイクロモジュール統合Spineデモ</h1>
+        <p class="subtitle">4大マイクロモジュール（spine-loader + position-manager + ui-manager + bounding-box）完全統合</p>
+    </div>
+    
+    <div class="demo-area">
+        <h2>🚀 マイクロモジュールテスト</h2>
+        <div class="controls">
+            <button class="btn primary" onclick="initializeModules()" id="initBtn">マイクロモジュール初期化</button>
+            <button class="btn" onclick="loadSpineCharacters()" id="loadBtn" disabled>Spineキャラクター読み込み</button>
+            <button class="btn" onclick="startBoundingBoxEdit()" id="editBtn" disabled>バウンディングボックス編集開始</button>
+            <button class="btn" onclick="showDebugInfo()">デバッグ情報表示</button>
+            <button class="btn" onclick="testSkeletonPosition()">スケルトン位置テスト</button>
+            <button class="btn" onclick="clearAll()">すべてクリア</button>
+        </div>
+        
+        <div class="scene-container">
+            <div class="info">
+                📋 マイクロモジュール統合デモ<br>
+                1. マイクロモジュール初期化<br>
+                2. Spineキャラクター読み込み<br>
+                3. バウンディングボックス編集<br>
+                4. 各モジュール独立動作確認
+            </div>
+            
+            <!-- Spineキャラクター -->
+            <canvas id="demo-purattokun-canvas"></canvas>
+            <canvas id="demo-nezumi-canvas"></canvas>
+        </div>
+        
+        <div class="status-panel">
+            <div class="status-title">🎯 マイクロモジュール読み込み状況</div>
+            <div id="module-status-container">
+                <div class="module-status" id="status-spine-loader">spine-loader: 未読み込み</div>
+                <div class="module-status" id="status-position-manager">position-manager: 未読み込み</div>
+                <div class="module-status" id="status-ui-manager">ui-manager: 未読み込み</div>
+                <div class="module-status" id="status-bounding-box">bounding-box: 未読み込み</div>
+            </div>
+            
+            <div class="log-output" id="log-output">
+                <div style="color: #3498db;">📝 操作ログがここに表示されます...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    
+    <script>
+        // グローバル状態
+        let moduleSystem = {
+            spineLoader: null,
+            positionManager: null,
+            uiManager: null,
+            boundingBox: null,
+            characters: {},
+            initialized: false
+        };
+        
+        // ログ出力
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: '#3498db',
+                success: '#2ecc71',
+                error: '#e74c3c',
+                warning: '#f39c12'
+            };
+            
+            const logElement = document.getElementById('log-output');
+            const logEntry = document.createElement('div');
+            logEntry.style.color = colors[type] || colors.info;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(message);
+        }
+        
+        // モジュール状態更新
+        function updateModuleStatus(module, status, error = null) {
+            const statusElement = document.getElementById(`status-${module}`);
+            const statusText = error ? `${module}: エラー - ${error}` : `${module}: ${status}`;
+            
+            statusElement.textContent = statusText;
+            statusElement.className = `module-status ${error ? 'error' : 'loaded'}`;
+        }
+        
+        // マイクロモジュール動的読み込み
+        async function loadMicroModule(modulePath, moduleName) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = modulePath;
+                script.onload = () => {
+                    log(`✅ ${moduleName} 読み込み完了`, 'success');
+                    resolve();
+                };
+                script.onerror = () => {
+                    const error = `${moduleName} 読み込み失敗`;
+                    log(`❌ ${error}`, 'error');
+                    reject(new Error(error));
+                };
+                document.head.appendChild(script);
+            });
+        }
+        
+        // マイクロモジュール初期化
+        async function initializeModules() {
+            log('🚀 マイクロモジュール初期化開始', 'info');
+            
+            const initBtn = document.getElementById('initBtn');
+            initBtn.disabled = true;
+            initBtn.textContent = '初期化中...';
+            
+            try {
+                // 1. spine-loader モジュール
+                await loadMicroModule('micromodules/spine-loader/PureSpineLoader.js', 'spine-loader');
+                updateModuleStatus('spine-loader', '読み込み完了');
+                
+                // 2. position-manager モジュール
+                await loadMicroModule('micromodules/position-manager/PurePositionManager.js', 'position-manager');
+                updateModuleStatus('position-manager', '読み込み完了');
+                
+                // 3. ui-manager モジュール
+                await loadMicroModule('micromodules/ui-manager/spine-ui-manager.js', 'ui-manager');
+                updateModuleStatus('ui-manager', '読み込み完了');
+                
+                // 4. bounding-box モジュール（順番重要）
+                const boundingBoxModules = [
+                    'micromodules/bounding-box/PureBoundingBoxCore.js',
+                    'micromodules/bounding-box/PureBoundingBoxBounds.js',
+                    'micromodules/bounding-box/PureBoundingBoxUI.js',
+                    'micromodules/bounding-box/PureBoundingBoxEvents.js',
+                    'micromodules/bounding-box/PureBoundingBox.js'
+                ];
+                
+                for (const module of boundingBoxModules) {
+                    const moduleName = module.split('/').pop().replace('.js', '');
+                    await loadMicroModule(module, moduleName);
+                }
+                updateModuleStatus('bounding-box', '読み込み完了');
+                
+                // モジュール初期化確認
+                setTimeout(() => {
+                    const checks = {
+                        spineLoader: typeof window.PureSpineLoader !== 'undefined',
+                        positionManager: typeof window.PurePositionManager !== 'undefined',
+                        uiManager: typeof window.SpineUIManager !== 'undefined',
+                        boundingBox: typeof window.PureBoundingBox !== 'undefined'
+                    };
+                    
+                    const allLoaded = Object.values(checks).every(loaded => loaded);
+                    
+                    if (allLoaded) {
+                        moduleSystem.initialized = true;
+                        document.getElementById('loadBtn').disabled = false;
+                        log('✅ 全マイクロモジュール初期化完了', 'success');
+                        log('📊 利用可能モジュール: ' + Object.keys(checks).filter(k => checks[k]).join(', '), 'info');
+                    } else {
+                        const failed = Object.keys(checks).filter(k => !checks[k]);
+                        log('❌ 一部モジュール初期化失敗: ' + failed.join(', '), 'error');
+                    }
+                    
+                    initBtn.disabled = false;
+                    initBtn.textContent = 'マイクロモジュール初期化';
+                }, 100);
+                
+            } catch (error) {
+                log(`❌ 初期化エラー: ${error.message}`, 'error');
+                initBtn.disabled = false;
+                initBtn.textContent = 'マイクロモジュール初期化';
+            }
+        }
+        
+        // Spineキャラクター読み込み
+        async function loadSpineCharacters() {
+            if (!moduleSystem.initialized) {
+                log('⚠️ 先にマイクロモジュールを初期化してください', 'warning');
+                return;
+            }
+            
+            log('🎯 Spineキャラクター読み込み開始', 'info');
+            
+            const loadBtn = document.getElementById('loadBtn');
+            loadBtn.disabled = true;
+            loadBtn.textContent = '読み込み中...';
+            
+            try {
+                // ぷらっとくん読み込み
+                const purattokunCanvas = document.getElementById('demo-purattokun-canvas');
+                const purattokunConfig = {
+                    spineFile: 'assets/spine/characters/purattokun/purattokun.json',
+                    atlasFile: 'assets/spine/characters/purattokun/purattokun.atlas',
+                    animations: { idle: 'taiki', click: 'syutugen' }
+                };
+                
+                // Spineローダー使用（シンプル版）
+                log('📦 ぷらっとくん読み込み中...', 'info');
+                await loadSimpleSpine(purattokunCanvas, purattokunConfig);
+                // Canvas表示確保（CSSで既にblock設定済み）
+                purattokunCanvas.style.opacity = '1';
+                moduleSystem.characters.purattokun = { canvas: purattokunCanvas, config: purattokunConfig };
+                log('✅ ぷらっとくん読み込み完了 - Canvas表示中', 'success');
+                
+                document.getElementById('editBtn').disabled = false;
+                log('🎮 バウンディングボックス編集が利用可能になりました', 'info');
+                
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'Spineキャラクター読み込み';
+                
+            } catch (error) {
+                log(`❌ Spine読み込みエラー: ${error.message}`, 'error');
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'Spineキャラクター読み込み';
+            }
+        }
+        
+        // シンプルなSpine読み込み
+        async function loadSimpleSpine(canvas, config) {
+            // Canvas初期設定（重要：WebGLコンテキスト取得前）
+            canvas.width = canvas.clientWidth || 200;
+            canvas.height = canvas.clientHeight || 200;
+            
+            log(`📐 Canvas初期設定: ${canvas.width}x${canvas.height} (CSS: ${canvas.clientWidth}x${canvas.clientHeight})`, 'info');
+            
+            // WebGLコンテキスト取得
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (!gl) {
+                throw new Error('WebGLコンテキストの取得に失敗しました');
+            }
+            log('✅ WebGLコンテキスト取得成功', 'success');
+            
+            // アセットマネージャー作成
+            const assetManager = new spine.AssetManager(gl);
+            
+            assetManager.loadText(config.spineFile);
+            assetManager.loadTextureAtlas(config.atlasFile);
+            
+            // アセット読み込み待ち
+            await new Promise((resolve, reject) => {
+                let checkCount = 0;
+                const checkAssets = () => {
+                    if (assetManager.isLoadingComplete()) {
+                        resolve();
+                    } else if (checkCount++ < 100) {
+                        setTimeout(checkAssets, 100);
+                    } else {
+                        reject(new Error('アセット読み込みタイムアウト'));
+                    }
+                };
+                checkAssets();
+            });
+            log('✅ Spineアセット読み込み完了', 'success');
+            
+            // Skeleton作成
+            const atlas = assetManager.require(config.atlasFile);
+            const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+            const skeletonJson = new spine.SkeletonJson(atlasLoader);
+            const skeletonData = skeletonJson.readSkeletonData(assetManager.require(config.spineFile));
+            
+            const skeleton = new spine.Skeleton(skeletonData);
+            const stateData = new spine.AnimationStateData(skeletonData);
+            const animationState = new spine.AnimationState(stateData);
+            
+            // レンダラー作成
+            const renderer = new spine.SceneRenderer(canvas, gl);
+            
+            // デバッグ用グローバル変数設定
+            window.currentSkeleton = skeleton;
+            window.currentRenderer = renderer;
+            window.currentCanvas = canvas;
+            
+            // キャラクター位置・スケール設定（Canvas中央表示）
+            skeleton.scaleX = skeleton.scaleY = 0.6; // 適切なサイズに調整
+            skeleton.x = canvas.width / 2;   // Canvas中央X位置
+            skeleton.y = canvas.height / 2;  // Canvas中央Y位置
+            skeleton.setToSetupPose();
+            skeleton.updateWorldTransform();
+            animationState.setAnimation(0, config.animations.idle, true);
+            
+            log(`🎯 キャラクター初期配置: x=${skeleton.x}, y=${skeleton.y}, scale=${skeleton.scaleX} (Canvas中央配置)`, 'info');
+            log(`📐 Canvas情報: width=${canvas.width}, height=${canvas.height}`, 'info');
+            log(`🔧 デバッグ用グローバル変数設定完了: window.currentSkeleton, window.currentRenderer, window.currentCanvas`, 'success');
+            
+            // 描画ループ
+            let lastTime = Date.now();
+            let debugFrameCount = 0; // デバッグ用フレームカウンター
+            let isResized = false; // リサイズフラグ
+            
+            function render() {
+                const now = Date.now();
+                const delta = (now - lastTime) / 1000;
+                lastTime = now;
+                
+                // Canvas描画サイズ更新（必要時のみ）
+                const newWidth = canvas.clientWidth || 200;
+                const newHeight = canvas.clientHeight || 200;
+                
+                if (canvas.width !== newWidth || canvas.height !== newHeight) {
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    // キャラクター位置は(0,0)を維持（正常表示位置）
+                    skeleton.x = 0;
+                    skeleton.y = 0;
+                    isResized = true;
+                    log(`📐 Canvas リサイズ: ${canvas.width}x${canvas.height}, skeleton位置維持: x=${skeleton.x}, y=${skeleton.y} (0,0=正常)`, 'info');
+                }
+                
+                // 初期5フレームのデバッグ情報出力
+                if (debugFrameCount < 5) {
+                    log(`🎯 フレーム${debugFrameCount + 1}: skeleton.x=${skeleton.x}, skeleton.y=${skeleton.y}, canvas=${canvas.width}x${canvas.height}`, 'info');
+                    debugFrameCount++;
+                }
+                
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                
+                // アニメーション更新
+                animationState.update(delta);
+                animationState.apply(skeleton);
+                skeleton.updateWorldTransform();
+                
+                // 背景クリア（半透明背景）
+                gl.clearColor(0.0, 0.0, 0.0, 0.1);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                
+                // カメラ設定（シンプル設定）
+                const camera = renderer.camera;
+                camera.position.x = canvas.width / 2;  // Canvas中央にカメラ配置
+                camera.position.y = canvas.height / 2; // Canvas中央にカメラ配置
+                camera.setViewport(canvas.width, canvas.height);
+                
+                // リサイズ時の追加デバッグ情報
+                if (isResized) {
+                    log(`🎮 カメラ設定: position=(${camera.position.x}, ${camera.position.y}), viewport=${canvas.width}x${canvas.height}`, 'info');
+                    isResized = false;
+                }
+                
+                // 描画実行
+                renderer.begin();
+                renderer.drawSkeleton(skeleton, true);
+                renderer.end();
+                
+                requestAnimationFrame(render);
+            }
+            render();
+            
+            log('✅ Spine描画ループ開始', 'success');
+            
+            // クリックイベント追加
+            canvas.addEventListener('click', () => {
+                log('🖱️ キャラクタークリック: アニメーション実行', 'info');
+                animationState.setAnimation(0, config.animations.click, false);
+                animationState.addAnimation(0, config.animations.idle, true, 0);
+            });
+        }
+        
+        // バウンディングボックス編集開始
+        function startBoundingBoxEdit() {
+            if (!moduleSystem.characters.purattokun) {
+                log('⚠️ 先にSpineキャラクターを読み込んでください', 'warning');
+                return;
+            }
+            
+            log('🎨 バウンディングボックス編集開始', 'info');
+            
+            try {
+                const purattokunCanvas = moduleSystem.characters.purattokun.canvas;
+                
+                // PureBoundingBox v5.0使用
+                const boundingBox = new PureBoundingBox({
+                    targetElement: purattokunCanvas,
+                    minWidth: 50,
+                    minHeight: 50,
+                    syncTransform: false // Spineキャラクター用設定
+                });
+                
+                boundingBox.execute({ visible: true });
+                moduleSystem.boundingBox = boundingBox;
+                
+                log('✅ バウンディングボックス表示完了', 'success');
+                log('🖱️ ぷらっとくんをクリックしてハンドル操作してください', 'info');
+                log('⌨️ Shift+ハンドル: 等比スケール, Alt+ハンドル: 中心基準', 'info');
+                
+            } catch (error) {
+                log(`❌ バウンディングボックスエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // スケルトン位置テスト
+        function testSkeletonPosition() {
+            if (!window.currentSkeleton) {
+                log('⚠️ Skeletonが読み込まれていません。先にSpineキャラクターを読み込んでください。', 'warning');
+                return;
+            }
+            
+            const skeleton = window.currentSkeleton;
+            const canvas = window.currentCanvas;
+            
+            log('🧪 スケルトン位置テスト開始', 'info');
+            log(`現在の位置: x=${skeleton.x}, y=${skeleton.y}`, 'info');
+            log(`Canvas情報: ${canvas.width}x${canvas.height}`, 'info');
+            
+            // 位置を複数パターンでテスト
+            const testPositions = [
+                { name: '中央', x: canvas.width * 0.5, y: canvas.height * 0.5 },
+                { name: '左上', x: canvas.width * 0.25, y: canvas.height * 0.25 },
+                { name: '右下', x: canvas.width * 0.75, y: canvas.height * 0.75 },
+                { name: '元の位置', x: canvas.width * 0.5, y: canvas.height * 0.3 }
+            ];
+            
+            let testIndex = 0;
+            const runTest = () => {
+                if (testIndex < testPositions.length) {
+                    const pos = testPositions[testIndex];
+                    skeleton.x = pos.x;
+                    skeleton.y = pos.y;
+                    skeleton.updateWorldTransform();
+                    
+                    log(`📍 テスト${testIndex + 1}: ${pos.name} -> x=${pos.x}, y=${pos.y}`, 'info');
+                    testIndex++;
+                    
+                    setTimeout(runTest, 1500); // 1.5秒間隔でテスト実行
+                } else {
+                    log('✅ スケルトン位置テスト完了', 'success');
+                }
+            };
+            
+            runTest();
+        }
+        
+        // デバッグ情報表示
+        function showDebugInfo() {
+            log('🔍 デバッグ情報表示', 'info');
+            log(`マイクロモジュール初期化状態: ${moduleSystem.initialized}`, 'info');
+            log(`読み込み済みキャラクター: ${Object.keys(moduleSystem.characters).join(', ')}`, 'info');
+            log(`PureBoundingBox存在: ${typeof window.PureBoundingBox}`, 'info');
+            log(`PurePositionManager存在: ${typeof window.PurePositionManager}`, 'info');
+            log(`SpineUIManager存在: ${typeof window.SpineUIManager}`, 'info');
+            
+            // Spineキャラクター詳細デバッグ
+            if (moduleSystem.characters.purattokun) {
+                const canvas = moduleSystem.characters.purattokun.canvas;
+                log('🎯 ぷらっとくん詳細状態:', 'info');
+                log(`  Canvas: ${canvas.width}x${canvas.height} (CSS: ${canvas.clientWidth}x${canvas.clientHeight})`, 'info');
+                log(`  Canvas位置: left=${canvas.style.left}, top=${canvas.style.top}`, 'info');
+                log(`  Canvas表示: display=${canvas.style.display}, opacity=${canvas.style.opacity}`, 'info');
+                
+                // Skeletonアクセスを試行（グローバル変数経由）
+                if (window.currentSkeleton) {
+                    const skeleton = window.currentSkeleton;
+                    log(`  Skeleton: x=${skeleton.x}, y=${skeleton.y}, scaleX=${skeleton.scaleX}, scaleY=${skeleton.scaleY}`, 'info');
+                } else {
+                    log('  ⚠️ Skeleton情報にアクセスできません（グローバル変数未設定）', 'warning');
+                }
+            }
+            
+            // グローバル状態確認
+            const globals = ['PureBoundingBox', 'PurePositionManager', 'SpineUIManager', 'PureSpineLoader'];
+            globals.forEach(name => {
+                const exists = typeof window[name] !== 'undefined';
+                log(`${name}: ${exists ? '✅ 利用可能' : '❌ 未読み込み'}`, exists ? 'success' : 'error');
+            });
+        }
+        
+        // すべてクリア
+        function clearAll() {
+            log('🧹 全体クリア開始', 'info');
+            
+            if (moduleSystem.boundingBox) {
+                moduleSystem.boundingBox.cleanup();
+                moduleSystem.boundingBox = null;
+                log('✅ バウンディングボックスクリア完了', 'success');
+            }
+            
+            Object.keys(moduleSystem.characters).forEach(charName => {
+                const char = moduleSystem.characters[charName];
+                if (char.canvas) {
+                    char.canvas.style.display = 'none';
+                }
+            });
+            moduleSystem.characters = {};
+            
+            document.getElementById('loadBtn').disabled = true;
+            document.getElementById('editBtn').disabled = true;
+            
+            log('🎯 全体クリア完了', 'success');
+        }
+        
+        // ページロード時
+        window.addEventListener('load', () => {
+            log('🚀 マイクロモジュール統合Spineデモページ準備完了', 'success');
+            log('📋 手順: 1.マイクロモジュール初期化 → 2.Spine読み込み → 3.編集開始', 'info');
+        });
+        
+        // ページ離脱時のクリーンアップ
+        window.addEventListener('beforeunload', clearAll);
+    </script>
+</body>
+</html>
