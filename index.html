@@ -161,7 +161,13 @@
                 'spine-package-export.js',  // ← PackageExportSystemを最初に読み込み
                 'spine-ui-manager.js',
                 'spine-multi-character-manager.js',
-                'spine-bounding-box-module.js',
+                // 🎯 PureBoundingBox v5.0 マイクロモジュール統合（修正済みパス）
+                'micromodules/bounding-box/PureBoundingBoxCore.js',
+                'micromodules/bounding-box/PureBoundingBoxBounds.js',
+                'micromodules/bounding-box/PureBoundingBoxUI.js',
+                'micromodules/bounding-box/PureBoundingBoxEvents.js',
+                'micromodules/bounding-box/PureBoundingBox.js',
+                // 'spine-bounding-box-module.js', // ← 旧バウンディングボックスを無効化
                 'spine-state-manager.js',
                 'spine-layer-editor.js',
                 'spine-debug-tools.js',
@@ -172,6 +178,8 @@
             const totalModules = moduleFiles.length;
             
             const loadModule = (src, index) => {
+                console.log(`🔄 モジュール読み込み開始: ${src}`);
+                console.log(`📁 フルパス: ${window.location.origin}/${src}`);
                 const script = document.createElement('script');
                 script.src = src;
                 script.onload = () => {
@@ -198,10 +206,42 @@
                         // 統合システムの初期化待機（自動初期化される）
                         console.log('🚀 v2.0中央制御システム統合版 準備完了');
                         console.log('🔗 統合完了後は window.spineEditUnified でアクセス可能');
+                        
+                        // PureBoundingBox v5.0読み込み確認（詳細ログ付き）
+                        setTimeout(() => {
+                            console.log('🎯 PureBoundingBox v5.0モジュール読み込み状況確認開始:');
+                            console.log('  - PureBoundingBoxCore:', typeof window.PureBoundingBoxCore, window.PureBoundingBoxCore);
+                            console.log('  - PureBoundingBoxBounds:', typeof window.PureBoundingBoxBounds, window.PureBoundingBoxBounds);
+                            console.log('  - PureBoundingBoxUI:', typeof window.PureBoundingBoxUI, window.PureBoundingBoxUI);
+                            console.log('  - PureBoundingBoxEvents:', typeof window.PureBoundingBoxEvents, window.PureBoundingBoxEvents);
+                            console.log('  - PureBoundingBox:', typeof window.PureBoundingBox, window.PureBoundingBox);
+                            
+                            // 各モジュールの読み込み状況統計
+                            const modules = ['PureBoundingBoxCore', 'PureBoundingBoxBounds', 'PureBoundingBoxUI', 'PureBoundingBoxEvents', 'PureBoundingBox'];
+                            const loadedCount = modules.filter(name => typeof window[name] !== 'undefined').length;
+                            
+                            console.log(`📊 読み込み状況: ${loadedCount}/${modules.length} モジュール`);
+                            
+                            if (loadedCount === modules.length) {
+                                console.log('✅ 全PureBoundingBox v5.0 マイクロモジュール読み込み完了');
+                            } else if (loadedCount > 0) {
+                                console.warn(`⚠️ PureBoundingBox v5.0 部分読み込み: ${loadedCount}/${modules.length}`);
+                                console.warn('未読み込みモジュール:', modules.filter(name => typeof window[name] === 'undefined'));
+                            } else {
+                                console.error('❌ PureBoundingBox v5.0 全モジュール読み込み失敗');
+                                console.error('📋 デバッグ手順:');
+                                console.error('  1. ブラウザのネットワークタブで404エラーを確認');
+                                console.error('  2. ファイルパスが正しいか確認');
+                                console.error('  3. 各モジュールファイルが存在するか確認');
+                            }
+                        }, 100);
                     }
                 };
-                script.onerror = () => {
-                    console.warn(`⚠️ モジュール読み込み失敗: ${src} - 継続します`);
+                script.onerror = (error) => {
+                    console.error(`❌ モジュール読み込み失敗: ${src}`);
+                    console.error('エラー詳細:', error);
+                    console.error('ファイルパス確認:', window.location.origin + '/' + src);
+                    console.warn(`⚠️ ${src} - 読み込み失敗により継続します`);
                     loadedModules++;
                 };
                 document.head.appendChild(script);

@@ -498,13 +498,21 @@ class PureBoundingBox {
         const dragType = isHandle ? 
             'resize-' + event.target.getAttribute('data-resize-type') : 'move';
         
-        // 🚨 シンプルスワップ: Transform情報のみ使用（Boundsレイヤー削除）
+        // 🎯 v2正確パターン: startBoundsも保存
+        const currentBounds = {
+            x: this.transform.x,
+            y: this.transform.y,
+            width: 100, // 固定値（実際の要素サイズに後で変更）
+            height: 100
+        };
+        
         this.uiState.dragState = {
             isDragging: true,
             dragType: dragType,
             startMouseX: event.clientX,
             startMouseY: event.clientY,
             startTransform: {...this.transform},
+            startBounds: {...currentBounds}, // v2パターン: startBounds保存
             modifierKeys: {
                 shift: event.shiftKey,
                 alt: event.altKey,
@@ -552,59 +560,88 @@ class PureBoundingBox {
             const handleType = dragState.dragType.replace('resize-', '');
             
             // ハンドル別の位置・スケール計算（v2/v3パターン）
-            // 🎯 BBスワップ シンプル化: CSS Transform scale() は元々中心基準
-            // 位置移動処理を削除し、純粋にスケールのみ実行
+            // 🎯 v2成功パターン適用: bounds直接計算方式
+            // Transformではなく、bounds(left,top,width,height)でシンプル計算
+            
+            // v2正確パターン: startBoundsから開始
+            let newBounds = {
+                x: dragState.startBounds.x,
+                y: dragState.startBounds.y,
+                width: dragState.startBounds.width,
+                height: dragState.startBounds.height
+            };
+            
             switch (handleType) {
                 case 'nw':
-                    // 左上ハンドル: 純粋にスケールのみ
-                    newTransform.scaleX = dragState.startTransform.scaleX * (1 - deltaX * scaleSensitivity);
-                    newTransform.scaleY = dragState.startTransform.scaleY * (1 - deltaY * scaleSensitivity);
+                    // v2正確パターン: startBounds値を使用
+                    newBounds.x = dragState.startBounds.x + deltaX;
+                    newBounds.y = dragState.startBounds.y + deltaY;
+                    newBounds.width = dragState.startBounds.width - deltaX;
+                    newBounds.height = dragState.startBounds.height - deltaY;
                     break;
                 case 'ne':
-                    // 右上ハンドル: 純粋にスケールのみ
-                    newTransform.scaleX = dragState.startTransform.scaleX * (1 + deltaX * scaleSensitivity);
-                    newTransform.scaleY = dragState.startTransform.scaleY * (1 - deltaY * scaleSensitivity);
+                    newBounds.y = dragState.startBounds.y + deltaY;
+                    newBounds.width = dragState.startBounds.width + deltaX;
+                    newBounds.height = dragState.startBounds.height - deltaY;
                     break;
                 case 'se':
-                    // 右下ハンドル: 純粋にスケールのみ（最も直感的）
-                    newTransform.scaleX = dragState.startTransform.scaleX * (1 + deltaX * scaleSensitivity);
-                    newTransform.scaleY = dragState.startTransform.scaleY * (1 + deltaY * scaleSensitivity);
+                    newBounds.width = dragState.startBounds.width + deltaX;
+                    newBounds.height = dragState.startBounds.height + deltaY;
                     break;
                 case 'sw':
-                    // 左下ハンドル: 純粋にスケールのみ
-                    newTransform.scaleX = dragState.startTransform.scaleX * (1 - deltaX * scaleSensitivity);
-                    newTransform.scaleY = dragState.startTransform.scaleY * (1 + deltaY * scaleSensitivity);
+                    newBounds.x = dragState.startBounds.x + deltaX;
+                    newBounds.width = dragState.startBounds.width - deltaX;
+                    newBounds.height = dragState.startBounds.height + deltaY;
                     break;
                 case 'n':
-                    // 上ハンドル: 純粋に縦スケールのみ
-                    newTransform.scaleY = dragState.startTransform.scaleY * (1 - deltaY * scaleSensitivity);
+                    newBounds.y = dragState.startBounds.y + deltaY;
+                    newBounds.height = dragState.startBounds.height - deltaY;
                     break;
                 case 's':
-                    // 下ハンドル: 純粋に縦スケールのみ
-                    newTransform.scaleY = dragState.startTransform.scaleY * (1 + deltaY * scaleSensitivity);
+                    newBounds.height = dragState.startBounds.height + deltaY;
                     break;
                 case 'w':
-                    // 左ハンドル: 純粋に横スケールのみ
-                    newTransform.scaleX = dragState.startTransform.scaleX * (1 - deltaX * scaleSensitivity);
+                    newBounds.x = dragState.startBounds.x + deltaX;
+                    newBounds.width = dragState.startBounds.width - deltaX;
                     break;
                 case 'e':
-                    // 右ハンドル: 純粋に横スケールのみ
-                    newTransform.scaleX = dragState.startTransform.scaleX * (1 + deltaX * scaleSensitivity);
+                    newBounds.width = dragState.startBounds.width + deltaX;
                     break;
             }
             
-            // Shift: 等比スケール
+            // boundsをTransformに変換して適用
+            newTransform.x = newBounds.x;
+            newTransform.y = newBounds.y;
+            // width/heightからscaleを逆算（後で実装）
+            
+            // 最小サイズ制限
+            newBounds.width = Math.max(20, newBounds.width);
+            newBounds.height = Math.max(20, newBounds.height);
+            
+            // Shift: 等比スケール（v2パターン）
             if (dragState.modifierKeys.shift) {
-                const scaleRatio = Math.max(
-                    newTransform.scaleX / dragState.startTransform.scaleX,
-                    newTransform.scaleY / dragState.startTransform.scaleY
-                );
-                newTransform.scaleX = dragState.startTransform.scaleX * scaleRatio;
-                newTransform.scaleY = dragState.startTransform.scaleY * scaleRatio;
+                const aspectRatio = newBounds.width / newBounds.height;
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    newBounds.height = newBounds.width / aspectRatio;
+                } else {
+                    newBounds.width = newBounds.height * aspectRatio;
+                }
             }
             
-            // Alt: 中心基準（CSS transformは元々中心基準なので、位置補正削除）
-            // →CSS transform scaleは元々中心基準なので、追加処理不要
+            // Altキー: 中心基準（v2では未実装だったが、簡単な位置補正で実現）
+            if (dragState.modifierKeys.alt) {
+                // 中心からのスケールをシミュレート
+                // 左上隅を中心方向に移動
+                const centerX = dragState.startTransform.x + 50; // 中心X
+                const centerY = dragState.startTransform.y + 50; // 中心Y
+                newBounds.x = centerX - newBounds.width / 2;
+                newBounds.y = centerY - newBounds.height / 2;
+            }
+            
+            // boundsをTransformに適用
+            newTransform.x = newBounds.x;
+            newTransform.y = newBounds.y;
+            // サイズはwidth/heightではなくscaleで管理する場合は後で実装
             
             // 最小・最大スケール制限
             newTransform.scaleX = Math.max(0.1, Math.min(5.0, newTransform.scaleX));
@@ -672,6 +709,68 @@ class PureBoundingBox {
             width: rect.width,
             height: rect.height
         });
+    }
+    
+    /**
+     * 🎯 BBスワップ: 編集モード進入（Transform → v2 bounds座標系）
+     */
+    enterEditingMode() {
+        if (this.swapState.currentState === 'editing') return;
+        
+        console.log('🔄 BBスワップ: 編集モード進入');
+        
+        // 現在のTransformを保存
+        this.swapState.originalTransform = {...this.transform};
+        
+        // Transformからboundsへ変換（実際の要素サイズを取得）
+        const element = this.config.targetElement;
+        const rect = element.getBoundingClientRect();
+        
+        this.uiState.bounds = {
+            x: rect.left,
+            y: rect.top,
+            width: rect.width,
+            height: rect.height
+        };
+        
+        this.swapState.currentState = 'editing';
+        this.swapState.isEditing = true;
+    }
+    
+    /**
+     * 🎯 BBスワップ: 編集モード終了（v2 bounds → Transform座標系）
+     */
+    exitEditingMode() {
+        if (this.swapState.currentState === 'idle') return;
+        
+        console.log('🔄 BBスワップ: 編集モード終了');
+        
+        // boundsをTransformに変換して適用
+        this.transform.x = this.uiState.bounds.x;
+        this.transform.y = this.uiState.bounds.y;
+        // サイズはCSSで直接適用（scaleではなく）
+        
+        this.setTransform(null, this.transform);
+        
+        this.swapState.currentState = 'idle';
+        this.swapState.isEditing = false;
+        this.swapState.originalTransform = null;
+    }
+    
+    /**
+     * v2互換: boundsからUI更新
+     */
+    updateBoundingBoxFromBounds(bounds) {
+        // 対象要素のサイズ更新
+        const element = this.config.targetElement;
+        element.style.position = 'absolute';
+        element.style.left = bounds.x + 'px';
+        element.style.top = bounds.y + 'px';
+        element.style.width = bounds.width + 'px';
+        element.style.height = bounds.height + 'px';
+        
+        // BB UIの位置同期
+        this.syncBoundingBoxPosition();
     }
     
     /**

@@ -138,8 +138,9 @@
     <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
     
     <!-- SkeletonBounds境界ボックスシステム -->
-    <script src="assets/spine/spine-skeleton-bounds.js"></script>
-    <script src="spine-bounds-integration.js"></script>
+    <!-- PureBoundingBox v5.0との競合を避けるため一時的に無効化 -->
+    <!-- <script src="assets/spine/spine-skeleton-bounds.js"></script> -->
+    <!-- <script src="spine-bounds-integration.js"></script> -->
     
     <script>
         // 🎯 URLパラメータで編集モード起動（1行追加機能）
@@ -161,7 +162,13 @@
                 'spine-package-export.js',  // ← PackageExportSystemを最初に読み込み
                 'spine-ui-manager.js',
                 'spine-multi-character-manager.js',
-                'spine-bounding-box-module.js',
+                // 🎯 PureBoundingBox v5.0 マイクロモジュール統合
+                'micromodules/experimental/bounding-box/PureBoundingBoxCore.js',
+                'micromodules/experimental/bounding-box/PureBoundingBoxBounds.js',
+                'micromodules/experimental/bounding-box/PureBoundingBoxUI.js',
+                'micromodules/experimental/bounding-box/PureBoundingBoxEvents.js',
+                'micromodules/experimental/bounding-box/PureBoundingBox.js',
+                // 'spine-bounding-box-module.js', // ← 旧バウンディングボックスを無効化
                 'spine-state-manager.js',
                 'spine-layer-editor.js',
                 'spine-debug-tools.js',
@@ -198,6 +205,21 @@
                         // 統合システムの初期化待機（自動初期化される）
                         console.log('🚀 v2.0中央制御システム統合版 準備完了');
                         console.log('🔗 統合完了後は window.spineEditUnified でアクセス可能');
+                        
+                        // PureBoundingBox v5.0読み込み確認
+                        setTimeout(() => {
+                            console.log('🎯 PureBoundingBox v5.0モジュール読み込み状況:');
+                            console.log('  - PureBoundingBoxCore:', typeof window.PureBoundingBoxCore);
+                            console.log('  - PureBoundingBoxBounds:', typeof window.PureBoundingBoxBounds);
+                            console.log('  - PureBoundingBoxUI:', typeof window.PureBoundingBoxUI);
+                            console.log('  - PureBoundingBoxEvents:', typeof window.PureBoundingBoxEvents);
+                            console.log('  - PureBoundingBox:', typeof window.PureBoundingBox);
+                            if (typeof window.PureBoundingBox !== 'undefined') {
+                                console.log('✅ PureBoundingBox v5.0 マイクロモジュール統合完了');
+                            } else {
+                                console.warn('❌ PureBoundingBox v5.0 読み込み失敗 - フォールバックシステム使用');
+                            }
+                        }, 100);
                     }
                 };
                 script.onerror = () => {

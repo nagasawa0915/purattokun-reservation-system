@@ -108,7 +108,14 @@ if (typeof window.MultiCharacterManager === 'undefined') {
             this.exitEditMode();
             this.activeCharacter = null;
             
-            // バウンディングボックス削除
+            // PureBoundingBox v5.0クリーンアップ
+            if (window.currentBoundingBox && typeof window.currentBoundingBox.cleanup === 'function') {
+                window.currentBoundingBox.cleanup();
+                window.currentBoundingBox = null;
+                console.log('🧹 PureBoundingBox v5.0クリーンアップ完了');
+            }
+            
+            // 旧システムバウンディングボックス削除
             if (window.ModuleManager) ModuleManager.removeModule('boundingBox');
             
             // プレビューボックスを更新
@@ -287,16 +294,44 @@ if (typeof window.MultiCharacterManager === 'undefined') {
         this.previewBoxes = [];
     },
     
-    // 編集バウンディングボックス表示
+    // 編集バウンディングボックス表示（PureBoundingBox v5.0）
     showEditBoundingBox: function() {
         if (this.activeCharacter) {
-            const boundingBoxModule = createBoundingBoxModule();
-            const success = window.ModuleManager ? ModuleManager.addModule('boundingBox', boundingBoxModule) : false;
-            
-            if (success) {
-                console.log('📦 編集バウンディングボックス表示');
-            } else {
-                console.error('❌ 編集バウンディングボックス表示失敗');
+            try {
+                // PureBoundingBox v5.0マイクロモジュール使用
+                if (typeof PureBoundingBox !== 'undefined') {
+                    const boundingBox = new PureBoundingBox({
+                        targetElement: this.activeCharacter.element,
+                        minWidth: 50,
+                        minHeight: 50,
+                        syncTransform: false // 🔧 スケール時移動問題回避のため無効化
+                    });
+                    
+                    // バウンディングボックス実行
+                    boundingBox.execute({visible: true});
+                    
+                    // グローバル参照保存（クリーンアップ用）
+                    window.currentBoundingBox = boundingBox;
+                    
+                    console.log('📦 PureBoundingBox v5.0編集バウンディングボックス表示');
+                } else {
+                    // フォールバック: 旧システム使用
+                    console.warn('⚠️ PureBoundingBox v5.0未読み込み - 旧システム使用');
+                    const boundingBoxModule = createBoundingBoxModule();
+                    const success = window.ModuleManager ? ModuleManager.addModule('boundingBox', boundingBoxModule) : false;
+                    
+                    if (success) {
+                        console.log('📦 編集バウンディングボックス表示（旧システム）');
+                    } else {
+                        console.error('❌ 編集バウンディングボックス表示失敗');
+                    }
+                }
+            } catch (error) {
+                console.error('❌ バウンディングボックス初期化エラー:', error);
+                // エラー時はフォールバック
+                const boundingBoxModule = createBoundingBoxModule();
+                const success = window.ModuleManager ? ModuleManager.addModule('boundingBox', boundingBoxModule) : false;
+                console.log('📦 フォールバックシステムでバウンディングボックス表示:', success ? '成功' : '失敗');
             }
         }
     },

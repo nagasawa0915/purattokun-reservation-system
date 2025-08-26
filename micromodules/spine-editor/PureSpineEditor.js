@@ -1,14 +1,9 @@
 /**
- * 🚨 DEPRECATED - このファイルは廃止されました
- * 
- * 新しい場所: /micromodules/spine-editor/PureSpineEditor.js
- * このファイルは将来のバージョンで削除される予定です
- * 
  * PureSpineEditor - v3.0 ハイブリッドマイクロモジュール
  * 
  * 🎯 v3.0 ハイブリッド設計思想
  * - 実証済みパターン活用：従来システムの成功コードを内部移植
- * - 実用性優先：理論的純粋性より実際の動作を重視
+ * - 実用性優先：理論的純粹性より実際の動作を重視
  * - トラブルシューティング互換：既存のデバッグ知識を活用可能
  * - 移植性維持：1ファイルコピーで即座に動作
  * 
@@ -262,7 +257,7 @@ class PureSpineEditor {
         // レンダラー構築
         this.state.spine.renderer = new spine.SceneRenderer(this.config.canvasElement, this.gl);
         
-        console.log('🏗️ Spineオブジェクト構築完了');
+        console.log('🏧️ Spineオブジェクト構築完了');
     }
     
     applyInitialTransform() {
@@ -949,7 +944,7 @@ class PureSpineEditor {
                 Canvas移動: {
                     x: canvasMovementX.toFixed(2) + 'px',
                     y: canvasMovementY.toFixed(2) + 'px',
-                    閾値超過: isInstantMovement ? '⚠️あり' : 'なし'
+                    闾値超過: isInstantMovement ? '⚠️あり' : 'なし'
                 },
                 Skeleton変更: {
                     移動量: skeletonMovement,

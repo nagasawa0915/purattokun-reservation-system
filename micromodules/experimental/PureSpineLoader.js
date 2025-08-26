@@ -1,4 +1,9 @@
 /**
+ * 🚨 DEPRECATED - このファイルは廃止されました
+ * 
+ * 新しい場所: /micromodules/spine-loader/PureSpineLoader.js
+ * このファイルは将来のバージョンで削除される予定です
+ * 
  * PureSpineLoader - v4マイクロモジュール設計
  * 
  * 🎯 絶対ルール

@@ -3,7 +3,7 @@
  * 
  * 🎯 v2互換bounds座標系計算マイクロモジュール
  * - 外部依存: PureBoundingBoxCore（同フォルダ内）
- * - 責務: v2と同じbounds計算ロジックのみ
+ * - 責務: v2と同bounds計算ロジックのみ
  */
 
 class PureBoundingBoxBounds {
