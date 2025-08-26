@@ -552,47 +552,43 @@ class PureBoundingBox {
             const handleType = dragState.dragType.replace('resize-', '');
             
             // ハンドル別の位置・スケール計算（v2/v3パターン）
+            // 🎯 BBスワップ シンプル化: CSS Transform scale() は元々中心基準
+            // 位置移動処理を削除し、純粋にスケールのみ実行
             switch (handleType) {
                 case 'nw':
-                    // 左上ハンドル: 右下固定でスケール
-                    newTransform.x = dragState.startTransform.x + deltaX;
-                    newTransform.y = dragState.startTransform.y + deltaY;
+                    // 左上ハンドル: 純粋にスケールのみ
                     newTransform.scaleX = dragState.startTransform.scaleX * (1 - deltaX * scaleSensitivity);
                     newTransform.scaleY = dragState.startTransform.scaleY * (1 - deltaY * scaleSensitivity);
                     break;
                 case 'ne':
-                    // 右上ハンドル: 左下固定でスケール
-                    newTransform.y = dragState.startTransform.y + deltaY;
+                    // 右上ハンドル: 純粋にスケールのみ
                     newTransform.scaleX = dragState.startTransform.scaleX * (1 + deltaX * scaleSensitivity);
                     newTransform.scaleY = dragState.startTransform.scaleY * (1 - deltaY * scaleSensitivity);
                     break;
                 case 'se':
-                    // 右下ハンドル: 左上固定でスケール（最も直感的）
+                    // 右下ハンドル: 純粋にスケールのみ（最も直感的）
                     newTransform.scaleX = dragState.startTransform.scaleX * (1 + deltaX * scaleSensitivity);
                     newTransform.scaleY = dragState.startTransform.scaleY * (1 + deltaY * scaleSensitivity);
                     break;
                 case 'sw':
-                    // 左下ハンドル: 右上固定でスケール
-                    newTransform.x = dragState.startTransform.x + deltaX;
+                    // 左下ハンドル: 純粋にスケールのみ
                     newTransform.scaleX = dragState.startTransform.scaleX * (1 - deltaX * scaleSensitivity);
                     newTransform.scaleY = dragState.startTransform.scaleY * (1 + deltaY * scaleSensitivity);
                     break;
                 case 'n':
-                    // 上ハンドル: 下固定で縦スケール
-                    newTransform.y = dragState.startTransform.y + deltaY;
+                    // 上ハンドル: 純粋に縦スケールのみ
                     newTransform.scaleY = dragState.startTransform.scaleY * (1 - deltaY * scaleSensitivity);
                     break;
                 case 's':
-                    // 下ハンドル: 上固定で縦スケール
+                    // 下ハンドル: 純粋に縦スケールのみ
                     newTransform.scaleY = dragState.startTransform.scaleY * (1 + deltaY * scaleSensitivity);
                     break;
                 case 'w':
-                    // 左ハンドル: 右固定で横スケール
-                    newTransform.x = dragState.startTransform.x + deltaX;
+                    // 左ハンドル: 純粋に横スケールのみ
                     newTransform.scaleX = dragState.startTransform.scaleX * (1 - deltaX * scaleSensitivity);
                     break;
                 case 'e':
-                    // 右ハンドル: 左固定で横スケール
+                    // 右ハンドル: 純粋に横スケールのみ
                     newTransform.scaleX = dragState.startTransform.scaleX * (1 + deltaX * scaleSensitivity);
                     break;
             }
