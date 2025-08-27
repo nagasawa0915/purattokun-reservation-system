@@ -161,13 +161,14 @@ class PureBoundingBoxEvents {
         let newBounds;
         
         if (this.core.dragState.dragType === 'move') {
-            // 🆕 Phase 2: 累積オフセット方式の移動処理
-            this.applyCumulativeOffset(event);
+            // 🔧 Phase 1緊急修正: 従来方式のみ使用（安定動作優先）
+            // 累積オフセット方式は無効化して従来の安定した方式を使用
+            // this.applyCumulativeOffset(event);  // 無効化
             
-            // 🎯 v2互換: 従来方式も並行実行（共存）
             newBounds = this.bounds.calculateMove(deltaX, deltaY);
+            
         } else if (this.core.dragState.dragType.startsWith('resize-')) {
-            // 🎯 v2互換: リサイズ計算
+            // 🎯 v2互換: リサイズ計算（リサイズ時は従来方式維持）
             const handleType = this.core.dragState.dragType.replace('resize-', '');
             newBounds = this.bounds.calculateResize(deltaX, deltaY, handleType);
             
@@ -176,7 +177,7 @@ class PureBoundingBoxEvents {
         }
         
         if (newBounds) {
-            // boundsを要素に適用
+            // boundsを要素に適用（リサイズ時のみ）
             this.bounds.applyBoundsToElement(newBounds);
             
             // UI位置同期
