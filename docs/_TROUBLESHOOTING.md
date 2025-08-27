@@ -27,6 +27,12 @@
 - **タグ**: `#位置` `#座標系` `#DPR補正` `#Y軸反転` `#統合解決策` `#環境別対応`
 - **別名**: レスポンシブ版位置ズレ、ウィンドウリサイズ問題、Spine座標系問題、WebGL座標系問題、PC版でずれる、デスクトップ版位置異常、マウス動作逆転、高解像度ディスプレイ問題、座標変換エラー
 
+#### BBハンドル操作瞬間移動問題
+- **ファイル**: [座標関連問題.md](./troubleshooting/coordinate-problems.md#bbハンドル操作瞬間移動問題)  
+- **症状**: BBハンドル操作時にキャラクターが枠内で瞬間移動、修正試行により通常移動に新しい問題発生
+- **タグ**: `#BBハンドル` `#瞬間移動` `#失敗事例` `#座標系スワップ` `#修正失敗` `#復旧成功`
+- **別名**: BBハンドル瞬間移動、バウンディングボックス操作問題、座標計算修正失敗、getBoundingClientRect問題、PureBoundingBox座標問題、ハンドル操作座標ずれ
+
 #### Canvasサイズ変更問題
 - **ファイル**: [Canvasサイズ変更問題.md](./troubleshooting/Canvasサイズ変更問題.md)  
 - **症状**: Canvasのサイズが変更できない、サイズ指定が効かない
@@ -279,6 +285,14 @@
 - [編集前バウンディングボックス表示問題.md](./troubleshooting/編集前バウンディングボックス表示問題.md)
 
 #### #瞬間移動
+#### #BBハンドル
+- [座標関連問題.md](./troubleshooting/coordinate-problems.md)
+
+#### #座標系スワップ
+- [座標関連問題.md](./troubleshooting/coordinate-problems.md)
+
+#### #修正失敗
+- [座標関連問題.md](./troubleshooting/coordinate-problems.md)
 - [編集ボタンクリック時瞬間移動問題.md](./troubleshooting/編集ボタンクリック時瞬間移動問題.md)
 
 #### #F12依存
@@ -515,6 +529,8 @@
 → [境界ボックス精密クリック判定実装成功記録.md](./troubleshooting/境界ボックス精密クリック判定実装成功記録.md)
 
 ### 「瞬間移動」「165px移動」「編集ボタンクリック時」「F12で変わる」「レイアウトレース」「purattokun移動」「座標強制変更」「enterEditMode」「spine-edit-core」
+### 「BBハンドル」「バウンディングボックス操作」「PureBoundingBox」「座標計算修正失敗」「getBoundingClientRect問題」「ハンドル操作座標ずれ」
+→ [座標関連問題.md](./troubleshooting/coordinate-problems.md#bbハンドル操作瞬間移動問題)
 → [編集ボタンクリック時瞬間移動問題.md](./troubleshooting/編集ボタンクリック時瞬間移動問題.md)
 
 ---

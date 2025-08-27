@@ -49,7 +49,12 @@ class PureBoundingBoxCore {
             startBoundsY: 0,
             startBoundsWidth: 0,
             startBoundsHeight: 0,
-            modifierKeys: {shift: false, alt: false, ctrl: false}
+            modifierKeys: {shift: false, alt: false, ctrl: false},
+            // 🆕 Phase 2: 累積オフセット方式の状態
+            baseTx: 0,
+            baseTy: 0,
+            startX: 0,
+            startY: 0
         };
         
         // UI状態
@@ -166,6 +171,71 @@ class PureBoundingBoxCore {
             this.dragState.modifierKeys.shift = event.shiftKey;
             this.dragState.modifierKeys.alt = event.altKey;
             this.dragState.modifierKeys.ctrl = event.ctrlKey;
+        }
+    }
+    
+    /**
+     * 🆕 Phase 3: 見た目の中心基準のコミット処理
+     * transform(-50%, -50%)を考慮した正確な%値再計算
+     */
+    commitToPercent() {
+        const element = this.config.targetElement;
+        const interactive = element.querySelector('.interactive');
+        
+        if (!element || !element.parentElement) {
+            console.warn('⚠️ コミット対象要素または親要素が見つかりません');
+            return false;
+        }
+        
+        // 親要素の条件チェック
+        const parentRect = element.parentElement.getBoundingClientRect();
+        if (parentRect.width === 0 || parentRect.height === 0) {
+            console.warn('⚠️ 親要素のサイズが0のため、コミット処理をスキップ');
+            return false;
+        }
+        
+        try {
+            // layout-anchorの現在の見た目の矩形（transform(-50%, -50%)反映後）
+            const anchorRect = element.getBoundingClientRect();
+            
+            // CSS変数による追加オフセットを取得
+            let tx = 0, ty = 0;
+            if (interactive) {
+                const cs = getComputedStyle(interactive);
+                tx = parseFloat(cs.getPropertyValue('--tx')) || 0;
+                ty = parseFloat(cs.getPropertyValue('--ty')) || 0;
+            }
+            
+            // 見た目の中心を計算（transform + CSS変数オフセット）
+            const visualCenterX = anchorRect.left + anchorRect.width/2 + tx;
+            const visualCenterY = anchorRect.top + anchorRect.height/2 + ty;
+            
+            // 親要素基準での%値に変換
+            const leftPct = ((visualCenterX - parentRect.left) / parentRect.width) * 100;
+            const topPct = ((visualCenterY - parentRect.top) / parentRect.height) * 100;
+            
+            // layout-anchorに書き戻し
+            element.style.left = leftPct.toFixed(2) + '%';
+            element.style.top = topPct.toFixed(2) + '%';
+            
+            // CSS変数をリセット（ズレ蓄積防止）
+            if (interactive) {
+                interactive.style.setProperty('--tx', '0px');
+                interactive.style.setProperty('--ty', '0px');
+            }
+            
+            console.log('✅ Phase 3コミット完了 - 見た目の中心基準:', {
+                visualCenter: {x: visualCenterX.toFixed(1), y: visualCenterY.toFixed(1)},
+                percentValues: {left: leftPct.toFixed(2) + '%', top: topPct.toFixed(2) + '%'},
+                offsetReset: {tx: '0px', ty: '0px'},
+                cssVariables: !!interactive
+            });
+            
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Phase 3コミット処理でエラー:', error);
+            return false;
         }
     }
     

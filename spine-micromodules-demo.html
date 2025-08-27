@@ -110,12 +110,93 @@
             z-index: 1000;
         }
         
-        /* ぷらっとくんCanvas */
-        #demo-purattokun-canvas {
+        /* 🎯 二層化ラッパーシステム - Phase 1実装 */
+        
+        /* Layout Anchor: 初期配置のみ担当（%値+translate(-50%,-50%)） */
+        .layout-anchor {
             position: absolute;
+            transform: translate(-50%, -50%);
+            /* 個別の位置は要素ごとに設定 */
+        }
+        
+        /* Interactive Layer: ドラッグオフセットのみ担当（CSS変数--tx/--ty） */
+        .interactive {
+            transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0);
+            will-change: transform;
+            touch-action: none; /* 🆕 Phase 4: モバイルでの意図しないスクロール抑止 */
+        }
+        
+        /* 🆕 Phase 4: BoundingBox編集システム強化CSS */
+        
+        /* BBoxコンテナ: .interactiveの内側に配置（z-index統合管理） */
+        .pure-bbox-container {
+            position: absolute;
+            pointer-events: none; /* 基本的に透明（ハンドルのみ操作可能） */
+            z-index: 100; /* Canvasより上層 */
+        }
+        
+        /* BBoxハンドル: Phase 4強化設定 */
+        .pure-bbox-handle {
+            position: absolute;
+            pointer-events: auto; /* ハンドルのみ操作可能 */
+            touch-action: none; /* 🎯 実務TIPS: モバイルでの意図しないスクロール完全抑止 */
+            user-select: none; /* テキスト選択防止 */
+            cursor: pointer;
+            background: rgba(74, 144, 226, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            border-radius: 3px;
+            width: 12px;
+            height: 12px;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        /* ハンドルホバー効果（デスクトップ） */
+        .pure-bbox-handle:hover {
+            background: rgba(74, 144, 226, 1.0);
+            transform: scale(1.2);
+            box-shadow: 0 0 8px rgba(74, 144, 226, 0.6);
+        }
+        
+        /* モバイル対応: アクティブ状態 */
+        .pure-bbox-handle:active {
+            background: rgba(255, 107, 107, 0.9);
+            transform: scale(1.3);
+            box-shadow: 0 0 12px rgba(255, 107, 107, 0.8);
+        }
+        
+        /* ハンドルタイプ別カーソル設定 */
+        .pure-bbox-handle.resize-nw,
+        .pure-bbox-handle.resize-se { cursor: nw-resize; }
+        
+        .pure-bbox-handle.resize-ne,
+        .pure-bbox-handle.resize-sw { cursor: ne-resize; }
+        
+        .pure-bbox-handle.resize-n,
+        .pure-bbox-handle.resize-s { cursor: ns-resize; }
+        
+        .pure-bbox-handle.resize-w,
+        .pure-bbox-handle.resize-e { cursor: ew-resize; }
+        
+        .pure-bbox-handle.move { cursor: move; }
+        
+        /* BBox境界線 */
+        .pure-bbox-border {
+            position: absolute;
+            border: 2px dashed rgba(74, 144, 226, 0.6);
+            pointer-events: none;
+            border-radius: 4px;
+            background: rgba(74, 144, 226, 0.05);
+        }
+        
+        /* ぷらっとくん用Layout Anchor */
+        #purattokun-layout-anchor {
             left: 30%;
             top: 60%;
-            transform: translate(-50%, -50%);
+        }
+        
+        /* ぷらっとくんCanvas（従来の設定を維持） */
+        #demo-purattokun-canvas {
             width: 300px;   /* 200px → 300px に拡大 */
             height: 300px;  /* 200px → 300px に拡大 */
             cursor: pointer;
@@ -125,12 +206,14 @@
             display: block; /* 初期表示に変更 */
         }
         
-        /* ねずみCanvas */
-        #demo-nezumi-canvas {
-            position: absolute;
+        /* ねずみ用Layout Anchor */
+        #nezumi-layout-anchor {
             left: 70%;
             top: 40%;
-            transform: translate(-50%, -50%);
+        }
+        
+        /* ねずみCanvas（従来の設定を維持） */
+        #demo-nezumi-canvas {
             width: 180px;
             height: 180px;
             cursor: pointer;
@@ -306,9 +389,21 @@
                 4. 各モジュール独立動作確認
             </div>
             
-            <!-- Spineキャラクター -->
-            <canvas id="demo-purattokun-canvas"></canvas>
-            <canvas id="demo-nezumi-canvas"></canvas>
+            <!-- 🎯 二層化ラッパーシステム - Spineキャラクター -->
+            
+            <!-- ぷらっとくん: Layout Anchor + Interactive Layer -->
+            <div id="purattokun-layout-anchor" class="layout-anchor">
+                <div class="interactive">
+                    <canvas id="demo-purattokun-canvas"></canvas>
+                </div>
+            </div>
+            
+            <!-- ねずみ: Layout Anchor + Interactive Layer -->
+            <div id="nezumi-layout-anchor" class="layout-anchor">
+                <div class="interactive">
+                    <canvas id="demo-nezumi-canvas"></canvas>
+                </div>
+            </div>
         </div>
         
         <div class="status-panel">
