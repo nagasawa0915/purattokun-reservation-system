@@ -64,7 +64,7 @@ class PureBoundingBoxEvents {
         this.core.startDrag(event, handleType === 'move' ? 'move' : `resize-${handleType}`);
         
         // ドキュメントレベルでイベント監視
-        document.addEventListener('mousemove', this.boundHandlers.mouseMove);
+        document.addEventListener('mousemove', this.boundHandlers.mouseMove, { passive: false });
         document.addEventListener('mouseup', this.boundHandlers.mouseUp);
         document.addEventListener('keydown', this.boundHandlers.keyDown);
         document.addEventListener('keyup', this.boundHandlers.keyUp);
@@ -165,7 +165,7 @@ class PureBoundingBoxEvents {
                 clientY: touch.clientY,
                 preventDefault: () => event.preventDefault()
             });
-        });
+        }, { passive: false });
         
         document.addEventListener('touchend', (event) => {
             if (!this.core.dragState.isDragging) return;

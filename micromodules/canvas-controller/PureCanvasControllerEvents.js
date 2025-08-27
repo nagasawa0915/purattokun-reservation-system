@@ -102,7 +102,7 @@ class PureCanvasControllerEvents {
         
         // イベントリスナー登録
         document.addEventListener('mousedown', this.eventListeners.mousedown);
-        document.addEventListener('mousemove', this.eventListeners.mousemove);
+        document.addEventListener('mousemove', this.eventListeners.mousemove, { passive: false });
         document.addEventListener('mouseup', this.eventListeners.mouseup);
         document.addEventListener('keydown', this.eventListeners.keydown);
         document.addEventListener('keyup', this.eventListeners.keyup);

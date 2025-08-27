@@ -33,6 +33,10 @@ class PureBoundingBoxEvents {
         // Phase 4: アクティブポインタートラッキング
         this.activePointerId = null;
         this.pointerCaptureElement = null;
+        
+        // 🆕 BB外クリック監視用
+        this.documentClickHandler = this.onDocumentClick.bind(this);
+        this.isListeningForOutsideClicks = false;
     }
     
     /**
@@ -55,7 +59,10 @@ class PureBoundingBoxEvents {
             console.log('⚠️ Pointerイベント非対応 - マウスイベントフォールバック');
         }
         
-        console.log('📡 Phase 4イベント登録完了 - 統合Pointer対応 + 中断処理強化');
+        // 🆕 BB外クリック監視開始
+        this.startListeningForOutsideClicks();
+        
+        console.log('📡 Phase 4イベント登録完了 - 統合Pointer対応 + 中断処理強化 + BB外クリック監視');
     }
     
     /**
@@ -77,6 +84,9 @@ class PureBoundingBoxEvents {
         // ドキュメントレベルのイベント削除
         this.detachDocumentEvents();
         
+        // 🆕 BB外クリック監視停止
+        this.stopListeningForOutsideClicks();
+        
         // Phase 4: ポインターキャプチャ解放
         this.releasePointerCapture();
     }
@@ -91,6 +101,16 @@ class PureBoundingBoxEvents {
         if (!this.ui.isHandle(event.target)) return;
         
         const handleType = this.ui.getHandleType(event.target);
+        const timestamp = new Date().toISOString();
+        
+        console.log('📱 [EVENT] onPointerDown: BB操作開始', {
+            timestamp: timestamp,
+            nodeId: this.core.config.nodeId,
+            handleType: handleType,
+            dragType: handleType === 'move' ? 'move' : `resize-${handleType}`,
+            eventCoords: {x: event.clientX, y: event.clientY},
+            pointerId: event.pointerId || 'legacy'
+        });
         
         // 🎯 BB座標系スワップ: 編集モード進入
         this.core.enterEditingMode();
@@ -110,11 +130,15 @@ class PureBoundingBoxEvents {
         // Phase 4: アクティブポインター記録
         this.activePointerId = event.pointerId || null;
         
-        console.log('📡 イベント登録完了 - 累積オフセット方式（Phase 2）');
-        console.log('🎯 ドラッグタイプ:', this.core.dragState.dragType);
-        console.log('📐 基準値保存完了:', {
-            baseTx: this.core.dragState.baseTx,
-            baseTy: this.core.dragState.baseTy
+        console.log('✅ [EVENT] onPointerDown完了 - ドラッグ準備整了', {
+            timestamp: timestamp,
+            dragStateInitialized: this.core.dragState.isDragging,
+            editingModeActive: this.core.swapState.currentMode === 'editing',
+            cumulativeOffsetBase: {
+                baseTx: this.core.dragState.baseTx,
+                baseTy: this.core.dragState.baseTy
+            },
+            pointerCaptureActive: !!this.pointerCaptureElement
         });
     }
     
@@ -171,6 +195,16 @@ class PureBoundingBoxEvents {
         }
         if (!this.core.dragState.isDragging) return;
         
+        const timestamp = new Date().toISOString();
+        
+        console.log('🔴 [EVENT] onPointerUp: ドラッグ終了処理開始', {
+            timestamp: timestamp,
+            nodeId: this.core.config.nodeId,
+            eventCoords: {x: event.clientX, y: event.clientY},
+            pointerId: event.pointerId || 'legacy',
+            activePointerId: this.activePointerId
+        });
+        
         // 🆕 Phase 3: 見た目の中心基準でのコミット処理
         const commitSuccess = this.core.commitToPercent();
         if (!commitSuccess) {
@@ -183,13 +217,19 @@ class PureBoundingBoxEvents {
         // ドラッグ終了
         this.core.endDrag();
         
-        // 🎯 BB座標系スワップ: 編集モード終了（Phase 3実装後は簡素化）
-        this.exitEditingModeSimplified();
+        // 🎯 BB座標系スワップ: 編集モード終了（commitToPercentで既に座標変換済み）
+        this.exitEditingModeSimplified(); // 二重変換防止
         
         // Phase 4: 統合イベント削除とクリーンアップ
         this.cleanupAfterDrag(event, 'normal');
         
-        console.log('🖱️ Phase 4ドラッグ正常終了 - 統合Pointerシステム');
+        console.log('✅ [EVENT] onPointerUp完了 - 正常終了', {
+            timestamp: timestamp,
+            commitSuccess: commitSuccess,
+            localStorageSaved: true,
+            editingModeExited: this.core.swapState.currentMode === 'idle',
+            finalCleanupCompleted: true
+        });
     }
     
     /**
@@ -209,67 +249,120 @@ class PureBoundingBoxEvents {
     /**
      * 🆕 Phase 2: 累積オフセット方式の初期化
      * pointerdown時に現在の--tx/--ty値を基準値として保存
+     * 🎯 レイアウトタイミング問題解決: 初回BB編集開始時にレイアウト確定待機
      */
     initCumulativeOffset(event) {
+        const timestamp = new Date().toISOString();
         const element = this.core.config.targetElement;
-        const interactive = element.querySelector('.interactive');
+        const interactive = element.closest('.interactive') || 
+                           element.parentElement?.closest('.interactive') ||
+                           element.querySelector('.interactive');
+        
+        console.log('📍 [OFFSET] initCumulativeOffset: CSS変数初期化開始 - レイアウト確定待機', {
+            timestamp: timestamp,
+            nodeId: this.core.config.nodeId,
+            hasInteractive: !!interactive,
+            eventCoords: {x: event.clientX, y: event.clientY}
+        });
         
         if (interactive) {
-            const cs = getComputedStyle(interactive);
-            
-            // 🚨 修正：CSS変数値を取得（NaN対応強化）
-            let baseTx = parseFloat(cs.getPropertyValue('--tx'));
-            let baseTy = parseFloat(cs.getPropertyValue('--ty'));
-            
-            // CSS変数が未定義（NaN）の場合は現在のtransform値から取得
-            if (isNaN(baseTx) || isNaN(baseTy)) {
-                console.log('⚠️ CSS変数未定義を検出。transform値から初期値を計算');
-                
-                // 現在のtransform: translate(Xpx, Ypx)から値を抽出
-                const transform = cs.transform;
-                console.log('🔍 現在のtransform:', transform);
-                
-                if (transform && transform !== 'none') {
-                    const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-                    
-                    if (match) {
-                        const extractedTx = parseFloat(match[1]);
-                        const extractedTy = parseFloat(match[2]);
-                        
-                        baseTx = isNaN(baseTx) ? (isNaN(extractedTx) ? 0 : extractedTx) : baseTx;
-                        baseTy = isNaN(baseTy) ? (isNaN(extractedTy) ? 0 : extractedTy) : baseTy;
-                        
-                        console.log('✅ transform値から初期値を取得:', {
-                            extracted: {tx: extractedTx, ty: extractedTy},
-                            final: {baseTx, baseTy}
-                        });
-                    } else {
-                        // transform解析失敗の場合は0で初期化
-                        baseTx = isNaN(baseTx) ? 0 : baseTx;
-                        baseTy = isNaN(baseTy) ? 0 : baseTy;
-                        console.log('🔧 transform解析失敗。0で初期化:', {baseTx, baseTy});
-                    }
-                } else {
-                    // transform未定義の場合は0で初期化
-                    baseTx = isNaN(baseTx) ? 0 : baseTx;
-                    baseTy = isNaN(baseTy) ? 0 : baseTy;
-                    console.log('🔧 transform未定義。0で初期化:', {baseTx, baseTy});
-                }
-            }
-            
-            this.core.dragState.baseTx = baseTx;
-            this.core.dragState.baseTy = baseTy;
-            
-            console.log('📐 累積オフセット基準値保存（修正版）:', {
-                baseTx: this.core.dragState.baseTx,
-                baseTy: this.core.dragState.baseTy
+            // 🎯 レイアウト確定待機: ダブルrequestAnimationFrame（安全策）
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    this.performCSSVariableInitialization(interactive, timestamp, event);
+                });
             });
         } else {
             // .interactiveが見つからない場合は0で初期化
             this.core.dragState.baseTx = 0;
             this.core.dragState.baseTy = 0;
-            console.log('⚠️ .interactive要素が見つからないため、基準値を0で初期化');
+            console.log('⚠️ [OFFSET] .interactive要素未発見 - 基準値を0で初期化', {
+                timestamp: timestamp,
+                fallbackBase: {baseTx: 0, baseTy: 0}
+            });
+            
+            // 開始位置保存（既存処理と同じ）
+            this.core.dragState.startX = event.clientX;
+            this.core.dragState.startY = event.clientY;
         }
+    }
+
+    /**
+     * 🆕 レイアウト確定後のCSS変数初期化処理
+     */
+    performCSSVariableInitialization(interactive, timestamp, event) {
+        // 🎯 レイアウト強制確定: getBoundingClientRect()実行
+        interactive.getBoundingClientRect();
+        
+        const cs = getComputedStyle(interactive);
+        
+        // 🚨 修正：CSS変数値を取得（NaN対応強化）
+        let baseTx = parseFloat(cs.getPropertyValue('--tx'));
+        let baseTy = parseFloat(cs.getPropertyValue('--ty'));
+        
+        const txRaw = cs.getPropertyValue('--tx') || 'undefined';
+        const tyRaw = cs.getPropertyValue('--ty') || 'undefined';
+        
+        const originalCssVars = {
+            tx: txRaw,
+            ty: tyRaw,
+            txParsed: parseFloat(txRaw),
+            tyParsed: parseFloat(tyRaw),
+            bothNaN: isNaN(baseTx) && isNaN(baseTy)
+        };
+        
+        // CSS変数が未定義（NaN）の場合は現在のtransform値から取得
+        if (isNaN(baseTx) || isNaN(baseTy)) {
+            console.log('⚠️ [OFFSET] CSS変数未定義を検出 - transform解析開始（レイアウト確定後）', originalCssVars);
+            
+            // 現在のtransform: translate(Xpx, Ypx)から値を抽出
+            const transform = cs.transform;
+            
+            if (transform && transform !== 'none') {
+                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                
+                if (match) {
+                    const extractedTx = parseFloat(match[1]);
+                    const extractedTy = parseFloat(match[2]);
+                    
+                    baseTx = isNaN(baseTx) ? (isNaN(extractedTx) ? 0 : extractedTx) : baseTx;
+                    baseTy = isNaN(baseTy) ? (isNaN(extractedTy) ? 0 : extractedTy) : baseTy;
+                    
+                    console.log('✅ [OFFSET] transform解析成功（レイアウト確定後）', {
+                        transform: transform,
+                        extracted: {tx: extractedTx, ty: extractedTy},
+                        final: {baseTx, baseTy}
+                    });
+                } else {
+                    // transform解析失敗の場合は0で初期化
+                    baseTx = isNaN(baseTx) ? 0 : baseTx;
+                    baseTy = isNaN(baseTy) ? 0 : baseTy;
+                    console.log('⚠️ [OFFSET] transform解析失敗 - 0で初期化（レイアウト確定後）', {
+                        transform: transform,
+                        fallback: {baseTx, baseTy}
+                    });
+                }
+            } else {
+                // transform未定義の場合は0で初期化
+                baseTx = isNaN(baseTx) ? 0 : baseTx;
+                baseTy = isNaN(baseTy) ? 0 : baseTy;
+                console.log('⚠️ [OFFSET] transform未定義 - 0で初期化（レイアウト確定後）', {baseTx, baseTy});
+            }
+        }
+        
+        this.core.dragState.baseTx = baseTx;
+        this.core.dragState.baseTy = baseTy;
+        
+        console.log('✅ [OFFSET] 累積オフセット基準値保存完了 - レイアウト確定待機版', {
+            timestamp: timestamp,
+            originalCssVars: originalCssVars,
+            finalBase: {
+                baseTx: this.core.dragState.baseTx,
+                baseTy: this.core.dragState.baseTy
+            },
+            initializationMethod: originalCssVars.bothNaN ? 'transform-parsing' : 'css-variables',
+            layoutWaitFrames: 2 // ダブルrequestAnimationFrame実行済み
+        });
         
         // 開始位置保存（既存処理と同じ）
         this.core.dragState.startX = event.clientX;
@@ -277,7 +370,9 @@ class PureBoundingBoxEvents {
     }
     applyCumulativeOffset(event) {
         const element = this.core.config.targetElement;
-        const interactive = element.querySelector('.interactive');
+        const interactive = element.closest('.interactive') || 
+                           element.parentElement?.closest('.interactive') ||
+                           element.querySelector('.interactive');
         
         if (!interactive) return;
         
@@ -475,7 +570,7 @@ class PureBoundingBoxEvents {
      * 🆕 Phase 4: 統合ドキュメントイベント登録
      */
     attachDocumentEvents() {
-        document.addEventListener('pointermove', this.boundHandlers.pointerMove);
+        document.addEventListener('pointermove', this.boundHandlers.pointerMove, { passive: false });
         document.addEventListener('pointerup', this.boundHandlers.pointerUp);
         document.addEventListener('pointercancel', this.boundHandlers.pointerCancel);
         document.addEventListener('keydown', this.boundHandlers.keyDown);
@@ -483,7 +578,7 @@ class PureBoundingBoxEvents {
         
         // レガシーフォールバック
         if (!window.PointerEvent) {
-            document.addEventListener('mousemove', this.boundHandlers.mouseMove);
+            document.addEventListener('mousemove', this.boundHandlers.mouseMove, { passive: false });
             document.addEventListener('mouseup', this.boundHandlers.mouseUp);
         }
     }
@@ -516,10 +611,157 @@ class PureBoundingBoxEvents {
         // ドラッグ終了
         this.core.endDrag();
         
-        // 編集モード終了（Phase 3簡素化版）
-        this.exitEditingModeSimplified();
+        // 編集モード終了（状態リセットのみ - 他で座標変換済み）
+        this.exitEditingModeSimplified(); // 二重変換防止
         
         console.log(`🧹 Phase 4クリーンアップ完了 - 終了タイプ: ${endType}`);
+    }
+    
+    /**
+     * 🆕 BB外クリック監視開始
+     */
+    startListeningForOutsideClicks() {
+        if (!this.isListeningForOutsideClicks) {
+            // 少し遅延させてdocumentに登録（イベントバブリングを避ける）
+            setTimeout(() => {
+                document.addEventListener('click', this.documentClickHandler, true);
+                this.isListeningForOutsideClicks = true;
+                console.log('👁️ [CLICK-MONITOR] BB外クリック監視開始', {
+                    timestamp: new Date().toISOString(),
+                    nodeId: this.core.config.nodeId,
+                    delay: '50ms'
+                });
+            }, 50);
+        }
+    }
+    
+    /**
+     * 🆕 BB外クリック監視停止
+     */
+    stopListeningForOutsideClicks() {
+        if (this.isListeningForOutsideClicks) {
+            document.removeEventListener('click', this.documentClickHandler, true);
+            this.isListeningForOutsideClicks = false;
+            console.log('👁️ BB外クリック監視停止');
+        }
+    }
+    
+    /**
+     * 🆕 document全体のクリック処理（BB外判定）
+     */
+    onDocumentClick(event) {
+        // BB表示中でない場合は何もしない
+        if (!this.core.uiState.visible || !this.core.uiState.container) {
+            return;
+        }
+        
+        // ドラッグ中は無視
+        if (this.core.dragState.isDragging) {
+            return;
+        }
+        
+        // クリック位置がBB要素内かチェック
+        const isClickInsideBB = this.isClickInsideBoundingBox(event.target, event.clientX, event.clientY);
+        
+        if (!isClickInsideBB) {
+            console.log('🎯 BB外クリック検出 - 選択解除処理開始');
+            this.deselectBoundingBox();
+        }
+    }
+    
+    /**
+     * 🆕 クリック位置がBB内かどうか判定
+     */
+    isClickInsideBoundingBox(target, clientX, clientY) {
+        // 1. BB要素内のクリックかチェック
+        if (this.core.uiState.container.contains(target)) {
+            return true;
+        }
+        
+        // 2. 対象要素自体のクリックかチェック
+        if (this.core.config.targetElement.contains(target)) {
+            return true;
+        }
+        
+        // 3. 座標による判定（より正確）
+        const bbRect = this.core.uiState.container.getBoundingClientRect();
+        const isInsideRect = (
+            clientX >= bbRect.left && 
+            clientX <= bbRect.right && 
+            clientY >= bbRect.top && 
+            clientY <= bbRect.bottom
+        );
+        
+        return isInsideRect;
+    }
+    
+    /**
+     * 🆕 BB選択解除処理（本番環境互換）
+     */
+    deselectBoundingBox() {
+        const timestamp = new Date().toISOString();
+        
+        console.log('🔄 [DESELECT] BB選択解除開始 - px→%スワップ実行', {
+            timestamp: timestamp,
+            nodeId: this.core.config.nodeId,
+            currentMode: this.core.swapState.currentMode,
+            isDragging: this.core.dragState.isDragging
+        });
+        
+        // 1. Phase 3座標スワップ実行（px→%変換）
+        const commitSuccess = this.core.commitToPercent();
+        if (commitSuccess) {
+            console.log('✅ [DESELECT] 座標コミット完了 - px→%変換成功');
+            
+            // 2. localStorage統合：位置データ保存
+            this.savePositionToStorage();
+            
+        } else {
+            console.warn('⚠️ [DESELECT] 座標コミット失敗 - 選択解除継続');
+        }
+        
+        // 3. 編集モード終了（状態リセットのみ - commitToPercentで既に座標変換済み）
+        this.exitEditingModeSimplified(); // 二重変換防止
+        
+        // 4. BB表示制御
+        this.core.uiState.container.style.display = 'none';
+        this.core.uiState.visible = false;
+        
+        // 5. BB外クリック監視停止
+        this.stopListeningForOutsideClicks();
+        
+        console.log('✅ [DESELECT] BB選択解除完了 - 本番環境互換動作', {
+            timestamp: timestamp,
+            commitSuccess: commitSuccess,
+            editingModeExited: this.core.swapState.currentMode === 'idle',
+            bbHidden: !this.core.uiState.visible,
+            clickMonitorStopped: !this.isListeningForOutsideClicks
+        });
+        
+        // 6. カスタムイベント発火（外部システム連携用）
+        this.dispatchDeselectEvent();
+    }
+    
+    /**
+     * 🆕 選択解除イベント発火（外部システム連携用）
+     */
+    dispatchDeselectEvent() {
+        const event = new CustomEvent('boundingBoxDeselected', {
+            detail: {
+                nodeId: this.core.config.nodeId,
+                targetElement: this.core.config.targetElement,
+                finalPosition: {
+                    left: this.core.config.targetElement.style.left,
+                    top: this.core.config.targetElement.style.top,
+                    width: this.core.config.targetElement.style.width,
+                    height: this.core.config.targetElement.style.height
+                },
+                timestamp: Date.now()
+            }
+        });
+        
+        document.dispatchEvent(event);
+        console.log('📡 boundingBoxDeselectedイベント発火', event.detail);
     }
     
     /**
@@ -530,7 +772,7 @@ class PureBoundingBoxEvents {
         
         this.core.uiState.container.addEventListener('touchstart', (event) => {
             const touch = event.touches[0];
-            this.onMouseDown({
+            this.onPointerDown({
                 target: event.target,
                 clientX: touch.clientX,
                 clientY: touch.clientY,
@@ -542,16 +784,19 @@ class PureBoundingBoxEvents {
         document.addEventListener('touchmove', (event) => {
             if (!this.core.dragState.isDragging) return;
             const touch = event.touches[0];
-            this.onMouseMove({
+            this.onPointerMove({
                 clientX: touch.clientX,
                 clientY: touch.clientY,
-                preventDefault: () => event.preventDefault()
+                preventDefault: () => event.preventDefault(),
+                pointerId: touch.identifier
             });
-        });
+        }, { passive: false });
         
         document.addEventListener('touchend', (event) => {
             if (!this.core.dragState.isDragging) return;
-            this.onMouseUp({});
+            this.onPointerUp({
+                pointerId: event.changedTouches[0]?.identifier
+            });
         });
     }
 }
@@ -618,7 +863,9 @@ PureBoundingBoxEvents.prototype.getPhase4DebugInfo = function() {
  */
 PureBoundingBoxEvents.prototype.getPhase3DebugInfo = function() {
     const element = this.core.config.targetElement;
-    const interactive = element?.querySelector('.interactive');
+    const interactive = element?.closest('.interactive') || 
+                       element?.parentElement?.closest('.interactive') ||
+                       element?.querySelector('.interactive');
     
     let visualCenterInfo = null;
     if (element && element.parentElement) {
@@ -681,7 +928,9 @@ PureBoundingBoxEvents.prototype.getPhase3DebugInfo = function() {
 
 PureBoundingBoxEvents.prototype.getCurrentCSSOffsets = function() {
     const element = this.core.config.targetElement;
-    const interactive = element?.querySelector('.interactive');
+    const interactive = element?.closest('.interactive') || 
+                       element?.parentElement?.closest('.interactive') ||
+                       element?.querySelector('.interactive');
     
     if (!interactive) return { tx: 'N/A', ty: 'N/A' };
     

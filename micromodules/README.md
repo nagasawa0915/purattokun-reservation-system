@@ -18,11 +18,18 @@ Spine WebGLアプリケーション開発のための統合マイクロモジュ
 ### 🎯 **新世代モジュール群（2025-08-26追加）**
 
 #### A. 🎭 Bounding Box System v5.0
-**責務**: 要素の境界編集・リサイズ機能
+**責務**: 要素の境界編集・リサイズ機能 + キャラクター選択システム
 - **構成**: 4つのサブモジュール（Core, Bounds, UI, Events）
 - **ファイル**: `bounding-box/PureBoundingBox*.js` (計5ファイル)
-- **特徴**: v2座標互換・8方向リサイズ・修飾キー対応
+- **特徴**: v2座標互換・8方向リサイズ・修飾キー対応・薄いCanvas選択対応
 - **技術**: Transform ↔ Bounds座標系スワップ
+- **選択フロー**: 薄いCanvas境界クリック→BB表示（%→px）、他キャラ/BB外クリック→薄Canvas復帰（px→%）
+
+**現在の実装状況（2025-08-27）**:
+- ✅ `enterEditingMode()`: 実装済み（座標系スワップ処理）
+- ⚠️ `exitEditingMode()`: 実装済みだが、親要素サイズ問題で動作不安定
+- 🔧 **既知の課題**: spine-micromodules-demo.htmlでのレスポンシブ座標連動問題
+- 📝 **正常動作環境**: index.html(?edit=true)では完全動作確認済み
 
 #### B. 🚀 Spine Loader v4.0
 **責務**: Spineアセットファイル読み込み専用
