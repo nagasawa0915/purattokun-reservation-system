@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElementObserver × PureBoundingBox 統合テスト</title>
+    <style>
+        body {
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+            touch-action: none;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-area {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            background: #e8f4f8;
+            border: 2px solid #007cba;
+            margin: 20px auto;
+            border-radius: 10px;
+            touch-action: none;
+        }
+        .layout-anchor {
+            position: absolute;
+            background: rgba(255, 107, 107, 0.3);
+            border: 2px solid #ff6b6b;
+            border-radius: 8px;
+            transform: translate(-50%, -50%);
+            touch-action: none;
+        }
+        .interactive {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            font-weight: bold;
+            cursor: pointer;
+            transform: translate(var(--tx, 0), var(--ty, 0));
+            touch-action: none;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a8a;
+        }
+        .log {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #007cba; }
+        .debug { color: #6f42c1; }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin: 0 5px;
+        }
+        .status.active {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.inactive {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .instructions {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🌊 ElementObserver × PureBoundingBox 統合テスト</h1>
+        
+        <div class="instructions">
+            <h3>📝 統合テスト内容</h3>
+            <ol>
+                <li><strong>親要素サイズ0問題の解決確認</strong> - commitToPercent()の安定実行</li>
+                <li><strong>座標スワップ安全性チェック</strong> - 事前チェック機能</li>
+                <li><strong>リアルタイム監視</strong> - 親要素変化の即座検出</li>
+                <li><strong>BB外クリック選択解除</strong> - 従来機能の完全保持</li>
+                <li><strong>ログ出力最適化</strong> - ElementObserver統合による詳細監視</li>
+            </ol>
+            <p><strong>🎯 期待結果</strong>：「親要素サイズが0のため、コミット処理をスキップ」エラーの完全解決</p>
+        </div>
+        
+        <div class="controls">
+            <button onclick="initializeElementObserver()">🌊 ElementObserver初期化</button>
+            <button onclick="startBoundingBoxTest()">BB選択開始</button>
+            <button onclick="testSafetyCheck()">🔍 安全性チェック</button>
+            <button onclick="testParentResize()">📐 親要素リサイズテスト</button>
+            <button onclick="showDebugInfo()">🛠️ デバッグ情報</button>
+            <button onclick="clearLog()">Log Clear</button>
+        </div>
+        
+        <div>
+            状態: 
+            <span id="observer-status" class="status inactive">ElementObserver Inactive</span>
+            <span id="bb-status" class="status inactive">BB Inactive</span>
+            <span id="parent-status" class="status inactive">Parent Monitoring Inactive</span>
+        </div>
+        
+        <!-- 🎯 メインテストエリア -->
+        <div class="test-area" id="test-area">
+            <div class="layout-anchor" id="test-target" style="left: 30%; top: 40%; width: 120px; height: 80px;">
+                <div class="interactive">
+                    <span>Test Element<br>🌊 Observer統合テスト</span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <!-- 🌊 ElementObserver マイクロモジュール -->
+    <script src="micromodules/element-observer/ElementObserverCore.js"></script>
+    <script src="micromodules/element-observer/ElementObserver.js"></script>
+    
+    <!-- 🎯 PureBoundingBox マイクロモジュール群 -->
+    <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
+    
+    <script>
+        const logElement = document.getElementById('log');
+        const observerStatusElement = document.getElementById('observer-status');
+        const bbStatusElement = document.getElementById('bb-status');
+        const parentStatusElement = document.getElementById('parent-status');
+        
+        let elementObserver = null;
+        let currentBoundingBox = null;
+        let parentUnobserve = null;
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            const logLine = `[${timestamp}] ${message}\n`;
+            
+            const span = document.createElement('span');
+            span.className = className;
+            span.textContent = logLine;
+            logElement.appendChild(span);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+        
+        function updateStatus(observerActive, bbActive, parentMonitoring) {
+            observerStatusElement.textContent = observerActive ? 'ElementObserver Active' : 'ElementObserver Inactive';
+            observerStatusElement.className = `status ${observerActive ? 'active' : 'inactive'}`;
+            
+            bbStatusElement.textContent = bbActive ? 'BB Active' : 'BB Inactive';
+            bbStatusElement.className = `status ${bbActive ? 'active' : 'inactive'}`;
+            
+            parentStatusElement.textContent = parentMonitoring ? 'Parent Monitoring Active' : 'Parent Monitoring Inactive';
+            parentStatusElement.className = `status ${parentMonitoring ? 'active' : 'inactive'}`;
+        }
+        
+        // 🌊 ElementObserver初期化
+        function initializeElementObserver() {
+            log('=== ElementObserver初期化開始 ===', 'success');
+            
+            try {
+                // ElementObserver作成
+                elementObserver = new ElementObserver();
+                
+                const targetElement = document.getElementById('test-target');
+                if (!targetElement) {
+                    throw new Error('テスト要素が見つかりません');
+                }
+                
+                // 親要素サイズ監視開始
+                parentUnobserve = elementObserver.observeParentSize(targetElement, (parentRect, isValid) => {
+                    log('📡 親要素変化通知:', 'debug');
+                    log(`  サイズ: ${parentRect ? `${parentRect.width}x${parentRect.height}` : 'null'}`, 'debug');
+                    log(`  有効: ${isValid}`, isValid ? 'success' : 'warning');
+                    
+                    updateStatus(true, currentBoundingBox?.core?.uiState?.visible || false, isValid);
+                });
+                
+                log('✅ ElementObserver初期化完了', 'success');
+                log('📐 親要素サイズ監視開始', 'info');
+                
+                updateStatus(true, false, true);
+                
+            } catch (error) {
+                log(`❌ ElementObserver初期化エラー: ${error.message}`, 'error');
+                updateStatus(false, false, false);
+            }
+        }
+        
+        // 🎯 BB選択開始テスト（ElementObserver統合版）
+        async function startBoundingBoxTest() {
+            log('=== BB選択開始テスト（ElementObserver統合版） ===', 'success');
+            
+            try {
+                // ElementObserver事前チェック
+                if (!elementObserver) {
+                    log('⚠️ ElementObserver未初期化 - 自動初期化します', 'warning');
+                    initializeElementObserver();
+                    await new Promise(resolve => setTimeout(resolve, 100)); // 初期化待機
+                }
+                
+                const targetElement = document.getElementById('test-target');
+                if (!targetElement) {
+                    throw new Error('テスト要素が見つかりません');
+                }
+                
+                // 🔍 座標スワップ安全性チェック
+                const safetyCheck = elementObserver.isSafeForCoordinateSwap(targetElement);
+                log('🔍 座標スワップ安全性チェック:', 'debug');
+                log(`  安全: ${safetyCheck.safe}`, safetyCheck.safe ? 'success' : 'warning');
+                log(`  親要素: ${safetyCheck.parentSize}`, 'debug');
+                log(`  対象要素: ${safetyCheck.targetSize}`, 'debug');
+                if (safetyCheck.reason) {
+                    log(`  理由: ${safetyCheck.reason}`, 'warning');
+                }
+                
+                // 既存のBBがある場合はクリーンアップ
+                if (currentBoundingBox) {
+                    currentBoundingBox.cleanup();
+                    currentBoundingBox = null;
+                }
+                
+                // PureBoundingBoxインスタンス作成
+                currentBoundingBox = new PureBoundingBox({
+                    targetElement: targetElement,
+                    nodeId: 'test-element-bb-observer'
+                });
+                
+                log('🔧 PureBoundingBox作成完了（ElementObserver統合準備済み）');
+                
+                // 🌊 ElementObserverのcommitToPercent統合
+                if (currentBoundingBox.core && elementObserver) {
+                    // オリジナルcommitToPercentをバックアップ
+                    currentBoundingBox.core._originalCommitToPercent = currentBoundingBox.core.commitToPercent;
+                    
+                    // ElementObserver統合版commitToPercentに置き換え
+                    currentBoundingBox.core.commitToPercent = function() {
+                        log('🌊 ElementObserver統合版commitToPercent開始', 'debug');
+                        
+                        // 安全性チェック
+                        const safetyResult = elementObserver.isSafeForCoordinateSwap(targetElement);
+                        if (!safetyResult.safe) {
+                            log(`⚠️ 座標スワップが安全でないため処理をスキップ: ${safetyResult.reason}`, 'warning');
+                            return false;
+                        }
+                        
+                        // 安定した親要素矩形を取得
+                        const stableParentRect = elementObserver.getStableParentRect(targetElement);
+                        if (!stableParentRect) {
+                            log('❌ 安定した親要素矩形を取得できません', 'error');
+                            return false;
+                        }
+                        
+                        log(`📐 安定親要素矩形取得: ${stableParentRect.width}x${stableParentRect.height}`, 'success');
+                        
+                        // オリジナル処理実行（ただし親要素矩形は安定版を使用）
+                        // 注意: この統合は概念実証。実際の統合では親要素矩形の注入が必要
+                        return this._originalCommitToPercent.call(this);
+                    };
+                    
+                    log('🔧 commitToPercent統合完了', 'success');
+                }
+                
+                // BB実行開始
+                const result = await currentBoundingBox.execute({ visible: true });
+                
+                if (result.success) {
+                    log('✅ BB実行成功（ElementObserver統合版）', 'success');
+                    log(`  nodeId: ${result.nodeId}`, 'debug');
+                    log(`  bounds: ${JSON.stringify(result.bounds)}`, 'debug');
+                    updateStatus(true, true, true);
+                    
+                    // BB選択解除イベントリスナー
+                    document.addEventListener('boundingBoxDeselected', onBoundingBoxDeselected);
+                    log('📡 boundingBoxDeselectedイベントリスナー登録完了');
+                    
+                } else {
+                    throw new Error(result.error || '不明なエラー');
+                }
+                
+            } catch (error) {
+                log(`❌ BB選択開始エラー: ${error.message}`, 'error');
+                updateStatus(elementObserver ? true : false, false, false);
+            }
+        }
+        
+        // BB選択解除イベントハンドラー
+        function onBoundingBoxDeselected(event) {
+            log('=== BB選択解除イベント受信（ElementObserver統合版） ===', 'info');
+            log(`  nodeId: ${event.detail.nodeId}`, 'debug');
+            log(`  finalPosition: ${JSON.stringify(event.detail.finalPosition)}`, 'debug');
+            log(`  timestamp: ${event.detail.timestamp}`, 'debug');
+            
+            updateStatus(elementObserver ? true : false, false, true);
+            log('✅ BB選択解除イベント処理完了（ElementObserver統合版）', 'success');
+        }
+        
+        // 🔍 安全性チェックテスト
+        function testSafetyCheck() {
+            if (!elementObserver) {
+                log('⚠️ ElementObserver未初期化', 'warning');
+                return;
+            }
+            
+            const targetElement = document.getElementById('test-target');
+            const result = elementObserver.isSafeForCoordinateSwap(targetElement);
+            
+            log('=== 座標スワップ安全性チェックテスト ===', 'debug');
+            log(`安全: ${result.safe}`, result.safe ? 'success' : 'warning');
+            log(`親要素有効: ${result.parentValid}`, result.parentValid ? 'success' : 'warning');
+            log(`対象要素有効: ${result.targetValid}`, result.targetValid ? 'success' : 'warning');
+            log(`親要素サイズ: ${result.parentSize}`, 'debug');
+            log(`対象要素サイズ: ${result.targetSize}`, 'debug');
+            if (result.reason) {
+                log(`理由: ${result.reason}`, 'warning');
+            }
+        }
+        
+        // 📐 親要素リサイズテスト
+        function testParentResize() {
+            log('=== 親要素リサイズテスト ===', 'debug');
+            
+            const testArea = document.getElementById('test-area');
+            const originalWidth = testArea.style.width;
+            
+            // リサイズ実行
+            testArea.style.width = '600px';
+            log('📐 親要素リサイズ実行: 800px → 600px', 'info');
+            
+            // 2秒後に元に戻す
+            setTimeout(() => {
+                testArea.style.width = originalWidth;
+                log('📐 親要素リサイズ復旧: 600px → 800px', 'info');
+            }, 2000);
+        }
+        
+        // 🛠️ デバッグ情報表示
+        function showDebugInfo() {
+            if (!elementObserver) {
+                log('⚠️ ElementObserver未初期化', 'warning');
+                return;
+            }
+            
+            const debugInfo = elementObserver.getDebugInfo();
+            const targetElement = document.getElementById('test-target');
+            const bbStatus = elementObserver.getBoundingBoxIntegrationStatus(targetElement);
+            
+            log('=== デバッグ情報 ===', 'debug');
+            log(`ElementObserver: ${JSON.stringify(debugInfo, null, 2)}`, 'debug');
+            log(`BB統合状況: ${JSON.stringify(bbStatus, null, 2)}`, 'debug');
+        }
+        
+        // オリジナルのconsoleをラップ
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            if (!args.join(' ').includes('👁️') || args.join(' ').includes('ElementObserver') || args.join(' ').includes('BB')) {
+                log(args.join(' '), 'info');
+            }
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            log(args.join(' '), 'warning');
+        };
+        
+        // ページ読み込み時
+        window.addEventListener('load', () => {
+            log('🌐 ElementObserver×PureBoundingBox統合テストページ読み込み完了');
+            log('');
+            log('🎯 統合テスト目標:');
+            log('  1. 親要素サイズ0問題の完全解決');
+            log('  2. 座標スワップ安全性の事前チェック');
+            log('  3. リアルタイム要素監視との連携');
+            log('  4. commitToPercent()の安定実行');
+            log('  5. BB外クリック選択解除の完全保持');
+            log('');
+            log('▶️ 「🌊 ElementObserver初期化」→「BB選択開始」の順でテスト開始');
+        });
+        
+        // クリーンアップ
+        window.addEventListener('beforeunload', () => {
+            if (currentBoundingBox) {
+                currentBoundingBox.cleanup();
+            }
+            if (parentUnobserve) {
+                parentUnobserve();
+            }
+            if (elementObserver) {
+                elementObserver.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>
