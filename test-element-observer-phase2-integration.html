@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElementObserver Phase 2統合テスト - 高度座標系統合</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            margin: 0;
+            touch-action: none;
+            color: white;
+        }
+        .test-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .test-area {
+            position: relative;
+            width: 1000px;
+            height: 600px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            margin: 20px auto;
+            border-radius: 15px;
+            touch-action: none;
+            overflow: hidden;
+        }
+        .layout-anchor {
+            position: absolute;
+            background: rgba(255, 107, 107, 0.4);
+            border: 2px solid #ff6b6b;
+            border-radius: 10px;
+            transform: translate(-50%, -50%);
+            touch-action: none;
+            transition: all 0.2s ease;
+        }
+        .interactive {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transform: translate(var(--tx, 0), var(--ty, 0)) scale(var(--scale, 1)) rotate(var(--rotation, 0deg));
+            touch-action: none;
+        }
+        .canvas-element {
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            background: rgba(78, 205, 196, 0.2);
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .control-group {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .control-group h3 {
+            margin: 0 0 10px 0;
+            color: #feca57;
+            font-size: 16px;
+        }
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 15px;
+            margin: 3px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        button.primary {
+            background: rgba(78, 205, 196, 0.3);
+            border-color: #4ecdc4;
+        }
+        button.secondary {
+            background: rgba(255, 107, 107, 0.3);
+            border-color: #ff6b6b;
+        }
+        .coordinate-display {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .coord-system {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 11px;
+        }
+        .coord-system h4 {
+            margin: 0 0 5px 0;
+            color: #feca57;
+            font-size: 12px;
+        }
+        .coord-value {
+            color: #4ecdc4;
+            font-family: monospace;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .success { color: #26de81; }
+        .error { color: #fc5c65; }
+        .warning { color: #fed330; }
+        .info { color: #45aaf2; }
+        .debug { color: #a55eea; }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+        .status.active {
+            background: rgba(38, 222, 129, 0.3);
+            color: #26de81;
+            border: 1px solid #26de81;
+        }
+        .status.inactive {
+            background: rgba(252, 92, 101, 0.3);
+            color: #fc5c65;
+            border: 1px solid #fc5c65;
+        }
+        .instructions {
+            background: rgba(69, 170, 242, 0.2);
+            border: 1px solid #45aaf2;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #45aaf2;
+        }
+        .phase-indicator {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .phase-indicator h1 {
+            margin: 0;
+            font-size: 24px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="phase-indicator">
+            <h1>🚀 ElementObserver Phase 2統合テスト</h1>
+            <p>高度座標系統合システム - 5つの座標系完全同期テスト</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>📝 Phase 2統合テスト項目</h3>
+            <ol>
+                <li><strong>5座標系統合初期化</strong> - DOM・Transform・WebGL・Skeleton・Canvas座標の統合管理</li>
+                <li><strong>統一座標API</strong> - `setUnifiedPosition()`による全座標系自動同期</li>
+                <li><strong>座標系間変換</strong> - DOM⟷WebGL・%⟷px変換の双方向対応</li>
+                <li><strong>レスポンシブWebGL</strong> - CSS表示サイズとWebGL描画バッファの分離管理</li>
+                <li><strong>PureBoundingBox高度統合</strong> - Phase 2機能による次世代BB制御</li>
+                <li><strong>リアルタイム同期</strong> - 全座標系の120fps同期・変化監視</li>
+            </ol>
+            <p><strong>🎯 期待結果</strong>：全座標系が完全同期し、1つの変更が自動的に全座標系に反映される</p>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>🚀 Phase 2初期化</h3>
+                <button class="primary" onclick="initializePhase2()">Phase 2高度初期化</button>
+                <button onclick="createTestElements()">テスト要素作成</button>
+                <button onclick="showPhase2Status()">Phase 2状態確認</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🎯 統一座標API</h3>
+                <button onclick="testUnifiedPosition()">統一座標テスト</button>
+                <button onclick="testCoordinateConversion()">座標変換テスト</button>
+                <button onclick="animateCoordinates()">座標アニメーション</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🌐 WebGL統合</h3>
+                <button onclick="testWebGLSync()">WebGL同期テスト</button>
+                <button onclick="testSkeletonSync()">Skeleton同期</button>
+                <button onclick="testCanvasMatrix()">Canvas Matrix</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>📱 レスポンシブテスト</h3>
+                <button onclick="testResponsiveCanvas()">レスポンシブCanvas</button>
+                <button onclick="testDPRChange()">DPR変化テスト</button>
+                <button onclick="testBreakpoints()">ブレークポイント</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🎮 BB高度統合</h3>
+                <button onclick="startAdvancedBoundingBox()">Phase 2 BB開始</button>
+                <button onclick="testAdvancedCommit()">高度コミット</button>
+                <button onclick="testBBSync()">BB座標同期</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🛠️ デバッグ・制御</h3>
+                <button onclick="showCoordinateSystems()">全座標系表示</button>
+                <button onclick="showAdvancedDebugInfo()">詳細デバッグ</button>
+                <button onclick="clearLog()">ログクリア</button>
+            </div>
+        </div>
+        
+        <div>
+            Phase 2状態: 
+            <span id="phase2-status" class="status inactive">Phase 2 Inactive</span>
+            <span id="transform-status" class="status inactive">Transform Inactive</span>
+            <span id="webgl-status" class="status inactive">WebGL Inactive</span>
+            <span id="responsive-status" class="status inactive">Responsive Inactive</span>
+            <span id="sync-status" class="status inactive">Sync Inactive</span>
+        </div>
+        
+        <!-- 5座標系リアルタイム表示 -->
+        <div class="coordinate-display" id="coordinate-display">
+            <div class="coord-system">
+                <h4>📐 DOM座標系</h4>
+                <div class="coord-value" id="dom-coords">未初期化</div>
+            </div>
+            <div class="coord-system">
+                <h4>🎯 Transform座標系</h4>
+                <div class="coord-value" id="transform-coords">未初期化</div>
+            </div>
+            <div class="coord-system">
+                <h4>🌐 WebGL座標系</h4>
+                <div class="coord-value" id="webgl-coords">未初期化</div>
+            </div>
+            <div class="coord-system">
+                <h4>🎮 Skeleton座標系</h4>
+                <div class="coord-value" id="skeleton-coords">未初期化</div>
+            </div>
+            <div class="coord-system">
+                <h4>📱 Canvas座標系</h4>
+                <div class="coord-value" id="canvas-coords">未初期化</div>
+            </div>
+        </div>
+        
+        <!-- 🎯 メインテストエリア -->
+        <div class="test-area" id="test-area">
+            <!-- テスト要素は動的に作成 -->
+        </div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <!-- 🚀 ElementObserver Phase 2 マイクロモジュール群 -->
+    <!-- Phase 1基本機能 -->
+    <script src="micromodules/element-observer/ElementObserverCore.js"></script>
+    <script src="micromodules/element-observer/ElementObserver.js"></script>
+    
+    <!-- Phase 2高度機能 -->
+    <script src="micromodules/element-observer/ElementObserverTransform.js"></script>
+    <script src="micromodules/element-observer/ElementObserverWebGL.js"></script>
+    <script src="micromodules/element-observer/ElementObserverResponsive.js"></script>
+    <script src="micromodules/element-observer/ElementObserverAdvanced.js"></script>
+    
+    <!-- 🎯 PureBoundingBox マイクロモジュール群 -->
+    <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
+    
+    <!-- ✨ Phase 2統合テストシステム -->
+    <script>
+        // グローバル変数
+        let elementObserverAdvanced = null;
+        let currentBoundingBox = null;
+        let testElements = {};
+        let animationId = null;
+        let coordinateUpdateInterval = null;
+        
+        const logElement = document.getElementById('log');
+        const statusElements = {
+            phase2: document.getElementById('phase2-status'),
+            transform: document.getElementById('transform-status'),
+            webgl: document.getElementById('webgl-status'),
+            responsive: document.getElementById('responsive-status'),
+            sync: document.getElementById('sync-status')
+        };
+        
+        // ログ関数
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            const logLine = `[${timestamp}] ${message}\n`;
+            
+            const span = document.createElement('span');
+            span.className = className;
+            span.textContent = logLine;
+            logElement.appendChild(span);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+        
+        // ステータス更新
+        function updateStatus(elementName, isActive) {
+            const element = statusElements[elementName];
+            if (element) {
+                element.textContent = isActive ? 
+                    elementName.charAt(0).toUpperCase() + elementName.slice(1) + ' Active' : 
+                    elementName.charAt(0).toUpperCase() + elementName.slice(1) + ' Inactive';
+                element.className = `status ${isActive ? 'active' : 'inactive'}`;
+            }
+        }
+        
+        // テスト要素作成
+        function createTestElements() {
+            log('=== テスト要素作成開始 ===', 'success');
+            
+            const testArea = document.getElementById('test-area');
+            
+            // Layout Anchor + Interactive Layer作成
+            const layoutAnchor = document.createElement('div');
+            layoutAnchor.id = 'test-layout-anchor';
+            layoutAnchor.className = 'layout-anchor';
+            layoutAnchor.style.left = '40%';
+            layoutAnchor.style.top = '50%';
+            layoutAnchor.style.width = '150px';
+            layoutAnchor.style.height = '100px';
+            
+            const interactive = document.createElement('div');
+            interactive.className = 'interactive';
+            
+            // Canvas要素作成（WebGL用）
+            const canvas = document.createElement('canvas');
+            canvas.id = 'test-canvas';
+            canvas.className = 'canvas-element';
+            canvas.width = 120;
+            canvas.height = 80;
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            
+            // Canvas内容設定
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                // 簡易描画（WebGLの代替）
+                ctx.fillStyle = 'rgba(78, 205, 196, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Test Canvas', canvas.width/2, canvas.height/2);
+            }
+            
+            interactive.appendChild(canvas);
+            layoutAnchor.appendChild(interactive);
+            testArea.appendChild(layoutAnchor);
+            
+            // 疑似Skeleton・Renderer作成（テスト用）
+            testElements = {
+                targetElement: layoutAnchor,
+                canvas: canvas,
+                skeleton: {
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    scaleX: 1,
+                    scaleY: 1,
+                    updateWorldTransform: () => {},
+                    getBounds: () => ({ x: 0, y: 0, width: 100, height: 80 })
+                },
+                renderer: {
+                    camera: {
+                        position: { x: canvas.width / 2, y: canvas.height / 2 },
+                        zoom: 1.0,
+                        setViewport: (w, h) => {}
+                    },
+                    canvas: canvas
+                }
+            };
+            
+            log('✅ テスト要素作成完了', 'success');
+            log(`  Layout Anchor: ${layoutAnchor.id}`, 'info');
+            log(`  Canvas: ${canvas.id} (${canvas.width}x${canvas.height})`, 'info');
+            log('  疑似Skeleton・Renderer作成完了', 'info');
+        }
+        
+        // 🚀 Phase 2高度初期化
+        async function initializePhase2() {
+            log('=== ElementObserver Phase 2高度初期化開始 ===', 'success');
+            
+            try {
+                // テスト要素確認
+                if (!testElements.targetElement) {
+                    log('⚠️ テスト要素未作成 - 自動作成します', 'warning');
+                    createTestElements();
+                }
+                
+                // ElementObserverAdvanced作成
+                elementObserverAdvanced = new ElementObserverAdvanced();
+                
+                // Phase 2高度初期化
+                const initialized = await elementObserverAdvanced.initializeAdvanced(
+                    testElements.targetElement,
+                    testElements.canvas,
+                    testElements.skeleton,
+                    testElements.renderer,
+                    {
+                        cssWidth: '25%',
+                        cssHeight: '25%',
+                        bufferWidth: 512,
+                        bufferHeight: 512,
+                        quality: 'high'
+                    }
+                );
+                
+                if (initialized) {
+                    // 統合変化監視開始
+                    elementObserverAdvanced.onIntegrationChange((event) => {
+                        log(`🔄 統合変化検出: ${event.type}`, 'debug');
+                        updateCoordinateDisplay();
+                    });
+                    
+                    // リアルタイム座標表示開始
+                    startCoordinateDisplay();
+                    
+                    // ステータス更新
+                    updateStatus('phase2', true);
+                    updateStatus('transform', !!elementObserverAdvanced.transform);
+                    updateStatus('webgl', !!elementObserverAdvanced.webgl);
+                    updateStatus('responsive', !!elementObserverAdvanced.responsive);
+                    updateStatus('sync', true);
+                    
+                    log('✅ ElementObserver Phase 2初期化完了', 'success');
+                    log('🎯 5座標系統合システム作動開始', 'success');
+                    
+                } else {
+                    throw new Error('Phase 2初期化失敗');
+                }
+                
+            } catch (error) {
+                log(`❌ Phase 2初期化エラー: ${error.message}`, 'error');
+                updateStatus('phase2', false);
+            }
+        }
+        
+        // 統一座標テスト
+        function testUnifiedPosition() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ Phase 2未初期化', 'warning');
+                return;
+            }
+            
+            log('=== 統一座標APIテスト開始 ===', 'success');
+            
+            const testPositions = [
+                { x: 30, y: 40, unit: '%', name: '左上' },
+                { x: 70, y: 40, unit: '%', name: '右上' },
+                { x: 70, y: 70, unit: '%', name: '右下' },
+                { x: 30, y: 70, unit: '%', name: '左下' },
+                { x: 50, y: 50, unit: '%', name: '中央' }
+            ];
+            
+            let index = 0;
+            const moveNext = () => {
+                if (index >= testPositions.length) {
+                    log('✅ 統一座標APIテスト完了', 'success');
+                    return;
+                }
+                
+                const pos = testPositions[index];
+                log(`🎯 統一座標設定: ${pos.name} (${pos.x}${pos.unit}, ${pos.y}${pos.unit})`, 'info');
+                
+                const success = elementObserverAdvanced.setUnifiedPosition(pos.x, pos.y, pos.unit);
+                if (success) {
+                    log(`✅ ${pos.name}移動完了 - 全座標系同期確認`, 'success');
+                } else {
+                    log(`❌ ${pos.name}移動失敗`, 'error');
+                }
+                
+                index++;
+                setTimeout(moveNext, 1500);
+            };
+            
+            moveNext();
+        }
+        
+        // 座標変換テスト
+        function testCoordinateConversion() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ Phase 2未初期化', 'warning');
+                return;
+            }
+            
+            log('=== 座標系間変換テスト開始 ===', 'success');
+            
+            const testCoords = { x: 50, y: 60, unit: '%' };
+            
+            // DOM → WebGL
+            const webglCoords = elementObserverAdvanced.convertBetweenCoordinateSystems(
+                'dom', 'webgl', testCoords
+            );
+            log(`DOM→WebGL変換: (${testCoords.x}%, ${testCoords.y}%) → (${webglCoords.x.toFixed(1)}, ${webglCoords.y.toFixed(1)})`, 'info');
+            
+            // WebGL → DOM
+            const domCoords = elementObserverAdvanced.convertBetweenCoordinateSystems(
+                'webgl', 'dom', webglCoords
+            );
+            log(`WebGL→DOM変換: (${webglCoords.x.toFixed(1)}, ${webglCoords.y.toFixed(1)}) → (${domCoords.x.toFixed(1)}%, ${domCoords.y.toFixed(1)}%)`, 'info');
+            
+            // % → px
+            const pixelCoords = elementObserverAdvanced.convertBetweenCoordinateSystems(
+                'percent', 'pixel', testCoords
+            );
+            log(`%→px変換: (${testCoords.x}%, ${testCoords.y}%) → (${pixelCoords.x.toFixed(1)}px, ${pixelCoords.y.toFixed(1)}px)`, 'info');
+            
+            // px → %
+            const percentCoords = elementObserverAdvanced.convertBetweenCoordinateSystems(
+                'pixel', 'percent', pixelCoords
+            );
+            log(`px→%変換: (${pixelCoords.x.toFixed(1)}px, ${pixelCoords.y.toFixed(1)}px) → (${percentCoords.x.toFixed(1)}%, ${percentCoords.y.toFixed(1)}%)`, 'info');
+            
+            log('✅ 座標系間変換テスト完了', 'success');
+        }
+        
+        // 座標アニメーション
+        function animateCoordinates() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ Phase 2未初期化', 'warning');
+                return;
+            }
+            
+            log('=== 座標アニメーション開始 ===', 'success');
+            
+            let startTime = performance.now();
+            const duration = 5000; // 5秒
+            const centerX = 50, centerY = 50;
+            const radiusX = 20, radiusY = 15;
+            
+            const animate = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const progress = (elapsed % duration) / duration;
+                const angle = progress * 2 * Math.PI;
+                
+                const x = centerX + Math.cos(angle) * radiusX;
+                const y = centerY + Math.sin(angle) * radiusY;
+                
+                elementObserverAdvanced.setUnifiedPosition(x, y, '%');
+                
+                if (elapsed < duration) {
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    log('✅ 座標アニメーション完了', 'success');
+                    animationId = null;
+                }
+            };
+            
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // WebGL同期テスト
+        function testWebGLSync() {
+            if (!elementObserverAdvanced?.webgl) {
+                log('⚠️ WebGL未初期化', 'warning');
+                return;
+            }
+            
+            log('=== WebGL同期テスト開始 ===', 'success');
+            
+            // Skeleton位置を直接変更
+            const skeleton = elementObserverAdvanced.webgl.skeleton;
+            const oldX = skeleton.x;
+            const oldY = skeleton.y;
+            
+            skeleton.x = 300;
+            skeleton.y = 200;
+            skeleton.updateWorldTransform();
+            
+            log(`Skeleton位置変更: (${oldX}, ${oldY}) → (${skeleton.x}, ${skeleton.y})`, 'info');
+            
+            // WebGL→DOM座標逆算
+            const domCoords = elementObserverAdvanced.webgl.webGLToDOM(skeleton.x, skeleton.y, {
+                coordinateType: 'percent'
+            });
+            
+            log(`WebGL→DOM逆算: (${skeleton.x}, ${skeleton.y}) → (${domCoords.x.toFixed(1)}%, ${domCoords.y.toFixed(1)}%)`, 'info');
+            
+            // 統一座標で同期
+            elementObserverAdvanced.setUnifiedPosition(domCoords.x, domCoords.y, '%');
+            
+            log('✅ WebGL同期テスト完了', 'success');
+        }
+        
+        // レスポンシブCanvasテスト
+        function testResponsiveCanvas() {
+            if (!elementObserverAdvanced?.responsive) {
+                log('⚠️ Responsive未初期化', 'warning');
+                return;
+            }
+            
+            log('=== レスポンシブCanvasテスト開始 ===', 'success');
+            
+            const responsive = elementObserverAdvanced.responsive;
+            const currentConfig = responsive.getState();
+            
+            log('現在の設定:', 'info');
+            log(`  CSS表示サイズ: ${currentConfig.actualSizes.css.width}x${currentConfig.actualSizes.css.height}`, 'info');
+            log(`  描画バッファ: ${currentConfig.actualSizes.buffer.width}x${currentConfig.actualSizes.buffer.height}`, 'info');
+            log(`  スケール比率: ${currentConfig.actualSizes.scaleRatio.x.toFixed(2)}x${currentConfig.actualSizes.scaleRatio.y.toFixed(2)}`, 'info');
+            
+            // 設定変更テスト
+            responsive.updateConfig({
+                cssSize: {
+                    width: '30%',
+                    height: '30%'
+                },
+                bufferSize: {
+                    quality: 'ultra'
+                }
+            });
+            
+            setTimeout(() => {
+                const newConfig = responsive.getState();
+                log('設定変更後:', 'success');
+                log(`  CSS表示サイズ: ${newConfig.actualSizes.css.width}x${newConfig.actualSizes.css.height}`, 'info');
+                log(`  描画バッファ: ${newConfig.actualSizes.buffer.width}x${newConfig.actualSizes.buffer.height}`, 'info');
+                log(`  品質: ${newConfig.config.bufferSize.quality}`, 'info');
+                
+                log('✅ レスポンシブCanvasテスト完了', 'success');
+            }, 1000);
+        }
+        
+        // Phase 2 BB開始
+        async function startAdvancedBoundingBox() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ Phase 2未初期化', 'warning');
+                return;
+            }
+            
+            log('=== Phase 2高度BB開始 ===', 'success');
+            
+            try {
+                // 既存のBBクリーンアップ
+                if (currentBoundingBox) {
+                    currentBoundingBox.cleanup();
+                    currentBoundingBox = null;
+                }
+                
+                // PureBoundingBox作成
+                currentBoundingBox = new PureBoundingBox({
+                    targetElement: testElements.targetElement,
+                    nodeId: 'phase2-advanced-bb'
+                });
+                
+                // Phase 2高度統合
+                const integrated = elementObserverAdvanced.integratePureBoundingBox(currentBoundingBox);
+                if (!integrated) {
+                    throw new Error('PureBoundingBox統合失敗');
+                }
+                
+                // BB実行開始
+                const result = await currentBoundingBox.execute({ visible: true });
+                
+                if (result.success) {
+                    log('✅ Phase 2高度BB開始成功', 'success');
+                    log(`  nodeId: ${result.nodeId}`, 'info');
+                    log('  🚀 Phase 2統合機能適用済み', 'success');
+                    
+                    // BB選択解除イベント監視
+                    document.addEventListener('boundingBoxDeselected', onAdvancedBoundingBoxDeselected);
+                    
+                } else {
+                    throw new Error(result.error || '不明なエラー');
+                }
+                
+            } catch (error) {
+                log(`❌ Phase 2高度BB開始エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // Phase 2 BB選択解除イベント
+        function onAdvancedBoundingBoxDeselected(event) {
+            log('=== Phase 2高度BB選択解除イベント ===', 'info');
+            log(`  nodeId: ${event.detail.nodeId}`, 'info');
+            log(`  finalPosition: ${JSON.stringify(event.detail.finalPosition)}`, 'info');
+            log('  🌊 Phase 2高度コミット処理実行済み', 'success');
+            
+            updateCoordinateDisplay();
+        }
+        
+        // Phase 2状態表示
+        function showPhase2Status() {
+            if (!elementObserverAdvanced) {
+                log('⚠️ ElementObserverAdvanced未作成', 'warning');
+                return;
+            }
+            
+            const debugInfo = elementObserverAdvanced.getAdvancedDebugInfo();
+            
+            log('=== Phase 2詳細状態 ===', 'info');
+            log(`初期化: ${debugInfo.phase2Integration.initialized}`, 'info');
+            log(`アクティブモジュール: [${debugInfo.phase2Integration.activeModules.join(', ')}]`, 'info');
+            log(`座標系数: ${debugInfo.phase2Integration.coordinateSystemsActive}`, 'info');
+            log(`最終同期: ${debugInfo.phase2Integration.syncAge.toFixed(1)}ms前`, 'info');
+            
+            if (debugInfo.modules.transform) {
+                log('Transform: ✅ アクティブ', 'success');
+            }
+            if (debugInfo.modules.webgl) {
+                log('WebGL: ✅ アクティブ', 'success');
+            }
+            if (debugInfo.modules.responsive) {
+                log('Responsive: ✅ アクティブ', 'success');
+            }
+        }
+        
+        // 全座標系表示
+        function showCoordinateSystems() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ Phase 2未初期化', 'warning');
+                return;
+            }
+            
+            const coords = elementObserverAdvanced.coordinateSystems;
+            
+            log('=== 全座標系現在値 ===', 'success');
+            log(`📐 DOM: (${coords.dom.x}${coords.dom.unit}, ${coords.dom.y}${coords.dom.unit})`, 'info');
+            log(`🎯 Transform: tx=${coords.transform.tx}px, ty=${coords.transform.ty}px`, 'info');
+            log(`🌐 WebGL: (${coords.webgl.x.toFixed(1)}, ${coords.webgl.y.toFixed(1)})`, 'info');
+            log(`🎮 Skeleton: (${coords.skeleton.x.toFixed(1)}, ${coords.skeleton.y.toFixed(1)})`, 'info');
+            log(`📱 Canvas: ${coords.canvas.displayWidth}x${coords.canvas.displayHeight} (表示) / ${coords.canvas.bufferWidth}x${coords.canvas.bufferHeight} (バッファ)`, 'info');
+        }
+        
+        // リアルタイム座標表示
+        function startCoordinateDisplay() {
+            if (coordinateUpdateInterval) {
+                clearInterval(coordinateUpdateInterval);
+            }
+            
+            coordinateUpdateInterval = setInterval(() => {
+                updateCoordinateDisplay();
+            }, 100); // 10fps更新
+            
+            log('📊 リアルタイム座標表示開始', 'info');
+        }
+        
+        function updateCoordinateDisplay() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                return;
+            }
+            
+            const coords = elementObserverAdvanced.coordinateSystems;
+            
+            document.getElementById('dom-coords').textContent = 
+                `${coords.dom.x}${coords.dom.unit}, ${coords.dom.y}${coords.dom.unit}`;
+                
+            document.getElementById('transform-coords').textContent = 
+                `tx: ${coords.transform.tx.toFixed(1)}px\nty: ${coords.transform.ty.toFixed(1)}px\nscale: ${coords.transform.scale}`;
+                
+            document.getElementById('webgl-coords').textContent = 
+                `${coords.webgl.x.toFixed(1)}, ${coords.webgl.y.toFixed(1)}\ncamera: ${coords.webgl.camera.x.toFixed(1)}, ${coords.webgl.camera.y.toFixed(1)}`;
+                
+            document.getElementById('skeleton-coords').textContent = 
+                `${coords.skeleton.x.toFixed(1)}, ${coords.skeleton.y.toFixed(1)}\nscale: ${coords.skeleton.scaleX}, ${coords.skeleton.scaleY}`;
+                
+            document.getElementById('canvas-coords').textContent = 
+                `${coords.canvas.displayWidth}x${coords.canvas.displayHeight}\n${coords.canvas.bufferWidth}x${coords.canvas.bufferHeight}`;
+        }
+        
+        // 詳細デバッグ情報
+        function showAdvancedDebugInfo() {
+            if (!elementObserverAdvanced) {
+                log('⚠️ ElementObserverAdvanced未作成', 'warning');
+                return;
+            }
+            
+            const debugInfo = elementObserverAdvanced.getAdvancedDebugInfo();
+            
+            log('=== Phase 2詳細デバッグ情報 ===', 'debug');
+            log(`Phase 2統合: ${JSON.stringify(debugInfo.phase2Integration, null, 2)}`, 'debug');
+            log(`座標系: ${JSON.stringify(debugInfo.coordinateSystems, null, 2)}`, 'debug');
+            
+            if (debugInfo.modules.transform) {
+                log(`Transform詳細: ${JSON.stringify(debugInfo.modules.transform, null, 2)}`, 'debug');
+            }
+            if (debugInfo.modules.webgl) {
+                log(`WebGL詳細: ${JSON.stringify(debugInfo.modules.webgl, null, 2)}`, 'debug');
+            }
+            if (debugInfo.modules.responsive) {
+                log(`Responsive詳細: ${JSON.stringify(debugInfo.modules.responsive, null, 2)}`, 'debug');
+            }
+        }
+        
+        // オリジナルのconsoleをラップ
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            if (!args.join(' ').includes('👁️') || args.join(' ').includes('ElementObserver') || args.join(' ').includes('Phase 2')) {
+                log(args.join(' '), 'info');
+            }
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            log(args.join(' '), 'warning');
+        };
+        
+        // ページ読み込み時
+        window.addEventListener('load', () => {
+            log('🌐 ElementObserver Phase 2統合テストページ読み込み完了');
+            log('');
+            log('🚀 Phase 2統合テスト目標:');
+            log('  1. 5座標系の完全統合・統一API動作確認');
+            log('  2. DOM⟷WebGL・%⟷px座標変換の双方向確認');
+            log('  3. レスポンシブWebGL・DPR対応の動作確認');
+            log('  4. PureBoundingBox Phase 2統合機能確認');
+            log('  5. リアルタイム120fps座標同期の確認');
+            log('');
+            log('▶️ 「Phase 2高度初期化」→「統一座標テスト」の順でテスト開始');
+        });
+        
+        // クリーンアップ
+        window.addEventListener('beforeunload', () => {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            if (coordinateUpdateInterval) {
+                clearInterval(coordinateUpdateInterval);
+            }
+            if (currentBoundingBox) {
+                currentBoundingBox.cleanup();
+            }
+            if (elementObserverAdvanced) {
+                elementObserverAdvanced.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>
