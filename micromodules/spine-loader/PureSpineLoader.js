@@ -42,7 +42,8 @@ class PureSpineLoader {
             loaded: false,
             loading: false,
             error: null,
-            spineData: null
+            spineData: null,
+            tempCanvas: null  // 一時Canvas要素の記録
         };
         
         console.log('✅ PureSpineLoader: 初期化完了');
@@ -78,34 +79,82 @@ class PureSpineLoader {
             this.loadState.loading = true;
             this.loadState.error = null;
             
-            // Spine WebGLライブラリの確認
+            // Spine WebGLライブラリの確認（詳細検証）
             if (typeof window === 'undefined' || !window.spine) {
-                throw new Error('Spine WebGLライブラリが読み込まれていません');
+                throw new Error('Spine WebGLライブラリが読み込まれていません（window.spineが未定義）');
             }
             
-            // アセットマネージャ作成
-            const assetManager = new window.spine.AssetManager();
+            // 必要なWebGLクラス群の存在確認
+            const requiredClasses = [
+                'AssetManager',
+                'SkeletonJson', 
+                'AtlasAttachmentLoader',
+                'PolygonBatcher',
+                'SkeletonRenderer'
+            ];
             
-            // ファイル読み込み
-            assetManager.loadText(this.config.atlasPath);
+            const missingClasses = requiredClasses.filter(className => 
+                !window.spine[className]
+            );
+            
+            if (missingClasses.length > 0) {
+                console.warn('⚠️ 不足しているSpineクラス:', missingClasses);
+                console.log('🔍 利用可能なSpineクラス:', Object.keys(window.spine));
+                throw new Error(`Spine WebGLに必要なクラスが不足しています: ${missingClasses.join(', ')}`);
+            }
+            
+            console.log('✅ Spine WebGLライブラリ検証完了（必要クラス確認済み）');
+            
+            // 一時的なCanvasとWebGLコンテキスト作成（AssetManager用）
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 1;
+            tempCanvas.height = 1;
+            const gl = tempCanvas.getContext('webgl') || tempCanvas.getContext('experimental-webgl');
+            if (!gl) {
+                throw new Error('WebGLコンテキストの作成に失敗しました');
+            }
+            
+            // cleanup用に記録
+            this.loadState.tempCanvas = tempCanvas;
+            
+            console.log('🔧 一時WebGLコンテキスト作成成功（AssetManager用）');
+            
+            // アセットマネージャ作成（WebGLコンテキスト付き）
+            const assetManager = new window.spine.AssetManager(gl);
+            
+            // ファイル読み込み（loadTextureAtlasを使用）
             assetManager.loadJson(this.config.jsonPath);
+            assetManager.loadTextureAtlas(this.config.atlasPath);
+            
+            console.log('📦 ファイル読み込み予約:', {
+                json: this.config.jsonPath,
+                atlas: this.config.atlasPath
+            });
             
             // 読み込み完了待ち
             await this.waitForAssets(assetManager);
             
-            // Atlas作成
-            const atlasText = assetManager.get(this.config.atlasPath);
-            const atlas = new window.spine.TextureAtlas(atlasText, (path) => {
-                const fullPath = this.config.basePath + path;
-                return assetManager.get(fullPath);
-            });
+            // AssetManager状態確認
+            console.log('📊 AssetManager読み込み状況:');
+            console.log('  - loadingComplete:', assetManager.isLoadingComplete());
+            console.log('  - hasErrors:', assetManager.hasErrors());
+            if (assetManager.hasErrors()) {
+                console.log('  - errors:', assetManager.getErrors());
+            }
+            
+            // Atlas取得（loadTextureAtlasで読み込んだものを使用）
+            const atlas = assetManager.require(this.config.atlasPath);
+            console.log('🖼️ Atlas取得:', atlas ? 'OK' : 'NG');
             
             // SkeletonJson作成
             const skeletonJson = new window.spine.SkeletonJson(new window.spine.AtlasAttachmentLoader(atlas));
             
-            // JSONデータ読み込み
-            const jsonData = assetManager.get(this.config.jsonPath);
+            // JSONデータ取得
+            const jsonData = assetManager.require(this.config.jsonPath);
+            console.log('📋 JSON取得:', jsonData ? 'OK' : 'NG');
+            
             const skeletonData = skeletonJson.readSkeletonData(jsonData);
+            console.log('🦴 SkeletonData作成:', skeletonData ? 'OK' : 'NG');
             
             // 結果保存
             this.loadState.spineData = {
@@ -175,12 +224,19 @@ class PureSpineLoader {
                 }
             }
             
+            // 一時Canvas削除
+            if (this.loadState.tempCanvas) {
+                this.loadState.tempCanvas.remove();
+                this.loadState.tempCanvas = null;
+            }
+            
             // 状態リセット
             this.loadState = {
                 loaded: false,
                 loading: false,
                 error: null,
-                spineData: null
+                spineData: null,
+                tempCanvas: null
             };
             
             console.log('🧹 PureSpineLoader: クリーンアップ完了');

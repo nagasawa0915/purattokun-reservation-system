@@ -268,6 +268,49 @@ execute()
 // 予期しない動作の可能性があります
 ```
 
+## 🎯 Spine座標系の重要な注意事項
+
+### ⚠️ 必読：Skeleton座標の正しい設定
+
+**Spineキャラクターを表示する際の座標設定は以下が正しいです：**
+
+```javascript
+// ✅ 正しい座標設定
+skeleton.x = 0;    // Spine座標系の基準点
+skeleton.y = 0;    // Spine座標系の基準点（地面レベル）
+skeleton.setToSetupPose();
+skeleton.updateWorldTransform();
+
+// ❌ 間違った座標設定
+skeleton.x = canvas.width / 2;   // Canvas中央配置は間違い
+skeleton.y = canvas.height / 2;  // Spineが画面外に行く原因
+```
+
+### 📋 理由と背景
+
+- **Spine座標系**: (0,0)がキャラクターの基準点として設計されている
+- **地面レベル**: Spineエディターで0.0を地面として配置されている
+- **表示結果**: 正しく設定すると「Canvas中央の少し上」に立った状態で表示される
+- **カメラ制御**: カメラ位置でキャラクターの表示位置を調整する
+
+### 🎨 WebGL描画での正しいパターン
+
+```javascript
+// Skeleton座標：Spine基準(0,0)
+skeleton.x = 0;
+skeleton.y = 0;
+
+// カメラ位置：Canvas表示制御
+if (renderer.camera) {
+    renderer.camera.position.x = 0;
+    renderer.camera.position.y = 0;
+    renderer.camera.setViewport(canvas.width, canvas.height);
+    renderer.camera.update();
+}
+```
+
+**🚨 この座標設定を間違えると、キャラクターが画面外に表示されたり、位置がずれたりします。**
+
 ## トラブルシューティング
 
 ### よくあるエラー
@@ -277,6 +320,8 @@ execute()
 | "Spine WebGLライブラリが..." | spine-webgl.js未読み込み | ライブラリを先に読み込む |
 | "アセット読み込みエラー" | ファイルパス間違い | パスを再確認 |
 | "入力パラメータが..." | 必須パラメータ不足 | configオブジェクトを確認 |
+| **キャラクターが画面外・位置ずれ** | **Skeleton座標設定ミス** | **skeleton.x=0, skeleton.y=0に設定** |
+| **ローカルファイル使用時のライブラリ検証失敗** | **WebGL検証条件の違い** | **個別クラス検証に変更** |
 
 ### デバッグ方法
 
@@ -291,7 +336,44 @@ fetch('/assets/spine/character/char.atlas')
 
 // 3. Spineライブラリ確認
 console.log('Spineライブラリ:', typeof window.spine);
+
+// 4. 詳細クラス確認（ローカル版検証用）
+console.log('AssetManager:', typeof spine?.AssetManager);
+console.log('SkeletonRenderer:', typeof spine?.SkeletonRenderer);
+console.log('PolygonBatcher:', typeof spine?.PolygonBatcher);
 ```
+
+### ✅ 解決事例：ローカルファイル使用時のWebGL検証エラー (2025-08-28)
+
+**問題**: 「Spine WebGLライブラリが読み込まれていません」エラー
+**環境**: ローカルspine-webgl.js使用、test-element-observer-bb-integration.html
+**症状**: CDN版は正常動作、ローカル版のみ検証失敗
+
+**根本原因**:
+```javascript
+// 誤った検証条件（CDN版用）
+if (!window.spine || !spine.webgl) {
+    return false;  // ローカル版では spine.webgl が存在しない
+}
+```
+
+**解決策**:
+```javascript
+// 正しい検証条件（CDN版・ローカル版両対応）
+if (!window.spine || !spine.AssetManager || !spine.SkeletonRenderer || 
+    !spine.PolygonBatcher || !spine.Skeleton || !spine.AnimationState || 
+    !spine.AtlasAttachmentLoader) {
+    return false;
+}
+```
+
+**技術説明**:
+- **CDN版**: `spine.webgl` オブジェクトにクラス群を格納
+- **ローカル版**: 直接 `spine` オブジェクトにクラス群を格納
+- **統一検証**: 実際に使用するクラスの存在を確認する方式で両方に対応
+
+**修正ファイル**: `micromodules/spine-loader/PureSpineLoader.js`
+**結果**: ぷらっとくんが正常な黒いキャラクターで表示成功
 
 ## 関連ファイル
 

@@ -186,3 +186,41 @@ async function initSpineCharacter() {
 **原因推測**: try-catch でエラーをキャッチしてフォールバック処理が確実に実行
 **学び**: エラーハンドリングとフォールバック処理の重要性
 **環境**: 全ブラウザで安定動作確認
+
+### ✅ Case #6: 2025-08-28 - PureSpineLoader WebGL検証条件修正による完全解決
+
+**問題**: 「Spine WebGLライブラリが読み込まれていません」エラーでぷらっとくんが表示されない
+**症状**: ローカルspine-webgl.jsファイル使用時にライブラリ読み込み検証が失敗
+**試した方法**:
+```javascript
+// 修正前（誤った検証条件）
+if (!window.spine || !spine.webgl) {
+    console.error('❌ Spine WebGLライブラリが読み込まれていません');
+    return false;
+}
+
+// 修正後（正しい検証条件）
+if (!window.spine || !spine.AssetManager || !spine.SkeletonRenderer || 
+    !spine.PolygonBatcher || !spine.Skeleton || !spine.AnimationState || 
+    !spine.AtlasAttachmentLoader) {
+    console.error('❌ Spine WebGLライブラリが読み込まれていません');
+    return false;
+}
+```
+**結果**: ✅ 完全に解決（ぷらっとくんが正常な黒いキャラクターで表示）
+**根本原因**: 
+- ローカルspine-webgl.jsは `spine.webgl` オブジェクトを作成しない構造
+- 実際には `spine` オブジェクトに直接クラス群（AssetManager等）が含まれる
+- CDN版とローカル版でオブジェクト構造が異なる
+
+**技術詳細**:
+- **検証すべきクラス**: AssetManager, SkeletonRenderer, PolygonBatcher, Skeleton, AnimationState, AtlasAttachmentLoader
+- **診断関数との統一**: `checkSpineWebGLAvailability()` と PureSpineLoader の検証条件を統一
+- **対象ファイル**: `micromodules/spine-loader/PureSpineLoader.js`
+
+**学び**: 
+- ライブラリの実装詳細に依存しない汎用的な検証が重要
+- CDN版とローカル版の構造差異を考慮した実装が必要
+- 診断システムとローダーシステムの検証条件統一が効果的
+
+**環境**: test-element-observer-bb-integration.html, Chrome, python server.py, ローカルspine-webgl.js
