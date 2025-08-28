@@ -242,6 +242,14 @@
             </div>
             
             <div class="control-group">
+                <h3>📊 パフォーマンス測定</h3>
+                <button class="primary" onclick="startPerformanceMonitoring()">測定開始</button>
+                <button onclick="measureSetUnifiedPosition()">setUnifiedPosition測定</button>
+                <button onclick="measureFPS()">FPS測定</button>
+                <button class="secondary" onclick="stopPerformanceMonitoring()">測定停止</button>
+            </div>
+            
+            <div class="control-group">
                 <h3>🛠️ デバッグ・制御</h3>
                 <button onclick="showCoordinateSystems()">全座標系表示</button>
                 <button onclick="showAdvancedDebugInfo()">詳細デバッグ</button>
@@ -256,6 +264,13 @@
             <span id="webgl-status" class="status inactive">WebGL Inactive</span>
             <span id="responsive-status" class="status inactive">Responsive Inactive</span>
             <span id="sync-status" class="status inactive">Sync Inactive</span>
+        </div>
+        
+        <div style="margin-top: 10px;">
+            📊 パフォーマンス: 
+            <span id="performance-status" class="status inactive">Monitoring Inactive</span>
+            <span id="fps-display" class="status inactive">FPS: --</span>
+            <span id="memory-status" class="status inactive">Memory: --</span>
         </div>
         
         <!-- 5座標系リアルタイム表示 -->
@@ -317,13 +332,27 @@
         let animationId = null;
         let coordinateUpdateInterval = null;
         
+        // パフォーマンス測定システム
+        let performanceMonitoring = {
+            isActive: false,
+            fpsMonitoring: false,
+            fpsFrameCount: 0,
+            fpsStartTime: null,
+            currentFPS: 0,
+            measurementData: [],
+            fpsAnimationId: null
+        };
+        
         const logElement = document.getElementById('log');
         const statusElements = {
             phase2: document.getElementById('phase2-status'),
             transform: document.getElementById('transform-status'),
             webgl: document.getElementById('webgl-status'),
             responsive: document.getElementById('responsive-status'),
-            sync: document.getElementById('sync-status')
+            sync: document.getElementById('sync-status'),
+            performance: document.getElementById('performance-status'),
+            fps: document.getElementById('fps-display'),
+            memory: document.getElementById('memory-status')
         };
         
         // ログ関数
@@ -831,6 +860,309 @@
             }
         }
         
+        // 📊 パフォーマンス測定システム
+        
+        // パフォーマンス測定開始
+        function startPerformanceMonitoring() {
+            if (performanceMonitoring.isActive) {
+                log('⚠️ パフォーマンス測定は既に開始されています', 'warning');
+                return;
+            }
+            
+            log('=== パフォーマンス測定開始 ===', 'success');
+            performanceMonitoring.isActive = true;
+            performanceMonitoring.measurementData = [];
+            
+            updatePerformanceStatus('performance', true);
+            
+            // メモリ測定開始（ブラウザ対応時）
+            startMemoryMonitoring();
+            
+            log('✅ パフォーマンス測定システム開始', 'success');
+            log('  📊 setUnifiedPosition時間測定準備完了', 'info');
+            log('  🎯 FPS測定準備完了', 'info');
+            log('  💾 メモリ監視準備完了', 'info');
+        }
+        
+        // パフォーマンス測定停止
+        function stopPerformanceMonitoring() {
+            if (!performanceMonitoring.isActive) {
+                log('⚠️ パフォーマンス測定は開始されていません', 'warning');
+                return;
+            }
+            
+            log('=== パフォーマンス測定停止 ===', 'info');
+            
+            // 測定データの統計レポート
+            generatePerformanceReport();
+            
+            // FPS測定停止
+            if (performanceMonitoring.fpsMonitoring) {
+                stopFPSMeasurement();
+            }
+            
+            performanceMonitoring.isActive = false;
+            performanceMonitoring.measurementData = [];
+            
+            updatePerformanceStatus('performance', false);
+            updatePerformanceStatus('fps', false);
+            updatePerformanceStatus('memory', false);
+            
+            log('✅ パフォーマンス測定システム停止', 'success');
+        }
+        
+        // setUnifiedPosition実行時間測定
+        function measureSetUnifiedPosition() {
+            if (!performanceMonitoring.isActive) {
+                log('⚠️ 先にパフォーマンス測定を開始してください', 'warning');
+                return;
+            }
+            
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ Phase 2未初期化', 'warning');
+                return;
+            }
+            
+            log('=== setUnifiedPosition実行時間測定開始 ===', 'success');
+            
+            const testCases = [
+                { x: 20, y: 30, unit: '%', name: 'テストケース1' },
+                { x: 60, y: 40, unit: '%', name: 'テストケース2' },
+                { x: 80, y: 70, unit: '%', name: 'テストケース3' },
+                { x: 40, y: 80, unit: '%', name: 'テストケース4' },
+                { x: 50, y: 50, unit: '%', name: 'テストケース5 (中央)' }
+            ];
+            
+            let caseIndex = 0;
+            
+            const runNextTest = () => {
+                if (caseIndex >= testCases.length) {
+                    // すべてのテスト完了、統計表示
+                    displaySetUnifiedPositionStats();
+                    return;
+                }
+                
+                const testCase = testCases[caseIndex];
+                const iterations = 10; // 10回測定して平均を取る
+                let measurements = [];
+                
+                // 1つのテストケースを10回実行
+                for (let i = 0; i < iterations; i++) {
+                    const startTime = performance.now();
+                    
+                    try {
+                        elementObserverAdvanced.setUnifiedPosition(testCase.x, testCase.y, testCase.unit);
+                        const endTime = performance.now();
+                        const duration = endTime - startTime;
+                        measurements.push(duration);
+                    } catch (error) {
+                        log(`❌ ${testCase.name} 実行エラー: ${error.message}`, 'error');
+                        continue;
+                    }
+                }
+                
+                // 統計計算
+                if (measurements.length > 0) {
+                    const stats = calculateStatistics(measurements);
+                    const measurementRecord = {
+                        testCase: testCase.name,
+                        position: `${testCase.x}${testCase.unit}, ${testCase.y}${testCase.unit}`,
+                        ...stats,
+                        timestamp: performance.now()
+                    };
+                    
+                    performanceMonitoring.measurementData.push(measurementRecord);
+                    
+                    log(`📊 ${testCase.name}: ${stats.average.toFixed(3)}ms (平均) ±${stats.stddev.toFixed(3)}ms`, 'info');
+                    log(`  最小: ${stats.min.toFixed(3)}ms, 最大: ${stats.max.toFixed(3)}ms`, 'debug');
+                }
+                
+                caseIndex++;
+                // 次のテストケースへ（少し間を開ける）
+                setTimeout(runNextTest, 100);
+            };
+            
+            runNextTest();
+        }
+        
+        // FPS測定開始
+        function measureFPS() {
+            if (!performanceMonitoring.isActive) {
+                log('⚠️ 先にパフォーマンス測定を開始してください', 'warning');
+                return;
+            }
+            
+            if (performanceMonitoring.fpsMonitoring) {
+                log('⚠️ FPS測定は既に開始されています', 'warning');
+                return;
+            }
+            
+            log('=== FPS測定開始 ===', 'success');
+            performanceMonitoring.fpsMonitoring = true;
+            performanceMonitoring.fpsFrameCount = 0;
+            performanceMonitoring.fpsStartTime = performance.now();
+            
+            updatePerformanceStatus('fps', true);
+            
+            const fpsLoop = () => {
+                if (!performanceMonitoring.fpsMonitoring) return;
+                
+                performanceMonitoring.fpsFrameCount++;
+                const currentTime = performance.now();
+                const elapsed = currentTime - performanceMonitoring.fpsStartTime;
+                
+                // 1秒ごとにFPS更新
+                if (elapsed >= 1000) {
+                    performanceMonitoring.currentFPS = Math.round(performanceMonitoring.fpsFrameCount * 1000 / elapsed);
+                    updateFPSDisplay(performanceMonitoring.currentFPS);
+                    
+                    // リセット
+                    performanceMonitoring.fpsFrameCount = 0;
+                    performanceMonitoring.fpsStartTime = currentTime;
+                }
+                
+                performanceMonitoring.fpsAnimationId = requestAnimationFrame(fpsLoop);
+            };
+            
+            performanceMonitoring.fpsAnimationId = requestAnimationFrame(fpsLoop);
+            log('📈 リアルタイムFPS測定開始', 'info');
+        }
+        
+        // FPS測定停止
+        function stopFPSMeasurement() {
+            if (!performanceMonitoring.fpsMonitoring) return;
+            
+            performanceMonitoring.fpsMonitoring = false;
+            if (performanceMonitoring.fpsAnimationId) {
+                cancelAnimationFrame(performanceMonitoring.fpsAnimationId);
+                performanceMonitoring.fpsAnimationId = null;
+            }
+            
+            log(`📈 FPS測定停止 - 最終FPS: ${performanceMonitoring.currentFPS}`, 'info');
+            updatePerformanceStatus('fps', false);
+        }
+        
+        // メモリ監視開始
+        function startMemoryMonitoring() {
+            if (!performance.memory) {
+                log('⚠️ このブラウザはメモリ測定に対応していません', 'warning');
+                updatePerformanceStatus('memory', false, 'N/A');
+                return;
+            }
+            
+            const updateMemory = () => {
+                if (!performanceMonitoring.isActive) return;
+                
+                try {
+                    const memInfo = performance.memory;
+                    const usedMB = Math.round(memInfo.usedJSHeapSize / 1024 / 1024);
+                    const totalMB = Math.round(memInfo.totalJSHeapSize / 1024 / 1024);
+                    const limitMB = Math.round(memInfo.jsHeapSizeLimit / 1024 / 1024);
+                    
+                    updatePerformanceStatus('memory', true, `${usedMB}/${totalMB}MB`);
+                    
+                    setTimeout(updateMemory, 2000); // 2秒ごと更新
+                } catch (error) {
+                    log(`⚠️ メモリ情報取得エラー: ${error.message}`, 'warning');
+                }
+            };
+            
+            updateMemory();
+            log('💾 メモリ監視開始', 'info');
+        }
+        
+        // パフォーマンスステータス更新
+        function updatePerformanceStatus(type, isActive, displayValue = '') {
+            const element = statusElements[type];
+            if (!element) return;
+            
+            if (type === 'performance') {
+                element.textContent = isActive ? 'Monitoring Active' : 'Monitoring Inactive';
+            } else if (type === 'fps') {
+                element.textContent = isActive ? `FPS: ${performanceMonitoring.currentFPS}` : 'FPS: --';
+            } else if (type === 'memory') {
+                element.textContent = displayValue ? `Memory: ${displayValue}` : 'Memory: --';
+            }
+            
+            element.className = `status ${isActive ? 'active' : 'inactive'}`;
+        }
+        
+        // FPS表示更新
+        function updateFPSDisplay(fps) {
+            const element = statusElements.fps;
+            if (element) {
+                element.textContent = `FPS: ${fps}`;
+            }
+        }
+        
+        // 統計計算ユーティリティ
+        function calculateStatistics(values) {
+            if (values.length === 0) return { min: 0, max: 0, average: 0, stddev: 0 };
+            
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const sum = values.reduce((a, b) => a + b, 0);
+            const average = sum / values.length;
+            
+            const variance = values.reduce((acc, val) => acc + Math.pow(val - average, 2), 0) / values.length;
+            const stddev = Math.sqrt(variance);
+            
+            return { min, max, average, stddev };
+        }
+        
+        // setUnifiedPosition統計表示
+        function displaySetUnifiedPositionStats() {
+            if (performanceMonitoring.measurementData.length === 0) {
+                log('⚠️ 測定データなし', 'warning');
+                return;
+            }
+            
+            log('=== setUnifiedPosition実行時間統計 ===', 'success');
+            
+            // 全体統計
+            const allMeasurements = performanceMonitoring.measurementData.map(record => record.average);
+            const overallStats = calculateStatistics(allMeasurements);
+            
+            log(`📊 全体統計 (${performanceMonitoring.measurementData.length}ケース):`, 'info');
+            log(`  平均実行時間: ${overallStats.average.toFixed(3)}ms`, 'info');
+            log(`  標準偏差: ${overallStats.stddev.toFixed(3)}ms`, 'info');
+            log(`  最速: ${overallStats.min.toFixed(3)}ms`, 'info');
+            log(`  最遅: ${overallStats.max.toFixed(3)}ms`, 'info');
+            
+            log('📋 詳細データ:', 'debug');
+            performanceMonitoring.measurementData.forEach((record, index) => {
+                log(`  ${index + 1}. ${record.testCase}: ${record.average.toFixed(3)}ms (${record.position})`, 'debug');
+            });
+        }
+        
+        // パフォーマンスレポート生成
+        function generatePerformanceReport() {
+            log('=== パフォーマンス測定レポート ===', 'success');
+            
+            if (performanceMonitoring.measurementData.length > 0) {
+                displaySetUnifiedPositionStats();
+            } else {
+                log('setUnifiedPosition測定データなし', 'info');
+            }
+            
+            if (performanceMonitoring.fpsMonitoring) {
+                log(`最終FPS: ${performanceMonitoring.currentFPS}`, 'info');
+            }
+            
+            // ブラウザ情報
+            log('🌐 実行環境情報:', 'info');
+            log(`  UserAgent: ${navigator.userAgent}`, 'debug');
+            log(`  画面解像度: ${screen.width}x${screen.height}`, 'info');
+            log(`  DPR: ${window.devicePixelRatio}`, 'info');
+            
+            if (performance.memory) {
+                const memInfo = performance.memory;
+                log(`  JSヒープサイズ: ${Math.round(memInfo.usedJSHeapSize / 1024 / 1024)}MB使用 / ${Math.round(memInfo.totalJSHeapSize / 1024 / 1024)}MB確保`, 'info');
+            }
+            
+            log('✅ パフォーマンス測定レポート生成完了', 'success');
+        }
+        
         // オリジナルのconsoleをラップ
         const originalLog = console.log;
         const originalError = console.error;
@@ -869,6 +1201,14 @@
         
         // クリーンアップ
         window.addEventListener('beforeunload', () => {
+            // パフォーマンス測定停止
+            if (performanceMonitoring.isActive) {
+                stopPerformanceMonitoring();
+            }
+            if (performanceMonitoring.fpsAnimationId) {
+                cancelAnimationFrame(performanceMonitoring.fpsAnimationId);
+            }
+            
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
