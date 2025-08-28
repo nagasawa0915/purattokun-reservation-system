@@ -95,14 +95,6 @@ class PureBoundingBoxCore {
             transform: element.style.transform
         };
         
-        // 🎯 初回ドラッグ瞬間移動修正: CSS変数リセットしてから位置計算
-        // 初回時は.interactiveにCSS変数が残っている可能性があるため事前にリセット
-        if (interactive) {
-            console.log('🎯 [INIT-FIX] 初回用CSS変数事前リセット');
-            interactive.style.setProperty('--tx', '0px');
-            interactive.style.setProperty('--ty', '0px');
-        }
-        
         // 🔧 CSS Transform中心基準補正を一時的に無効化
         // transform(-50%, -50%)による座標競合を回避
         const currentRect = element.getBoundingClientRect();
@@ -312,65 +304,59 @@ class PureBoundingBoxCore {
             // layout-anchorの現在の見た目の矩形（transform(-50%, -50%)反映後）
             const anchorRect = element.getBoundingClientRect();
             
-            // CSS変数による追加オフセットを取得
+            // 🎯 修正：CSS変数による追加オフセットを取得（堅牢版）
             let tx = 0, ty = 0;
             if (interactive) {
                 const cs = getComputedStyle(interactive);
-                tx = parseFloat(cs.getPropertyValue('--tx')) || 0;
-                ty = parseFloat(cs.getPropertyValue('--ty')) || 0;
+                const txRaw = cs.getPropertyValue('--tx');
+                const tyRaw = cs.getPropertyValue('--ty');
                 
-                // 🔍 CSS変数の詳細状態デバッグ情報
+                // 🎯 修正：より堅牢なCSS変数解析（NaN・空文字・undefined対策）
+                tx = (txRaw && txRaw !== '' && txRaw !== 'undefined') ? parseFloat(txRaw) : 0;
+                ty = (tyRaw && tyRaw !== '' && tyRaw !== 'undefined') ? parseFloat(tyRaw) : 0;
+                
+                // 二重チェック：NaN対策
+                if (isNaN(tx)) tx = 0;
+                if (isNaN(ty)) ty = 0;
+                
+                // 🔍 CSS変数の詳細状態デバッグ情報（修正版）
                 console.log('🔍 [DEBUG] CSS変数詳細状態:', {
                     interactiveElement: interactive,
                     computedStyle: cs,
-                    txRaw: cs.getPropertyValue('--tx'),
-                    tyRaw: cs.getPropertyValue('--ty'),
-                    txParsed: parseFloat(cs.getPropertyValue('--tx')),
-                    tyParsed: parseFloat(cs.getPropertyValue('--ty')),
+                    txRaw: txRaw,
+                    tyRaw: tyRaw,
+                    txParsed: tx,
+                    tyParsed: ty,
+                    robustParsing: {
+                        txValid: txRaw && txRaw !== '' && txRaw !== 'undefined',
+                        tyValid: tyRaw && tyRaw !== '' && tyRaw !== 'undefined'
+                    },
                     allCustomProps: Object.fromEntries([...cs].filter(prop => prop.startsWith('--')).map(prop => [prop, cs.getPropertyValue(prop)]))
                 });
             }
             
-            // 🎯 瞬間移動問題修正: 現在の正確な位置を親要素基準で計算
-            console.log('🎯 [FIX] 瞬間移動修正 - 座標計算を親要素基準に統一');
+            // 見た目の中心を計算（transform + CSS変数オフセット）
+            const visualCenterX = anchorRect.left + anchorRect.width/2 + tx;
+            const visualCenterY = anchorRect.top + anchorRect.height/2 + ty;
             
-            // 親要素基準での相対位置を直接計算（ページ座標を使わない）
-            const currentLeft = parseFloat(getComputedStyle(element).left) || 0;
-            const currentTop = parseFloat(getComputedStyle(element).top) || 0;
-            
-            // %値かpx値かを判定
-            const leftIsPercent = getComputedStyle(element).left.includes('%');
-            const topIsPercent = getComputedStyle(element).top.includes('%');
-            
-            let leftPct, topPct;
-            
-            if (leftIsPercent) {
-                // 既に%の場合はそのまま使用（CSS変数分のみ加算）
-                leftPct = currentLeft + (tx / parentRect.width * 100);
-            } else {
-                // px値の場合は%に変換
-                leftPct = (currentLeft / parentRect.width) * 100 + (tx / parentRect.width * 100);
+            // 🔍 transform解析の詳細デバッグ情報
+            if (interactive) {
+                const cs = getComputedStyle(interactive);
+                console.log('🔍 [DEBUG] transform解析詳細:', {
+                    element: interactive,
+                    transform: cs.transform,
+                    matrix: cs.transform,
+                    getAllTransforms: {
+                        transform: cs.transform,
+                        webkitTransform: cs.webkitTransform,
+                        mozTransform: cs.mozTransform
+                    }
+                });
             }
             
-            if (topIsPercent) {
-                // 既に%の場合はそのまま使用（CSS変数分のみ加算）
-                topPct = currentTop + (ty / parentRect.height * 100);
-            } else {
-                // px値の場合は%に変換
-                topPct = (currentTop / parentRect.height) * 100 + (ty / parentRect.height * 100);
-            }
-            
-            console.log('🔍 [DEBUG] 修正後座標計算詳細:', {
-                currentStyles: {
-                    left: getComputedStyle(element).left,
-                    top: getComputedStyle(element).top,
-                    leftIsPercent: leftIsPercent,
-                    topIsPercent: topIsPercent
-                },
-                cssVariables: {tx: tx, ty: ty},
-                parentSize: {width: parentRect.width, height: parentRect.height},
-                calculatedPercent: {left: leftPct.toFixed(2), top: topPct.toFixed(2)}
-            });
+            // 親要素基準での%値に変換
+            const leftPct = ((visualCenterX - parentRect.left) / parentRect.width) * 100;
+            const topPct = ((visualCenterY - parentRect.top) / parentRect.height) * 100;
             
             // layout-anchorに書き戻し
             element.style.left = leftPct.toFixed(2) + '%';
@@ -385,15 +371,14 @@ class PureBoundingBoxCore {
             // コミット後の状態を詳細に記録
             const afterCommitState = this.captureDetailedState('AFTER_COMMIT', timestamp);
             
-            console.log('✅ [SWAP] commitToPercent完了 - 修正版座標計算', {
+            console.log('✅ [SWAP] commitToPercent完了 - 見た目の中心基準', {
                 timestamp: timestamp,
                 conversionDetails: {
-                    originalPosition: {left: currentLeft.toFixed(1), top: currentTop.toFixed(1)},
+                    visualCenter: {x: visualCenterX.toFixed(1), y: visualCenterY.toFixed(1)},
                     cssOffsetsBefore: {tx: tx, ty: ty},
                     cssOffsetsAfter: {tx: '0px', ty: '0px'},
                     percentValues: {left: leftPct.toFixed(2) + '%', top: topPct.toFixed(2) + '%'},
-                    hasInteractive: !!interactive,
-                    coordinateType: {leftIsPercent: leftIsPercent, topIsPercent: topIsPercent}
+                    hasInteractive: !!interactive
                 },
                 beforeAfterComparison: this.compareStates(beforeCommitState, afterCommitState),
                 success: true

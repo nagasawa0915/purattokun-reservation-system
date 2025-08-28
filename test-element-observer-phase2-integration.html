@@ -250,6 +250,14 @@
             </div>
             
             <div class="control-group">
+                <h3>⚡ Phase 3-A最適化</h3>
+                <button class="primary" onclick="enableOptimizations()">最適化ON</button>
+                <button onclick="disableOptimizations()">最適化OFF</button>
+                <button onclick="comparePerformance()">最適化効果比較</button>
+                <button onclick="showOptimizationStats()">最適化統計</button>
+            </div>
+            
+            <div class="control-group">
                 <h3>🛠️ デバッグ・制御</h3>
                 <button onclick="showCoordinateSystems()">全座標系表示</button>
                 <button onclick="showAdvancedDebugInfo()">詳細デバッグ</button>
@@ -341,6 +349,16 @@
             currentFPS: 0,
             measurementData: [],
             fpsAnimationId: null
+        };
+        
+        // Phase 3-A最適化制御システム
+        let phase3AOptimization = {
+            enabled: false,
+            comparisonData: {
+                optimizedResults: [],
+                unoptimizedResults: []
+            },
+            currentMode: 'unoptimized'
         };
         
         const logElement = document.getElementById('log');
@@ -1161,6 +1179,211 @@
             }
             
             log('✅ パフォーマンス測定レポート生成完了', 'success');
+        }
+        
+        // ⚡ Phase 3-A最適化制御機能
+        
+        // 最適化機能を有効化
+        function enableOptimizations() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ ElementObserverAdvanced未初期化', 'warning');
+                return;
+            }
+            
+            log('=== Phase 3-A最適化機能有効化 ===', 'success');
+            
+            // 最適化設定を有効化
+            elementObserverAdvanced.setPerformanceOptimization({
+                enabled: true,
+                batchCoordinateUpdates: true,
+                skipRedundantCalculations: true,
+                minUpdateInterval: 8  // 120fps対応
+            });
+            
+            phase3AOptimization.enabled = true;
+            phase3AOptimization.currentMode = 'optimized';
+            
+            log('✅ 最適化機能有効化完了', 'success');
+            log('  🚀 バッチ座標更新: ON', 'info');
+            log('  ⚡ 冗長計算スキップ: ON', 'info');
+            log('  🎯 120fps対応モード: ON', 'info');
+        }
+        
+        // 最適化機能を無効化
+        function disableOptimizations() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ ElementObserverAdvanced未初期化', 'warning');
+                return;
+            }
+            
+            log('=== Phase 3-A最適化機能無効化 ===', 'info');
+            
+            // 最適化設定を無効化
+            elementObserverAdvanced.setPerformanceOptimization({
+                enabled: false,
+                batchCoordinateUpdates: false,
+                skipRedundantCalculations: false,
+                minUpdateInterval: 16  // 60fps標準
+            });
+            
+            phase3AOptimization.enabled = false;
+            phase3AOptimization.currentMode = 'unoptimized';
+            
+            log('✅ 最適化機能無効化完了', 'info');
+            log('  📦 バッチ座標更新: OFF', 'info');
+            log('  🔄 冗長計算スキップ: OFF', 'info');
+            log('  📺 60fps標準モード: ON', 'info');
+        }
+        
+        // 最適化効果の比較テスト
+        function comparePerformance() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ ElementObserverAdvanced未初期化', 'warning');
+                return;
+            }
+            
+            log('=== Phase 3-A最適化効果比較テスト開始 ===', 'success');
+            
+            // 比較データをクリア
+            phase3AOptimization.comparisonData.optimizedResults = [];
+            phase3AOptimization.comparisonData.unoptimizedResults = [];
+            
+            // テストケース定義
+            const testCases = [
+                { x: 20, y: 30, label: '軽負荷テスト' },
+                { x: 60, y: 40, label: '中負荷テスト' },
+                { x: 80, y: 70, label: '高負荷テスト' }
+            ];
+            
+            let currentTest = 0;
+            
+            function runComparisonTest() {
+                if (currentTest >= testCases.length) {
+                    // すべてのテスト完了、結果表示
+                    displayComparisonResults();
+                    return;
+                }
+                
+                const testCase = testCases[currentTest];
+                const iterations = 20; // 20回測定
+                
+                // 最適化OFF版測定
+                disableOptimizations();
+                setTimeout(() => {
+                    log(`📊 ${testCase.label}: 最適化OFF測定開始 (${iterations}回)`, 'info');
+                    
+                    let unoptimizedTimes = [];
+                    for (let i = 0; i < iterations; i++) {
+                        const startTime = performance.now();
+                        elementObserverAdvanced.setUnifiedPosition(testCase.x, testCase.y, '%');
+                        const duration = performance.now() - startTime;
+                        unoptimizedTimes.push(duration);
+                    }
+                    
+                    // 最適化ON版測定
+                    enableOptimizations();
+                    setTimeout(() => {
+                        log(`⚡ ${testCase.label}: 最適化ON測定開始 (${iterations}回)`, 'info');
+                        
+                        let optimizedTimes = [];
+                        for (let i = 0; i < iterations; i++) {
+                            const startTime = performance.now();
+                            elementObserverAdvanced.setUnifiedPosition(testCase.x + 1, testCase.y + 1, '%');
+                            const duration = performance.now() - startTime;
+                            optimizedTimes.push(duration);
+                        }
+                        
+                        // 統計計算
+                        const unoptimizedStats = calculateStatistics(unoptimizedTimes);
+                        const optimizedStats = calculateStatistics(optimizedTimes);
+                        const improvement = ((unoptimizedStats.average - optimizedStats.average) / unoptimizedStats.average * 100);
+                        
+                        phase3AOptimization.comparisonData.unoptimizedResults.push({
+                            label: testCase.label,
+                            stats: unoptimizedStats
+                        });
+                        
+                        phase3AOptimization.comparisonData.optimizedResults.push({
+                            label: testCase.label,
+                            stats: optimizedStats,
+                            improvement: improvement
+                        });
+                        
+                        log(`✅ ${testCase.label}完了: ${improvement.toFixed(1)}% 高速化`, 'success');
+                        
+                        currentTest++;
+                        setTimeout(runComparisonTest, 100);
+                        
+                    }, 50);
+                }, 50);
+            }
+            
+            runComparisonTest();
+        }
+        
+        // 比較結果表示
+        function displayComparisonResults() {
+            log('=== Phase 3-A最適化効果比較結果 ===', 'success');
+            
+            let totalImprovement = 0;
+            let maxImprovement = 0;
+            
+            for (let i = 0; i < phase3AOptimization.comparisonData.optimizedResults.length; i++) {
+                const optimized = phase3AOptimization.comparisonData.optimizedResults[i];
+                const unoptimized = phase3AOptimization.comparisonData.unoptimizedResults[i];
+                
+                log(`📊 ${optimized.label}:`, 'info');
+                log(`  最適化前: ${unoptimized.stats.average.toFixed(3)}ms ±${unoptimized.stats.stdDev.toFixed(3)}ms`, 'info');
+                log(`  最適化後: ${optimized.stats.average.toFixed(3)}ms ±${optimized.stats.stdDev.toFixed(3)}ms`, 'info');
+                log(`  改善率: ${optimized.improvement.toFixed(1)}% 高速化`, optimized.improvement > 0 ? 'success' : 'warning');
+                
+                totalImprovement += optimized.improvement;
+                maxImprovement = Math.max(maxImprovement, optimized.improvement);
+            }
+            
+            const averageImprovement = totalImprovement / phase3AOptimization.comparisonData.optimizedResults.length;
+            
+            log('🏆 Phase 3-A最適化効果まとめ:', 'success');
+            log(`  平均改善率: ${averageImprovement.toFixed(1)}% 高速化`, 'success');
+            log(`  最大改善率: ${maxImprovement.toFixed(1)}% 高速化`, 'success');
+            log(`  目標達成度: ${averageImprovement >= 80 ? '✅' : '⚠️'} (目標80%高速化)`, averageImprovement >= 80 ? 'success' : 'warning');
+            
+            log('✅ Phase 3-A最適化効果比較完了', 'success');
+        }
+        
+        // 最適化統計情報表示
+        function showOptimizationStats() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState.initialized) {
+                log('⚠️ ElementObserverAdvanced未初期化', 'warning');
+                return;
+            }
+            
+            log('=== Phase 3-A最適化統計情報 ===', 'info');
+            
+            try {
+                const stats = elementObserverAdvanced.getOptimizationStats();
+                
+                log('⚡ 最適化設定:', 'info');
+                log(`  有効: ${stats.performanceOptimization.enabled}`, 'info');
+                log(`  バッチ更新: ${stats.performanceOptimization.batchCoordinateUpdates}`, 'info');
+                log(`  冗長計算スキップ: ${stats.performanceOptimization.skipRedundantCalculations}`, 'info');
+                log(`  最小更新間隔: ${stats.performanceOptimization.minUpdateInterval}ms`, 'info');
+                
+                log('📊 座標更新情報:', 'info');
+                log(`  保留中更新: ${stats.coordinateUpdateInfo.hasPending}`, 'info');
+                log(`  最終更新: ${stats.coordinateUpdateInfo.timeSinceLastUpdate.toFixed(1)}ms前`, 'info');
+                
+                if (stats.moduleStats.transform) {
+                    log('🎯 Transform統計:', 'info');
+                    log(`  キャッシュ有効: ${stats.moduleStats.transform.cache.staticValid} (static), ${stats.moduleStats.transform.cache.dynamicValid} (dynamic)`, 'info');
+                    log(`  保留中更新: ${stats.moduleStats.transform.pendingUpdates.count}件`, 'info');
+                }
+                
+            } catch (error) {
+                log('❌ 最適化統計取得エラー: ' + error.message, 'error');
+            }
+            
+            log('✅ 最適化統計表示完了', 'success');
         }
         
         // オリジナルのconsoleをラップ

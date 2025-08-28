@@ -29,16 +29,38 @@ class ElementObserverTransform {
             rotation: 0 // --rotation
         };
         
-        // Transform Matrix管理
+        // Transform Matrix管理 + キャッシュシステム
         this.matrices = {
             static: null,
             dynamic: null,
-            combined: null
+            combined: null,
+            cache: {
+                staticValid: false,
+                dynamicValid: false,
+                combinedValid: false,
+                lastStaticTransform: null,
+                lastDynamicTransform: null
+            }
         };
         
         // 監視状態
         this.isActive = false;
         this.changeCallbacks = new Set();
+        
+        // パフォーマンス最適化設定
+        this.optimizationSettings = {
+            batchUpdates: true,
+            cacheEnabled: true,
+            skipRedundantCalculations: true,
+            maxCacheAge: 16  // ms（約1フレーム）
+        };
+        
+        // バッチ処理用
+        this.pendingUpdates = {
+            cssVariables: {},
+            hasPending: false,
+            batchTimeout: null
+        };
         
         this.initialize();
     }
@@ -171,7 +193,7 @@ class ElementObserverTransform {
     }
     
     /**
-     * 複数のCSS変数を一括設定
+     * 複数のCSS変数を一括設定（バッチ最適化版）
      */
     setCSSVariables(variables) {
         if (!this.interactiveElement) {
@@ -179,100 +201,237 @@ class ElementObserverTransform {
             return false;
         }
         
+        if (this.optimizationSettings.batchUpdates) {
+            return this.setCSSVariablesBatch(variables);
+        }
+        
+        return this.setCSSVariablesImmediate(variables);
+    }
+    
+    /**
+     * バッチ処理版CSS変数設定
+     */
+    setCSSVariablesBatch(variables) {
         const oldValues = { ...this.cssVariables };
         
-        // 値を更新（DOM適用は後でまとめて実行）
+        // ペンディング更新にマージ
+        Object.entries(variables).forEach(([name, value]) => {
+            this.pendingUpdates.cssVariables[name] = value;
+            this.cssVariables[name] = value;  // 内部状態は即座に更新
+        });
+        
+        this.pendingUpdates.hasPending = true;
+        
+        // バッチ処理をスケジュール
+        if (this.pendingUpdates.batchTimeout) {
+            clearTimeout(this.pendingUpdates.batchTimeout);
+        }
+        
+        this.pendingUpdates.batchTimeout = setTimeout(() => {
+            this.flushBatchedUpdates(oldValues);
+        }, 0);  // 次のイベントループで実行
+        
+        return true;
+    }
+    
+    /**
+     * 即座処理版CSS変数設定（フォールバック）
+     */
+    setCSSVariablesImmediate(variables) {
+        const oldValues = { ...this.cssVariables };
+        
+        // DocumentFragment使用でDOM操作を最適化
+        const style = this.interactiveElement.style;
+        
+        // 値を更新
         Object.entries(variables).forEach(([name, value]) => {
             this.cssVariables[name] = value;
         });
         
         // CSS変数をまとめてDOM適用
         Object.entries(variables).forEach(([name, value]) => {
-            let cssValue;
-            switch (name) {
-                case 'tx':
-                case 'ty':
-                    cssValue = value + 'px';
-                    break;
-                case 'scale':
-                    cssValue = value.toString();
-                    break;
-                case 'rotation':
-                    cssValue = value + 'deg';
-                    break;
-                default:
-                    cssValue = value.toString();
-            }
-            
-            this.interactiveElement.style.setProperty(`--${name}`, cssValue);
+            const cssValue = this.formatCSSValue(name, value);
+            style.setProperty(`--${name}`, cssValue);
         });
         
-        // 動的Transform更新
+        // 一括更新
         this.updateDynamicTransform();
-        
-        // Matrix再計算
         this.updateMatrices();
-        
-        // 変化通知
         this.notifyChange('cssVariables', { oldValues, newValues: { ...this.cssVariables } });
-        
-        console.log('🔧 CSS変数一括設定完了:', {
-            oldValues,
-            newValues: { ...this.cssVariables },
-            dynamicTransform: this.transforms.dynamic
-        });
         
         return true;
     }
     
     /**
-     * Transform Matrix計算・更新
+     * バッチ更新のフラッシュ
      */
-    updateMatrices() {
-        try {
-            // 静的Matrix（layout-anchor）
-            this.matrices.static = this.parseTransformToMatrix(this.transforms.static);
-            
-            // 動的Matrix（interactive）
-            this.matrices.dynamic = this.parseTransformToMatrix(this.transforms.dynamic);
-            
-            // 合成Matrix
-            this.matrices.combined = this.multiplyMatrices(this.matrices.static, this.matrices.dynamic);
-            
-            // 合成Transform文字列更新
-            this.transforms.combined = this.matrixToTransformString(this.matrices.combined);
-            
-            console.log('📐 Transform Matrix更新完了', {
-                static: this.transforms.static,
-                dynamic: this.transforms.dynamic,
-                combined: this.transforms.combined
-            });
-            
-        } catch (error) {
-            console.error('❌ Transform Matrix計算エラー:', error);
+    flushBatchedUpdates(oldValues) {
+        if (!this.pendingUpdates.hasPending) return;
+        
+        const startTime = performance.now();
+        
+        // DOM更新をバッチで実行
+        Object.entries(this.pendingUpdates.cssVariables).forEach(([name, value]) => {
+            const cssValue = this.formatCSSValue(name, value);
+            this.interactiveElement.style.setProperty(`--${name}`, cssValue);
+        });
+        
+        // Transform・Matrix一括更新
+        this.updateDynamicTransform();
+        this.updateMatrices();
+        
+        // 変化通知
+        this.notifyChange('cssVariables', { 
+            oldValues, 
+            newValues: { ...this.cssVariables },
+            batchInfo: {
+                itemCount: Object.keys(this.pendingUpdates.cssVariables).length,
+                duration: performance.now() - startTime
+            }
+        });
+        
+        // バッチクリア
+        this.pendingUpdates.cssVariables = {};
+        this.pendingUpdates.hasPending = false;
+        this.pendingUpdates.batchTimeout = null;
+        
+        console.log(`🚀 バッチ更新完了 (${(performance.now() - startTime).toFixed(3)}ms)`);
+    }
+    
+    /**
+     * CSS値フォーマット（共通化）
+     */
+    formatCSSValue(name, value) {
+        switch (name) {
+            case 'tx':
+            case 'ty':
+                return value + 'px';
+            case 'scale':
+                return value.toString();
+            case 'rotation':
+                return value + 'deg';
+            default:
+                return value.toString();
         }
     }
     
     /**
-     * Transform文字列をMatrixに変換
+     * Transform Matrix計算・更新（最適化版）
+     */
+    updateMatrices() {
+        const startTime = this.optimizationSettings.cacheEnabled ? performance.now() : 0;
+        
+        try {
+            let matricesChanged = false;
+            
+            // 静的Matrix（キャッシュチェック）
+            if (!this.matrices.cache.staticValid || 
+                this.transforms.static !== this.matrices.cache.lastStaticTransform) {
+                
+                this.matrices.static = this.parseTransformToMatrix(this.transforms.static);
+                this.matrices.cache.staticValid = true;
+                this.matrices.cache.lastStaticTransform = this.transforms.static;
+                this.matrices.cache.combinedValid = false;  // 合成無効化
+                matricesChanged = true;
+            }
+            
+            // 動的Matrix（キャッシュチェック）
+            if (!this.matrices.cache.dynamicValid || 
+                this.transforms.dynamic !== this.matrices.cache.lastDynamicTransform) {
+                
+                this.matrices.dynamic = this.parseTransformToMatrix(this.transforms.dynamic);
+                this.matrices.cache.dynamicValid = true;
+                this.matrices.cache.lastDynamicTransform = this.transforms.dynamic;
+                this.matrices.cache.combinedValid = false;  // 合成無効化
+                matricesChanged = true;
+            }
+            
+            // 合成Matrix（必要な場合のみ計算）
+            if (!this.matrices.cache.combinedValid || matricesChanged) {
+                this.matrices.combined = this.multiplyMatrices(this.matrices.static, this.matrices.dynamic);
+                this.transforms.combined = this.matrixToTransformString(this.matrices.combined);
+                this.matrices.cache.combinedValid = true;
+                matricesChanged = true;
+            }
+            
+            if (matricesChanged && this.optimizationSettings.cacheEnabled) {
+                const duration = performance.now() - startTime;
+                console.log(`📐 Transform Matrix更新完了 (${duration.toFixed(3)}ms)`, {
+                    cacheHits: {
+                        static: this.matrices.cache.staticValid && !matricesChanged,
+                        dynamic: this.matrices.cache.dynamicValid && !matricesChanged,
+                        combined: this.matrices.cache.combinedValid && !matricesChanged
+                    }
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ Transform Matrix計算エラー:', error);
+            // キャッシュクリア
+            this.clearMatrixCache();
+        }
+    }
+    
+    /**
+     * Transform文字列をMatrixに変換（最適化版）
      */
     parseTransformToMatrix(transformString) {
         // デフォルトは単位行列
-        let matrix = this.createIdentityMatrix();
-        
         if (!transformString || transformString === 'none') {
-            return matrix;
+            return this.createIdentityMatrix();
         }
         
-        // transform関数を解析
+        // matrix()関数の直接解析（最適化）
+        if (transformString.startsWith('matrix(')) {
+            return this.parseMatrixFunction(transformString);
+        }
+        
+        // transform関数を解析（既存方式）
         const transforms = this.parseTransformFunctions(transformString);
         
+        if (transforms.length === 0) {
+            return this.createIdentityMatrix();
+        }
+        
+        // 単一transform関数の最適化パス
+        if (transforms.length === 1) {
+            return this.createTransformMatrix(transforms[0]);
+        }
+        
+        // 複数transform関数の合成
+        let matrix = this.createIdentityMatrix();
         transforms.forEach(transform => {
             const transformMatrix = this.createTransformMatrix(transform);
             matrix = this.multiplyMatrices(matrix, transformMatrix);
         });
         
         return matrix;
+    }
+    
+    /**
+     * matrix()関数の直接解析（高速化）
+     */
+    parseMatrixFunction(matrixString) {
+        const match = matrixString.match(/matrix\(([^)]+)\)/);
+        if (!match) {
+            console.warn('⚠️ matrix()関数解析失敗:', matrixString);
+            return this.createIdentityMatrix();
+        }
+        
+        const values = match[1].split(',').map(v => parseFloat(v.trim()));
+        if (values.length !== 6) {
+            console.warn('⚠️ matrix()値の数が不正:', values.length);
+            return this.createIdentityMatrix();
+        }
+        
+        // 2D matrix → 4x4 matrix変換
+        const [a, b, c, d, tx, ty] = values;
+        return [
+            a, b, 0, tx,
+            c, d, 0, ty,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        ];
     }
     
     /**
@@ -329,8 +488,28 @@ class ElementObserverTransform {
             case 'rotate':
                 return this.createRotateMatrix(this.parseAngle(args[0] || '0deg'));
                 
+            case 'matrix':
+                // matrix(a, b, c, d, tx, ty)の6値形式
+                if (args.length === 6) {
+                    const [a, b, c, d, tx, ty] = args.map(v => parseFloat(v) || 0);
+                    return [
+                        a, b, 0, tx,
+                        c, d, 0, ty,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1
+                    ];
+                }
+                break;
+                
+            case 'matrix3d':
+                // matrix3d()の16値形式
+                if (args.length === 16) {
+                    return args.map(v => parseFloat(v) || 0);
+                }
+                break;
+                
             default:
-                console.warn('⚠️ 未対応のTransform関数:', name);
+                console.warn('⚠️ 未対応のTransform関数:', name, args);
                 return this.createIdentityMatrix();
         }
     }
@@ -556,9 +735,64 @@ class ElementObserverTransform {
     }
     
     /**
+     * Matrix キャッシュクリア
+     */
+    clearMatrixCache() {
+        this.matrices.cache.staticValid = false;
+        this.matrices.cache.dynamicValid = false;
+        this.matrices.cache.combinedValid = false;
+        this.matrices.cache.lastStaticTransform = null;
+        this.matrices.cache.lastDynamicTransform = null;
+        
+        console.log('🗑️ Matrix キャッシュクリア完了');
+    }
+    
+    /**
+     * 最適化設定変更
+     */
+    setOptimizationSettings(settings) {
+        this.optimizationSettings = { ...this.optimizationSettings, ...settings };
+        
+        console.log('⚙️ 最適化設定更新:', this.optimizationSettings);
+        
+        // バッチ処理無効時は保留中の更新をフラッシュ
+        if (!settings.batchUpdates && this.pendingUpdates.hasPending) {
+            this.flushBatchedUpdates({});
+        }
+    }
+    
+    /**
+     * パフォーマンス統計取得
+     */
+    getPerformanceStats() {
+        return {
+            optimizationSettings: this.optimizationSettings,
+            cache: {
+                staticValid: this.matrices.cache.staticValid,
+                dynamicValid: this.matrices.cache.dynamicValid,
+                combinedValid: this.matrices.cache.combinedValid,
+                age: performance.now() - (this.matrices.cache.lastUpdate || 0)
+            },
+            pendingUpdates: {
+                count: Object.keys(this.pendingUpdates.cssVariables).length,
+                hasPending: this.pendingUpdates.hasPending
+            }
+        };
+    }
+    
+    /**
      * クリーンアップ
      */
     cleanup() {
+        // 保留中のバッチ更新をクリア
+        if (this.pendingUpdates.batchTimeout) {
+            clearTimeout(this.pendingUpdates.batchTimeout);
+            this.pendingUpdates.batchTimeout = null;
+        }
+        
+        // キャッシュクリア
+        this.clearMatrixCache();
+        
         this.changeCallbacks.clear();
         this.isActive = false;
         

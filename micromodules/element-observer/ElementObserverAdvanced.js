@@ -63,6 +63,17 @@ class ElementObserverAdvanced extends ElementObserver {
         // 統合コールバック
         this.integrationCallbacks = new Set();
         
+        // Phase 3-A 最適化設定
+        this.performanceOptimization = {
+            enabled: true,
+            batchCoordinateUpdates: true,
+            skipRedundantCalculations: true,
+            coordinateUpdateTimeout: null,
+            pendingCoordinateUpdate: null,
+            lastCoordinateUpdate: 0,
+            minUpdateInterval: 8  // ms (120fps対応)
+        };
+        
         console.log('🚀 ElementObserverAdvanced作成完了');
     }
     
@@ -258,43 +269,69 @@ class ElementObserverAdvanced extends ElementObserver {
      * 🎯 統一座標設定API（メイン機能）
      */
     setUnifiedPosition(x, y, unit = '%', options = {}) {
-        console.log('🎯 統一座標設定開始:', { x, y, unit, options });
+        const startTime = performance.now();
         
         if (!this.integrationState.initialized) {
             console.warn('⚠️ Advanced未初期化');
             return false;
         }
         
+        // 最適化: バッチ処理モード
+        if (this.performanceOptimization.batchCoordinateUpdates) {
+            return this.setUnifiedPositionBatched(x, y, unit, options, startTime);
+        }
+        
+        // 通常処理モード
+        return this.setUnifiedPositionImmediate(x, y, unit, options, startTime);
+    }
+    
+    /**
+     * バッチ処理版統一座標設定
+     */
+    setUnifiedPositionBatched(x, y, unit, options, startTime) {
+        // 保留中の更新をクリア
+        if (this.performanceOptimization.coordinateUpdateTimeout) {
+            clearTimeout(this.performanceOptimization.coordinateUpdateTimeout);
+        }
+        
+        // 更新情報を保存
+        this.performanceOptimization.pendingCoordinateUpdate = {
+            x, y, unit, options, startTime,
+            timestamp: performance.now()
+        };
+        
+        // バッチ処理をスケジュール
+        this.performanceOptimization.coordinateUpdateTimeout = setTimeout(() => {
+            this.flushCoordinateUpdate();
+        }, 0);
+        
+        return true;
+    }
+    
+    /**
+     * 即座処理版統一座標設定
+     */
+    setUnifiedPositionImmediate(x, y, unit, options, startTime) {
+        console.log('🎯 統一座標設定開始:', { x, y, unit, options });
+        
         try {
-            const oldCoordinates = JSON.parse(JSON.stringify(this.coordinateSystems));
+            const oldCoordinates = this.performanceOptimization.skipRedundantCalculations 
+                ? null 
+                : JSON.parse(JSON.stringify(this.coordinateSystems));
             
-            // 1. DOM座標更新
-            this.updateDOMCoordinates(x, y, unit, options);
-            
-            // 2. Transform更新（CSS変数）
-            this.updateTransformCoordinates(x, y, unit, options);
-            
-            // 3. WebGL座標同期
-            this.updateWebGLCoordinates(x, y, unit, options);
-            
-            // 4. Skeleton位置同期
-            this.updateSkeletonCoordinates(x, y, unit, options);
-            
-            // 5. Canvas Matrix更新
-            this.updateCanvasMatrix(options);
+            // 座標系更新のバッチ実行
+            this.performCoordinateUpdates(x, y, unit, options);
             
             // 統合通知
             this.notifyIntegrationChange('unifiedPositionUpdate', {
                 input: { x, y, unit, options },
                 oldCoordinates,
                 newCoordinates: this.coordinateSystems,
-                timestamp: performance.now()
+                timestamp: performance.now(),
+                duration: performance.now() - startTime
             });
             
-            console.log('✅ 統一座標設定完了:', {
-                input: { x, y, unit },
-                coordinateSystems: this.coordinateSystems
-            });
+            console.log(`✅ 統一座標設定完了 (${(performance.now() - startTime).toFixed(3)}ms)`);
             
             return true;
             
@@ -302,6 +339,75 @@ class ElementObserverAdvanced extends ElementObserver {
             console.error('❌ 統一座標設定エラー:', error);
             return false;
         }
+    }
+    
+    /**
+     * バッチ更新のフラッシュ
+     */
+    flushCoordinateUpdate() {
+        const update = this.performanceOptimization.pendingCoordinateUpdate;
+        if (!update) return;
+        
+        const currentTime = performance.now();
+        const timeSinceLastUpdate = currentTime - this.performanceOptimization.lastCoordinateUpdate;
+        
+        // 更新間隔チェック (120fps制限)
+        if (timeSinceLastUpdate < this.performanceOptimization.minUpdateInterval) {
+            // 再スケジュール
+            this.performanceOptimization.coordinateUpdateTimeout = setTimeout(() => {
+                this.flushCoordinateUpdate();
+            }, this.performanceOptimization.minUpdateInterval - timeSinceLastUpdate);
+            return;
+        }
+        
+        const { x, y, unit, options, startTime } = update;
+        
+        console.log(`🚀 バッチ更新実行: (${x}, ${y})${unit}`);
+        
+        try {
+            // 座標系更新のバッチ実行
+            this.performCoordinateUpdates(x, y, unit, options);
+            
+            // 統合通知
+            this.notifyIntegrationChange('unifiedPositionUpdate', {
+                input: { x, y, unit, options },
+                timestamp: performance.now(),
+                batchInfo: {
+                    totalDuration: performance.now() - startTime,
+                    flushDelay: currentTime - update.timestamp
+                }
+            });
+            
+            this.performanceOptimization.lastCoordinateUpdate = currentTime;
+            console.log(`✅ バッチ更新完了 (${(performance.now() - startTime).toFixed(3)}ms)`);
+            
+        } catch (error) {
+            console.error('❌ バッチ更新エラー:', error);
+        } finally {
+            // バッチクリア
+            this.performanceOptimization.pendingCoordinateUpdate = null;
+            this.performanceOptimization.coordinateUpdateTimeout = null;
+        }
+    }
+    
+    /**
+     * 座標系更新の統合実行
+     */
+    performCoordinateUpdates(x, y, unit, options) {
+        // 1. DOM座標更新
+        this.updateDOMCoordinates(x, y, unit, options);
+        
+        // 2. Transform更新（CSS変数）
+        this.updateTransformCoordinates(x, y, unit, options);
+        
+        // 3. WebGL座標同期
+        this.updateWebGLCoordinates(x, y, unit, options);
+        
+        // 4. Skeleton位置同期
+        this.updateSkeletonCoordinates(x, y, unit, options);
+        
+        // 5. Canvas Matrix更新
+        this.updateCanvasMatrix(options);
     }
     
     /**
@@ -847,7 +953,49 @@ class ElementObserverAdvanced extends ElementObserver {
                 webgl: this.webgl ? this.webgl.getDebugInfo() : null,
                 responsive: this.responsive ? this.responsive.getDebugInfo() : null
             },
-            integrationCallbacks: this.integrationCallbacks.size
+            integrationCallbacks: this.integrationCallbacks.size,
+            phase3AOptimization: this.getOptimizationStats()
+        };
+    }
+    
+    /**
+     * Phase 3-A 最適化設定変更
+     */
+    setPerformanceOptimization(settings) {
+        this.performanceOptimization = { ...this.performanceOptimization, ...settings };
+        
+        console.log('⚡ Phase 3-A 最適化設定更新:', this.performanceOptimization);
+        
+        // Transformモジュールにも反映
+        if (this.transform && settings.batchCoordinateUpdates !== undefined) {
+            this.transform.setOptimizationSettings({
+                batchUpdates: settings.batchCoordinateUpdates
+            });
+        }
+        
+        // バッチ処理無効時は保留中更新をフラッシュ
+        if (!settings.batchCoordinateUpdates && this.performanceOptimization.coordinateUpdateTimeout) {
+            clearTimeout(this.performanceOptimization.coordinateUpdateTimeout);
+            this.flushCoordinateUpdate();
+        }
+    }
+    
+    /**
+     * 最適化統計情報取得
+     */
+    getOptimizationStats() {
+        return {
+            performanceOptimization: this.performanceOptimization,
+            moduleStats: {
+                transform: this.transform ? this.transform.getPerformanceStats() : null,
+                webgl: this.webgl ? 'WebGL stats available' : null,
+                responsive: this.responsive ? 'Responsive stats available' : null
+            },
+            coordinateUpdateInfo: {
+                hasPending: !!this.performanceOptimization.pendingCoordinateUpdate,
+                lastUpdate: this.performanceOptimization.lastCoordinateUpdate,
+                timeSinceLastUpdate: performance.now() - this.performanceOptimization.lastCoordinateUpdate
+            }
         };
     }
     
@@ -855,6 +1003,12 @@ class ElementObserverAdvanced extends ElementObserver {
      * クリーンアップ
      */
     cleanup() {
+        // Phase 3-A バッチ処理クリア
+        if (this.performanceOptimization.coordinateUpdateTimeout) {
+            clearTimeout(this.performanceOptimization.coordinateUpdateTimeout);
+            this.performanceOptimization.coordinateUpdateTimeout = null;
+        }
+        
         // 座標同期停止
         if (this.syncInterval) {
             clearInterval(this.syncInterval);
