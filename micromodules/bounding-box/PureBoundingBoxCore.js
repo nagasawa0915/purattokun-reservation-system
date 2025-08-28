@@ -67,6 +67,7 @@ class PureBoundingBoxCore {
     
     /**
      * 🎯 BB座標系スワップ: Transform → Bounds
+     * 🔧 CSS Transform中心基準補正の競合解決
      */
     enterEditingMode() {
         if (this.swapState.currentMode === 'editing') return;
@@ -78,15 +79,14 @@ class PureBoundingBoxCore {
         // スワップ前の状態を詳細に記録
         const beforeState = this.captureDetailedState('BEFORE_ENTER_EDITING', timestamp);
         
-        console.log('🔄 [SWAP] enterEditingMode: %→px変換開始', {
+        console.log('🔄 [SWAP] enterEditingMode: CSS Transform競合解決開始', {
             timestamp: timestamp,
             nodeId: this.config.nodeId,
             attempt: this.getSwapAttemptCount(),
             beforeState: beforeState
         });
         
-        // 🎯 瞬間移動完全防止：位置変更を行わない
-        // 元の座標系を完全バックアップ（位置変更なし）
+        // 🎯 CSS Transform中心基準補正のバックアップと一時無効化
         this.swapState.originalTransform = {
             left: element.style.left,
             top: element.style.top,
@@ -95,17 +95,31 @@ class PureBoundingBoxCore {
             transform: element.style.transform
         };
         
-        // 🎯 位置変更なし：編集可能状態の設定のみ
+        // 🔧 CSS Transform中心基準補正を一時的に無効化
+        // transform(-50%, -50%)による座標競合を回避
+        const currentRect = element.getBoundingClientRect();
+        const parentRect = element.parentElement.getBoundingClientRect();
+        
+        // 現在の視覚的位置を保持したままtransformを無効化
+        const absoluteLeft = currentRect.left - parentRect.left;
+        const absoluteTop = currentRect.top - parentRect.top;
+        
+        // 絶対座標でtransformなし状態に設定
+        element.style.left = absoluteLeft + 'px';
+        element.style.top = absoluteTop + 'px';
+        element.style.transform = 'none'; // 中心基準補正を一時無効化
+        
+        // 編集モード開始
         this.swapState.currentMode = 'editing';
         
         // スワップ後の状態を詳細に記録
         const afterState = this.captureDetailedState('AFTER_ENTER_EDITING', timestamp);
         
-        console.log('✅ [SWAP] enterEditingMode完了 - 瞬間移動防止', {
+        console.log('✅ [SWAP] enterEditingMode完了 - CSS Transform競合解決', {
             timestamp: timestamp,
             beforeAfterComparison: this.compareStates(beforeState, afterState),
             editingModeActive: this.swapState.currentMode === 'editing',
-            preventJumpingStrategy: 'no-position-change'
+            transformConflictSolution: 'temp-disable-center-offset'
         });
         
         // 初回/2回目以降の判定ログ
@@ -114,6 +128,7 @@ class PureBoundingBoxCore {
     
     /**
      * 🎯 BB座標系スワップ: Bounds → Transform
+     * 🔧 CSS Transform中心基準補正の復元
      */
     exitEditingMode() {
         if (this.swapState.currentMode === 'idle') return;
@@ -125,28 +140,32 @@ class PureBoundingBoxCore {
         // スワップ前の状態を詳細に記録
         const beforeState = this.captureDetailedState('BEFORE_EXIT_EDITING', timestamp);
         
-        console.log('🔄 [SWAP] exitEditingMode: px→%変換開始', {
+        console.log('🔄 [SWAP] exitEditingMode: CSS Transform中心基準復元開始', {
             timestamp: timestamp,
             nodeId: this.config.nodeId,
             beforeState: beforeState
         });
         
-        // 🎯 編集後の絶対座標を取得
+        // 🎯 編集後の絶対座標を取得（transformなし状態）
         const editedRect = element.getBoundingClientRect();
         const parentRect = element.parentElement.getBoundingClientRect();
         
-        // 🔧 従来システム互換: px座標を%座標+transformに変換
-        const newLeftPercent = ((editedRect.left + editedRect.width/2 - parentRect.left) / parentRect.width) * 100;
-        const newTopPercent = ((editedRect.top + editedRect.height/2 - parentRect.top) / parentRect.height) * 100;
+        // 🔧 中心基準（transform(-50%, -50%)）での%座標に変換
+        // 編集後の左上座標を中心基準の%座標に変換
+        const centerX = editedRect.left + editedRect.width/2;
+        const centerY = editedRect.top + editedRect.height/2;
+        
+        const newLeftPercent = ((centerX - parentRect.left) / parentRect.width) * 100;
+        const newTopPercent = ((centerY - parentRect.top) / parentRect.height) * 100;
         const newWidthPercent = (editedRect.width / parentRect.width) * 100;
         const newHeightPercent = (editedRect.height / parentRect.height) * 100;
         
-        // 🎯 元の形式（%値 + transform）で適用
+        // 🎯 元の形式（%値 + transform(-50%, -50%)中心基準補正）で適用
         element.style.left = newLeftPercent.toFixed(1) + '%';
         element.style.top = newTopPercent.toFixed(1) + '%';
         element.style.width = newWidthPercent.toFixed(1) + '%';
         element.style.height = newHeightPercent.toFixed(1) + '%';
-        element.style.transform = 'translate(-50%, -50%)'; // transform復元
+        element.style.transform = 'translate(-50%, -50%)'; // 中心基準補正を復元
         
         // 状態をリセット
         this.swapState.currentMode = 'idle';
@@ -155,11 +174,11 @@ class PureBoundingBoxCore {
         // スワップ後の状態を詳細に記録
         const afterState = this.captureDetailedState('AFTER_EXIT_EDITING', timestamp);
         
-        console.log('✅ [SWAP] exitEditingMode完了 - px→%変換', {
+        console.log('✅ [SWAP] exitEditingMode完了 - CSS Transform中心基準復元', {
             timestamp: timestamp,
             coordinateConversion: {
-                from: 'px-absolute',
-                to: 'percent-relative',
+                from: 'px-absolute-no-transform',
+                to: 'percent-center-based-transform',
                 newValues: {
                     left: newLeftPercent.toFixed(1) + '%',
                     top: newTopPercent.toFixed(1) + '%',
