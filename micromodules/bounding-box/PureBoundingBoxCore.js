@@ -323,28 +323,46 @@ class PureBoundingBoxCore {
                 });
             }
             
-            // 見た目の中心を計算（transform + CSS変数オフセット）
-            const visualCenterX = anchorRect.left + anchorRect.width/2 + tx;
-            const visualCenterY = anchorRect.top + anchorRect.height/2 + ty;
+            // 🎯 瞬間移動問題修正: 現在の正確な位置を親要素基準で計算
+            console.log('🎯 [FIX] 瞬間移動修正 - 座標計算を親要素基準に統一');
             
-            // 🔍 transform解析の詳細デバッグ情報
-            if (interactive) {
-                const cs = getComputedStyle(interactive);
-                console.log('🔍 [DEBUG] transform解析詳細:', {
-                    element: interactive,
-                    transform: cs.transform,
-                    matrix: cs.transform,
-                    getAllTransforms: {
-                        transform: cs.transform,
-                        webkitTransform: cs.webkitTransform,
-                        mozTransform: cs.mozTransform
-                    }
-                });
+            // 親要素基準での相対位置を直接計算（ページ座標を使わない）
+            const currentLeft = parseFloat(getComputedStyle(element).left) || 0;
+            const currentTop = parseFloat(getComputedStyle(element).top) || 0;
+            
+            // %値かpx値かを判定
+            const leftIsPercent = getComputedStyle(element).left.includes('%');
+            const topIsPercent = getComputedStyle(element).top.includes('%');
+            
+            let leftPct, topPct;
+            
+            if (leftIsPercent) {
+                // 既に%の場合はそのまま使用（CSS変数分のみ加算）
+                leftPct = currentLeft + (tx / parentRect.width * 100);
+            } else {
+                // px値の場合は%に変換
+                leftPct = (currentLeft / parentRect.width) * 100 + (tx / parentRect.width * 100);
             }
             
-            // 親要素基準での%値に変換
-            const leftPct = ((visualCenterX - parentRect.left) / parentRect.width) * 100;
-            const topPct = ((visualCenterY - parentRect.top) / parentRect.height) * 100;
+            if (topIsPercent) {
+                // 既に%の場合はそのまま使用（CSS変数分のみ加算）
+                topPct = currentTop + (ty / parentRect.height * 100);
+            } else {
+                // px値の場合は%に変換
+                topPct = (currentTop / parentRect.height) * 100 + (ty / parentRect.height * 100);
+            }
+            
+            console.log('🔍 [DEBUG] 修正後座標計算詳細:', {
+                currentStyles: {
+                    left: getComputedStyle(element).left,
+                    top: getComputedStyle(element).top,
+                    leftIsPercent: leftIsPercent,
+                    topIsPercent: topIsPercent
+                },
+                cssVariables: {tx: tx, ty: ty},
+                parentSize: {width: parentRect.width, height: parentRect.height},
+                calculatedPercent: {left: leftPct.toFixed(2), top: topPct.toFixed(2)}
+            });
             
             // layout-anchorに書き戻し
             element.style.left = leftPct.toFixed(2) + '%';

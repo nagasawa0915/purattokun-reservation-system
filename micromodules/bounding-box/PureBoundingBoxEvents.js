@@ -93,7 +93,7 @@ class PureBoundingBoxEvents {
     
     /**
      * 🆕 Phase 4: 統合Pointerダウンイベント
-     * マウス・タッチ・ペン統一処理 + Pointer Capture強化
+     * マウス・タッチ・ペン統一処理 + Pointer Capture強化 + 🎯 クリック/ドラッグ区別
      */
     onPointerDown(event) {
         event.preventDefault();
@@ -112,11 +112,14 @@ class PureBoundingBoxEvents {
             pointerId: event.pointerId || 'legacy'
         });
         
-        // 🎯 BB座標系スワップ: 編集モード進入
-        this.core.enterEditingMode();
+        // 🎯 瞬間移動問題修正: 編集モード開始を遅延（実際のドラッグ検出まで）
+        // this.core.enterEditingMode(); // ← ここでは実行せず、onPointerMove初回で実行
         
-        // ドラッグ開始
+        // ドラッグ開始準備（ただし、実際のドラッグはまだ開始しない）
         this.core.startDrag(event, handleType === 'move' ? 'move' : `resize-${handleType}`);
+        
+        // 🎯 実際のドラッグ開始フラグを追加
+        this.actualDragStarted = false;
         
         // 🆕 Phase 2: 累積オフセット方式の初期化
         this.initCumulativeOffset(event);
@@ -130,10 +133,11 @@ class PureBoundingBoxEvents {
         // Phase 4: アクティブポインター記録
         this.activePointerId = event.pointerId || null;
         
-        console.log('✅ [EVENT] onPointerDown完了 - ドラッグ準備整了', {
+        console.log('✅ [EVENT] onPointerDown完了 - ドラッグ準備整了（編集モード遅延）', {
             timestamp: timestamp,
             dragStateInitialized: this.core.dragState.isDragging,
-            editingModeActive: this.core.swapState.currentMode === 'editing',
+            editingModeActive: this.core.swapState.currentMode, // まだ'idle'のはず
+            actualDragStarted: this.actualDragStarted,
             cumulativeOffsetBase: {
                 baseTx: this.core.dragState.baseTx,
                 baseTy: this.core.dragState.baseTy
@@ -144,7 +148,7 @@ class PureBoundingBoxEvents {
     
     /**
      * 🆕 Phase 4: 統合Pointerムーブイベント
-     * マウス・タッチ・ペン統一処理
+     * マウス・タッチ・ペン統一処理 + 🎯 実際のドラッグ検出
      */
     onPointerMove(event) {
         // Phase 4: アクティブポインターチェック（複数ポインター対応）
@@ -157,6 +161,24 @@ class PureBoundingBoxEvents {
         
         const deltaX = event.clientX - this.core.dragState.startMouseX;
         const deltaY = event.clientY - this.core.dragState.startMouseY;
+        
+        // 🎯 実際のドラッグ検出（3px以上の移動で実ドラッグと判定）
+        if (!this.actualDragStarted) {
+            const dragDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (dragDistance >= 3) { // 3px以上で実際のドラッグと判定
+                console.log('🎯 [DRAG-DETECT] 実際のドラッグ開始を検出 - 編集モード開始', {
+                    dragDistance: dragDistance,
+                    threshold: 3
+                });
+                
+                // 実際のドラッグ開始時に編集モード開始
+                this.core.enterEditingMode();
+                this.actualDragStarted = true;
+            } else {
+                // まだ移動量が小さい場合は何もしない（クリックの可能性）
+                return;
+            }
+        }
         
         let newBounds;
         
@@ -187,7 +209,7 @@ class PureBoundingBoxEvents {
     
     /**
      * 🆕 Phase 4: 統合Pointerアップイベント
-     * マウス・タッチ・ペン統一処理 + 正常終了処理
+     * マウス・タッチ・ペン統一処理 + 正常終了処理 + 🎯 クリック/ドラッグ区別
      */
     onPointerUp(event) {
         // Phase 4: アクティブポインターチェック
@@ -203,23 +225,43 @@ class PureBoundingBoxEvents {
             nodeId: this.core.config.nodeId,
             eventCoords: {x: event.clientX, y: event.clientY},
             pointerId: event.pointerId || 'legacy',
-            activePointerId: this.activePointerId
+            activePointerId: this.activePointerId,
+            actualDragStarted: this.actualDragStarted
         });
         
-        // 🆕 Phase 3: 見た目の中心基準でのコミット処理
-        const commitSuccess = this.core.commitToPercent();
-        if (!commitSuccess) {
-            console.warn('⚠️ Phase 3コミット処理が失敗しました - 従来処理続行');
-        }
+        let commitSuccess = true; // デフォルトは成功とする
         
-        // 🎯 localStorage統合: 位置データ保存
-        this.savePositionToStorage();
+        // 🎯 瞬間移動問題修正: 実際にドラッグが発生した場合のみcommitToPercent実行
+        if (this.actualDragStarted) {
+            console.log('🎯 [COMMIT] 実際のドラッグが発生 - commitToPercent実行');
+            
+            // 🆕 Phase 3: 見た目の中心基準でのコミット処理
+            commitSuccess = this.core.commitToPercent();
+            if (!commitSuccess) {
+                console.warn('⚠️ Phase 3コミット処理が失敗しました - 従来処理続行');
+            }
+            
+            // 🎯 localStorage統合: 位置データ保存
+            this.savePositionToStorage();
+            
+            // 🎯 BB座標系スワップ: 編集モード終了（commitToPercentで既に座標変換済み）
+            this.exitEditingModeSimplified(); // 二重変換防止
+            
+        } else {
+            console.log('🎯 [SKIP] 単純クリック検出 - commitToPercent・座標変換をスキップ');
+            // 単純クリックの場合は座標変換を行わない（瞬間移動防止）
+            
+            // ただし、編集モードに入っている場合は終了させる必要がある
+            if (this.core.swapState.currentMode === 'editing') {
+                this.exitEditingModeSimplified();
+            }
+        }
         
         // ドラッグ終了
         this.core.endDrag();
         
-        // 🎯 BB座標系スワップ: 編集モード終了（commitToPercentで既に座標変換済み）
-        this.exitEditingModeSimplified(); // 二重変換防止
+        // 実際のドラッグフラグをリセット
+        this.actualDragStarted = false;
         
         // Phase 4: 統合イベント削除とクリーンアップ
         this.cleanupAfterDrag(event, 'normal');
@@ -227,9 +269,10 @@ class PureBoundingBoxEvents {
         console.log('✅ [EVENT] onPointerUp完了 - 正常終了', {
             timestamp: timestamp,
             commitSuccess: commitSuccess,
-            localStorageSaved: true,
+            localStorageSaved: this.actualDragStarted, // 実際のドラッグ時のみ保存
             editingModeExited: this.core.swapState.currentMode === 'idle',
-            finalCleanupCompleted: true
+            finalCleanupCompleted: true,
+            wasActualDrag: this.actualDragStarted
         });
     }
     

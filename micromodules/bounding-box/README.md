@@ -261,6 +261,41 @@ exitEditingMode() {
 
 この技術により、**レスポンシブWebサイトでの精密なキャラクター配置編集**と**背景画像との完全な位置同期**の両立を実現しています。
 
+## ⚠️ 座標変換処理における重要な注意事項
+
+### commitToPercent()メソッドでの座標計算
+
+**❌ 問題のあるアプローチ**:
+```javascript
+// ページ全体座標系を使用（誤差が生じやすい）
+const anchorRect = element.getBoundingClientRect();
+const visualCenterX = anchorRect.left + anchorRect.width/2 + tx;
+const leftPct = ((visualCenterX - parentRect.left) / parentRect.width) * 100;
+```
+
+**✅ 推奨アプローチ**:
+```javascript
+// CSS値を直接取得（安定性が高い）
+const currentLeft = parseFloat(getComputedStyle(element).left) || 0;
+const leftIsPercent = getComputedStyle(element).left.includes('%');
+
+if (leftIsPercent) {
+    leftPct = currentLeft + (tx / parentRect.width * 100);
+} else {
+    leftPct = (currentLeft / parentRect.width) * 100 + (tx / parentRect.width * 100);
+}
+```
+
+**重要なポイント**:
+- **ページ座標系（getBoundingClientRect）は絶対位置**のため、相対座標変換で誤差が生じやすい
+- **CSS getComputedStyleによる直接取得**の方が安定
+- **%値とpx値の混在**に注意が必要
+- **CSS変数（--tx, --ty）の正確な統合処理**が重要
+
+### トラブルシューティング
+
+座標関連の問題が発生した場合は、[docs/troubleshooting/](./docs/troubleshooting/)を参照してください。
+
 ## ✅ PureBoundingBox v5.0整理完了
 
 🎯 **新フォルダ構造確立**
