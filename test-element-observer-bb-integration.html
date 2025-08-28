@@ -585,84 +585,18 @@
             log(args.join(' '), 'warning');
         };
         
-        // 🎮 Spine キャラクター表示関数（WebGL描画統合版）
+        // 🎮 Spine キャラクター表示関数（BB内Canvas統合版）
         async function renderSpineCharacterInBB() {
-            log('=== Spine キャラクター表示開始（WebGL描画統合版） ===', 'success');
+            log('=== Spine キャラクター表示開始（BB内Canvas統合版） ===', 'success');
             
             try {
-                // 📋 解決策1: Spine読み込み状態の自動診断（PureSpineLoader統合版）
-                log('🔍 Spine読み込み状態の自動診断開始 (PureSpineLoader統合版):', 'info');
-                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'debug');
-                
-                // 基本的なSpine定義チェック
-                const spineExists = typeof spine !== 'undefined';
-                log(`・spine定義: ${typeof spine}`, spineExists ? 'success' : 'error');
-                
-                let spineValidationResult = false;
-                if (spineExists) {
-                    // 必須クラスの存在確認（PureSpineLoaderと同じ条件）
-                    const requiredClasses = [
-                        { name: 'AssetManager', path: 'spine.AssetManager' },
-                        { name: 'SkeletonRenderer', path: 'spine.SkeletonRenderer' },
-                        { name: 'PolygonBatcher', path: 'spine.PolygonBatcher' },
-                        { name: 'Skeleton', path: 'spine.Skeleton' },
-                        { name: 'AnimationState', path: 'spine.AnimationState' },
-                        { name: 'AtlasAttachmentLoader', path: 'spine.AtlasAttachmentLoader' }
-                    ];
-                    
-                    let allClassesPresent = true;
-                    
-                    requiredClasses.forEach(cls => {
-                        const exists = eval(`typeof ${cls.path}`) !== 'undefined';
-                        log(`・${cls.name}: ${eval(`typeof ${cls.path}`)}`, exists ? 'success' : 'error');
-                        if (!exists) allClassesPresent = false;
-                    });
-                    
-                    // 追加の重要クラスチェック
-                    const additionalClasses = [
-                        { name: 'SkeletonJson', path: 'spine.SkeletonJson' },
-                        { name: 'AnimationStateData', path: 'spine.AnimationStateData' }
-                    ];
-                    
-                    additionalClasses.forEach(cls => {
-                        const exists = eval(`typeof ${cls.path}`) !== 'undefined';
-                        log(`・${cls.name}: ${eval(`typeof ${cls.path}`)}`, exists ? 'success' : 'error');
-                        if (!exists) allClassesPresent = false;
-                    });
-                    
-                    spineValidationResult = allClassesPresent;
-                    
-                    if (!allClassesPresent) {
-                        log('❌ 必須Spineクラスが不足しています', 'error');
-                    }
-                } else {
-                    log('❌ spine オブジェクトが未定義です', 'error');
+                // 📋 解決策1: BB要素内の既存Canvas検索・作成
+                const testTarget = document.getElementById('test-target');
+                if (!testTarget) {
+                    throw new Error('test-target 要素が見つかりません');
                 }
                 
-                // WebGL対応チェック
-                const testCanvas = document.createElement('canvas');
-                const webglContext = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
-                const webglSupported = !!webglContext;
-                log(`・WebGL対応: ${webglSupported}`, webglSupported ? 'success' : 'error');
-                if (webglContext) {
-                    log(`  WebGLバージョン: ${webglContext.getParameter(webglContext.VERSION)}`, 'debug');
-                    log(`  レンダラー: ${webglContext.getParameter(webglContext.RENDERER)}`, 'debug');
-                }
-                
-                // PureSpineLoaderチェック
-                const loaderExists = typeof PureSpineLoader !== 'undefined';
-                log(`・PureSpineLoader: ${typeof PureSpineLoader}`, loaderExists ? 'success' : 'error');
-                
-                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'debug');
-                
-                // PureSpineLoaderと同じ総合判定
-                const spineSystemReady = spineExists && spineValidationResult && webglSupported && loaderExists;
-                if (spineSystemReady) {
-                    log('✅ Spine WebGLシステム準備完了', 'success');
-                } else {
-                    log('❌ Spine WebGLシステムに問題があります', 'error');
-                }
-                log('📋 診断完了', 'info');
+                log('🎯 BB内Canvas準備開始', 'info');
                 
                 // 既存のSpineがある場合はクリーンアップ
                 if (currentCanvas && currentCanvas.parentNode) {
@@ -673,20 +607,69 @@
                     currentSkeleton = null;
                 }
                 
-                // PureSpineLoaderがロードされているか確認
-                if (typeof PureSpineLoader === 'undefined') {
+                // BB要素内に既存のCanvasがないか確認
+                let existingCanvas = testTarget.querySelector('canvas');
+                if (existingCanvas) {
+                    log('♻️ 既存Canvas発見 - 削除して新規作成', 'info');
+                    existingCanvas.remove();
+                }
+                
+                // 📋 解決策2: Spine読み込み状態の診断（必須クラスチェック）
+                log('🔍 Spine読み込み状態診断開始:', 'info');
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'debug');
+                
+                const spineExists = typeof spine !== 'undefined';
+                log(`・spine定義: ${typeof spine}`, spineExists ? 'success' : 'error');
+                
+                let spineValidationResult = false;
+                if (spineExists) {
+                    // 必須クラスの存在確認
+                    const requiredClasses = [
+                        { name: 'AssetManager', path: 'spine.AssetManager' },
+                        { name: 'SkeletonRenderer', path: 'spine.SkeletonRenderer' },
+                        { name: 'PolygonBatcher', path: 'spine.PolygonBatcher' },
+                        { name: 'Skeleton', path: 'spine.Skeleton' },
+                        { name: 'AnimationState', path: 'spine.AnimationState' },
+                        { name: 'AtlasAttachmentLoader', path: 'spine.AtlasAttachmentLoader' },
+                        { name: 'SkeletonJson', path: 'spine.SkeletonJson' },
+                        { name: 'AnimationStateData', path: 'spine.AnimationStateData' }
+                    ];
+                    
+                    let allClassesPresent = true;
+                    requiredClasses.forEach(cls => {
+                        const exists = eval(`typeof ${cls.path}`) !== 'undefined';
+                        log(`・${cls.name}: ${eval(`typeof ${cls.path}`)}`, exists ? 'success' : 'error');
+                        if (!exists) allClassesPresent = false;
+                    });
+                    
+                    spineValidationResult = allClassesPresent;
+                    
+                    if (!allClassesPresent) {
+                        throw new Error('必須Spineクラスが不足しています');
+                    }
+                } else {
+                    throw new Error('spine オブジェクトが未定義です');
+                }
+                
+                // WebGL対応チェック
+                const testCanvas = document.createElement('canvas');
+                const webglContext = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+                const webglSupported = !!webglContext;
+                log(`・WebGL対応: ${webglSupported}`, webglSupported ? 'success' : 'error');
+                
+                if (!webglSupported) {
+                    throw new Error('WebGLがサポートされていません');
+                }
+                
+                // PureSpineLoaderチェック
+                const loaderExists = typeof PureSpineLoader !== 'undefined';
+                log(`・PureSpineLoader: ${typeof PureSpineLoader}`, loaderExists ? 'success' : 'error');
+                
+                if (!loaderExists) {
                     throw new Error('PureSpineLoader が読み込まれていません');
                 }
                 
-                // Spine WebGLライブラリの確認（PureSpineLoader統合版）
-                if (!spineSystemReady) {
-                    throw new Error('Spine WebGLシステムが準備できていません - 上記診断結果を確認してください');
-                }
-                
-                const testArea = document.getElementById('test-area');
-                if (!testArea) {
-                    throw new Error('テストエリアが見つかりません');
-                }
+                log('✅ Spine WebGLシステム準備完了', 'success');
                 
                 // Spineファイル設定
                 const spineConfig = {
@@ -714,12 +697,17 @@
                 log(`  Atlas: ${result.atlas ? '✅' : '❌'}`, 'debug');
                 log(`  SkeletonData: ${result.skeletonData ? '✅' : '❌'}`, 'debug');
                 
-                // Canvasを作成
+                // 📋 解決策3: BB要素内にCanvasを作成（位置固定）
                 currentCanvas = document.createElement('canvas');
-                currentCanvas.width = 800;
-                currentCanvas.height = 500;
                 
-                // Canvasスタイル設定
+                // BB要素のサイズに合わせてCanvas設定
+                const targetRect = testTarget.getBoundingClientRect();
+                currentCanvas.width = targetRect.width || 120;  // test-targetのwidth
+                currentCanvas.height = targetRect.height || 80; // test-targetのheight
+                
+                log(`📐 Canvas サイズ設定: ${currentCanvas.width}x${currentCanvas.height}`, 'debug');
+                
+                // Canvasスタイル設定（BB内配置）
                 currentCanvas.className = 'spine-canvas';
                 currentCanvas.style.position = 'absolute';
                 currentCanvas.style.top = '0';
@@ -727,10 +715,12 @@
                 currentCanvas.style.width = '100%';
                 currentCanvas.style.height = '100%';
                 currentCanvas.style.pointerEvents = 'none';
-                currentCanvas.style.zIndex = '10';
+                currentCanvas.style.zIndex = '5';  // BB内表示用
                 
-                // テストエリアに追加
-                testArea.appendChild(currentCanvas);
+                // test-target要素内に追加（重要：test-area ではなく test-target 内）
+                testTarget.appendChild(currentCanvas);
+                
+                log('✅ Canvas をBB要素内に配置完了', 'success');
                 
                 // WebGLコンテキスト作成
                 const gl = currentCanvas.getContext('webgl') || currentCanvas.getContext('experimental-webgl');
@@ -740,15 +730,14 @@
                 
                 log('🎯 WebGLコンテキスト作成完了', 'success');
                 
-                // SpineWebGL初期化（PureSpineLoader統合版）
+                // SpineWebGL初期化
                 const mvp = new spine.Matrix4();
                 const shader = spine.Shader.newTwoColoredTextured(gl);
                 const batcher = new spine.PolygonBatcher(gl);
                 const skeletonRenderer = new spine.SkeletonRenderer(gl);
-                const shapeRenderer = new spine.ShapeRenderer(gl);
                 const assetManager = new spine.AssetManager(gl);
                 
-                // Spine WebGL AssetManagerにアセット追加
+                // アセット読み込み
                 assetManager.loadTextureAtlas(spineConfig.atlasPath);
                 assetManager.loadText(spineConfig.jsonPath);
                 
@@ -772,20 +761,53 @@
                 
                 log('✅ SpineWebGL アセット読み込み完了', 'success');
                 
-                // SkeletonとAnimationState作成
+                // 📋 解決策4: Skeleton作成の安全性確保
                 const atlas = assetManager.get(spineConfig.atlasPath);
+                if (!atlas) {
+                    throw new Error('Atlasの取得に失敗しました');
+                }
+                
                 const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                if (!atlasLoader) {
+                    throw new Error('AtlasAttachmentLoaderの作成に失敗しました');
+                }
+                
                 const skeletonJson = new spine.SkeletonJson(atlasLoader);
-                const skeletonData = skeletonJson.readSkeletonData(assetManager.get(spineConfig.jsonPath));
+                if (!skeletonJson) {
+                    throw new Error('SkeletonJsonの作成に失敗しました');
+                }
                 
+                const skeletonDataText = assetManager.get(spineConfig.jsonPath);
+                if (!skeletonDataText) {
+                    throw new Error('SkeletonDataテキストの取得に失敗しました');
+                }
+                
+                const skeletonData = skeletonJson.readSkeletonData(skeletonDataText);
+                if (!skeletonData) {
+                    throw new Error('SkeletonDataの作成に失敗しました');
+                }
+                
+                // Skeleton作成（nullチェック強化）
                 currentSkeleton = new spine.Skeleton(skeletonData);
-                const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                if (!currentSkeleton) {
+                    throw new Error('Skeletonの作成に失敗しました');
+                }
                 
-                // 初期位置設定（BB内中央）
+                const animationStateData = new spine.AnimationStateData(skeletonData);
+                if (!animationStateData) {
+                    throw new Error('AnimationStateDataの作成に失敗しました');
+                }
+                
+                const animationState = new spine.AnimationState(animationStateData);
+                if (!animationState) {
+                    throw new Error('AnimationStateの作成に失敗しました');
+                }
+                
+                // BB要素サイズに合わせた初期位置設定
                 currentSkeleton.x = currentCanvas.width / 2;  // Canvas中央X
                 currentSkeleton.y = currentCanvas.height / 2; // Canvas中央Y
-                currentSkeleton.scaleX = 0.4;
-                currentSkeleton.scaleY = 0.4;
+                currentSkeleton.scaleX = 0.3;  // BB内表示に適したスケール
+                currentSkeleton.scaleY = 0.3;
                 
                 log('🎯 Skeleton初期化完了:', 'success');
                 log(`  位置: (${currentSkeleton.x}, ${currentSkeleton.y})`, 'debug');
@@ -795,50 +817,81 @@
                 animationState.setAnimation(0, 'taiki', true);
                 log('🎬 アニメーション設定: taiki (ループ)', 'success');
                 
-                // 描画ループ開始
+                // 📋 解決策5: 描画ループの安全性確保
                 let lastFrameTime = Date.now() / 1000;
                 const renderLoop = () => {
-                    const now = Date.now() / 1000;
-                    const deltaTime = now - lastFrameTime;
-                    lastFrameTime = now;
-                    
-                    // アニメーション更新
-                    animationState.update(deltaTime);
-                    animationState.apply(currentSkeleton);
-                    currentSkeleton.updateWorldTransform();
-                    
-                    // 画面クリア
-                    gl.clearColor(0, 0, 0, 0); // 透明背景
-                    gl.clear(gl.COLOR_BUFFER_BIT);
-                    
-                    // 描画設定
-                    mvp.ortho2d(0, 0, currentCanvas.width, currentCanvas.height);
-                    gl.viewport(0, 0, currentCanvas.width, currentCanvas.height);
-                    
-                    // Skeleton描画
-                    shader.bind();
-                    shader.setUniformi(spine.Shader.SAMPLER, 0);
-                    shader.setUniform4x4f(spine.Shader.MVP_MATRIX, mvp.values);
-                    
-                    batcher.begin(shader);
-                    skeletonRenderer.draw(batcher, currentSkeleton);
-                    batcher.end();
-                    
-                    shader.unbind();
-                    
-                    // 次フレーム予約
-                    requestAnimationFrame(renderLoop);
+                    try {
+                        // 必須オブジェクトのnullチェック
+                        if (!currentSkeleton) {
+                            log('❌ renderLoop: Skeleton が null です', 'error');
+                            return; // ループ停止
+                        }
+                        
+                        if (!animationState) {
+                            log('❌ renderLoop: AnimationState が null です', 'error');
+                            return; // ループ停止
+                        }
+                        
+                        if (!gl || gl.isContextLost()) {
+                            log('❌ renderLoop: WebGLコンテキストが無効です', 'error');
+                            return; // ループ停止
+                        }
+                        
+                        const now = Date.now() / 1000;
+                        const deltaTime = now - lastFrameTime;
+                        lastFrameTime = now;
+                        
+                        // アニメーション更新（安全性チェック付き）
+                        animationState.update(deltaTime);
+                        animationState.apply(currentSkeleton); // ここで skeleton null エラーが発生していた
+                        currentSkeleton.updateWorldTransform();
+                        
+                        // 画面クリア
+                        gl.clearColor(0, 0, 0, 0); // 透明背景
+                        gl.clear(gl.COLOR_BUFFER_BIT);
+                        
+                        // 描画設定
+                        mvp.ortho2d(0, 0, currentCanvas.width, currentCanvas.height);
+                        gl.viewport(0, 0, currentCanvas.width, currentCanvas.height);
+                        
+                        // Skeleton描画
+                        shader.bind();
+                        shader.setUniformi(spine.Shader.SAMPLER, 0);
+                        shader.setUniform4x4f(spine.Shader.MVP_MATRIX, mvp.values);
+                        
+                        batcher.begin(shader);
+                        skeletonRenderer.draw(batcher, currentSkeleton);
+                        batcher.end();
+                        
+                        shader.unbind();
+                        
+                        // 次フレーム予約
+                        requestAnimationFrame(renderLoop);
+                        
+                    } catch (renderError) {
+                        log(`❌ renderLoop エラー: ${renderError.message}`, 'error');
+                        console.error('RenderLoop詳細エラー:', renderError);
+                        // エラー時はループを停止
+                    }
                 };
                 
                 // 描画ループ開始
                 renderLoop();
                 
                 log('✅ Spine WebGL描画ループ開始', 'success');
-                log('🎮 黒いぷらっとくんがBB内に表示されているはずです', 'success');
+                log('🎮 ぷらっとくんがBB要素内に表示されているはずです', 'success');
+                log('🔧 BB編集時：キャラクターがBBと一緒に移動します', 'info');
                 
             } catch (error) {
                 log(`❌ Spine キャラクター表示エラー: ${error.message}`, 'error');
                 console.error('Spine表示エラー詳細:', error);
+                
+                // エラー時のクリーンアップ
+                if (currentCanvas && currentCanvas.parentNode) {
+                    currentCanvas.parentNode.removeChild(currentCanvas);
+                    currentCanvas = null;
+                }
+                currentSkeleton = null;
             }
         }
         

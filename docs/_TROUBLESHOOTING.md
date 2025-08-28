@@ -81,6 +81,12 @@
 - **タグ**: `#編集システム` `#瞬間移動` `#座標系` `#F12依存` `#レイアウトレース` `#purattokun固有` `#spine-edit-core` `#完全解決`
 - **別名**: 編集開始時瞬間移動、165px右移動、F12依存瞬間移動、レイアウト確定レース、enterEditMode問題、座標強制変更問題
 
+#### BB移動時Spineキャラクター連動問題
+- **ファイル**: [BB移動時Spineキャラクター連動問題.md](./troubleshooting/BB移動時Spineキャラクター連動問題.md)
+- **症状**: BBを移動してもぷらっとくんがその場に留まる、「skeleton cannot be null」エラー、SpineキャラクターがBB外の別Canvasに表示
+- **タグ**: `#BB` `#Spine` `#Canvas` `#配置問題` `#連動` `#成功事例` `#PureBoundingBox` `#統合システム`
+- **別名**: BBとキャラクターが連動しない、ぷらっとくんがその場に留まる、skeleton cannot be null、BB移動でキャラクターが動かない、SpineキャラクターBB外表示、Canvas配置先問題、testArea配置問題、testTarget配置問題、BB Spine integration issue、bounding box character connection problem
+
 
 #### Spine配置システム編集UI問題
 - **ファイル**: [Spine配置システム編集UI問題.md](./troubleshooting/Spine配置システム編集UI問題.md)
@@ -404,6 +410,21 @@
 #### #完全解決
 - [境界ボックス精密クリック判定実装成功記録.md](./troubleshooting/境界ボックス精密クリック判定実装成功記録.md)
 
+#### #BB
+- [BB移動時Spineキャラクター連動問題.md](./troubleshooting/BB移動時Spineキャラクター連動問題.md)
+
+#### #配置問題
+- [BB移動時Spineキャラクター連動問題.md](./troubleshooting/BB移動時Spineキャラクター連動問題.md)
+
+#### #連動
+- [BB移動時Spineキャラクター連動問題.md](./troubleshooting/BB移動時Spineキャラクター連動問題.md)
+
+#### #PureBoundingBox
+- [BB移動時Spineキャラクター連動問題.md](./troubleshooting/BB移動時Spineキャラクター連動問題.md)
+
+#### #統合システム
+- [BB移動時Spineキャラクター連動問題.md](./troubleshooting/BB移動時Spineキャラクター連動問題.md)
+
 ### 症状別
 
 #### #表示
@@ -532,6 +553,9 @@
 ### 「BBハンドル」「バウンディングボックス操作」「PureBoundingBox」「座標計算修正失敗」「getBoundingClientRect問題」「ハンドル操作座標ずれ」
 → [座標関連問題.md](./troubleshooting/coordinate-problems.md#bbハンドル操作瞬間移動問題)
 → [編集ボタンクリック時瞬間移動問題.md](./troubleshooting/編集ボタンクリック時瞬間移動問題.md)
+
+### 「BB移動」「BBと連動しない」「ぷらっとくんが動かない」「その場に留まる」「skeleton cannot be null」「Canvas配置先」「testArea」「testTarget」「BB統合」「PureBoundingBox統合」「Spine連動」「DOM配置」
+→ [BB移動時Spineキャラクター連動問題.md](./troubleshooting/BB移動時Spineキャラクター連動問題.md)
 
 ---
 
