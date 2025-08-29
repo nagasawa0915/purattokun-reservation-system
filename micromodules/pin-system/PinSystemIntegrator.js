@@ -547,6 +547,9 @@ class PinSystemIntegrator {
             mode: options.scaleMode || 'proportional',
             baseScale: options.baseScale || 1.0,
             referenceSize: options.referenceSize || null,
+            currentFontSize: options.currentFontSize || null,
+            referenceFontSize: options.referenceFontSize || null,
+            referenceArea: options.referenceArea || null,
             ...options.scaleOptions
         };
         console.log('[DEBUG] Created scaleOptions:', scaleOptions);
