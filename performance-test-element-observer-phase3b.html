@@ -488,14 +488,12 @@
                     for (let i = 0; i < iterations; i++) {
                         const startTime = performance.now();
                         
-                        // setUnifiedPosition() 相当の処理をシミュレート
-                        const rect = testElement.getBoundingClientRect();
-                        const pin = this.createTestPin();
+                        // 🚀 実際のsetUnifiedPosition()メソッドを使用
+                        const x = Math.random() * 100;
+                        const y = Math.random() * 100;
                         
-                        // DOMアップデート
-                        pin.style.left = (rect.left + Math.random() * 10) + 'px';
-                        pin.style.top = (rect.top + Math.random() * 10) + 'px';
-                        pin.style.transform = `scale(${1 + Math.random() * 0.2})`;
+                        // ElementObserver超高速パスの直接テスト
+                        this.observer.setUnifiedPosition(x, y, '%');
                         
                         const endTime = performance.now();
                         const processingTime = endTime - startTime;
@@ -561,8 +559,13 @@
                         this.observer.observe(element, (rect, changeType) => {
                             const startTime = performance.now();
                             
-                            pin.style.left = (rect.left + rect.width / 2) + 'px';
-                            pin.style.top = (rect.top + rect.height / 2) + 'px';
+                            // 🚀 setUnifiedPosition()の直接使用
+                            const parentRect = element.parentElement.getBoundingClientRect();
+                            const x = ((rect.left - parentRect.left) / parentRect.width) * 100;
+                            const y = ((rect.top - parentRect.top) / parentRect.height) * 100;
+                            
+                            // ElementObserver超高速パス使用
+                            this.observer.setUnifiedPosition(x, y, '%');
                             
                             const processingTime = performance.now() - startTime;
                             this.metrics.processingTimes.push(processingTime);
@@ -1035,12 +1038,12 @@
                 logEntry.className = `log-entry ${type}`;
                 logEntry.textContent = `[${timestamp}] ${message}`;
                 
-                const console = document.getElementById('logConsole');
-                console.appendChild(logEntry);
-                console.scrollTop = console.scrollHeight;
+                const logConsole = document.getElementById('logConsole');
+                logConsole.appendChild(logEntry);
+                logConsole.scrollTop = logConsole.scrollHeight;
                 
-                // Consoleにも出力
-                console.log(`[${type.toUpperCase()}] ${message}`);
+                // ブラウザコンソールにも出力
+                window.console.log(`[${type.toUpperCase()}] ${message}`);
             }
             
             // リアルタイム監視

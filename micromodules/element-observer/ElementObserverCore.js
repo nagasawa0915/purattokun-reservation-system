@@ -13,9 +13,9 @@ class ElementObserverCore {
         this.throttleTimers = new Map(); // element -> timerId
         this.lastNotifications = new Map(); // element -> lastRect
         
-        // スロットリング設定
-        this.throttleDelay = 16; // ~60fps
-        this.duplicateThreshold = 0.1; // 0.1px未満の変化は重複として扱う
+        // スロットリング設定（60fps最適化）
+        this.throttleDelay = 8; // ~120fps対応
+        this.duplicateThreshold = 0.05; // 0.05px未満の変化は重複として扱う（精度向上）
         
         // グローバルObserver
         this.resizeObserver = null;
