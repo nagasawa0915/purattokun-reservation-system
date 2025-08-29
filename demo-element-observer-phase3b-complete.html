@@ -472,7 +472,17 @@
                     this.observer = new ElementObserverAdvanced();
                     
                     // Phase 2統合制御初期化
-                    await this.observer.initializePhase2Integration();
+                    await this.observer.initializeAdvanced(
+                        document.body,  // targetElement
+                        null,           // canvas（デモ用）
+                        null,           // skeleton（デモ用）
+                        null,           // renderer（デモ用）
+                        {
+                            enableTransform: true,
+                            enableWebGL: true,
+                            enableResponsive: true
+                        }
+                    );
                     
                     // デモ機能セットアップ
                     this.setupImagePinDemo();
