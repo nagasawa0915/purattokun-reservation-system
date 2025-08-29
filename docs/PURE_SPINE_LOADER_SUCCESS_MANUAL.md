@@ -77,6 +77,55 @@ window.addEventListener('load', async () => {
 });
 ```
 
+### 🎬 **Spineアニメーション30FPS制御問題解決**
+- **問題**: Spineで30FPSで作成したアニメーションが、ブラウザ（60FPS）で再生すると2倍速になる
+- **原因**: `animationState.update()`が毎フレーム（60FPS）で0.033秒ずつ進めるため実質60FPS相当になる
+- **症状**: アニメーションが「やたらと速い」、固定値0.033でも「速い感じがする」
+
+**✅ 解決策: 自然な30FPS制御**
+```javascript
+startRenderLoop() {
+    let lastTime = Date.now();
+    
+    const render = () => {
+        if (!this.purattokunLoaded) return;
+        
+        const now = Date.now();
+        const deltaTime = (now - lastTime) / 1000; // 秒単位
+        lastTime = now;
+        
+        // 30FPS相当のdelta（最大制限付き）
+        const targetDelta = Math.min(deltaTime, 0.033); // 30FPS = 0.033秒
+        
+        this.animationState.update(targetDelta);
+        this.animationState.apply(this.skeleton);
+        this.skeleton.updateWorldTransform();
+        
+        // 描画処理...
+        
+        requestAnimationFrame(render);
+    };
+    
+    requestAnimationFrame(render);
+}
+```
+
+**🔧 技術詳細**:
+- **実際の経過時間を使用**: `(now - lastTime) / 1000` で実際のdelta計算
+- **30FPS制限**: `Math.min(deltaTime, 0.033)` で最大0.033秒に制限
+- **自然な再生**: ブラウザのフレームレートに同期しつつ、アニメーション速度は30FPS維持
+
+**❌ 避けるべき実装**:
+```javascript
+// ❌ 毎フレーム固定値 → 60FPSで実行すると2倍速
+this.animationState.update(0.033);
+
+// ❌ 厳密な間隔制御 → アニメーションがスローになる
+if (now - lastUpdate >= 33.33) {
+    this.animationState.update(0.033);
+}
+```
+
 ## 🚨 重要な発見事項（v2.0で解決済み）
 
 ### **真っ黒表示問題の根本原因と解決策**
