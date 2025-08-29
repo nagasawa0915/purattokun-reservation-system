@@ -55,7 +55,10 @@
       "Bash(for file in *.js)",
       "Bash(do echo \"[$file]\")",
       "Bash(npm test:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(PORT=8000 /usr/bin/python3 -m http.server)",
+      "Bash(/usr/bin/python3:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
