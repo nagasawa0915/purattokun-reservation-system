@@ -919,24 +919,26 @@
                     ];
                     
                     // Phase 3-A（ElementObserverAdvanced）API確認
+                    this.log('info', 'Phase 3-A available methods:', Object.getOwnPropertyNames(this.phase3A.advanced));
                     for (const method of requiredMethods) {
                         if (typeof this.phase3A.advanced[method] !== 'function') {
-                            this.log('warning', `Phase 3-A: ${method} method not found`);
+                            this.log('warning', `Phase 3-A: ${method} method not found (type: ${typeof this.phase3A.advanced[method]})`);
                             return false;
                         }
                     }
                     
                     // Phase 3-B（PinSystemIntegrator）API確認
+                    this.log('info', 'Phase 3-B available methods:', Object.getOwnPropertyNames(this.phase3B.integrator));
                     for (const method of requiredMethods) {
                         if (typeof this.phase3B.integrator[method] !== 'function') {
-                            this.log('warning', `Phase 3-B: ${method} method not found`);
+                            this.log('warning', `Phase 3-B: ${method} method not found (type: ${typeof this.phase3B.integrator[method]})`);
                             return false;
                         }
                     }
                     
                     // setUnifiedPosition API確認
                     if (typeof this.phase3A.advanced.setUnifiedPosition !== 'function') {
-                        this.log('warning', 'Phase 3-A: setUnifiedPosition method not found');
+                        this.log('warning', `Phase 3-A: setUnifiedPosition method not found (type: ${typeof this.phase3A.advanced.setUnifiedPosition})`);
                         return false;
                     }
                     
