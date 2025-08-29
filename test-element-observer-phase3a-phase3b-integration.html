@@ -990,6 +990,7 @@
                     this.phase3B.integrator.observe(this.elements.imageTest, {
                         scaleMode: 'proportional',
                         baseScale: 1.0,
+                        referenceSize: 200, // テスト要素width基準
                         highlight: true,
                         usePhase3A: true
                     });
@@ -998,6 +999,8 @@
                     this.phase3B.integrator.observe(this.elements.textTest, {
                         scaleMode: 'fontSize',
                         baseScale: 1.0,
+                        currentFontSize: 16,
+                        referenceFontSize: 16,
                         highlight: true,
                         usePhase3A: true
                     });
@@ -1006,6 +1009,7 @@
                     this.phase3B.integrator.observe(this.elements.backgroundTest, {
                         scaleMode: 'imageSize',
                         baseScale: 1.0,
+                        referenceArea: 20000, // 200x100の基準面積（テスト用）
                         highlight: true,
                         usePhase3A: true
                     });
