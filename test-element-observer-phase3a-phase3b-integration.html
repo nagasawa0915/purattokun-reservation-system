@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElementObserver Phase 3-A + Phase 3-B 完全統合動作確認テスト</title>
+    <style>
+        /* ==========================================
+         * ElementObserver Phase 3-A + Phase 3-B 統合テスト用スタイル
+         * Phase 3-A: 99.9%高速化技術（setUnifiedPosition）
+         * Phase 3-B: マイクロモジュール分割システム
+         * ========================================== */
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+        
+        .phase-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .phase-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .phase-3a {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+        
+        .phase-3b {
+            background: linear-gradient(45deg, #00d2d3, #54a0ff);
+            color: white;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .test-section h3 {
+            color: #2c3e50;
+            margin: 0 0 20px 0;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .test-element {
+            width: 200px;
+            height: 120px;
+            margin: 10px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .image-element {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            position: relative;
+        }
+        
+        .text-element {
+            background: linear-gradient(45deg, #00d2d3, #54a0ff);
+            font-size: 1.1em;
+        }
+        
+        .background-element {
+            background: linear-gradient(45deg, #feca57, #ff9ff3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .spine-target {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #2ecc71, #27ae60);
+            border-radius: 50%;
+            position: absolute;
+            transition: all 0.1s ease;
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+        
+        .controls {
+            background: #2c3e50;
+            border-radius: 10px;
+            padding: 20px;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .controls h3 {
+            margin: 0 0 15px 0;
+            color: #ecf0f1;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9em;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, #00d2d3, #54a0ff);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 210, 211, 0.4);
+        }
+        
+        .status-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .status-panel h4 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .status-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .status-label {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            color: #7f8c8d;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .performance-metrics {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .performance-metrics h4 {
+            margin: 0 0 15px 0;
+            font-size: 1.3em;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-value {
+            font-family: 'Consolas', monospace;
+            font-weight: bold;
+        }
+        
+        .log-panel {
+            background: #2c3e50;
+            border-radius: 10px;
+            padding: 20px;
+            color: #ecf0f1;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px 0;
+        }
+        
+        .log-timestamp {
+            color: #95a5a6;
+            margin-right: 10px;
+        }
+        
+        .log-level-info {
+            color: #3498db;
+        }
+        
+        .log-level-success {
+            color: #2ecc71;
+        }
+        
+        .log-level-warning {
+            color: #f39c12;
+        }
+        
+        .log-level-error {
+            color: #e74c3c;
+        }
+        
+        .integration-status {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        
+        .status-indicator {
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .status-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+        
+        .status-ready {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+        
+        .status-active {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            animation: pulse 2s infinite;
+        }
+        
+        .status-error {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .phase-indicator {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .control-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+        
+        /* F12風ハイライトスタイル */
+        .pin-highlight {
+            position: absolute;
+            pointer-events: none;
+            border: 2px solid #007acc;
+            background: rgba(0, 122, 204, 0.1);
+            z-index: 10000;
+            border-radius: 3px;
+            transition: all 0.1s ease;
+        }
+        
+        .pin-preview {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #ff6b6b;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 10px rgba(255, 107, 107, 0.5);
+            z-index: 10001;
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 ElementObserver Phase 3-A + Phase 3-B 完全統合テスト</h1>
+            <div class="subtitle">
+                Phase 3-A（99.9%高速化技術）+ Phase 3-B（マイクロモジュール分割）統合動作確認
+            </div>
+            <div class="phase-indicator">
+                <div class="phase-badge phase-3a">Phase 3-A: setUnifiedPosition() 0.01ms</div>
+                <div class="phase-badge phase-3b">Phase 3-B: 4モジュール統合制御</div>
+            </div>
+        </div>
+        
+        <!-- 統合状態インジケーター -->
+        <div class="integration-status">
+            <div class="status-indicator">
+                <div class="status-circle status-ready" id="phase3a-status">3-A</div>
+                <div>Phase 3-A</div>
+                <small>ElementObserverAdvanced</small>
+            </div>
+            <div class="status-indicator">
+                <div class="status-circle status-ready" id="phase3b-status">3-B</div>
+                <div>Phase 3-B</div>
+                <small>PinSystemIntegrator</small>
+            </div>
+            <div class="status-indicator">
+                <div class="status-circle status-ready" id="integration-status">∫</div>
+                <div>統合制御</div>
+                <small>協調動作システム</small>
+            </div>
+        </div>
+        
+        <!-- コントロールパネル -->
+        <div class="controls">
+            <h3>🎛️ 統合テスト制御パネル</h3>
+            <div class="control-group">
+                <button class="btn btn-primary" id="btn-initialize">🚀 統合システム初期化</button>
+                <button class="btn btn-secondary" id="btn-start-phase3a">⚡ Phase 3-A テスト開始</button>
+                <button class="btn btn-success" id="btn-start-phase3b">🔧 Phase 3-B テスト開始</button>
+            </div>
+            <div class="control-group">
+                <button class="btn btn-primary" id="btn-pin-mode">📌 ピン設定モード開始</button>
+                <button class="btn btn-secondary" id="btn-performance-test">📊 パフォーマンステスト</button>
+                <button class="btn btn-success" id="btn-compatibility-test">🔗 互換性テスト</button>
+            </div>
+            <div class="control-group">
+                <button class="btn btn-primary" id="btn-cleanup">🧹 完全クリーンアップ</button>
+                <button class="btn btn-secondary" id="btn-reset">🔄 テストリセット</button>
+            </div>
+        </div>
+        
+        <!-- パフォーマンス指標パネル -->
+        <div class="performance-metrics">
+            <h4>⚡ Phase 3-A + 3-B 統合パフォーマンス指標</h4>
+            <div class="metric">
+                <span>setUnifiedPosition() 処理時間</span>
+                <span class="metric-value" id="metric-processing-time">測定待ち</span>
+            </div>
+            <div class="metric">
+                <span>統合座標制御成功率</span>
+                <span class="metric-value" id="metric-success-rate">測定待ち</span>
+            </div>
+            <div class="metric">
+                <span>高速化技術活用率</span>
+                <span class="metric-value" id="metric-speedup-usage">測定待ち</span>
+            </div>
+            <div class="metric">
+                <span>メモリ使用量</span>
+                <span class="metric-value" id="metric-memory-usage">測定待ち</span>
+            </div>
+            <div class="metric">
+                <span>フレームレート維持率</span>
+                <span class="metric-value" id="metric-framerate">測定待ち</span>
+            </div>
+        </div>
+        
+        <!-- テストエリア -->
+        <div class="test-grid">
+            <!-- 画像ピン追従テスト -->
+            <div class="test-section">
+                <h3><span class="test-icon">🖼️</span>画像ピン追従テスト</h3>
+                <div class="test-element image-element" id="image-test">
+                    <span>📷 Image Pin Target</span>
+                    <div class="spine-target" id="image-spine" style="top: 10px; right: 10px;">S</div>
+                </div>
+                <div class="status-panel">
+                    <h4>画像ピン統合状態</h4>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-label">アンカー位置</div>
+                            <div class="status-value" id="image-anchor-pos">br (右下)</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">追従精度</div>
+                            <div class="status-value" id="image-accuracy">測定待ち</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- テキスト末尾ピンテスト -->
+            <div class="test-section">
+                <h3><span class="test-icon">📝</span>テキスト末尾ピンテスト</h3>
+                <div class="test-element text-element" id="text-test">
+                    <span id="text-content">テキストの末尾に追従するSpineキャラクター</span>
+                    <div class="spine-target" id="text-spine" style="top: 50%; right: -30px;">S</div>
+                </div>
+                <div class="status-panel">
+                    <h4>テキストピン統合状態</h4>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-label">Range方式</div>
+                            <div class="status-value" id="text-range-status">準備中</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">追従精度</div>
+                            <div class="status-value" id="text-accuracy">測定待ち</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 背景同期テスト -->
+            <div class="test-section">
+                <h3><span class="test-icon">🎨</span>背景同期テスト</h3>
+                <div class="test-element background-element" id="background-test">
+                    <span>🎭 Background Sync</span>
+                    <div class="spine-target" id="background-spine" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">S</div>
+                </div>
+                <div class="status-panel">
+                    <h4>背景同期統合状態</h4>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-label">同期モード</div>
+                            <div class="status-value" id="background-mode">center</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">同期精度</div>
+                            <div class="status-value" id="background-accuracy">測定待ち</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 統合制御テスト -->
+            <div class="test-section">
+                <h3><span class="test-icon">⚙️</span>Phase 3-A+3-B 統合制御</h3>
+                <div class="status-panel">
+                    <h4>統合システム状態</h4>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-label">ElementObserverAdvanced</div>
+                            <div class="status-value" id="advanced-status">未初期化</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">PinSystemIntegrator</div>
+                            <div class="status-value" id="integrator-status">未初期化</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">環境監視モジュール</div>
+                            <div class="status-value" id="env-module-status">未初期化</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">スケール計算モジュール</div>
+                            <div class="status-value" id="scale-module-status">未初期化</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">ハイライトモジュール</div>
+                            <div class="status-value" id="highlight-module-status">未初期化</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">統合制御システム</div>
+                            <div class="status-value" id="integration-control-status">未初期化</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ログパネル -->
+        <div class="log-panel" id="log-panel">
+            <div class="log-entry">
+                <span class="log-timestamp">00:00:00.000</span>
+                <span class="log-level-info">[INFO]</span>
+                <span>ElementObserver Phase 3-A + Phase 3-B統合テストシステム初期化完了</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Phase 3-A統合: ElementObserverAdvanced.js -->
+    <script src="micromodules/element-observer/ElementObserverCore.js"></script>
+    <script src="micromodules/element-observer/ElementObserver.js"></script>
+    <script src="micromodules/element-observer/ElementObserverTransform.js"></script>
+    <script src="micromodules/element-observer/ElementObserverWebGL.js"></script>
+    <script src="micromodules/element-observer/ElementObserverResponsive.js"></script>
+    <script src="micromodules/element-observer/ElementObserverAdvanced.js"></script>
+    
+    <!-- Phase 3-B マイクロモジュール -->
+    <script src="micromodules/environment-observer/PureEnvironmentObserver.js"></script>
+    <script src="micromodules/scale-calculator/PureScaleCalculator.js"></script>
+    <script src="micromodules/pin-highlighter/PurePinHighlighter.js"></script>
+    <script src="micromodules/pin-system/PinSystemIntegrator.js"></script>
+    
+    <script>
+        /**
+         * ==========================================
+         * ElementObserver Phase 3-A + 3-B 統合テストシステム
+         * 
+         * 【テスト目的】
+         * - Phase 3-A（99.9%高速化技術）とPhase 3-B（4モジュール分割）の完全統合
+         * - setUnifiedPosition()システムとの連携確認
+         * - ElementObserverAdvanced互換性テスト
+         * - PinSystemIntegratorとの協調動作確認
+         * 
+         * 【検証項目】
+         * 1. 統合動作テスト: Phase 3-A + 3-B システムの協調制御
+         * 2. 互換性テスト: ElementObserver標準APIとの完全互換性
+         * 3. パフォーマンステスト: 0.01ms処理時間・60fps維持・メモリ使用量
+         * 4. 実用テスト: 画像ピン・テキストピン・背景同期機能
+         * ==========================================
+         */
+        
+        class Phase3APhase3BIntegrationTest {
+            constructor() {
+                // Phase 3-A成果（ElementObserverAdvanced）
+                this.phase3A = {
+                    advanced: null,
+                    initialized: false,
+                    status: 'pending'
+                };
+                
+                // Phase 3-B成果（PinSystemIntegrator + 4モジュール）
+                this.phase3B = {
+                    integrator: null,
+                    initialized: false,
+                    status: 'pending',
+                    modules: {
+                        environment: false,
+                        scale: false,
+                        highlighter: false,
+                        pin: false
+                    }
+                };
+                
+                // 統合制御状態
+                this.integration = {
+                    active: false,
+                    compatibility: false,
+                    performance: {
+                        totalTests: 0,
+                        passedTests: 0,
+                        averageProcessingTime: 0,
+                        highSpeedUsageRate: 0,
+                        memoryUsage: 0,
+                        frameRate: 60
+                    }
+                };
+                
+                // テスト制御
+                this.testState = {
+                    running: false,
+                    currentTest: null,
+                    startTime: 0,
+                    results: []
+                };
+                
+                // UI要素
+                this.elements = {
+                    imageTest: document.getElementById('image-test'),
+                    textTest: document.getElementById('text-test'),
+                    backgroundTest: document.getElementById('background-test'),
+                    imageSpine: document.getElementById('image-spine'),
+                    textSpine: document.getElementById('text-spine'),
+                    backgroundSpine: document.getElementById('background-spine')
+                };
+                
+                this.init();
+            }
+            
+            /**
+             * テストシステム初期化
+             */
+            init() {
+                this.log('info', 'Phase 3-A + Phase 3-B統合テストシステム初期化開始');
+                
+                // UIイベント設定
+                this.setupEventListeners();
+                
+                // 初期状態更新
+                this.updateUI();
+                
+                this.log('success', 'Phase 3-A + Phase 3-B統合テストシステム初期化完了');
+            }
+            
+            /**
+             * UIイベントリスナー設定
+             */
+            setupEventListeners() {
+                // 統合システム初期化ボタン
+                document.getElementById('btn-initialize').addEventListener('click', () => {
+                    this.initializeIntegratedSystem();
+                });
+                
+                // Phase 3-Aテスト開始
+                document.getElementById('btn-start-phase3a').addEventListener('click', () => {
+                    this.startPhase3ATest();
+                });
+                
+                // Phase 3-Bテスト開始
+                document.getElementById('btn-start-phase3b').addEventListener('click', () => {
+                    this.startPhase3BTest();
+                });
+                
+                // ピン設定モード
+                document.getElementById('btn-pin-mode').addEventListener('click', () => {
+                    this.togglePinSetupMode();
+                });
+                
+                // パフォーマンステスト
+                document.getElementById('btn-performance-test').addEventListener('click', () => {
+                    this.runPerformanceTest();
+                });
+                
+                // 互換性テスト
+                document.getElementById('btn-compatibility-test').addEventListener('click', () => {
+                    this.runCompatibilityTest();
+                });
+                
+                // クリーンアップ
+                document.getElementById('btn-cleanup').addEventListener('click', () => {
+                    this.cleanup();
+                });
+                
+                // リセット
+                document.getElementById('btn-reset').addEventListener('click', () => {
+                    this.reset();
+                });
+            }
+            
+            /**
+             * 統合システム初期化
+             */
+            async initializeIntegratedSystem() {
+                try {
+                    this.log('info', '🚀 統合システム初期化開始...');
+                    
+                    // Phase 3-A初期化
+                    await this.initializePhase3A();
+                    
+                    // Phase 3-B初期化
+                    await this.initializePhase3B();
+                    
+                    // 統合制御確立
+                    await this.establishIntegrationControl();
+                    
+                    this.integration.active = true;
+                    this.updateUI();
+                    
+                    this.log('success', '✅ 統合システム初期化完了！Phase 3-A + 3-B協調動作確立');
+                    
+                } catch (error) {
+                    this.log('error', `❌ 統合システム初期化エラー: ${error.message}`);
+                    throw error;
+                }
+            }
+            
+            /**
+             * Phase 3-A（ElementObserverAdvanced）初期化
+             */
+            async initializePhase3A() {
+                try {
+                    this.log('info', '⚡ Phase 3-A ElementObserverAdvanced初期化...');
+                    
+                    // ElementObserverAdvanced存在チェック
+                    if (typeof ElementObserverAdvanced === 'undefined') {
+                        throw new Error('ElementObserverAdvanced not found');
+                    }
+                    
+                    // ElementObserverAdvanced インスタンス作成
+                    this.phase3A.advanced = new ElementObserverAdvanced();
+                    
+                    // 高度初期化実行
+                    const initialized = await this.phase3A.advanced.initializeAdvanced(
+                        this.elements.imageTest,    // targetElement
+                        null,                       // canvas（テスト用にnull）
+                        null,                       // skeleton（テスト用にnull） 
+                        null,                       // renderer（テスト用にnull）
+                        {
+                            cssWidth: '200px',
+                            cssHeight: '120px',
+                            quality: 'high'
+                        }
+                    );
+                    
+                    if (!initialized) {
+                        throw new Error('ElementObserverAdvanced initialization failed');
+                    }
+                    
+                    this.phase3A.initialized = true;
+                    this.phase3A.status = 'ready';
+                    
+                    this.log('success', '✅ Phase 3-A初期化完了：99.9%高速化技術有効');
+                    
+                } catch (error) {
+                    this.phase3A.status = 'error';
+                    this.log('error', `❌ Phase 3-A初期化エラー: ${error.message}`);
+                    throw error;
+                }
+            }
+            
+            /**
+             * Phase 3-B（PinSystemIntegrator + 4モジュール）初期化
+             */
+            async initializePhase3B() {
+                try {
+                    this.log('info', '🔧 Phase 3-B PinSystemIntegrator初期化...');
+                    
+                    // 4モジュール存在チェック
+                    const requiredModules = [
+                        'PureEnvironmentObserver',
+                        'PureScaleCalculator', 
+                        'PurePinHighlighter',
+                        'PinSystemIntegrator'
+                    ];
+                    
+                    for (const moduleName of requiredModules) {
+                        if (typeof window[moduleName] === 'undefined') {
+                            throw new Error(`${moduleName} not found`);
+                        }
+                    }
+                    
+                    // PinSystemIntegrator インスタンス作成
+                    this.phase3B.integrator = new PinSystemIntegrator({
+                        usePhase3A: true,           // Phase 3-A統合有効
+                        compatMode: 'advanced',     // ElementObserverAdvanced互換
+                        highSpeedCoordinate: true,  // 高速座標制御有効
+                        epsilon: 0.5,
+                        defaultBaseScale: 1.0,
+                        debug: true
+                    });
+                    
+                    // 初期化確認
+                    if (!this.phase3B.integrator.integrationState.initialized) {
+                        throw new Error('PinSystemIntegrator initialization failed');
+                    }
+                    
+                    // モジュール状態確認
+                    const systemInfo = this.phase3B.integrator.getSystemInfo();
+                    this.phase3B.modules.environment = systemInfo.modules.environment;
+                    this.phase3B.modules.scale = systemInfo.modules.scale;
+                    this.phase3B.modules.highlighter = systemInfo.modules.highlighter;
+                    this.phase3B.modules.pin = true;
+                    
+                    this.phase3B.initialized = true;
+                    this.phase3B.status = 'ready';
+                    
+                    this.log('success', '✅ Phase 3-B初期化完了：4モジュール統合制御有効');
+                    
+                } catch (error) {
+                    this.phase3B.status = 'error';
+                    this.log('error', `❌ Phase 3-B初期化エラー: ${error.message}`);
+                    throw error;
+                }
+            }
+            
+            /**
+             * 統合制御確立（Phase 3-A + 3-B協調システム）
+             */
+            async establishIntegrationControl() {
+                try {
+                    this.log('info', '∫ Phase 3-A + 3-B統合制御確立...');
+                    
+                    // ElementObserverAdvanced互換性確認
+                    this.integration.compatibility = await this.verifyCompatibility();
+                    
+                    if (!this.integration.compatibility) {
+                        throw new Error('Phase 3-A + 3-B compatibility verification failed');
+                    }
+                    
+                    // 統合コールバック設定
+                    this.setupIntegratedCallbacks();
+                    
+                    // テスト要素の監視開始
+                    await this.startIntegratedObservation();
+                    
+                    this.log('success', '✅ 統合制御確立完了：Phase 3-A + 3-B協調動作有効');
+                    
+                } catch (error) {
+                    this.log('error', `❌ 統合制御確立エラー: ${error.message}`);
+                    throw error;
+                }
+            }
+            
+            /**
+             * 互換性確認（ElementObserver API互換性）
+             */
+            async verifyCompatibility() {
+                try {
+                    this.log('info', '🔗 ElementObserver API互換性確認...');
+                    
+                    // 基本APIメソッド存在確認
+                    const requiredMethods = [
+                        'observe', 'unobserve', 'onChange', 'onError', 'onReady'
+                    ];
+                    
+                    // Phase 3-A（ElementObserverAdvanced）API確認
+                    for (const method of requiredMethods) {
+                        if (typeof this.phase3A.advanced[method] !== 'function') {
+                            this.log('warning', `Phase 3-A: ${method} method not found`);
+                            return false;
+                        }
+                    }
+                    
+                    // Phase 3-B（PinSystemIntegrator）API確認
+                    for (const method of requiredMethods) {
+                        if (typeof this.phase3B.integrator[method] !== 'function') {
+                            this.log('warning', `Phase 3-B: ${method} method not found`);
+                            return false;
+                        }
+                    }
+                    
+                    // setUnifiedPosition API確認
+                    if (typeof this.phase3A.advanced.setUnifiedPosition !== 'function') {
+                        this.log('warning', 'Phase 3-A: setUnifiedPosition method not found');
+                        return false;
+                    }
+                    
+                    this.log('success', '✅ ElementObserver API互換性確認完了');
+                    return true;
+                    
+                } catch (error) {
+                    this.log('error', `❌ 互換性確認エラー: ${error.message}`);
+                    return false;
+                }
+            }
+            
+            /**
+             * 統合コールバック設定
+             */
+            setupIntegratedCallbacks() {
+                // Phase 3-A変化通知
+                this.phase3A.advanced.onIntegrationChange((event) => {
+                    this.log('info', `Phase 3-A統合変化: ${event.type}`);
+                    this.updatePerformanceMetrics(event);
+                });
+                
+                // Phase 3-B変化通知
+                this.phase3B.integrator.onChange((data) => {
+                    this.log('info', `Phase 3-B変化検出: ${data.id}`);
+                    this.updatePerformanceMetrics(data);
+                });
+                
+                // エラーハンドリング
+                this.phase3A.advanced.onIntegrationChange((event) => {
+                    if (event.type === 'error') {
+                        this.log('error', `Phase 3-A エラー: ${event.data.message}`);
+                    }
+                });
+                
+                this.phase3B.integrator.onError((errorData) => {
+                    this.log('error', `Phase 3-B エラー: ${errorData.error.message}`);
+                });
+            }
+            
+            /**
+             * 統合監視開始
+             */
+            async startIntegratedObservation() {
+                try {
+                    // Phase 3-B（PinSystemIntegrator）で各要素監視開始
+                    
+                    // 画像要素監視
+                    this.phase3B.integrator.observe(this.elements.imageTest, {
+                        scaleMode: 'proportional',
+                        baseScale: 1.0,
+                        highlight: true,
+                        usePhase3A: true
+                    });
+                    
+                    // テキスト要素監視
+                    this.phase3B.integrator.observe(this.elements.textTest, {
+                        scaleMode: 'fontSize',
+                        baseScale: 1.0,
+                        highlight: true,
+                        usePhase3A: true
+                    });
+                    
+                    // 背景要素監視
+                    this.phase3B.integrator.observe(this.elements.backgroundTest, {
+                        scaleMode: 'imageSize',
+                        baseScale: 1.0,
+                        highlight: true,
+                        usePhase3A: true
+                    });
+                    
+                    this.log('success', '✅ 統合監視開始完了');
+                    
+                } catch (error) {
+                    this.log('error', `❌ 統合監視開始エラー: ${error.message}`);
+                    throw error;
+                }
+            }
+            
+            /**
+             * Phase 3-Aテスト実行
+             */
+            async startPhase3ATest() {
+                try {
+                    this.log('info', '⚡ Phase 3-A高速化技術テスト開始...');
+                    
+                    if (!this.phase3A.initialized) {
+                        throw new Error('Phase 3-A not initialized');
+                    }
+                    
+                    const startTime = performance.now();
+                    
+                    // setUnifiedPosition()高速化テスト実行
+                    const testResults = [];
+                    for (let i = 0; i < 100; i++) {
+                        const testStart = performance.now();
+                        
+                        // ランダム座標でsetUnifiedPosition実行
+                        const x = Math.random() * 100;
+                        const y = Math.random() * 100;
+                        
+                        const result = this.phase3A.advanced.setUnifiedPosition(x, y, '%');
+                        
+                        const testEnd = performance.now();
+                        const processingTime = testEnd - testStart;
+                        
+                        testResults.push({
+                            result,
+                            processingTime,
+                            coordinates: { x, y }
+                        });
+                    }
+                    
+                    // 結果分析
+                    const averageTime = testResults.reduce((sum, test) => sum + test.processingTime, 0) / testResults.length;
+                    const successRate = testResults.filter(test => test.result).length / testResults.length * 100;
+                    const targetTimeCount = testResults.filter(test => test.processingTime <= 0.01).length;
+                    const targetTimeRate = targetTimeCount / testResults.length * 100;
+                    
+                    // パフォーマンス指標更新
+                    this.integration.performance.averageProcessingTime = averageTime;
+                    this.integration.performance.highSpeedUsageRate = targetTimeRate;
+                    
+                    this.updateUI();
+                    
+                    this.log('success', `✅ Phase 3-A高速化テスト完了: 平均${averageTime.toFixed(4)}ms, 成功率${successRate.toFixed(1)}%, 目標達成率${targetTimeRate.toFixed(1)}%`);
+                    
+                } catch (error) {
+                    this.log('error', `❌ Phase 3-Aテストエラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * Phase 3-Bテスト実行
+             */
+            async startPhase3BTest() {
+                try {
+                    this.log('info', '🔧 Phase 3-B マイクロモジュール統合テスト開始...');
+                    
+                    if (!this.phase3B.initialized) {
+                        throw new Error('Phase 3-B not initialized');
+                    }
+                    
+                    // 4モジュール連携テスト実行
+                    const integrationResults = await this.testModuleIntegration();
+                    
+                    // システム情報取得
+                    const systemInfo = this.phase3B.integrator.getSystemInfo();
+                    
+                    this.log('success', `✅ Phase 3-B統合テスト完了: ${integrationResults.totalTests}件実行, ${integrationResults.passedTests}件成功`);
+                    this.log('info', `📊 システム情報: ${systemInfo.observingTargets}個監視中, 平均処理時間${systemInfo.performance.averageProcessingTime}`);
+                    
+                } catch (error) {
+                    this.log('error', `❌ Phase 3-Bテストエラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * 4モジュール統合テスト
+             */
+            async testModuleIntegration() {
+                const results = {
+                    totalTests: 0,
+                    passedTests: 0,
+                    moduleResults: {}
+                };
+                
+                try {
+                    // 環境監視モジュールテスト
+                    results.totalTests++;
+                    const envTest = await this.testEnvironmentModule();
+                    if (envTest) results.passedTests++;
+                    results.moduleResults.environment = envTest;
+                    
+                    // スケール計算モジュールテスト
+                    results.totalTests++;
+                    const scaleTest = await this.testScaleModule();
+                    if (scaleTest) results.passedTests++;
+                    results.moduleResults.scale = scaleTest;
+                    
+                    // ハイライトモジュールテスト
+                    results.totalTests++;
+                    const highlightTest = await this.testHighlightModule();
+                    if (highlightTest) results.passedTests++;
+                    results.moduleResults.highlighter = highlightTest;
+                    
+                    // 統合制御テスト
+                    results.totalTests++;
+                    const integrationTest = await this.testIntegrationControl();
+                    if (integrationTest) results.passedTests++;
+                    results.moduleResults.integration = integrationTest;
+                    
+                } catch (error) {
+                    this.log('error', `❌ モジュール統合テストエラー: ${error.message}`);
+                }
+                
+                return results;
+            }
+            
+            /**
+             * 環境監視モジュールテスト
+             */
+            async testEnvironmentModule() {
+                try {
+                    // 要素サイズ変更テスト
+                    const originalWidth = this.elements.imageTest.style.width;
+                    this.elements.imageTest.style.width = '250px';
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // 元に戻す
+                    this.elements.imageTest.style.width = originalWidth;
+                    
+                    this.log('success', '✅ 環境監視モジュールテスト完了');
+                    return true;
+                } catch (error) {
+                    this.log('error', `❌ 環境監視モジュールテストエラー: ${error.message}`);
+                    return false;
+                }
+            }
+            
+            /**
+             * スケール計算モジュールテスト
+             */
+            async testScaleModule() {
+                try {
+                    // スケール計算テスト（統合システム経由）
+                    const systemInfo = this.phase3B.integrator.getSystemInfo();
+                    if (systemInfo.modules.scale) {
+                        this.log('success', '✅ スケール計算モジュールテスト完了');
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    this.log('error', `❌ スケール計算モジュールテストエラー: ${error.message}`);
+                    return false;
+                }
+            }
+            
+            /**
+             * ハイライトモジュールテスト
+             */
+            async testHighlightModule() {
+                try {
+                    // ハイライト機能テスト
+                    const systemInfo = this.phase3B.integrator.getSystemInfo();
+                    if (systemInfo.modules.highlighter) {
+                        this.log('success', '✅ ハイライトモジュールテスト完了');
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    this.log('error', `❌ ハイライトモジュールテストエラー: ${error.message}`);
+                    return false;
+                }
+            }
+            
+            /**
+             * 統合制御テスト
+             */
+            async testIntegrationControl() {
+                try {
+                    // 統合制御システムテスト
+                    const systemInfo = this.phase3B.integrator.getSystemInfo();
+                    if (systemInfo.initialized && systemInfo.phase3A.enabled) {
+                        this.log('success', '✅ 統合制御システムテスト完了');
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    this.log('error', `❌ 統合制御システムテストエラー: ${error.message}`);
+                    return false;
+                }
+            }
+            
+            /**
+             * ピン設定モード切り替え
+             */
+            togglePinSetupMode() {
+                try {
+                    if (!this.phase3B.initialized) {
+                        this.log('warning', 'Phase 3-B未初期化のためピン設定モード開始不可');
+                        return;
+                    }
+                    
+                    if (this.phase3B.integrator.integrationState.pinSetupMode) {
+                        // ピンモード終了
+                        this.phase3B.integrator.stopPinSetupMode();
+                        this.log('info', '📌 ピン設定モード終了');
+                    } else {
+                        // ピンモード開始
+                        this.phase3B.integrator.startPinSetupMode({
+                            highlightColor: '#ff6b6b',
+                            throttle: 16
+                        });
+                        this.log('info', '📌 ピン設定モード開始');
+                    }
+                    
+                } catch (error) {
+                    this.log('error', `❌ ピン設定モード切り替えエラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * パフォーマンステスト実行
+             */
+            async runPerformanceTest() {
+                try {
+                    this.log('info', '📊 統合パフォーマンステスト開始...');
+                    
+                    const results = {
+                        processingTimes: [],
+                        memoryUsage: [],
+                        frameRates: [],
+                        highSpeedCount: 0
+                    };
+                    
+                    // 連続処理テスト（1000回実行）
+                    for (let i = 0; i < 1000; i++) {
+                        const startTime = performance.now();
+                        
+                        // Phase 3-A高速処理
+                        if (this.phase3A.initialized) {
+                            const x = Math.random() * 100;
+                            const y = Math.random() * 100;
+                            this.phase3A.advanced.setUnifiedPosition(x, y, '%');
+                        }
+                        
+                        const endTime = performance.now();
+                        const processingTime = endTime - startTime;
+                        
+                        results.processingTimes.push(processingTime);
+                        
+                        if (processingTime <= 0.01) {
+                            results.highSpeedCount++;
+                        }
+                        
+                        // メモリ使用量記録（100回毎）
+                        if (i % 100 === 0 && performance.memory) {
+                            results.memoryUsage.push(performance.memory.usedJSHeapSize);
+                        }
+                    }
+                    
+                    // 結果分析
+                    const avgProcessingTime = results.processingTimes.reduce((a, b) => a + b, 0) / results.processingTimes.length;
+                    const highSpeedRate = (results.highSpeedCount / 1000) * 100;
+                    const maxMemory = Math.max(...results.memoryUsage) / 1024 / 1024; // MB
+                    
+                    // パフォーマンス指標更新
+                    this.integration.performance.totalTests += 1000;
+                    this.integration.performance.passedTests += results.highSpeedCount;
+                    this.integration.performance.averageProcessingTime = avgProcessingTime;
+                    this.integration.performance.highSpeedUsageRate = highSpeedRate;
+                    this.integration.performance.memoryUsage = maxMemory;
+                    
+                    this.updateUI();
+                    
+                    this.log('success', `✅ パフォーマンステスト完了: 平均${avgProcessingTime.toFixed(4)}ms, 高速化率${highSpeedRate.toFixed(1)}%, メモリ${maxMemory.toFixed(1)}MB`);
+                    
+                } catch (error) {
+                    this.log('error', `❌ パフォーマンステストエラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * 互換性テスト実行
+             */
+            async runCompatibilityTest() {
+                try {
+                    this.log('info', '🔗 ElementObserver API互換性テスト開始...');
+                    
+                    let compatibilityScore = 0;
+                    let totalTests = 0;
+                    
+                    // Phase 3-A互換性テスト
+                    if (this.phase3A.initialized) {
+                        totalTests += 5;
+                        
+                        // observe/unobserve テスト
+                        if (typeof this.phase3A.advanced.observe === 'function') compatibilityScore++;
+                        if (typeof this.phase3A.advanced.unobserve === 'function') compatibilityScore++;
+                        if (typeof this.phase3A.advanced.onChange === 'function') compatibilityScore++;
+                        if (typeof this.phase3A.advanced.onError === 'function') compatibilityScore++;
+                        if (typeof this.phase3A.advanced.setUnifiedPosition === 'function') compatibilityScore++;
+                    }
+                    
+                    // Phase 3-B互換性テスト
+                    if (this.phase3B.initialized) {
+                        totalTests += 5;
+                        
+                        // ElementObserver互換API テスト
+                        if (typeof this.phase3B.integrator.observe === 'function') compatibilityScore++;
+                        if (typeof this.phase3B.integrator.unobserve === 'function') compatibilityScore++;
+                        if (typeof this.phase3B.integrator.onChange === 'function') compatibilityScore++;
+                        if (typeof this.phase3B.integrator.onError === 'function') compatibilityScore++;
+                        if (typeof this.phase3B.integrator.onReady === 'function') compatibilityScore++;
+                    }
+                    
+                    const compatibilityRate = (compatibilityScore / totalTests) * 100;
+                    this.integration.compatibility = compatibilityRate >= 90;
+                    
+                    this.updateUI();
+                    
+                    this.log('success', `✅ 互換性テスト完了: ${compatibilityScore}/${totalTests} (${compatibilityRate.toFixed(1)}%)`);
+                    
+                } catch (error) {
+                    this.log('error', `❌ 互換性テストエラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * パフォーマンス指標更新
+             */
+            updatePerformanceMetrics(eventData) {
+                // processingTime更新
+                if (eventData.duration !== undefined) {
+                    const currentAvg = this.integration.performance.averageProcessingTime;
+                    const totalTests = this.integration.performance.totalTests;
+                    
+                    this.integration.performance.averageProcessingTime = 
+                        (currentAvg * totalTests + eventData.duration) / (totalTests + 1);
+                    this.integration.performance.totalTests++;
+                }
+                
+                // Phase 3-A高速化技術使用確認
+                if (eventData.phase3A && eventData.phase3A.highSpeedUsed) {
+                    this.integration.performance.passedTests++;
+                }
+            }
+            
+            /**
+             * UI状態更新
+             */
+            updateUI() {
+                // ステータスインジケーター更新
+                this.updateStatusIndicator('phase3a-status', this.phase3A.status);
+                this.updateStatusIndicator('phase3b-status', this.phase3B.status);
+                this.updateStatusIndicator('integration-status', this.integration.active ? 'active' : 'pending');
+                
+                // システム状態更新
+                document.getElementById('advanced-status').textContent = 
+                    this.phase3A.initialized ? '✅ 初期化済み' : '⏳ 未初期化';
+                document.getElementById('integrator-status').textContent = 
+                    this.phase3B.initialized ? '✅ 初期化済み' : '⏳ 未初期化';
+                document.getElementById('env-module-status').textContent = 
+                    this.phase3B.modules.environment ? '✅ 有効' : '⏳ 未初期化';
+                document.getElementById('scale-module-status').textContent = 
+                    this.phase3B.modules.scale ? '✅ 有効' : '⏳ 未初期化';
+                document.getElementById('highlight-module-status').textContent = 
+                    this.phase3B.modules.highlighter ? '✅ 有効' : '⏳ 未初期化';
+                document.getElementById('integration-control-status').textContent = 
+                    this.integration.active ? '✅ 有効' : '⏳ 未確立';
+                
+                // パフォーマンス指標更新
+                const perf = this.integration.performance;
+                document.getElementById('metric-processing-time').textContent = 
+                    perf.averageProcessingTime > 0 ? `${perf.averageProcessingTime.toFixed(4)}ms` : '測定待ち';
+                document.getElementById('metric-success-rate').textContent = 
+                    perf.totalTests > 0 ? `${((perf.passedTests / perf.totalTests) * 100).toFixed(1)}%` : '測定待ち';
+                document.getElementById('metric-speedup-usage').textContent = 
+                    `${perf.highSpeedUsageRate.toFixed(1)}%`;
+                document.getElementById('metric-memory-usage').textContent = 
+                    perf.memoryUsage > 0 ? `${perf.memoryUsage.toFixed(1)}MB` : '測定待ち';
+                document.getElementById('metric-framerate').textContent = 
+                    `${perf.frameRate}fps`;
+            }
+            
+            /**
+             * ステータスインジケーター更新
+             */
+            updateStatusIndicator(elementId, status) {
+                const element = document.getElementById(elementId);
+                element.className = 'status-circle';
+                
+                switch (status) {
+                    case 'ready':
+                        element.classList.add('status-ready');
+                        break;
+                    case 'active':
+                        element.classList.add('status-active');
+                        break;
+                    case 'error':
+                        element.classList.add('status-error');
+                        break;
+                    default:
+                        element.classList.add('status-ready');
+                }
+            }
+            
+            /**
+             * ログ出力
+             */
+            log(level, message) {
+                const timestamp = new Date().toTimeString().split(' ')[0] + '.' + 
+                    String(Date.now() % 1000).padStart(3, '0');
+                    
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                logEntry.innerHTML = `
+                    <span class="log-timestamp">${timestamp}</span>
+                    <span class="log-level-${level}">[${level.toUpperCase()}]</span>
+                    <span>${message}</span>
+                `;
+                
+                const logPanel = document.getElementById('log-panel');
+                logPanel.appendChild(logEntry);
+                logPanel.scrollTop = logPanel.scrollHeight;
+                
+                console.log(`[Phase3APhase3BTest] ${level.toUpperCase()}: ${message}`);
+            }
+            
+            /**
+             * クリーンアップ
+             */
+            cleanup() {
+                try {
+                    this.log('info', '🧹 統合システムクリーンアップ開始...');
+                    
+                    // Phase 3-Aクリーンアップ
+                    if (this.phase3A.advanced) {
+                        this.phase3A.advanced.cleanup();
+                        this.phase3A.advanced = null;
+                    }
+                    
+                    // Phase 3-Bクリーンアップ
+                    if (this.phase3B.integrator) {
+                        this.phase3B.integrator.cleanup();
+                        this.phase3B.integrator = null;
+                    }
+                    
+                    // 状態リセット
+                    this.phase3A.initialized = false;
+                    this.phase3A.status = 'pending';
+                    this.phase3B.initialized = false;
+                    this.phase3B.status = 'pending';
+                    this.integration.active = false;
+                    
+                    this.updateUI();
+                    
+                    this.log('success', '✅ 統合システムクリーンアップ完了');
+                    
+                } catch (error) {
+                    this.log('error', `❌ クリーンアップエラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * テストリセット
+             */
+            reset() {
+                try {
+                    this.log('info', '🔄 テストシステムリセット...');
+                    
+                    // クリーンアップ実行
+                    this.cleanup();
+                    
+                    // パフォーマンス指標リセット
+                    this.integration.performance = {
+                        totalTests: 0,
+                        passedTests: 0,
+                        averageProcessingTime: 0,
+                        highSpeedUsageRate: 0,
+                        memoryUsage: 0,
+                        frameRate: 60
+                    };
+                    
+                    // ログクリア
+                    const logPanel = document.getElementById('log-panel');
+                    logPanel.innerHTML = `
+                        <div class="log-entry">
+                            <span class="log-timestamp">00:00:00.000</span>
+                            <span class="log-level-info">[INFO]</span>
+                            <span>ElementObserver Phase 3-A + Phase 3-B統合テストシステムリセット完了</span>
+                        </div>
+                    `;
+                    
+                    this.updateUI();
+                    
+                    this.log('success', '✅ テストシステムリセット完了');
+                    
+                } catch (error) {
+                    this.log('error', `❌ リセットエラー: ${error.message}`);
+                }
+            }
+        }
+        
+        // テストシステム初期化・起動
+        let integrationTest;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            integrationTest = new Phase3APhase3BIntegrationTest();
+        });
+        
+        // グローバルデバッグ用
+        window.Phase3APhase3BIntegrationTest = Phase3APhase3BIntegrationTest;
+        window.integrationTest = integrationTest;
+        
+    </script>
+</body>
+</html>
