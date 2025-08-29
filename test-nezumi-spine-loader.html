@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐭 Nezumi Spine Loader テスト</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.loading {
+            background: #fef5e7;
+            border: 1px solid #f6ad55;
+            color: #c05621;
+        }
+        
+        .status.success {
+            background: #f0fff4;
+            border: 1px solid #68d391;
+            color: #22543d;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            color: #742a2a;
+        }
+        
+        .spine-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            background: #2d3748;
+            border-radius: 10px;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        #spine-canvas {
+            border-radius: 10px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .info-panel {
+            background: #edf2f7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .info-panel h3 {
+            margin-top: 0;
+            color: #2d3748;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-item strong {
+            display: block;
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .info-item span {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .log-container {
+            background: #1a202c;
+            color: #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        
+        .log-entry.success { color: #68d391; }
+        .log-entry.error { color: #fc8181; }
+        .log-entry.info { color: #63b3ed; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐭 Nezumi Spine Loader テスト</h1>
+        
+        <div class="test-section">
+            <h2>🚀 PureSpineLoader マイクロモジュールテスト</h2>
+            <p>マイクロモジュール設計のPureSpineLoaderを使用してnezumiのSpineデータを読み込み・表示するテストページです。</p>
+            
+            <div class="test-controls">
+                <button id="load-nezumi" onclick="loadNezumiSpine()">
+                    🐭 Nezumi読み込み
+                </button>
+                <button id="test-module" onclick="testModule()">
+                    🧪 モジュールテスト
+                </button>
+                <button id="cleanup-btn" onclick="cleanupLoader()" disabled>
+                    🧹 クリーンアップ
+                </button>
+                <button id="clear-log" onclick="clearLog()">
+                    📋 ログクリア
+                </button>
+                <button id="debug-coords" onclick="debugCoordinates()" disabled>
+                    🎯 座標デバッグ
+                </button>
+                <button id="test-positions" onclick="testDifferentPositions()" disabled>
+                    📍 位置テスト
+                </button>
+            </div>
+            
+            <div id="status" class="status" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎬 Spine表示エリア</h3>
+            <div class="spine-container">
+                <canvas id="spine-canvas" width="800" height="600"></canvas>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 読み込み情報</h3>
+            <div class="info-panel">
+                <div class="info-grid" id="info-grid">
+                    <div class="info-item">
+                        <strong>読み込み状態</strong>
+                        <span id="load-status">未実行</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>ファイルパス</strong>
+                        <span id="file-paths">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>処理時間</strong>
+                        <span id="load-time">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>モジュール状態</strong>
+                        <span id="module-status">初期化前</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 実行ログ</h3>
+            <div class="log-container" id="log-container">
+                <div class="log-entry info">システム初期化完了 - PureSpineLoader テストページ起動</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL ライブラリ -->
+    <script src="assets/js/libs/spine-webgl.js"></script>
+    
+    <!-- PureSpineLoader マイクロモジュール -->
+    <script src="micromodules/spine-loader/PureSpineLoader.js"></script>
+
+    <script>
+        // グローバル変数
+        let spineLoader = null;
+        let spineRenderer = null;
+        let animationLoop = null;
+        let loadStartTime = 0;
+
+        /**
+         * ログ出力関数
+         */
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        /**
+         * ステータス表示更新
+         */
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        /**
+         * 情報パネル更新
+         */
+        function updateInfo(loadStatus, filePaths, loadTime, moduleStatus) {
+            document.getElementById('load-status').textContent = loadStatus;
+            document.getElementById('file-paths').textContent = filePaths;
+            document.getElementById('load-time').textContent = loadTime;
+            document.getElementById('module-status').textContent = moduleStatus;
+        }
+
+        /**
+         * Nezumi Spine読み込みメイン関数
+         */
+        async function loadNezumiSpine() {
+            const loadBtn = document.getElementById('load-nezumi');
+            const cleanupBtn = document.getElementById('cleanup-btn');
+            
+            try {
+                // ボタン状態更新
+                loadBtn.disabled = true;
+                loadBtn.innerHTML = '🔄 読み込み中...';
+                loadBtn.classList.add('loading');
+                
+                // 開始時刻記録
+                loadStartTime = performance.now();
+                
+                addLog('Nezumi Spine読み込み開始', 'info');
+                updateStatus('🔄 Nezumi Spineファイルを読み込み中...', 'loading');
+                updateInfo('読み込み中', '/assets/spine/characters/nezumi/', '計測中', '実行中');
+                
+                // Spine WebGLライブラリ確認
+                if (typeof window.spine === 'undefined') {
+                    throw new Error('Spine WebGLライブラリが読み込まれていません');
+                }
+                
+                addLog('Spine WebGLライブラリ確認完了', 'success');
+                
+                // PureSpineLoader作成
+                spineLoader = new PureSpineLoader({
+                    basePath: '/assets/spine/characters/nezumi/',
+                    atlasPath: '/assets/spine/characters/nezumi/nezumi.atlas',
+                    jsonPath: '/assets/spine/characters/nezumi/nezumi.json',
+                    scale: 1.0
+                });
+                
+                addLog('PureSpineLoaderインスタンス作成完了', 'success');
+                
+                // 読み込み実行
+                const result = await spineLoader.execute();
+                
+                // 処理時間計算
+                const loadTime = Math.round(performance.now() - loadStartTime);
+                
+                if (result.loaded) {
+                    addLog(`Spine読み込み成功 (${loadTime}ms)`, 'success');
+                    updateStatus('✅ Nezumi Spine読み込み成功！', 'success');
+                    updateInfo('読み込み完了', 'nezumi.atlas, nezumi.json, nezumi.png', `${loadTime}ms`, 'アクティブ');
+                    
+                    // Spine描画開始
+                    await startSpineRendering(result.spineData);
+                    
+                    cleanupBtn.disabled = false;
+                    // デバッグボタンを有効化
+                    document.getElementById('debug-coords').disabled = false;
+                    document.getElementById('test-positions').disabled = false;
+                } else {
+                    throw new Error(result.error || '不明なエラー');
+                }
+                
+            } catch (error) {
+                const loadTime = Math.round(performance.now() - loadStartTime);
+                addLog(`読み込みエラー: ${error.message} (${loadTime}ms)`, 'error');
+                updateStatus(`❌ 読み込みエラー: ${error.message}`, 'error');
+                updateInfo('エラー', '/assets/spine/characters/nezumi/', `${loadTime}ms (失敗)`, 'エラー状態');
+            } finally {
+                // ボタン状態復元
+                loadBtn.disabled = false;
+                loadBtn.innerHTML = '🐭 Nezumi読み込み';
+                loadBtn.classList.remove('loading');
+            }
+        }
+
+        /**
+         * Spine描画開始
+         */
+        async function startSpineRendering(spineData) {
+            try {
+                const canvas = document.getElementById('spine-canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                
+                if (!gl) {
+                    throw new Error('WebGLコンテキストの取得に失敗');
+                }
+                
+                addLog('WebGLコンテキスト取得成功', 'success');
+                
+                // Spine描画システム初期化
+                const shader = window.spine.Shader.newTwoColoredTextured(gl);
+                const batcher = new window.spine.PolygonBatcher(gl);
+                const skeletonRenderer = new window.spine.SkeletonRenderer(gl);
+                const renderer = new window.spine.SceneRenderer(canvas, gl);
+                
+                addLog('Spine描画システム初期化完了', 'success');
+                
+                // スケルトン作成
+                const skeleton = new window.spine.Skeleton(spineData.skeletonData);
+                skeleton.setToSetupPose();
+                skeleton.updateWorldTransform();
+                
+                // アニメーション状態作成
+                const animationStateData = new window.spine.AnimationStateData(spineData.skeletonData);
+                const animationState = new window.spine.AnimationState(animationStateData);
+                
+                // デフォルトアニメーション設定（nezumiの待機アニメーション）
+                const animations = spineData.skeletonData.animations;
+                if (animations.length > 0) {
+                    // taikiアニメーションを探す
+                    let defaultAnimation = animations.find(anim => anim.name === 'taiki') || animations[0];
+                    animationState.setAnimation(0, defaultAnimation.name, true);
+                    addLog(`アニメーション設定: ${defaultAnimation.name}`, 'success');
+                }
+                
+                // スケルトン位置設定（中央）
+                skeleton.x = canvas.width / 2;
+                skeleton.y = canvas.height * 0.8; // 下部に配置
+                skeleton.scaleX = skeleton.scaleY = 0.5; // サイズ調整
+                
+                // 📊 詳細座標情報をログ出力
+                addLog(`スケルトン座標設定: x=${skeleton.x}, y=${skeleton.y}`, 'info');
+                addLog(`Canvas寸法: width=${canvas.width}, height=${canvas.height}`, 'info');
+                addLog(`スケール: scaleX=${skeleton.scaleX}, scaleY=${skeleton.scaleY}`, 'info');
+                addLog(`SkeletonData: width=${spineData.skeletonData.width}, height=${spineData.skeletonData.height}`, 'info');
+                
+                addLog('スケルトン配置・スケール設定完了', 'success');
+                
+                // アニメーションループ開始
+                let lastTime = Date.now();
+                
+                function render() {
+                    const now = Date.now();
+                    const delta = (now - lastTime) / 1000;
+                    lastTime = now;
+                    
+                    // アニメーション更新
+                    animationState.update(delta);
+                    animationState.apply(skeleton);
+                    skeleton.updateWorldTransform();
+                    
+                    // 描画
+                    gl.clearColor(0.2, 0.2, 0.2, 1.0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    
+                    renderer.begin();
+                    renderer.drawSkeleton(skeleton, false);
+                    renderer.end();
+                    
+                    animationLoop = requestAnimationFrame(render);
+                }
+                
+                // 描画開始
+                render();
+                addLog('Nezumi描画ループ開始 - アニメーション表示中', 'success');
+                
+                // グローバル変数に保存
+                spineRenderer = {
+                    skeleton,
+                    animationState,
+                    renderer,
+                    gl
+                };
+                
+            } catch (error) {
+                addLog(`描画エラー: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        /**
+         * モジュール単独テスト
+         */
+        async function testModule() {
+            const testBtn = document.getElementById('test-module');
+            
+            try {
+                testBtn.disabled = true;
+                testBtn.innerHTML = '🧪 テスト中...';
+                
+                addLog('PureSpineLoader単独テスト開始', 'info');
+                updateStatus('🧪 モジュールテストを実行中...', 'loading');
+                
+                // PureSpineLoader.test()実行
+                const testResult = await PureSpineLoader.test();
+                
+                if (testResult.success) {
+                    addLog('モジュールテスト成功', 'success');
+                    updateStatus('✅ モジュールテスト成功！', 'success');
+                } else {
+                    addLog(`モジュールテスト失敗: ${testResult.error}`, 'error');
+                    updateStatus(`❌ モジュールテスト失敗: ${testResult.error}`, 'error');
+                }
+                
+            } catch (error) {
+                addLog(`テストエラー: ${error.message}`, 'error');
+                updateStatus(`❌ テストエラー: ${error.message}`, 'error');
+            } finally {
+                testBtn.disabled = false;
+                testBtn.innerHTML = '🧪 モジュールテスト';
+            }
+        }
+
+        /**
+         * クリーンアップ実行
+         */
+        function cleanupLoader() {
+            try {
+                addLog('クリーンアップ開始', 'info');
+                
+                // アニメーションループ停止
+                if (animationLoop) {
+                    cancelAnimationFrame(animationLoop);
+                    animationLoop = null;
+                    addLog('アニメーションループ停止', 'success');
+                }
+                
+                // Spine描画リソース解放
+                if (spineRenderer) {
+                    // WebGLリソースのクリーンアップは自動的に行われる
+                    spineRenderer = null;
+                    addLog('Spine描画リソース解放', 'success');
+                }
+                
+                // Canvas クリア
+                const canvas = document.getElementById('spine-canvas');
+                const gl = canvas.getContext('webgl');
+                if (gl) {
+                    gl.clearColor(0.2, 0.2, 0.2, 1.0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                }
+                
+                // PureSpineLoader クリーンアップ
+                if (spineLoader) {
+                    spineLoader.cleanup();
+                    spineLoader = null;
+                    addLog('PureSpineLoader クリーンアップ完了', 'success');
+                }
+                
+                // UI状態リセット
+                updateStatus('🧹 クリーンアップ完了', 'success');
+                updateInfo('未実行', '-', '-', '初期化前');
+                document.getElementById('cleanup-btn').disabled = true;
+                document.getElementById('debug-coords').disabled = true;
+                document.getElementById('test-positions').disabled = true;
+                
+                addLog('全リソースクリーンアップ完了', 'success');
+                
+            } catch (error) {
+                addLog(`クリーンアップエラー: ${error.message}`, 'error');
+            }
+        }
+
+        /**
+         * ログクリア
+         */
+        function clearLog() {
+            const logContainer = document.getElementById('log-container');
+            logContainer.innerHTML = '<div class="log-entry info">ログクリア - PureSpineLoader テストページ</div>';
+        }
+
+        /**
+         * 座標デバッグ情報表示
+         */
+        function debugCoordinates() {
+            if (!spineRenderer || !spineRenderer.skeleton) {
+                addLog('❌ Spine描画システムが初期化されていません', 'error');
+                return;
+            }
+
+            const skeleton = spineRenderer.skeleton;
+            const canvas = document.getElementById('spine-canvas');
+            const gl = spineRenderer.gl;
+
+            addLog('=== 📊 詳細座標デバッグ情報 ===', 'info');
+            addLog(`🎯 Skeleton座標: x=${skeleton.x}, y=${skeleton.y}`, 'info');
+            addLog(`📏 Skeletonスケール: scaleX=${skeleton.scaleX}, scaleY=${skeleton.scaleY}`, 'info');
+            addLog(`🖼️ Canvas寸法: ${canvas.width}x${canvas.height}`, 'info');
+            addLog(`📐 SkeletonData寸法: ${skeleton.data.width}x${skeleton.data.height}`, 'info');
+            addLog(`🎨 ViewPort: ${gl.getParameter(gl.VIEWPORT)}`, 'info');
+            
+            // Bounding Box情報
+            skeleton.updateWorldTransform();
+            const bounds = skeleton.getBounds();
+            addLog(`📦 BoundingBox: x=${bounds.offset.x}, y=${bounds.offset.y}, width=${bounds.size.x}, height=${bounds.size.y}`, 'info');
+
+            // アニメーション情報
+            if (spineRenderer.animationState.tracks.length > 0) {
+                const track = spineRenderer.animationState.tracks[0];
+                if (track.animation) {
+                    addLog(`🎬 アニメーション: ${track.animation.name}`, 'info');
+                }
+            }
+
+            addLog('=== デバッグ情報終了 ===', 'info');
+        }
+
+        /**
+         * 異なる位置での表示テスト
+         */
+        function testDifferentPositions() {
+            if (!spineRenderer || !spineRenderer.skeleton) {
+                addLog('❌ Spine描画システムが初期化されていません', 'error');
+                return;
+            }
+
+            const skeleton = spineRenderer.skeleton;
+            const canvas = document.getElementById('spine-canvas');
+            
+            addLog('🧪 位置テスト開始', 'info');
+            
+            const testPositions = [
+                { name: '中央上', x: canvas.width / 2, y: 100, scale: 0.3 },
+                { name: '中央中', x: canvas.width / 2, y: canvas.height / 2, scale: 0.3 },
+                { name: '中央下', x: canvas.width / 2, y: canvas.height - 100, scale: 0.3 },
+                { name: '左上', x: 100, y: 100, scale: 0.2 },
+                { name: '右上', x: canvas.width - 100, y: 100, scale: 0.2 },
+                { name: '大きく中央', x: canvas.width / 2, y: canvas.height / 2, scale: 1.0 },
+                { name: '元の位置', x: canvas.width / 2, y: canvas.height * 0.8, scale: 0.5 }
+            ];
+
+            let currentTest = 0;
+
+            function runNextTest() {
+                if (currentTest >= testPositions.length) {
+                    addLog('✅ 位置テスト完了', 'success');
+                    return;
+                }
+
+                const pos = testPositions[currentTest];
+                skeleton.x = pos.x;
+                skeleton.y = pos.y;
+                skeleton.scaleX = skeleton.scaleY = pos.scale;
+
+                addLog(`📍 テスト${currentTest + 1}: ${pos.name} (${pos.x}, ${pos.y}) scale=${pos.scale}`, 'info');
+                
+                currentTest++;
+                setTimeout(runNextTest, 2000); // 2秒後に次のテスト
+            }
+
+            runNextTest();
+        }
+
+        // ページロード完了時の初期化
+        window.addEventListener('load', function() {
+            addLog('ページロード完了 - Nezumi Spine Loaderテストページ準備完了', 'success');
+            
+            // Spine WebGLライブラリ確認
+            if (typeof window.spine !== 'undefined') {
+                addLog('Spine WebGLライブラリ検出成功', 'success');
+            } else {
+                addLog('⚠️ Spine WebGLライブラリが見つかりません', 'error');
+                updateStatus('❌ Spine WebGLライブラリが読み込まれていません', 'error');
+            }
+            
+            // PureSpineLoader確認
+            if (typeof window.PureSpineLoader !== 'undefined') {
+                addLog('PureSpineLoaderモジュール検出成功', 'success');
+            } else {
+                addLog('⚠️ PureSpineLoaderモジュールが見つかりません', 'error');
+            }
+        });
+
+        // ウィンドウクローズ前のクリーンアップ
+        window.addEventListener('beforeunload', function() {
+            if (spineLoader) {
+                spineLoader.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>

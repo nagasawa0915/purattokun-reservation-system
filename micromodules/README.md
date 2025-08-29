@@ -294,9 +294,8 @@ micromodules/
 │   └── examples/
 │       └── interaction-patterns.html  # インタラクションパターン例
 │
-├── experimental/                       # 実験的機能・旧バージョン
-│   ├── 🚨 PureSpineLoader.js           # 廃止済み → spine-loader/へ移行
-│   ├── 🚨 各種旧バージョンファイル      # 参考・アーカイブ用途
+├── experimental/                       # 実験的機能（アーカイブ済み）
+│   ├── 🗄️ [アーカイブ済み] PureSpineLoader.js → archive/spine-loader-modules-archive/
 │   └── 各種デモファイル               # 実験・検証用
 │
 └── features/                          # 機能別実装（Legacy）
@@ -376,6 +375,24 @@ try {
 - **4つのマイクロモジュール**: 全て単独テスト成功
 - **統合システム**: v3.0完全互換ワークフロー動作確認
 - **デモシステム**: ブラウザ実動作・インタラクティブ確認完了
+
+## 🗄️ アーカイブ済みモジュール（2025-08-28）
+
+### Spine読み込み関連モジュール
+**理由**: PureSpineLoader v4.0正式版への統一・混乱防止
+
+- **UniversalSpineLoader v3.0** → `archive/spine-loader-modules-archive/universal-spine-loader/`
+- **実験版PureSpineLoader** → `archive/spine-loader-modules-archive/experimental/`  
+- **SpineCharacterManager** → `archive/spine-integration-archive/spine-character-manager/`
+- **各種Spine統合システム** → `archive/spine-integration-archive/integration-systems/`
+
+### 推奨移行方法
+❌ **旧**: `new SpineCharacterManager()`  
+✅ **新**: `new PureSpineLoader()` (micromodules/spine-loader/)
+
+詳細な移行ガイド: `archive/*/ARCHIVE_README.md`
+
+---
 
 ## 📈 今後の拡張可能性
 

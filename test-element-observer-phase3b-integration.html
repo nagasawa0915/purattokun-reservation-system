@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElementObserver Phase 3B統合テスト - 本番Spine統合システム</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            margin: 0;
+            touch-action: none;
+            color: white;
+        }
+        .test-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .test-area {
+            position: relative;
+            width: 1000px;
+            height: 600px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            margin: 20px auto;
+            border-radius: 15px;
+            touch-action: none;
+            overflow: hidden;
+        }
+        .layout-anchor {
+            position: absolute;
+            background: rgba(255, 107, 107, 0.4);
+            border: 2px solid #ff6b6b;
+            border-radius: 10px;
+            transform: translate(-50%, -50%);
+            touch-action: none;
+            transition: all 0.2s ease;
+        }
+        .interactive {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transform: translate(var(--tx, 0), var(--ty, 0)) scale(var(--scale, 1)) rotate(var(--rotation, 0deg));
+            touch-action: none;
+        }
+        .canvas-element {
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            background: rgba(78, 205, 196, 0.2);
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .control-group {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .control-group h3 {
+            margin: 0 0 10px 0;
+            color: #feca57;
+            font-size: 16px;
+        }
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 15px;
+            margin: 3px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        button.primary {
+            background: rgba(78, 205, 196, 0.3);
+            border-color: #4ecdc4;
+        }
+        button.secondary {
+            background: rgba(255, 107, 107, 0.3);
+            border-color: #ff6b6b;
+        }
+        .coordinate-display {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .coord-system {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 11px;
+        }
+        .coord-system h4 {
+            margin: 0 0 5px 0;
+            color: #feca57;
+            font-size: 12px;
+        }
+        .coord-value {
+            color: #4ecdc4;
+            font-family: monospace;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .success { color: #26de81; }
+        .error { color: #fc5c65; }
+        .warning { color: #fed330; }
+        .info { color: #45aaf2; }
+        .debug { color: #a55eea; }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+        .status.active {
+            background: rgba(38, 222, 129, 0.3);
+            color: #26de81;
+            border: 1px solid #26de81;
+        }
+        .status.inactive {
+            background: rgba(252, 92, 101, 0.3);
+            color: #fc5c65;
+            border: 1px solid #fc5c65;
+        }
+        .instructions {
+            background: rgba(69, 170, 242, 0.2);
+            border: 1px solid #45aaf2;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #45aaf2;
+        }
+        .phase-indicator {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .phase-indicator h1 {
+            margin: 0;
+            font-size: 24px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .spine-canvas {
+            position: absolute;
+            cursor: pointer;
+            border: 2px solid rgba(255, 215, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="phase-indicator">
+            <h1>🚀 ElementObserver Phase 3B統合テスト</h1>
+            <p>本番Spine統合システム - nezumiキャラクター読み込み完全対応</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>📝 Phase 3B統合テスト項目</h3>
+            <ol>
+                <li><strong>本番Spineシステム統合</strong> - spine-character-manager.js正式統合</li>
+                <li><strong>nezumiキャラクター読み込み</strong> - 本番フローでのSpineデータ確実読み込み</li>
+                <li><strong>SpineCharacterManager初期化</strong> - 正しい初期化フロー実装</li>
+                <li><strong>ElementObserver統合</strong> - Phase 2機能と本番システムの完全統合</li>
+                <li><strong>キャラクター配置制御</strong> - 統合システムでの正確な位置・スケール制御</li>
+            </ol>
+            <p><strong>🎯 期待結果</strong>：nezumiのSpineアニメーションが確実に読み込まれ、ElementObserver Phase 2機能との完全統合動作</p>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>🚀 Spine統合初期化</h3>
+                <button class="primary" onclick="initializeSpineIntegration()">Spine統合システム初期化</button>
+                <button onclick="loadNezumiCharacter()">nezumiキャラクター読み込み</button>
+                <button onclick="showSpineSystemStatus()">Spineシステム状態確認</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🎯 ElementObserver統合</h3>
+                <button onclick="initializeElementObserver()">ElementObserver Phase 2初期化</button>
+                <button onclick="integrateSystems()">システム統合実行</button>
+                <button onclick="testIntegratedPositioning()">統合位置制御テスト</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🎮 キャラクター制御</h3>
+                <button onclick="testCharacterMovement()">キャラクター移動テスト</button>
+                <button onclick="testAnimationSequence()">アニメーションテスト</button>
+                <button onclick="testBoundsDetection()">境界検出テスト</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>📊 診断・デバッグ</h3>
+                <button onclick="showDetailedStatus()">詳細状態表示</button>
+                <button onclick="debugSpineLoading()">Spine読み込み診断</button>
+                <button onclick="clearLog()">ログクリア</button>
+            </div>
+        </div>
+        
+        <div>
+            Phase 3B状態: 
+            <span id="spine-integration-status" class="status inactive">Spine Integration Inactive</span>
+            <span id="character-loading-status" class="status inactive">Character Loading Inactive</span>
+            <span id="element-observer-status" class="status inactive">ElementObserver Inactive</span>
+            <span id="system-integration-status" class="status inactive">System Integration Inactive</span>
+        </div>
+        
+        <!-- 座標系リアルタイム表示 -->
+        <div class="coordinate-display" id="coordinate-display">
+            <div class="coord-system">
+                <h4>📐 DOM座標系</h4>
+                <div class="coord-value" id="dom-coords">未初期化</div>
+            </div>
+            <div class="coord-system">
+                <h4>🎯 Transform座標系</h4>
+                <div class="coord-value" id="transform-coords">未初期化</div>
+            </div>
+            <div class="coord-system">
+                <h4>🌐 WebGL座標系</h4>
+                <div class="coord-value" id="webgl-coords">未初期化</div>
+            </div>
+            <div class="coord-system">
+                <h4>🎮 Skeleton座標系</h4>
+                <div class="coord-value" id="skeleton-coords">未初期化</div>
+            </div>
+            <div class="coord-system">
+                <h4>📱 Canvas座標系</h4>
+                <div class="coord-value" id="canvas-coords">未初期化</div>
+            </div>
+        </div>
+        
+        <!-- 🎯 メインテストエリア -->
+        <div class="test-area" id="test-area">
+            <!-- nezumiキャラクターCanvas -->
+            <canvas id="nezumi-canvas" class="spine-canvas" width="300" height="200" 
+                    style="left: 50%; top: 50%; transform: translate(-50%, -50%); width: 150px; height: 100px; display: none;"
+                    data-character-name="nezumi"></canvas>
+            
+            <!-- ElementObserverテスト要素 -->
+            <div id="test-layout-anchor" class="layout-anchor" 
+                 style="left: 30%; top: 30%; width: 100px; height: 80px;">
+                <div class="interactive">Test Element</div>
+            </div>
+        </div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <!-- 🚀 Spine WebGL Runtime -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    
+    <!-- 🎯 本番Spine統合システム -->
+    <script src="assets/spine/spine-integration-v2.js"></script>
+    <script src="assets/spine/spine-character-manager.js"></script>
+    
+    <!-- 🚀 ElementObserver Phase 2 マイクロモジュール群 -->
+    <script src="micromodules/element-observer/ElementObserverCore.js"></script>
+    <script src="micromodules/element-observer/ElementObserver.js"></script>
+    <script src="micromodules/element-observer/ElementObserverTransform.js"></script>
+    <script src="micromodules/element-observer/ElementObserverWebGL.js"></script>
+    <script src="micromodules/element-observer/ElementObserverResponsive.js"></script>
+    <script src="micromodules/element-observer/ElementObserverAdvanced.js"></script>
+    
+    <!-- ✨ Phase 3B統合テストシステム -->
+    <script>
+        // グローバル変数
+        let spineCharacterManager = null;
+        let elementObserverAdvanced = null;
+        let nezumiCharacter = null;
+        let systemsIntegrated = false;
+        
+        const logElement = document.getElementById('log');
+        const statusElements = {
+            spineIntegration: document.getElementById('spine-integration-status'),
+            characterLoading: document.getElementById('character-loading-status'),
+            elementObserver: document.getElementById('element-observer-status'),
+            systemIntegration: document.getElementById('system-integration-status')
+        };
+        
+        // ログ関数
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            const logLine = `[${timestamp}] ${message}\n`;
+            
+            const span = document.createElement('span');
+            span.className = className;
+            span.textContent = logLine;
+            logElement.appendChild(span);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+        
+        // ステータス更新
+        function updateStatus(elementName, isActive) {
+            const element = statusElements[elementName];
+            if (element) {
+                const statusText = elementName.charAt(0).toUpperCase() + elementName.slice(1).replace(/([A-Z])/g, ' $1');
+                element.textContent = isActive ? statusText + ' Active' : statusText + ' Inactive';
+                element.className = `status ${isActive ? 'active' : 'inactive'}`;
+            }
+        }
+        
+        // 🚀 Spine統合システム初期化
+        async function initializeSpineIntegration() {
+            log('=== Spine統合システム初期化開始 ===', 'success');
+            
+            try {
+                // SpineCharacterManagerの初期化
+                spineCharacterManager = new SpineCharacterManager();
+                
+                const initialized = await spineCharacterManager.init();
+                if (!initialized) {
+                    throw new Error('SpineCharacterManager初期化失敗');
+                }
+                
+                updateStatus('spineIntegration', true);
+                
+                log('✅ SpineCharacterManager初期化完了', 'success');
+                log('🎯 Spine WebGL Runtime準備完了', 'success');
+                
+                // Spineランタイム情報確認
+                if (typeof spine !== 'undefined') {
+                    log('📋 Spine Runtime確認:', 'info');
+                    log(`  - spine object: ${typeof spine}`, 'info');
+                    log(`  - spine.webgl: ${typeof spine.webgl}`, 'info');
+                    if (spine.webgl) {
+                        log(`  - WebGL classes available: ${Object.keys(spine.webgl).length}`, 'info');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Spine統合システム初期化エラー: ${error.message}`, 'error');
+                updateStatus('spineIntegration', false);
+            }
+        }
+        
+        // nezumiキャラクター読み込み
+        async function loadNezumiCharacter() {
+            if (!spineCharacterManager) {
+                log('⚠️ 先にSpine統合システムを初期化してください', 'warning');
+                return;
+            }
+            
+            log('=== nezumiキャラクター読み込み開始 ===', 'success');
+            
+            try {
+                const canvas = document.getElementById('nezumi-canvas');
+                const basePath = 'assets/spine/characters/nezumi/';
+                const testArea = document.getElementById('test-area');
+                
+                log(`📁 読み込みパス: ${basePath}`, 'info');
+                log(`🎮 Canvas要素: ${canvas.id}`, 'info');
+                
+                // キャラクター読み込み実行
+                nezumiCharacter = await spineCharacterManager.loadCharacter('nezumi', basePath, testArea);
+                
+                if (nezumiCharacter) {
+                    updateStatus('characterLoading', true);
+                    
+                    // Canvasを表示
+                    canvas.style.display = 'block';
+                    
+                    log('✅ nezumiキャラクター読み込み成功', 'success');
+                    log(`📊 キャラクタータイプ: ${nezumiCharacter.type}`, 'info');
+                    
+                    if (nezumiCharacter.type === 'spine') {
+                        log('🎭 SpineWebGL読み込み成功', 'success');
+                        log(`🎮 Canvas: ${nezumiCharacter.canvas.id}`, 'info');
+                        log(`🦴 Skeleton: ${nezumiCharacter.skeleton ? 'あり' : 'なし'}`, 'info');
+                        log(`🎬 AnimationState: ${nezumiCharacter.animationState ? 'あり' : 'なし'}`, 'info');
+                    } else {
+                        log('📦 プレースホルダーモード（Spine読み込み中）', 'warning');
+                    }
+                    
+                } else {
+                    throw new Error('キャラクター読み込み失敗');
+                }
+                
+            } catch (error) {
+                log(`❌ nezumiキャラクター読み込みエラー: ${error.message}`, 'error');
+                updateStatus('characterLoading', false);
+            }
+        }
+        
+        // ElementObserver Phase 2初期化
+        async function initializeElementObserver() {
+            log('=== ElementObserver Phase 2初期化開始 ===', 'success');
+            
+            try {
+                // テスト要素取得
+                const testElement = document.getElementById('test-layout-anchor');
+                const canvas = document.getElementById('nezumi-canvas');
+                
+                if (!testElement) {
+                    throw new Error('テスト要素が見つかりません');
+                }
+                
+                // ElementObserverAdvanced作成
+                elementObserverAdvanced = new ElementObserverAdvanced();
+                
+                // 疑似SkeletonとRenderer（nezumiキャラクターが使用可能な場合は実際のものを使用）
+                let skeleton, renderer;
+                
+                if (nezumiCharacter && nezumiCharacter.type === 'spine') {
+                    skeleton = nezumiCharacter.skeleton;
+                    renderer = nezumiCharacter.renderer;
+                    log('🦴 実際のSpine Skeleton/Rendererを使用', 'info');
+                } else {
+                    // 疑似オブジェクト作成
+                    skeleton = {
+                        x: canvas.width / 2,
+                        y: canvas.height / 2,
+                        scaleX: 1,
+                        scaleY: 1,
+                        updateWorldTransform: () => {},
+                        getBounds: () => ({ x: 0, y: 0, width: 100, height: 80 })
+                    };
+                    renderer = {
+                        camera: {
+                            position: { x: canvas.width / 2, y: canvas.height / 2 },
+                            zoom: 1.0,
+                            setViewport: (w, h) => {}
+                        },
+                        canvas: canvas
+                    };
+                    log('📦 疑似Skeleton/Rendererを使用', 'info');
+                }
+                
+                // Phase 2高度初期化
+                const initialized = await elementObserverAdvanced.initializeAdvanced(
+                    testElement,
+                    canvas,
+                    skeleton,
+                    renderer,
+                    {
+                        cssWidth: '15%',
+                        cssHeight: '10%',
+                        bufferWidth: 300,
+                        bufferHeight: 200,
+                        quality: 'high'
+                    }
+                );
+                
+                if (initialized) {
+                    updateStatus('elementObserver', true);
+                    
+                    log('✅ ElementObserver Phase 2初期化完了', 'success');
+                    log('🎯 5座標系統合システム開始', 'success');
+                    
+                    // リアルタイム座標表示開始
+                    startCoordinateDisplay();
+                    
+                } else {
+                    throw new Error('ElementObserver初期化失敗');
+                }
+                
+            } catch (error) {
+                log(`❌ ElementObserver初期化エラー: ${error.message}`, 'error');
+                updateStatus('elementObserver', false);
+            }
+        }
+        
+        // システム統合実行
+        async function integrateSystems() {
+            if (!spineCharacterManager || !elementObserverAdvanced) {
+                log('⚠️ 先にSpine統合システムとElementObserverを初期化してください', 'warning');
+                return;
+            }
+            
+            log('=== システム統合実行開始 ===', 'success');
+            
+            try {
+                // Spineキャラクターとの統合
+                if (nezumiCharacter && nezumiCharacter.type === 'spine') {
+                    // 実際のSpineキャラクターと統合
+                    elementObserverAdvanced.updateWebGLComponents(
+                        nezumiCharacter.skeleton,
+                        nezumiCharacter.renderer
+                    );
+                    
+                    log('🔗 Spineキャラクターとの統合完了', 'success');
+                }
+                
+                // 統合変化監視開始
+                elementObserverAdvanced.onIntegrationChange((event) => {
+                    log(`🔄 統合変化検出: ${event.type}`, 'debug');
+                    updateCoordinateDisplay();
+                });
+                
+                systemsIntegrated = true;
+                updateStatus('systemIntegration', true);
+                
+                log('✅ システム統合完了', 'success');
+                log('🎯 ElementObserver + Spine統合システム連動開始', 'success');
+                
+            } catch (error) {
+                log(`❌ システム統合エラー: ${error.message}`, 'error');
+                updateStatus('systemIntegration', false);
+            }
+        }
+        
+        // 統合位置制御テスト
+        function testIntegratedPositioning() {
+            if (!systemsIntegrated) {
+                log('⚠️ 先にシステム統合を実行してください', 'warning');
+                return;
+            }
+            
+            log('=== 統合位置制御テスト開始 ===', 'success');
+            
+            const testPositions = [
+                { x: 25, y: 35, unit: '%', name: '左上' },
+                { x: 75, y: 35, unit: '%', name: '右上' },
+                { x: 75, y: 75, unit: '%', name: '右下' },
+                { x: 25, y: 75, unit: '%', name: '左下' },
+                { x: 50, y: 50, unit: '%', name: '中央' }
+            ];
+            
+            let index = 0;
+            const moveNext = () => {
+                if (index >= testPositions.length) {
+                    log('✅ 統合位置制御テスト完了', 'success');
+                    return;
+                }
+                
+                const pos = testPositions[index];
+                log(`🎯 統合位置設定: ${pos.name} (${pos.x}${pos.unit}, ${pos.y}${pos.unit})`, 'info');
+                
+                const success = elementObserverAdvanced.setUnifiedPosition(pos.x, pos.y, pos.unit);
+                if (success) {
+                    log(`✅ ${pos.name}移動完了`, 'success');
+                } else {
+                    log(`❌ ${pos.name}移動失敗`, 'error');
+                }
+                
+                index++;
+                setTimeout(moveNext, 1500);
+            };
+            
+            moveNext();
+        }
+        
+        // キャラクター移動テスト
+        function testCharacterMovement() {
+            if (!nezumiCharacter) {
+                log('⚠️ 先にnezumiキャラクターを読み込んでください', 'warning');
+                return;
+            }
+            
+            log('=== キャラクター移動テスト開始 ===', 'success');
+            
+            const canvas = document.getElementById('nezumi-canvas');
+            const positions = [
+                { left: '30%', top: '30%' },
+                { left: '70%', top: '30%' },
+                { left: '70%', top: '70%' },
+                { left: '30%', top: '70%' },
+                { left: '50%', top: '50%' }
+            ];
+            
+            let index = 0;
+            const moveNext = () => {
+                if (index >= positions.length) {
+                    log('✅ キャラクター移動テスト完了', 'success');
+                    return;
+                }
+                
+                const pos = positions[index];
+                canvas.style.left = pos.left;
+                canvas.style.top = pos.top;
+                
+                log(`🎮 キャラクター移動: ${pos.left}, ${pos.top}`, 'info');
+                
+                index++;
+                setTimeout(moveNext, 1000);
+            };
+            
+            moveNext();
+        }
+        
+        // アニメーションテスト
+        function testAnimationSequence() {
+            if (!nezumiCharacter || nezumiCharacter.type !== 'spine') {
+                log('⚠️ Spineキャラクターが読み込まれていません', 'warning');
+                return;
+            }
+            
+            log('=== アニメーションシーケンステスト開始 ===', 'success');
+            
+            try {
+                const { skeleton, animationState } = nezumiCharacter;
+                
+                if (skeleton.data.animations.length > 0) {
+                    const animName = skeleton.data.animations[0].name;
+                    animationState.setAnimation(0, animName, true);
+                    log(`🎭 アニメーション開始: ${animName}`, 'success');
+                } else {
+                    log('⚠️ アニメーションが見つかりません', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ アニメーションテストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 境界検出テスト
+        function testBoundsDetection() {
+            log('=== 境界検出テスト開始 ===', 'success');
+            
+            if (!nezumiCharacter) {
+                log('⚠️ nezumiキャラクターが読み込まれていません', 'warning');
+                return;
+            }
+            
+            const canvas = document.getElementById('nezumi-canvas');
+            const rect = canvas.getBoundingClientRect();
+            
+            log('📐 Canvas境界情報:', 'info');
+            log(`  位置: (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)})`, 'info');
+            log(`  サイズ: ${rect.width.toFixed(1)} x ${rect.height.toFixed(1)}`, 'info');
+            
+            // クリックハンドラー設定テスト
+            if (nezumiCharacter.canvas) {
+                log('🖱️ クリックハンドラーテスト: Canvasをクリックしてください', 'info');
+                
+                nezumiCharacter.canvas.onclick = (event) => {
+                    const clickX = event.clientX - rect.left;
+                    const clickY = event.clientY - rect.top;
+                    log(`🎯 Canvas内クリック: (${clickX.toFixed(1)}, ${clickY.toFixed(1)})`, 'success');
+                };
+            }
+            
+            log('✅ 境界検出テスト準備完了', 'success');
+        }
+        
+        // Spine読み込み診断
+        function debugSpineLoading() {
+            log('=== Spine読み込み診断開始 ===', 'debug');
+            
+            // Spineランタイム確認
+            log('📋 Spine Runtime診断:', 'debug');
+            log(`  spine: ${typeof spine}`, 'debug');
+            if (typeof spine !== 'undefined') {
+                log(`  spine.webgl: ${typeof spine.webgl}`, 'debug');
+                log(`  spine keys: [${Object.keys(spine).join(', ')}]`, 'debug');
+                if (spine.webgl) {
+                    log(`  webgl keys: [${Object.keys(spine.webgl).join(', ')}]`, 'debug');
+                }
+            }
+            
+            // SpineCharacterManager状態
+            log('🔧 SpineCharacterManager診断:', 'debug');
+            if (spineCharacterManager) {
+                log(`  initialized: ${spineCharacterManager.initialized}`, 'debug');
+                log(`  characters: ${spineCharacterManager.characters.size}`, 'debug');
+                
+                spineCharacterManager.characters.forEach((char, name) => {
+                    log(`    ${name}: ${char.type}`, 'debug');
+                });
+            } else {
+                log('  SpineCharacterManager未初期化', 'debug');
+            }
+            
+            // nezumiキャラクター詳細
+            if (nezumiCharacter) {
+                log('🐭 nezumiキャラクター詳細:', 'debug');
+                log(`  type: ${nezumiCharacter.type}`, 'debug');
+                log(`  canvas: ${nezumiCharacter.canvas?.id || 'なし'}`, 'debug');
+                log(`  skeleton: ${nezumiCharacter.skeleton ? 'あり' : 'なし'}`, 'debug');
+                log(`  animationState: ${nezumiCharacter.animationState ? 'あり' : 'なし'}`, 'debug');
+                
+                if (nezumiCharacter.skeleton?.data) {
+                    log(`  animations: [${nezumiCharacter.skeleton.data.animations.map(a => a.name).join(', ')}]`, 'debug');
+                }
+            }
+            
+            log('✅ Spine読み込み診断完了', 'debug');
+        }
+        
+        // 詳細状態表示
+        function showDetailedStatus() {
+            log('=== Phase 3B詳細状態 ===', 'info');
+            
+            log('🚀 Spine統合システム:', 'info');
+            log(`  SpineCharacterManager: ${spineCharacterManager ? '初期化済み' : '未初期化'}`, 'info');
+            log(`  nezumiキャラクター: ${nezumiCharacter ? nezumiCharacter.type : '未読み込み'}`, 'info');
+            
+            log('⚙️ ElementObserver Phase 2:', 'info');
+            log(`  初期化状態: ${elementObserverAdvanced ? '初期化済み' : '未初期化'}`, 'info');
+            
+            if (elementObserverAdvanced?.integrationState) {
+                const state = elementObserverAdvanced.integrationState;
+                log(`  統合状態: ${state.initialized}`, 'info');
+                log(`  アクティブモジュール: [${state.activeModules?.join(', ') || 'なし'}]`, 'info');
+            }
+            
+            log('🔗 システム統合:', 'info');
+            log(`  統合完了: ${systemsIntegrated}`, 'info');
+            
+            log('📊 Canvas状態:', 'info');
+            const canvas = document.getElementById('nezumi-canvas');
+            log(`  表示: ${canvas.style.display}`, 'info');
+            log(`  位置: ${canvas.style.left}, ${canvas.style.top}`, 'info');
+            log(`  サイズ: ${canvas.style.width}, ${canvas.style.height}`, 'info');
+        }
+        
+        // Spineシステム状態確認
+        function showSpineSystemStatus() {
+            if (!spineCharacterManager) {
+                log('⚠️ SpineCharacterManager未初期化', 'warning');
+                return;
+            }
+            
+            log('=== Spineシステム状態確認 ===', 'info');
+            log(`初期化済み: ${spineCharacterManager.initialized}`, 'info');
+            log(`読み込み済みキャラクター数: ${spineCharacterManager.characters.size}`, 'info');
+            
+            spineCharacterManager.characters.forEach((character, name) => {
+                log(`  ${name}: ${character.type}`, 'info');
+                if (character.type === 'spine' && character.skeleton) {
+                    const animations = character.skeleton.data.animations || [];
+                    log(`    アニメーション: [${animations.map(a => a.name).join(', ')}]`, 'info');
+                }
+            });
+        }
+        
+        // リアルタイム座標表示
+        let coordinateUpdateInterval = null;
+        
+        function startCoordinateDisplay() {
+            if (coordinateUpdateInterval) {
+                clearInterval(coordinateUpdateInterval);
+            }
+            
+            coordinateUpdateInterval = setInterval(() => {
+                updateCoordinateDisplay();
+            }, 100); // 10fps更新
+            
+            log('📊 リアルタイム座標表示開始', 'info');
+        }
+        
+        function updateCoordinateDisplay() {
+            if (!elementObserverAdvanced || !elementObserverAdvanced.integrationState?.initialized) {
+                return;
+            }
+            
+            try {
+                const coords = elementObserverAdvanced.coordinateSystems;
+                
+                document.getElementById('dom-coords').textContent = 
+                    `${coords.dom.x}${coords.dom.unit}, ${coords.dom.y}${coords.dom.unit}`;
+                    
+                document.getElementById('transform-coords').textContent = 
+                    `tx: ${coords.transform.tx.toFixed(1)}px\nty: ${coords.transform.ty.toFixed(1)}px\nscale: ${coords.transform.scale}`;
+                    
+                document.getElementById('webgl-coords').textContent = 
+                    `${coords.webgl.x.toFixed(1)}, ${coords.webgl.y.toFixed(1)}\ncamera: ${coords.webgl.camera.x.toFixed(1)}, ${coords.webgl.camera.y.toFixed(1)}`;
+                    
+                document.getElementById('skeleton-coords').textContent = 
+                    `${coords.skeleton.x.toFixed(1)}, ${coords.skeleton.y.toFixed(1)}\nscale: ${coords.skeleton.scaleX}, ${coords.skeleton.scaleY}`;
+                    
+                document.getElementById('canvas-coords').textContent = 
+                    `${coords.canvas.displayWidth}x${coords.canvas.displayHeight}\n${coords.canvas.bufferWidth}x${coords.canvas.bufferHeight}`;
+            } catch (error) {
+                // 座標表示エラーは無視（デバッグログのみ）
+            }
+        }
+        
+        // ページ読み込み時
+        window.addEventListener('load', () => {
+            log('🌐 ElementObserver Phase 3B統合テストページ読み込み完了');
+            log('');
+            log('🚀 Phase 3B統合テスト目標:');
+            log('  1. 本番Spine統合システムの正式統合');
+            log('  2. nezumiキャラクターの確実な読み込み');
+            log('  3. ElementObserver Phase 2機能との完全統合');
+            log('  4. 統合システムでの正確な位置・アニメーション制御');
+            log('');
+            log('▶️ 「Spine統合システム初期化」→「nezumiキャラクター読み込み」→「システム統合実行」の順でテスト開始');
+        });
+        
+        // クリーンアップ
+        window.addEventListener('beforeunload', () => {
+            if (coordinateUpdateInterval) {
+                clearInterval(coordinateUpdateInterval);
+            }
+            if (spineCharacterManager) {
+                // キャラクタークリーンアップ
+                spineCharacterManager.characters.forEach((character) => {
+                    if (character.canvas && character.canvas.parentNode) {
+                        character.canvas.remove();
+                    }
+                });
+            }
+            if (elementObserverAdvanced) {
+                elementObserverAdvanced.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>

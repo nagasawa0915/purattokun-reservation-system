@@ -84,13 +84,15 @@ class PureSpineLoader {
                 throw new Error('Spine WebGLライブラリが読み込まれていません（window.spineが未定義）');
             }
             
-            // 必要なWebGLクラス群の存在確認
+            // 必要なWebGLクラス群の存在確認（トラブルシューティング対応版）
             const requiredClasses = [
                 'AssetManager',
                 'SkeletonJson', 
                 'AtlasAttachmentLoader',
                 'PolygonBatcher',
-                'SkeletonRenderer'
+                'SkeletonRenderer',
+                'Skeleton',
+                'AnimationState'
             ];
             
             const missingClasses = requiredClasses.filter(className => 
