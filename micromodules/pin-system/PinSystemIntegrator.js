@@ -59,6 +59,7 @@ class PinSystemIntegrator {
         // ElementObserver互換API用状態
         this.elementObserverCompat = {
             observers: new Map(),            // target -> observerData
+            activeCallbacks: new Map(),      // callbackId -> callbackData
             globalCallbacks: {
                 onChange: new Set(),
                 onError: new Set(),
