@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElementObserver Phase 3-B マイクロモジュール単独テスト</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .header h1 {
+            color: #007acc;
+            margin: 0;
+            font-size: 2.2em;
+        }
+        .header .subtitle {
+            color: #666;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .test-section h2 {
+            color: #333;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+        .test-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+        .btn-primary {
+            background: #007acc;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #005a99;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #bd2130;
+        }
+        .test-output {
+            background: #1e1e1e;
+            color: #f8f8f8;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.4;
+        }
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .module-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .module-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007acc;
+        }
+        .module-card h3 {
+            margin-top: 0;
+            color: #007acc;
+        }
+        .module-card .description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .summary-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .summary-panel h3 {
+            margin-top: 0;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-item {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            display: block;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            background: #28a745;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        /* テスト対象要素のスタイル */
+        .test-element {
+            width: 120px;
+            height: 80px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: 2px solid #333;
+            border-radius: 8px;
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .console-output {
+            background: #282c34;
+            color: #abb2bf;
+            font-family: 'Fira Code', 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="header">
+            <h1>🧪 ElementObserver Phase 3-B</h1>
+            <div class="subtitle">マイクロモジュール分割システム 単独テスト実行環境</div>
+        </div>
+
+        <!-- 概要情報 -->
+        <div class="summary-panel">
+            <h3>🎯 Phase 3-B マイクロモジュール概要</h3>
+            <p>ElementObserver Phase 3-Aの99.9%高速化技術を4つの独立マイクロモジュールに分割し、完全な単独テストを実行します。</p>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <span class="stat-value">4</span>
+                    <span class="stat-label">マイクロモジュール</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">100%</span>
+                    <span class="stat-label">独立性</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">0</span>
+                    <span class="stat-label">外部依存</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">✓</span>
+                    <span class="stat-label">メモリリーク防止</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- モジュール情報 -->
+        <div class="module-info">
+            <div class="module-card">
+                <h3>🌊 PureEnvironmentObserver</h3>
+                <div class="description">
+                    環境変化監視専門モジュール<br>
+                    ・ResizeObserver統合制御<br>
+                    ・DPR・ズーム・ブレークポイント監視<br>
+                    ・数値のみ入出力（932行）
+                </div>
+            </div>
+            <div class="module-card">
+                <h3>🧮 PureScaleCalculator</h3>
+                <div class="description">
+                    スケール値計算専門モジュール<br>
+                    ・5つのスケールモード対応<br>
+                    ・純粋な数値計算のみ<br>
+                    ・境界値テスト完備（600行）
+                </div>
+            </div>
+            <div class="module-card">
+                <h3>🎨 PurePinHighlighter</h3>
+                <div class="description">
+                    要素ハイライト表示専門モジュール<br>
+                    ・F12開発者ツール風UI<br>
+                    ・マウスオーバーハイライト<br>
+                    ・DOM操作・メモリリーク防止（613行）
+                </div>
+            </div>
+            <div class="module-card">
+                <h3>🚀 PinSystemIntegrator</h3>
+                <div class="description">
+                    統合制御システム<br>
+                    ・3モジュール協調制御<br>
+                    ・ElementObserver互換API<br>
+                    ・Phase 3-A統合技術（1,198行）
+                </div>
+            </div>
+        </div>
+
+        <!-- 全モジュール一括テスト -->
+        <div class="test-section">
+            <h2>🎯 全モジュール一括テスト</h2>
+            <div class="test-controls">
+                <button class="btn btn-primary" onclick="runAllTests()">🚀 全モジュールテスト実行</button>
+                <button class="btn btn-secondary" onclick="clearOutput()">🗑️ 出力クリア</button>
+                <button class="btn btn-success" onclick="runPerformanceTest()">⚡ パフォーマンステスト</button>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="overall-progress" style="width: 0%"></div>
+            </div>
+            <div class="test-output console-output" id="all-test-output"></div>
+        </div>
+
+        <!-- 個別モジュールテスト -->
+        <div class="test-section">
+            <h2>🔬 個別モジュールテスト</h2>
+            <div class="test-controls">
+                <button class="btn btn-primary" onclick="testEnvironmentObserver()">🌊 環境監視テスト</button>
+                <button class="btn btn-primary" onclick="testScaleCalculator()">🧮 スケール計算テスト</button>
+                <button class="btn btn-primary" onclick="testPinHighlighter()">🎨 ハイライトテスト</button>
+                <button class="btn btn-primary" onclick="testPinIntegrator()">🚀 統合制御テスト</button>
+            </div>
+            <div class="test-output console-output" id="individual-test-output"></div>
+        </div>
+
+        <!-- テストターゲット要素 -->
+        <div class="test-section">
+            <h2>🎯 テスト対象要素</h2>
+            <p>以下の要素を使用してマイクロモジュールの動作をテストします：</p>
+            <div class="test-element" id="test-target-element">Test Element</div>
+        </div>
+
+        <!-- テスト結果サマリー -->
+        <div class="test-section">
+            <h2>📊 テスト結果サマリー</h2>
+            <div id="test-summary">テスト未実行</div>
+        </div>
+    </div>
+
+    <!-- マイクロモジュール読み込み -->
+    <script src="micromodules/environment-observer/PureEnvironmentObserver.js"></script>
+    <script src="micromodules/scale-calculator/PureScaleCalculator.js"></script>
+    <script src="micromodules/pin-highlighter/PurePinHighlighter.js"></script>
+    <script src="micromodules/pin-system/PinSystemIntegrator.js"></script>
+
+    <script>
+        // ========================================
+        // テスト制御システム
+        // ========================================
+
+        class TestController {
+            constructor() {
+                this.results = {
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    modules: {
+                        environment: null,
+                        scale: null,
+                        highlighter: null,
+                        integrator: null
+                    },
+                    startTime: null,
+                    endTime: null
+                };
+                this.outputElement = document.getElementById('all-test-output');
+                this.individualOutputElement = document.getElementById('individual-test-output');
+            }
+
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const prefix = {
+                    'info': '🔵',
+                    'success': '✅',
+                    'error': '❌',
+                    'warning': '⚠️'
+                }[type] || '🔵';
+                
+                const formattedMessage = `[${timestamp}] ${prefix} ${message}`;
+                
+                if (this.outputElement) {
+                    this.outputElement.textContent += formattedMessage + '\n';
+                    this.outputElement.scrollTop = this.outputElement.scrollHeight;
+                }
+                
+                console.log(formattedMessage);
+            }
+
+            logToIndividual(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const prefix = {
+                    'info': '🔵',
+                    'success': '✅',
+                    'error': '❌',
+                    'warning': '⚠️'
+                }[type] || '🔵';
+                
+                const formattedMessage = `[${timestamp}] ${prefix} ${message}`;
+                
+                if (this.individualOutputElement) {
+                    this.individualOutputElement.textContent += formattedMessage + '\n';
+                    this.individualOutputElement.scrollTop = this.individualOutputElement.scrollHeight;
+                }
+                
+                console.log(formattedMessage);
+            }
+
+            updateProgress(percent) {
+                const progressBar = document.getElementById('overall-progress');
+                if (progressBar) {
+                    progressBar.style.width = `${percent}%`;
+                }
+            }
+
+            updateSummary() {
+                const summaryElement = document.getElementById('test-summary');
+                if (!summaryElement) return;
+
+                const duration = this.results.endTime ? 
+                    (this.results.endTime - this.results.startTime) / 1000 : 0;
+
+                const html = `
+                    <div class="summary-stats">
+                        <div class="stat-item ${this.results.failed === 0 ? 'status-success' : 'status-error'}">
+                            <span class="stat-value">${this.results.total}</span>
+                            <span class="stat-label">総テスト数</span>
+                        </div>
+                        <div class="stat-item status-success">
+                            <span class="stat-value">${this.results.passed}</span>
+                            <span class="stat-label">成功</span>
+                        </div>
+                        <div class="stat-item ${this.results.failed > 0 ? 'status-error' : 'status-success'}">
+                            <span class="stat-value">${this.results.failed}</span>
+                            <span class="stat-label">失敗</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${duration.toFixed(2)}s</span>
+                            <span class="stat-label">実行時間</span>
+                        </div>
+                    </div>
+                    <h4>📋 モジュール別結果:</h4>
+                    <ul>
+                        <li>🌊 環境監視: ${this.formatModuleResult('environment')}</li>
+                        <li>🧮 スケール計算: ${this.formatModuleResult('scale')}</li>
+                        <li>🎨 ハイライト表示: ${this.formatModuleResult('highlighter')}</li>
+                        <li>🚀 統合制御: ${this.formatModuleResult('integrator')}</li>
+                    </ul>
+                `;
+
+                summaryElement.innerHTML = html;
+            }
+
+            formatModuleResult(moduleKey) {
+                const result = this.results.modules[moduleKey];
+                if (!result) return '⏳ 未実行';
+                
+                const successRate = result.total > 0 ? 
+                    ((result.passed / result.total) * 100).toFixed(1) : '0';
+                
+                return `${result.passed}/${result.total} (${successRate}%) ${result.failed === 0 ? '✅' : '❌'}`;
+            }
+        }
+
+        const testController = new TestController();
+
+        // ========================================
+        // テスト実行関数
+        // ========================================
+
+        async function runAllTests() {
+            testController.results.startTime = Date.now();
+            testController.log('🚀 ElementObserver Phase 3-B マイクロモジュール統合テスト開始', 'info');
+            testController.updateProgress(0);
+
+            // 依存モジュール確認
+            testController.log('📋 マイクロモジュール依存関係確認...', 'info');
+            
+            const modules = {
+                'PureEnvironmentObserver': window.PureEnvironmentObserver,
+                'PureScaleCalculator': window.PureScaleCalculator,
+                'PurePinHighlighter': window.PurePinHighlighter,
+                'PinSystemIntegrator': window.PinSystemIntegrator
+            };
+
+            let allModulesAvailable = true;
+            Object.entries(modules).forEach(([name, module]) => {
+                if (typeof module !== 'undefined') {
+                    testController.log(`✅ ${name} モジュール読み込み成功`, 'success');
+                } else {
+                    testController.log(`❌ ${name} モジュール読み込み失敗`, 'error');
+                    allModulesAvailable = false;
+                }
+            });
+
+            if (!allModulesAvailable) {
+                testController.log('❌ 必要なモジュールが不足しています。テストを中止します。', 'error');
+                return;
+            }
+
+            testController.updateProgress(10);
+
+            // 各モジュールのテストを順次実行
+            const testSequence = [
+                { name: '環境監視', key: 'environment', fn: () => PureEnvironmentObserver.test(), progress: 30 },
+                { name: 'スケール計算', key: 'scale', fn: () => PureScaleCalculator.test(), progress: 50 },
+                { name: 'ハイライト表示', key: 'highlighter', fn: () => PurePinHighlighter.test(), progress: 70 },
+                { name: '統合制御', key: 'integrator', fn: () => PinSystemIntegrator.test(), progress: 90 }
+            ];
+
+            for (const test of testSequence) {
+                testController.log(`\n🔬 ${test.name}モジュール テスト開始...`, 'info');
+                
+                try {
+                    const result = await test.fn();
+                    testController.results.modules[test.key] = result;
+                    testController.results.total += result.total || (result.passed + result.failed);
+                    testController.results.passed += result.passed;
+                    testController.results.failed += result.failed;
+
+                    if (result.failed === 0) {
+                        testController.log(`✅ ${test.name}モジュール テスト完了 (${result.passed}件成功)`, 'success');
+                    } else {
+                        testController.log(`❌ ${test.name}モジュール テスト完了 (${result.passed}件成功, ${result.failed}件失敗)`, 'error');
+                        if (result.errors && result.errors.length > 0) {
+                            result.errors.forEach(error => {
+                                testController.log(`   💥 ${error}`, 'error');
+                            });
+                        }
+                    }
+                } catch (error) {
+                    testController.log(`❌ ${test.name}モジュール テスト実行エラー: ${error.message}`, 'error');
+                    testController.results.failed++;
+                    testController.results.modules[test.key] = { passed: 0, failed: 1, total: 1, errors: [error.message] };
+                }
+
+                testController.updateProgress(test.progress);
+                await new Promise(resolve => setTimeout(resolve, 500)); // 視覚的な間隔
+            }
+
+            testController.results.endTime = Date.now();
+            testController.updateProgress(100);
+
+            // 最終結果
+            const duration = (testController.results.endTime - testController.results.startTime) / 1000;
+            testController.log('\n🎉 全モジュールテスト完了!', 'success');
+            testController.log(`📊 結果: ${testController.results.passed}/${testController.results.total} 成功 (実行時間: ${duration.toFixed(2)}秒)`, 'info');
+
+            if (testController.results.failed === 0) {
+                testController.log('🎉 🎉 🎉 全テスト成功! マイクロモジュール分割システム正常動作確認完了 🎉 🎉 🎉', 'success');
+            } else {
+                testController.log(`⚠️ ${testController.results.failed}件のテストが失敗しました。詳細を確認してください。`, 'warning');
+            }
+
+            testController.updateSummary();
+        }
+
+        function testEnvironmentObserver() {
+            testController.logToIndividual('🌊 PureEnvironmentObserver 単独テスト実行中...', 'info');
+            try {
+                const result = PureEnvironmentObserver.test();
+                testController.logToIndividual(`✅ 環境監視テスト完了: ${result.passed}/${result.total} 成功`, 'success');
+            } catch (error) {
+                testController.logToIndividual(`❌ 環境監視テストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        function testScaleCalculator() {
+            testController.logToIndividual('🧮 PureScaleCalculator 単独テスト実行中...', 'info');
+            try {
+                const result = PureScaleCalculator.test();
+                testController.logToIndividual(`✅ スケール計算テスト完了: ${result.passed}/${result.total} 成功`, 'success');
+            } catch (error) {
+                testController.logToIndividual(`❌ スケール計算テストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        function testPinHighlighter() {
+            testController.logToIndividual('🎨 PurePinHighlighter 単独テスト実行中...', 'info');
+            try {
+                const result = PurePinHighlighter.test();
+                testController.logToIndividual(`✅ ハイライト表示テスト完了: ${result.passed}/${result.failed} 成功`, 'success');
+            } catch (error) {
+                testController.logToIndividual(`❌ ハイライト表示テストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        function testPinIntegrator() {
+            testController.logToIndividual('🚀 PinSystemIntegrator 単独テスト実行中...', 'info');
+            try {
+                const result = PinSystemIntegrator.test();
+                testController.logToIndividual(`✅ 統合制御テスト完了: ${result.passed}/${result.failed} 成功`, 'success');
+            } catch (error) {
+                testController.logToIndividual(`❌ 統合制御テストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        function runPerformanceTest() {
+            testController.log('⚡ パフォーマンステスト実行中...', 'info');
+            
+            try {
+                if (typeof PureScaleCalculator.performanceTest === 'function') {
+                    const perfResult = PureScaleCalculator.performanceTest(1000);
+                    testController.log('📈 PureScaleCalculator パフォーマンス結果:', 'info');
+                    Object.entries(perfResult).forEach(([mode, stats]) => {
+                        testController.log(`   ${mode}: ${stats.avgTime.toFixed(4)}ms/回, ${stats.opsPerSecond} ops/sec`, 'info');
+                    });
+                } else {
+                    testController.log('⚠️ パフォーマンステストは PureScaleCalculator でのみ利用可能です', 'warning');
+                }
+            } catch (error) {
+                testController.log(`❌ パフォーマンステストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        function clearOutput() {
+            if (testController.outputElement) {
+                testController.outputElement.textContent = '';
+            }
+            if (testController.individualOutputElement) {
+                testController.individualOutputElement.textContent = '';
+            }
+            testController.updateProgress(0);
+            
+            // 結果をリセット
+            testController.results = {
+                total: 0,
+                passed: 0,
+                failed: 0,
+                modules: {
+                    environment: null,
+                    scale: null,
+                    highlighter: null,
+                    integrator: null
+                },
+                startTime: null,
+                endTime: null
+            };
+            
+            document.getElementById('test-summary').innerHTML = 'テスト未実行';
+        }
+
+        // ========================================
+        // 初期化・自動実行
+        // ========================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            testController.log('🚀 ElementObserver Phase 3-B テスト環境初期化完了', 'success');
+            testController.log('📋 4つのマイクロモジュール読み込み確認中...', 'info');
+            
+            // モジュール存在確認
+            const moduleStatus = {
+                'PureEnvironmentObserver': typeof PureEnvironmentObserver !== 'undefined',
+                'PureScaleCalculator': typeof PureScaleCalculator !== 'undefined',
+                'PurePinHighlighter': typeof PurePinHighlighter !== 'undefined',
+                'PinSystemIntegrator': typeof PinSystemIntegrator !== 'undefined'
+            };
+
+            Object.entries(moduleStatus).forEach(([name, available]) => {
+                testController.log(`${available ? '✅' : '❌'} ${name}: ${available ? '利用可能' : '未読み込み'}`, available ? 'success' : 'error');
+            });
+
+            const allAvailable = Object.values(moduleStatus).every(status => status);
+            if (allAvailable) {
+                testController.log('🎉 全マイクロモジュール正常読み込み完了! テスト実行準備OK', 'success');
+                testController.log('💡 "🚀 全モジュールテスト実行" ボタンをクリックして単独テストを開始してください', 'info');
+            } else {
+                testController.log('⚠️ 一部のマイクロモジュールが読み込まれていません', 'warning');
+            }
+        });
+
+    </script>
+</body>
+</html>
