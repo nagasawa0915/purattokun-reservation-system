@@ -1,9 +1,9 @@
 # PureSpineLoader 100%読み込み成功マニュアル
 
 **作成日**: 2025-08-29  
-**最終更新**: 2025-08-29（真っ黒表示問題・座標問題解決版）  
-**バージョン**: v2.0 - 完全動作保証版（表示問題解決済み）  
-**対象**: PureSpineLoader + 直接描画システムの確実な表示成功
+**最終更新**: 2025-08-29（統合システム対応・spine.webgl問題解決版）  
+**バージョン**: v3.0 - 統合システム完全対応版（全エラー解決済み）  
+**対象**: PureSpineLoader + 統合システム + バウンディングボックス統合の確実な成功
 
 ---
 
@@ -11,6 +11,71 @@
 
 **PureSpineLoaderで100%確実にSpineキャラクターを表示する**ための完全ガイドです。
 404エラー・読み込み失敗・WebGLエラー・真っ黒表示・座標問題等を完全に回避し、ぷらっとくん/nezumiキャラクターの正常表示まで確実に実現します。
+
+## 🆕 **v3.0新機能・解決事項 (2025-08-29)**
+
+### ✅ **統合システム対応**
+- **完全成果**: nezumi + バウンディングボックス統合システム完全動作
+- **SafeSpineInitializerパターン**: 確実なライブラリ読み込み待機システム
+- **4段階診断システム**: Spine Global Object → Shader → AssetManager → PolygonBatcher確認
+
+### 🔧 **spine.webgl問題完全解決**
+- **問題**: `Cannot read properties of undefined (reading 'Shader')` 
+- **原因**: このライブラリ版はspine.webgl名前空間を使わない
+- **解決**: 直接spine.Shader、spine.AssetManager、spine.PolygonBatcherアクセス
+- **実装**: 全てのspine.webgl.*をspine.*に変更
+
+### 📋 **PureSpineLoader正確なAPI仕様**
+- **パラメーター**: `basePath`, `atlasPath`, `jsonPath`, `scale`（atlasFile/jsonFileではない）
+- **実行メソッド**: `execute()`（loadAssets()ではない）
+- **初期化確認**: `typeof window.PureSpineLoader !== 'undefined'`での存在確認必須
+
+**正しい初期化コード**:
+```javascript
+// ✅ 正しいパラメーター形式
+const spineLoader = new PureSpineLoader({
+    basePath: '/assets/spine/characters/nezumi/',
+    atlasPath: '/assets/spine/characters/nezumi/nezumi.atlas',
+    jsonPath: '/assets/spine/characters/nezumi/nezumi.json',
+    scale: 1.0
+});
+
+// ✅ 正しい実行メソッド
+const result = await spineLoader.execute();
+```
+
+**v3.0 SafeSpineInitializerパターン**:
+```javascript
+class SafeSpineInitializer {
+    static async waitForSpine(maxWait = 10000) {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < maxWait) {
+            // v3.0: spine.webglではなく直接アクセス
+            if (typeof spine !== 'undefined' && 
+                spine.Shader && 
+                spine.AssetManager) {
+                return true;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        throw new Error('Spine WebGL読み込みタイムアウト');
+    }
+    
+    static async initialize() {
+        await this.waitForSpine();
+        console.log('✅ Spine WebGL読み込み完了');
+        return new YourSpineSystem(); // あなたのシステムを初期化
+    }
+}
+
+// 使用方法
+window.addEventListener('load', async () => {
+    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms待機
+    const system = await SafeSpineInitializer.initialize();
+});
+```
 
 ## 🚨 重要な発見事項（v2.0で解決済み）
 

@@ -294,7 +294,26 @@ const loaderResult = await this.spineLoader.execute();
 2. ✅ PureSpineLoaderパラメーター問題 → atlasPath/jsonPath形式で解決  
 3. ✅ APIメソッド名問題 → execute()メソッドで解決
 
-**最終成果**: nezumi + バウンディングボックス統合システム完全動作確認  
+**最終成果**: nezumi + バウンディングボックス統合システム完全動作確認
+
+### ❌ Case 8: アニメーション速度制御機能が効かない問題 (2025-08-29)
+
+**試行内容**: animationState.timeScaleによる速度制御
+```javascript
+setAnimationSpeed(speed) {
+    if (this.animationState) {
+        this.animationState.timeScale = speed;
+        this.log(`⚡ アニメーション速度変更: ${speed}x`);
+    }
+}
+```
+
+**結果**: 
+- ✅ ログは表示される
+- ❌ 実際の速度変更は反映されない
+
+**原因**: 不明（要調査）
+**対応**: 機能削除・将来の課題として保留  
 
 ---
 
