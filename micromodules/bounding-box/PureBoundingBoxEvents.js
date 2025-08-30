@@ -468,6 +468,11 @@ class PureBoundingBoxEvents {
                     height: currentHeight,
                     transform: 'translate(-50%, -50%)'
                 },
+                // 🎯 編集時の実サイズ情報も保存（復元ズレ対策）
+                actualSize: {
+                    widthPx: this.core.bounds ? this.core.bounds.width : null,
+                    heightPx: this.core.bounds ? this.core.bounds.height : null
+                },
                 timestamp: Date.now(),
                 source: 'PureBoundingBox-Phase3'
             };

@@ -399,14 +399,48 @@
                 }
             });
             
-            // ウィンドウリサイズテスト用
+            // ウィンドウリサイズテスト用 + BB比率保持機能
             let resizeTimeout;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     log('📐 ウィンドウリサイズ検出 - 自動追従テスト', 'info');
+                    // 🎯 BB比率保持機能: 編集サイズを維持
+                    maintainBBRatioAfterResize();
                 }, 100);
             });
+        }
+        
+        // BB比率保持機能: ウィンドウリサイズ後に編集サイズを維持
+        function maintainBBRatioAfterResize() {
+            const storageKey = 'bb-position-test-character';
+            const savedPosition = localStorage.getItem(storageKey);
+            
+            if (savedPosition) {
+                try {
+                    const positionData = JSON.parse(savedPosition);
+                    
+                    // 編集時の実サイズ情報があるか確認
+                    if (positionData.actualSize && positionData.actualSize.widthPx && positionData.actualSize.heightPx) {
+                        const heroSection = document.getElementById('test-hero');
+                        const parentRect = heroSection.getBoundingClientRect();
+                        
+                        // 編集時の実サイズから現在の環境でのパーセンテージを再計算
+                        const widthPct = (positionData.actualSize.widthPx / parentRect.width) * 100;
+                        const heightPct = (positionData.actualSize.heightPx / parentRect.height) * 100;
+                        
+                        // 位置は現在のパーセンテージを維持、サイズのみ再計算
+                        testCharacter.style.width = widthPct.toFixed(2) + '%';
+                        testCharacter.style.height = heightPct.toFixed(2) + '%';
+                        
+                        log(`🔧 BB比率保持: サイズ再計算 ${widthPct.toFixed(2)}% × ${heightPct.toFixed(2)}%`, 'success');
+                    } else {
+                        log('⚠️ 実サイズ情報なし - BB比率保持スキップ', 'warning');
+                    }
+                } catch (error) {
+                    log(`❌ BB比率保持エラー: ${error.message}`, 'error');
+                }
+            }
         }
         
         // 保存された位置を復元
@@ -424,23 +458,21 @@
                         testCharacter.style.left = position.left;
                         testCharacter.style.top = position.top;
                         
-                        // サイズは真の初期サイズ基準で再計算
-                        const originalBoundsData = localStorage.getItem('original-bounds-test-character');
-                        if (originalBoundsData) {
-                            const originalBounds = JSON.parse(originalBoundsData);
+                        // サイズは編集時の実サイズ基準で再計算
+                        if (positionData.actualSize && positionData.actualSize.widthPx && positionData.actualSize.heightPx) {
+                            // 編集時の実サイズから現在の環境でのパーセンテージを再計算
                             const heroSection = document.getElementById('test-hero');
                             const parentRect = heroSection.getBoundingClientRect();
                             
-                            // 真の初期サイズからパーセンテージを再計算
-                            const widthPct = (originalBounds.width / parentRect.width) * 100;
-                            const heightPct = (originalBounds.height / parentRect.height) * 100;
+                            const widthPct = (positionData.actualSize.widthPx / parentRect.width) * 100;
+                            const heightPct = (positionData.actualSize.heightPx / parentRect.height) * 100;
                             
                             testCharacter.style.width = widthPct.toFixed(2) + '%';
                             testCharacter.style.height = heightPct.toFixed(2) + '%';
                             
-                            log(`🔄 保存位置を復元: ${position.left}, ${position.top} | ${widthPct.toFixed(2)}% × ${heightPct.toFixed(2)}% (再計算)`, 'success');
+                            log(`🔄 保存位置を復元: ${position.left}, ${position.top} | ${widthPct.toFixed(2)}% × ${heightPct.toFixed(2)}% (実サイズ基準)`, 'success');
                         } else {
-                            // fallback: 保存された値を使用
+                            // fallback: 保存されたパーセンテージ値を使用
                             if (position.width && position.height) {
                                 testCharacter.style.width = position.width;
                                 testCharacter.style.height = position.height;
