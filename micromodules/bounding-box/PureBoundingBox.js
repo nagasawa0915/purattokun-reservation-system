@@ -112,6 +112,40 @@ class PureBoundingBox {
         };
         
         console.log('📎 初期bounds設定:', this.core.bounds);
+        
+        // 🎯 スケール計算用の真の初期bounds保存（新しいサイズを常に優先）
+        const storageKey = `original-bounds-${this.core.config.nodeId}`;
+        const existing = localStorage.getItem(storageKey);
+        
+        // 新しい初期boundsを保存（既存より新しいサイズがある場合は更新）
+        const originalBounds = {
+            width: this.core.bounds.width,
+            height: this.core.bounds.height,
+            timestamp: Date.now()
+        };
+        
+        let shouldSave = true;
+        if (existing) {
+            try {
+                const stored = JSON.parse(existing);
+                console.log('💎 既存の初期bounds確認:', stored);
+                
+                // 既存データが有効で、新しいサイズが同じ場合のみスキップ
+                if (stored.width === originalBounds.width && stored.height === originalBounds.height) {
+                    shouldSave = false;
+                    console.log('💎 既存の初期boundsが一致 - 保存スキップ');
+                } else {
+                    console.log('💎 新しいサイズを検出 - 初期bounds更新:', originalBounds);
+                }
+            } catch (error) {
+                console.warn('⚠️ 既存データ解析失敗 - 新しいデータで上書き:', error.message);
+            }
+        }
+        
+        if (shouldSave) {
+            localStorage.setItem(storageKey, JSON.stringify(originalBounds));
+            console.log('💎 真の初期bounds保存完了（スケール計算用）:', originalBounds);
+        }
     }
     
     /**

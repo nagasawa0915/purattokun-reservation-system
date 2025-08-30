@@ -1201,9 +1201,25 @@ class ElementObserverAdvanced extends ElementObserverCore {
      * ResizeObserver エントリー処理
      */
     handleResizeEntries(entries) {
+        console.log('🔍 ResizeObserver エントリー処理:', {
+            entriesCount: entries.length,
+            entries: entries.map(e => ({
+                target: e.target.tagName,
+                id: e.target.id,
+                className: e.target.className,
+                size: `${e.contentRect.width}×${e.contentRect.height}`
+            }))
+        });
+        
         for (const entry of entries) {
             const target = entry.target;
             const observationData = this.environmentObserver.activeObservations.get(target);
+            
+            console.log('🔍 観測データ確認:', {
+                target: target.tagName + '#' + target.id,
+                hasObservationData: !!observationData,
+                targetId: observationData?.targetId
+            });
             
             if (!observationData) continue;
             
@@ -1375,10 +1391,21 @@ class ElementObserverAdvanced extends ElementObserverCore {
             
             // 変化通知（簡略化）
             if (observationData.callbacks.onChange) {
+                console.log('🔍 onChange コールバック実行:', {
+                    targetId: observationData.targetId,
+                    rect: currentRect,
+                    callbackExists: !!observationData.callbacks.onChange
+                });
+                
                 observationData.callbacks.onChange({
                     targetId: observationData.targetId,
                     rect: currentRect,
                     timestamp: currentRect.timestamp
+                });
+            } else {
+                console.log('⚠️ onChange コールバックが設定されていません:', {
+                    targetId: observationData.targetId,
+                    callbacks: Object.keys(observationData.callbacks || {})
                 });
             }
             
@@ -1576,6 +1603,9 @@ class ElementObserverAdvanced extends ElementObserverCore {
         config.spineElement = spineElement;
         config.anchor = options.anchor || 'br';  // bottom-right
         config.responsive = options.responsive !== false;
+        config.skipImageLoad = options.skipImageLoad || false;
+        config.bounds = options.bounds || null;
+        config.scale = options.scale || { x: 1.0, y: 1.0 };
         
         // 画像の完全ロード確認
         const startImageObservation = () => {
@@ -1602,16 +1632,21 @@ class ElementObserverAdvanced extends ElementObserverCore {
             return unobserveImage;
         };
         
-        // 画像ロード状態チェック
-        const imageLoadPromise = this.ensureImageLoaded(imageElement);
-        imageLoadPromise.then(() => {
-            console.log('✅ 画像ロード完了 → 監視開始');
+        // 画像ロード状態チェック（スキップオプション対応）
+        if (config.skipImageLoad) {
+            console.log('⏭️ 画像ロードスキップ → 直接監視開始');
             const unobserveImage = startImageObservation();
-        }).catch((error) => {
-            console.warn('⚠️ 画像ロード失敗:', error);
-            // ロード失敗でも監視は開始（サイズが確定していれば動作）
-            const unobserveImage = startImageObservation();
-        });
+        } else {
+            const imageLoadPromise = this.ensureImageLoaded(imageElement);
+            imageLoadPromise.then(() => {
+                console.log('✅ 画像ロード完了 → 監視開始');
+                const unobserveImage = startImageObservation();
+            }).catch((error) => {
+                console.warn('⚠️ 画像ロード失敗:', error);
+                // ロード失敗でも監視は開始（サイズが確定していれば動作）
+                const unobserveImage = startImageObservation();
+            });
+        }
         
         return () => {
             config.enabled = false;
@@ -1680,8 +1715,20 @@ class ElementObserverAdvanced extends ElementObserverCore {
                 config.responsive
             );
             
-            // Phase 3-A高速化統一座標API使用
-            this.setUnifiedPosition(spinePosition.x, spinePosition.y, '%');
+            // Phase 3-A高速化統一座標API使用（スケール情報も適用）
+            const scale = config.scale || { x: 1.0, y: 1.0 };
+            
+            console.log('🔍 setUnifiedPosition スケール適用:', {
+                configScale: config.scale,
+                appliedScale: scale,
+                spinePosition,
+                bounds: config.bounds
+            });
+            
+            this.setUnifiedPosition(spinePosition.x, spinePosition.y, '%', {
+                scaleX: scale.x,
+                scaleY: scale.y
+            });
             
             // 最新画像rect保存
             config.lastImageRect = payload.rect;

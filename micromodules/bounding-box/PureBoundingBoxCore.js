@@ -372,9 +372,42 @@ class PureBoundingBoxCore {
                 calculatedPercent: {left: leftPct.toFixed(2), top: topPct.toFixed(2)}
             });
             
-            // layout-anchorに書き戻し
+            // layout-anchorに書き戻し（位置・サイズ両方を%変換）
             element.style.left = leftPct.toFixed(2) + '%';
             element.style.top = topPct.toFixed(2) + '%';
+            
+            // 🎯 サイズも%で設定（レスポンシブ対応）- 真の初期サイズ基準で計算
+            let boundsWidth, boundsHeight, sizeSource;
+            
+            // 1. 真の初期サイズを取得（localStorage から）
+            const originalBoundsData = localStorage.getItem(`original-bounds-${this.config.targetElement.id || 'default'}`);
+            if (originalBoundsData) {
+                const originalBounds = JSON.parse(originalBoundsData);
+                if (originalBounds.width && originalBounds.height) {
+                    boundsWidth = originalBounds.width;
+                    boundsHeight = originalBounds.height;
+                    sizeSource = 'original-bounds-localStorage';
+                    console.log('🎯 [SIZE-FIX] 真の初期サイズを localStorage から取得:', originalBounds);
+                }
+            }
+            
+            // 2. fallback: this.bounds
+            if (!boundsWidth) {
+                boundsWidth = this.bounds ? this.bounds.width : element.getBoundingClientRect().width;
+                boundsHeight = this.bounds ? this.bounds.height : element.getBoundingClientRect().height;
+                sizeSource = this.bounds ? 'core.bounds' : 'getBoundingClientRect';
+            }
+            
+            const widthPct = (boundsWidth / parentRect.width) * 100;
+            const heightPct = (boundsHeight / parentRect.height) * 100;
+            element.style.width = widthPct.toFixed(2) + '%';
+            element.style.height = heightPct.toFixed(2) + '%';
+            
+            console.log('🎯 [SIZE] サイズも%変換適用（真の初期サイズ基準）:', {
+                'bounds→%': `${boundsWidth.toFixed(1)}px×${boundsHeight.toFixed(1)}px → ${widthPct.toFixed(2)}%×${heightPct.toFixed(2)}%`,
+                'parentSize': `${parentRect.width}×${parentRect.height}`,
+                'boundsSource': sizeSource
+            });
             
             // CSS変数をリセット（ズレ蓄積防止）
             if (interactive) {

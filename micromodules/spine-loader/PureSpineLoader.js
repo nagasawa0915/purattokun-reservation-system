@@ -16,6 +16,80 @@
  * - アニメーション制御禁止
  * - 他ファイルへの影響禁止
  * - 状態の永続化禁止
+ * 
+ * 🎨 WebGL最適化設定マニュアル
+ * ==============================
+ * 
+ * ## 🎯 アルファ/透明度処理の最適化
+ * 
+ * Spineキャラクターの口パク時に黒枠が表示される問題を解決するための設定：
+ * 
+ * ### WebGLコンテキスト作成時の設定
+ * ```javascript
+ * const gl = canvas.getContext('webgl', {
+ *     alpha: true,                  // アルファチャンネル有効
+ *     premultipliedAlpha: true,     // プリマルチプライアルファ有効（重要）
+ *     antialias: true,              // アンチエイリアシング有効
+ *     depth: false,                 // デプステスト無効化
+ *     stencil: false                // ステンシルテスト無効化
+ * });
+ * ```
+ * 
+ * ### ブレンド設定の最適化
+ * ```javascript
+ * gl.enable(gl.BLEND);
+ * 
+ * // プリマルチプライアルファ用ブレンド設定
+ * gl.blendFuncSeparate(
+ *     gl.ONE, gl.ONE_MINUS_SRC_ALPHA,     // RGB用ブレンド
+ *     gl.ONE, gl.ONE_MINUS_SRC_ALPHA      // Alpha用ブレンド
+ * );
+ * 
+ * // アルファテスト設定（透明度カットオフ）
+ * gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+ * ```
+ * 
+ * ### テクスチャフィルタリング設定
+ * ```javascript
+ * // テクスチャバインド時の自動設定
+ * const originalBindTexture = gl.bindTexture.bind(gl);
+ * gl.bindTexture = (target, texture) => {
+ *     const result = originalBindTexture(target, texture);
+ *     
+ *     if (target === gl.TEXTURE_2D && texture) {
+ *         // ピクセルパーフェクト（補間なし）
+ *         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+ *         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+ *         
+ *         // テクスチャ境界処理（境界をクランプ）
+ *         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+ *         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+ *     }
+ *     
+ *     return result;
+ * };
+ * ```
+ * 
+ * ## 🔧 問題解決パターン
+ * 
+ * ### 黒枠問題（口パク時）
+ * - **原因**: プリマルチプライアルファ設定の不一致
+ * - **解決策**: `premultipliedAlpha: true` + 適切なブレンド設定
+ * 
+ * ### テクスチャ境界のにじみ
+ * - **原因**: LINEAR フィルタリングによる補間
+ * - **解決策**: `gl.NEAREST` フィルタリング + `gl.CLAMP_TO_EDGE`
+ * 
+ * ### 透明度処理の問題
+ * - **原因**: アルファテスト設定の不備
+ * - **解決策**: `gl.SAMPLE_ALPHA_TO_COVERAGE` 有効化
+ * 
+ * ## ⚠️ 注意事項
+ * 
+ * - index.htmlとtest-*.htmlで設定を統一すること
+ * - WebGLコンテキスト作成は最初に１回のみ
+ * - テクスチャ設定は動的にオーバーライドが必要
+ * - ブレンド設定はSpine描画前に適用すること
  */
 
 class PureSpineLoader {

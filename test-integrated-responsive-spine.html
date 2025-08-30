@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Integrated Responsive Spine System Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* メインコンテナ */
+        .main-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        /* 背景エリア（レスポンシブ対象） */
+        .background-area {
+            position: relative;
+            width: 80%;
+            height: 70vh;
+            margin: 50px auto;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23e8f4f8;stop-opacity:1" /><stop offset="100%" style="stop-color:%23d1ecf1;stop-opacity:1" /></linearGradient></defs><rect width="1000" height="600" fill="url(%23bg)"/><rect x="50" y="150" width="900" height="300" fill="%23ffffff" stroke="%234a90a4" stroke-width="4" rx="20" opacity="0.8"/><circle cx="250" cy="300" r="100" fill="%23b8e6b8" stroke="%23228b22" stroke-width="6" opacity="0.9"/><circle cx="750" cy="300" r="80" fill="%23ffb6c1" stroke="%23ff69b4" stroke-width="4" opacity="0.9"/><rect x="400" y="200" width="200" height="200" fill="%23fff2cc" stroke="%23d6b656" stroke-width="3" rx="15" opacity="0.7"/><text x="500" y="320" font-family="Arial, sans-serif" font-size="28" fill="%23333" text-anchor="middle" font-weight="bold">背景レスポンシブエリア</text><text x="250" y="320" font-family="Arial" font-size="16" fill="%23fff" text-anchor="middle" font-weight="bold">🟢 左エリア</text><text x="750" y="320" font-family="Arial" font-size="16" fill="%23fff" text-anchor="middle" font-weight="bold">🔴 右エリア</text><text x="500" y="280" font-family="Arial" font-size="12" fill="%23666" text-anchor="middle">中央エリア</text></svg>') center/contain no-repeat;
+            border: 3px solid #4a90a4;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            resize: both;
+            overflow: auto;
+            min-width: 300px;
+            min-height: 200px;
+        }
+
+        .background-area:hover {
+            box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+            border-color: #007cff;
+        }
+
+        /* Spineキャラクター（レスポンシブ対象） */
+        .spine-character {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #ff6b6b, #ee5a6f);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            text-align: center;
+            box-shadow: 0 6px 24px rgba(255, 107, 107, 0.5);
+            cursor: move;
+            transform-origin: center center;
+            transition: all 0.2s ease;
+            z-index: 100;
+            
+            /* 初期位置（中央） */
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .spine-character:hover {
+            background: radial-gradient(circle, #ff8e8e, #ee5a6f);
+            box-shadow: 0 8px 32px rgba(255, 107, 107, 0.7);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .spine-character.selected {
+            border-color: #007cff;
+            box-shadow: 0 0 0 3px rgba(0, 124, 255, 0.3), 0 6px 24px rgba(255, 107, 107, 0.5);
+        }
+
+        /* コントロールパネル */
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            width: 320px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .control-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #495057;
+            font-size: 13px;
+        }
+
+        .control-group select,
+        .control-group input[type="range"] {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .control-group input[type="range"] {
+            margin-bottom: 5px;
+        }
+
+        .value-display {
+            font-size: 11px;
+            color: #6c757d;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .control-button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-size: 13px;
+        }
+
+        .control-button.primary {
+            background: #007cff;
+            color: white;
+        }
+
+        .control-button.primary:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .control-button.success {
+            background: #28a745;
+            color: white;
+        }
+
+        .control-button.success:hover {
+            background: #218838;
+        }
+
+        .control-button.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .control-button.warning:hover {
+            background: #e0a800;
+        }
+
+        .control-button.danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .control-button.danger:hover {
+            background: #c82333;
+        }
+
+        .status-display {
+            background: #e9ecef;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            border-left: 3px solid #007cff;
+        }
+
+        /* リアルタイムデバッグ情報 */
+        .debug-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-width: 450px;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            border: 1px solid #333;
+        }
+
+        .debug-title {
+            color: #00ffff;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .debug-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            padding: 2px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .debug-label {
+            color: #ffff00;
+        }
+
+        .debug-value {
+            color: #00ff00;
+            text-align: right;
+        }
+
+        /* インジケーター */
+        .system-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 10000;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        /* レスポンシブ調整 */
+        @media (max-width: 768px) {
+            .control-panel {
+                position: relative;
+                top: 10px;
+                right: 10px;
+                width: calc(100% - 20px);
+                margin-bottom: 20px;
+                max-height: none;
+            }
+
+            .background-area {
+                width: 95%;
+                height: 50vh;
+                margin: 20px auto;
+            }
+
+            .debug-panel {
+                position: relative;
+                bottom: auto;
+                left: auto;
+                margin: 10px;
+                width: calc(100% - 20px);
+            }
+
+            .main-container {
+                padding: 10px;
+            }
+        }
+
+        /* アニメーション */
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        @keyframes responseActive {
+            0%, 100% { border-color: #4a90a4; }
+            50% { border-color: #28a745; }
+        }
+
+        .background-area.responsive-active {
+            animation: responseActive 2s infinite;
+        }
+
+        .spine-character.responsive-tracking {
+            animation: pulse 3s infinite;
+        }
+
+        /* カスタムスクロールバー */
+        .control-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .control-panel::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .control-panel::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .control-panel::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 背景エリア（レスポンシブ追従対象） -->
+        <div class="background-area" id="backgroundArea">
+            <!-- Spineキャラクター（レスポンシブ制御対象） -->
+            <div class="spine-character" id="spineCharacter">
+                <div>🎯<br>Spine</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- システム統合制御パネル -->
+    <div class="control-panel">
+        <div class="panel-title">
+            🎯 統合レスポンシブSpineシステム
+        </div>
+
+        <!-- バウンディングボックス制御 -->
+        <div class="control-section">
+            <h3>📦 バウンディングボックス</h3>
+            <button class="control-button primary" id="enableBoundingBox">バウンディングボックス有効化</button>
+            <button class="control-button warning" id="saveBoundingBox" style="display:none;">💾 保存（自動ピン適用）</button>
+            <button class="control-button danger" id="cancelBoundingBox" style="display:none;">❌ キャンセル</button>
+        </div>
+
+        <!-- レスポンシブ制御 -->
+        <div class="control-section">
+            <h3>📱 レスポンシブ制御</h3>
+            <div class="control-group">
+                <label>追従領域選択</label>
+                <select id="regionSelect">
+                    <option value="center-auto">中央エリア（自動）</option>
+                    <option value="shop-front">左エリア（🟢）</option>
+                    <option value="road-area">右エリア（🔴）</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>フィット比率: <span class="value-display" id="fitRatioValue">1.0</span></label>
+                <input type="range" id="fitRatioSlider" min="0.3" max="3.0" step="0.1" value="1.0">
+            </div>
+            
+            <div class="control-group">
+                <label>フィットモード</label>
+                <select id="fitModeSelect">
+                    <option value="contain">完全収まり</option>
+                    <option value="cover">エリア全体</option>
+                    <option value="exact">正確サイズ</option>
+                </select>
+            </div>
+            
+            <button class="control-button success" id="toggleResponsive">📱 レスポンシブ ON</button>
+        </div>
+
+        <!-- システムテスト -->
+        <div class="control-section">
+            <h3>🧪 システムテスト</h3>
+            <button class="control-button primary" id="testResize">リサイズテスト実行</button>
+            <button class="control-button primary" id="testIntegration">統合機能テスト</button>
+            <button class="control-button warning" id="resetAll">🔄 全リセット</button>
+        </div>
+
+        <!-- システム状態 -->
+        <div class="status-display" id="systemStatus">
+            システム初期化中...
+        </div>
+    </div>
+
+    <!-- リアルタイムデバッグ情報 -->
+    <div class="debug-panel" id="debugPanel">
+        <div class="debug-title">🔍 リアルタイム診断情報</div>
+        <div class="debug-row">
+            <span class="debug-label">背景サイズ:</span>
+            <span class="debug-value" id="debugBgSize">未取得</span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">Spine位置:</span>
+            <span class="debug-value" id="debugSpinePos">未取得</span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">Spine縮尺:</span>
+            <span class="debug-value" id="debugSpineScale">未取得</span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">レスポンシブ:</span>
+            <span class="debug-value" id="debugResponsive">未初期化</span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">バウンディングボックス:</span>
+            <span class="debug-value" id="debugBoundingBox">未初期化</span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">ElementObserver:</span>
+            <span class="debug-value" id="debugElementObserver">未検出</span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">更新頻度:</span>
+            <span class="debug-value" id="debugUpdateRate">0 FPS</span>
+        </div>
+    </div>
+
+    <!-- システムインジケーター -->
+    <div class="system-indicator" id="systemIndicator"></div>
+
+    <!-- 必要なモジュール読み込み -->
+    <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
+    <script src="micromodules/bounding-box/ResponsiveSpineFitIntegration.js"></script>
+
+    <!-- ElementObserver Phase 3-B 統合（利用可能な場合） -->
+    <script>
+        // ElementObserver Phase 3-B の動的読み込み試行
+        const tryLoadElementObserver = () => {
+            const scripts = [
+                'ElementObserverAdvanced.js',
+                'micromodules/element-observer/ElementObserverAdvanced.js',
+                'element-observer/ElementObserverAdvanced.js'
+            ];
+            
+            let loaded = false;
+            scripts.forEach(script => {
+                if (loaded) return;
+                try {
+                    const scriptEl = document.createElement('script');
+                    scriptEl.src = script;
+                    scriptEl.onload = () => {
+                        loaded = true;
+                        console.log(`✅ ElementObserver読み込み成功: ${script}`);
+                        updateSystemStatus('ElementObserver Phase 3-B 読み込み完了');
+                    };
+                    scriptEl.onerror = () => {
+                        console.log(`⚠️ ElementObserver読み込み失敗: ${script}`);
+                    };
+                    document.head.appendChild(scriptEl);
+                } catch (error) {
+                    console.log(`⚠️ ElementObserver読み込みエラー: ${script}`, error);
+                }
+            });
+            
+            // フォールバック（読み込み失敗時）
+            setTimeout(() => {
+                if (!loaded) {
+                    console.log('ℹ️ ElementObserver Phase 3-B無効 - 基本機能のみ利用');
+                    updateSystemStatus('ElementObserver無効 - 基本モード');
+                }
+            }, 1000);
+        };
+        
+        tryLoadElementObserver();
+    </script>
+
+    <script>
+        // 🎯 統合レスポンシブSpineシステム - メイン制御
+        class IntegratedResponsiveSpineSystem {
+            constructor() {
+                this.spineElement = document.getElementById('spineCharacter');
+                this.backgroundElement = document.getElementById('backgroundArea');
+                
+                // システム統合状態
+                this.boundingBoxSystem = null;
+                this.responsiveSystem = null;
+                
+                // 制御状態
+                this.isBoundingBoxActive = false;
+                this.isResponsiveActive = false;
+                
+                // デバッグ情報
+                this.debugInfo = {
+                    updateCount: 0,
+                    lastUpdateTime: 0,
+                    fps: 0
+                };
+                
+                console.log('🎯 統合レスポンシブSpineシステム初期化開始');
+                this.init();
+            }
+            
+            async init() {
+                this.setupEventListeners();
+                this.startDebugMonitoring();
+                this.updateSystemStatus('システム初期化完了 - 待機中');
+                
+                // 必要なモジュールの確認
+                this.checkModulesAvailability();
+                
+                console.log('✅ 統合システム初期化完了');
+            }
+            
+            /**
+             * モジュール可用性確認
+             */
+            checkModulesAvailability() {
+                const modules = {
+                    'PureBoundingBoxCore': window.PureBoundingBoxCore,
+                    'PureBoundingBoxUI': window.PureBoundingBoxUI,
+                    'ResponsiveSpineFitIntegration': window.ResponsiveSpineFitIntegration,
+                    'ElementObserverAdvanced': window.ElementObserverAdvanced
+                };
+                
+                console.log('🔍 モジュール可用性確認:');
+                Object.entries(modules).forEach(([name, available]) => {
+                    const status = available ? '✅' : '❌';
+                    console.log(`  ${status} ${name}: ${available ? '利用可能' : '未検出'}`);
+                });
+                
+                // デバッグパネル更新
+                this.updateDebugInfo();
+            }
+            
+            /**
+             * バウンディングボックス有効化
+             */
+            async enableBoundingBox() {
+                try {
+                    this.showSystemIndicator('バウンディングボックス初期化中...');
+                    
+                    // PureBoundingBoxCore初期化
+                    if (!window.PureBoundingBoxCore) {
+                        throw new Error('PureBoundingBoxCore が見つかりません');
+                    }
+                    
+                    const core = new window.PureBoundingBoxCore({
+                        targetElement: this.spineElement,
+                        nodeId: 'spine-character-main'
+                    });
+                    
+                    // UI初期化
+                    if (!window.PureBoundingBoxUI) {
+                        throw new Error('PureBoundingBoxUI が見つかりません');
+                    }
+                    
+                    const ui = new window.PureBoundingBoxUI(core);
+                    
+                    // イベント初期化
+                    if (window.PureBoundingBoxEvents) {
+                        const events = new window.PureBoundingBoxEvents(core, ui);
+                    }
+                    
+                    // バウンディングボックス表示
+                    const container = ui.createBoundingBoxUI();
+                    ui.show();
+                    
+                    // レスポンシブシステム統合
+                    if (window.ResponsiveSpineFitIntegration) {
+                        this.responsiveSystem = new window.ResponsiveSpineFitIntegration(ui);
+                        console.log('🔗 レスポンシブシステム統合完了');
+                    }
+                    
+                    this.boundingBoxSystem = { core, ui };
+                    this.isBoundingBoxActive = true;
+                    
+                    // UI更新
+                    document.getElementById('enableBoundingBox').style.display = 'none';
+                    document.getElementById('saveBoundingBox').style.display = 'block';
+                    document.getElementById('cancelBoundingBox').style.display = 'block';
+                    
+                    this.spineElement.classList.add('selected');
+                    this.hideSystemIndicator();
+                    this.updateSystemStatus('バウンディングボックス有効化完了');
+                    
+                    console.log('✅ バウンディングボックス有効化成功');
+                    
+                } catch (error) {
+                    console.error('❌ バウンディングボックス有効化エラー:', error);
+                    this.hideSystemIndicator();
+                    this.updateSystemStatus(`エラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * バウンディングボックス保存
+             */
+            async saveBoundingBox() {
+                try {
+                    if (!this.boundingBoxSystem) {
+                        throw new Error('バウンディングボックスが初期化されていません');
+                    }
+                    
+                    this.showSystemIndicator('保存中（自動ピン適用）...');
+                    
+                    // 保存処理実行
+                    await this.boundingBoxSystem.ui.handleSave();
+                    
+                    // UI状態リセット
+                    this.resetBoundingBoxUI();
+                    
+                    this.hideSystemIndicator();
+                    this.updateSystemStatus('保存完了 - 自動ピン適用済み');
+                    
+                    console.log('✅ バウンディングボックス保存完了');
+                    
+                } catch (error) {
+                    console.error('❌ 保存エラー:', error);
+                    this.hideSystemIndicator();
+                    this.updateSystemStatus(`保存エラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * バウンディングボックスキャンセル
+             */
+            cancelBoundingBox() {
+                try {
+                    if (this.boundingBoxSystem) {
+                        this.boundingBoxSystem.ui.handleCancel();
+                    }
+                    
+                    this.resetBoundingBoxUI();
+                    this.updateSystemStatus('編集をキャンセルしました');
+                    
+                    console.log('✅ バウンディングボックスキャンセル完了');
+                    
+                } catch (error) {
+                    console.error('❌ キャンセルエラー:', error);
+                    this.updateSystemStatus(`キャンセルエラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * バウンディングボックスUI リセット
+             */
+            resetBoundingBoxUI() {
+                // UI状態リセット
+                document.getElementById('enableBoundingBox').style.display = 'block';
+                document.getElementById('saveBoundingBox').style.display = 'none';
+                document.getElementById('cancelBoundingBox').style.display = 'none';
+                
+                this.spineElement.classList.remove('selected');
+                this.isBoundingBoxActive = false;
+                this.boundingBoxSystem = null;
+            }
+            
+            /**
+             * レスポンシブモード切り替え
+             */
+            toggleResponsiveMode() {
+                if (!this.responsiveSystem) {
+                    this.updateSystemStatus('レスポンシブシステムが利用できません');
+                    return;
+                }
+                
+                this.responsiveSystem.toggleResponsiveMode();
+                this.isResponsiveActive = this.responsiveSystem.isEnabled;
+                
+                // UI更新
+                const button = document.getElementById('toggleResponsive');
+                button.textContent = this.isResponsiveActive ? '📱 レスポンシブ OFF' : '📱 レスポンシブ ON';
+                button.className = this.isResponsiveActive ? 'control-button warning' : 'control-button success';
+                
+                // 視覚的フィードバック
+                if (this.isResponsiveActive) {
+                    this.backgroundElement.classList.add('responsive-active');
+                    this.spineElement.classList.add('responsive-tracking');
+                } else {
+                    this.backgroundElement.classList.remove('responsive-active');
+                    this.spineElement.classList.remove('responsive-tracking');
+                }
+                
+                this.updateSystemStatus(`レスポンシブモード: ${this.isResponsiveActive ? 'ON' : 'OFF'}`);
+            }
+            
+            /**
+             * リサイズテスト実行
+             */
+            testResize() {
+                this.showSystemIndicator('リサイズテスト実行中...');
+                this.updateSystemStatus('リサイズテスト実行中...');
+                
+                const originalWidth = this.backgroundElement.style.width || '80%';
+                const originalHeight = this.backgroundElement.style.height || '70vh';
+                
+                const testSequence = [
+                    { width: '60%', height: '50vh', message: 'テスト: 縮小' },
+                    { width: '95%', height: '80vh', message: 'テスト: 拡大' },
+                    { width: originalWidth, height: originalHeight, message: 'テスト: 元のサイズ' }
+                ];
+                
+                let step = 0;
+                const executeStep = () => {
+                    if (step >= testSequence.length) {
+                        this.hideSystemIndicator();
+                        this.updateSystemStatus('リサイズテスト完了');
+                        return;
+                    }
+                    
+                    const config = testSequence[step];
+                    this.backgroundElement.style.width = config.width;
+                    this.backgroundElement.style.height = config.height;
+                    this.updateSystemStatus(config.message);
+                    
+                    step++;
+                    setTimeout(executeStep, 1000);
+                };
+                
+                executeStep();
+            }
+            
+            /**
+             * 統合機能テスト
+             */
+            testIntegration() {
+                this.showSystemIndicator('統合機能テスト実行中...');
+                
+                const tests = [
+                    () => this.checkBoundingBoxIntegration(),
+                    () => this.checkResponsiveIntegration(),
+                    () => this.checkElementObserverIntegration(),
+                    () => this.checkPerformanceMetrics()
+                ];
+                
+                let currentTest = 0;
+                const executeTest = async () => {
+                    if (currentTest >= tests.length) {
+                        this.hideSystemIndicator();
+                        this.updateSystemStatus('統合テスト完了 - 全機能正常');
+                        return;
+                    }
+                    
+                    try {
+                        await tests[currentTest]();
+                        currentTest++;
+                        setTimeout(executeTest, 500);
+                    } catch (error) {
+                        console.error(`テスト${currentTest + 1}失敗:`, error);
+                        this.hideSystemIndicator();
+                        this.updateSystemStatus(`テスト失敗: ${error.message}`);
+                    }
+                };
+                
+                executeTest();
+            }
+            
+            /**
+             * 統合テスト: バウンディングボックス
+             */
+            checkBoundingBoxIntegration() {
+                return new Promise((resolve) => {
+                    this.updateSystemStatus('テスト: バウンディングボックス統合');
+                    
+                    const available = !!(window.PureBoundingBoxCore && window.PureBoundingBoxUI);
+                    console.log('🧪 バウンディングボックス統合テスト:', available ? 'PASS' : 'FAIL');
+                    
+                    resolve(available);
+                });
+            }
+            
+            /**
+             * 統合テスト: レスポンシブシステム
+             */
+            checkResponsiveIntegration() {
+                return new Promise((resolve) => {
+                    this.updateSystemStatus('テスト: レスポンシブシステム統合');
+                    
+                    const available = !!window.ResponsiveSpineFitIntegration;
+                    console.log('🧪 レスポンシブシステム統合テスト:', available ? 'PASS' : 'FAIL');
+                    
+                    resolve(available);
+                });
+            }
+            
+            /**
+             * 統合テスト: ElementObserver
+             */
+            checkElementObserverIntegration() {
+                return new Promise((resolve) => {
+                    this.updateSystemStatus('テスト: ElementObserver Phase 3-B統合');
+                    
+                    const available = !!window.ElementObserverAdvanced;
+                    console.log('🧪 ElementObserver統合テスト:', available ? 'PASS' : 'FAIL');
+                    
+                    resolve(available);
+                });
+            }
+            
+            /**
+             * 統合テスト: パフォーマンスメトリクス
+             */
+            checkPerformanceMetrics() {
+                return new Promise((resolve) => {
+                    this.updateSystemStatus('テスト: パフォーマンスメトリクス');
+                    
+                    const metrics = {
+                        fps: this.debugInfo.fps,
+                        updateCount: this.debugInfo.updateCount,
+                        memoryUsage: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) : 'N/A'
+                    };
+                    
+                    console.log('🧪 パフォーマンスメトリクス:', metrics);
+                    resolve(metrics);
+                });
+            }
+            
+            /**
+             * 全リセット
+             */
+            resetAll() {
+                try {
+                    this.showSystemIndicator('システムリセット中...');
+                    
+                    // バウンディングボックス停止
+                    if (this.boundingBoxSystem) {
+                        this.cancelBoundingBox();
+                    }
+                    
+                    // レスポンシブシステム停止
+                    if (this.responsiveSystem && this.isResponsiveActive) {
+                        this.toggleResponsiveMode();
+                    }
+                    
+                    // レスポンシブシステム破棄
+                    if (this.responsiveSystem) {
+                        this.responsiveSystem.destroy();
+                        this.responsiveSystem = null;
+                    }
+                    
+                    // スタイルリセット
+                    this.spineElement.style.transform = 'translate(-50%, -50%)';
+                    this.backgroundElement.style.width = '80%';
+                    this.backgroundElement.style.height = '70vh';
+                    
+                    // クラスリセット
+                    this.backgroundElement.classList.remove('responsive-active');
+                    this.spineElement.classList.remove('responsive-tracking', 'selected');
+                    
+                    // UIリセット
+                    this.resetBoundingBoxUI();
+                    document.getElementById('toggleResponsive').textContent = '📱 レスポンシブ ON';
+                    document.getElementById('toggleResponsive').className = 'control-button success';
+                    
+                    // 状態リセット
+                    this.isBoundingBoxActive = false;
+                    this.isResponsiveActive = false;
+                    
+                    this.hideSystemIndicator();
+                    this.updateSystemStatus('システムリセット完了');
+                    
+                    console.log('✅ システムリセット完了');
+                    
+                } catch (error) {
+                    console.error('❌ リセットエラー:', error);
+                    this.hideSystemIndicator();
+                    this.updateSystemStatus(`リセットエラー: ${error.message}`);
+                }
+            }
+            
+            /**
+             * イベントリスナー設定
+             */
+            setupEventListeners() {
+                // バウンディングボックス制御
+                document.getElementById('enableBoundingBox').addEventListener('click', () => {
+                    this.enableBoundingBox();
+                });
+                
+                document.getElementById('saveBoundingBox').addEventListener('click', () => {
+                    this.saveBoundingBox();
+                });
+                
+                document.getElementById('cancelBoundingBox').addEventListener('click', () => {
+                    this.cancelBoundingBox();
+                });
+                
+                // レスポンシブ制御
+                document.getElementById('toggleResponsive').addEventListener('click', () => {
+                    this.toggleResponsiveMode();
+                });
+                
+                document.getElementById('regionSelect').addEventListener('change', (e) => {
+                    if (this.responsiveSystem && this.responsiveSystem.targetRegionConfig) {
+                        const regionName = e.target.value;
+                        const region = this.responsiveSystem.targetRegionConfig[regionName];
+                        if (region) {
+                            this.responsiveSystem.baseMetrics.regionConfig = region;
+                            this.responsiveSystem.updateResponsivePosition();
+                            this.updateSystemStatus(`追従領域変更: ${regionName}`);
+                        }
+                    }
+                });
+                
+                document.getElementById('fitRatioSlider').addEventListener('input', (e) => {
+                    const ratio = parseFloat(e.target.value);
+                    document.getElementById('fitRatioValue').textContent = ratio.toFixed(1);
+                    
+                    if (this.responsiveSystem) {
+                        this.responsiveSystem.baseMetrics.fitRatio = ratio;
+                        this.responsiveSystem.updateResponsivePosition();
+                    }
+                });
+                
+                document.getElementById('fitModeSelect').addEventListener('change', (e) => {
+                    if (this.responsiveSystem && this.responsiveSystem.baseMetrics.regionConfig) {
+                        this.responsiveSystem.baseMetrics.regionConfig.fitMode = e.target.value;
+                        this.responsiveSystem.updateResponsivePosition();
+                        this.updateSystemStatus(`フィットモード変更: ${e.target.value}`);
+                    }
+                });
+                
+                // システムテスト
+                document.getElementById('testResize').addEventListener('click', () => {
+                    this.testResize();
+                });
+                
+                document.getElementById('testIntegration').addEventListener('click', () => {
+                    this.testIntegration();
+                });
+                
+                document.getElementById('resetAll').addEventListener('click', () => {
+                    this.resetAll();
+                });
+            }
+            
+            /**
+             * デバッグ監視開始
+             */
+            startDebugMonitoring() {
+                let frameCount = 0;
+                let lastTime = Date.now();
+                
+                const updateDebug = () => {
+                    frameCount++;
+                    const now = Date.now();
+                    
+                    // FPS計算（1秒毎）
+                    if (now - lastTime >= 1000) {
+                        this.debugInfo.fps = frameCount;
+                        frameCount = 0;
+                        lastTime = now;
+                    }
+                    
+                    this.debugInfo.updateCount++;
+                    this.debugInfo.lastUpdateTime = now;
+                    
+                    this.updateDebugInfo();
+                    requestAnimationFrame(updateDebug);
+                };
+                
+                requestAnimationFrame(updateDebug);
+            }
+            
+            /**
+             * デバッグ情報更新
+             */
+            updateDebugInfo() {
+                // 背景サイズ
+                const bgRect = this.backgroundElement.getBoundingClientRect();
+                document.getElementById('debugBgSize').textContent = 
+                    `${Math.round(bgRect.width)}×${Math.round(bgRect.height)}`;
+                
+                // Spine位置
+                const spineRect = this.spineElement.getBoundingClientRect();
+                document.getElementById('debugSpinePos').textContent = 
+                    `(${Math.round(spineRect.left)}, ${Math.round(spineRect.top)})`;
+                
+                // Spine縮尺
+                const transform = window.getComputedStyle(this.spineElement).transform;
+                const scale = transform !== 'none' ? this.extractScaleFromMatrix(transform) : 1.0;
+                document.getElementById('debugSpineScale').textContent = `${scale.toFixed(3)}x`;
+                
+                // レスポンシブ状態
+                document.getElementById('debugResponsive').textContent = 
+                    this.isResponsiveActive ? 'ON' : 'OFF';
+                
+                // バウンディングボックス状態
+                document.getElementById('debugBoundingBox').textContent = 
+                    this.isBoundingBoxActive ? 'ON' : 'OFF';
+                
+                // ElementObserver状態
+                document.getElementById('debugElementObserver').textContent = 
+                    window.ElementObserverAdvanced ? '利用可能' : '未検出';
+                
+                // 更新頻度
+                document.getElementById('debugUpdateRate').textContent = 
+                    `${this.debugInfo.fps} FPS`;
+            }
+            
+            /**
+             * CSS Matrix からスケール値抽出
+             */
+            extractScaleFromMatrix(matrixString) {
+                try {
+                    const matrix = new DOMMatrix(matrixString);
+                    return Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b);
+                } catch (error) {
+                    return 1.0;
+                }
+            }
+            
+            /**
+             * システムステータス更新
+             */
+            updateSystemStatus(message) {
+                const statusEl = document.getElementById('systemStatus');
+                const timestamp = new Date().toLocaleTimeString();
+                statusEl.textContent = `[${timestamp}] ${message}`;
+            }
+            
+            /**
+             * システムインジケーター表示
+             */
+            showSystemIndicator(message) {
+                const indicator = document.getElementById('systemIndicator');
+                indicator.textContent = message;
+                indicator.style.display = 'block';
+            }
+            
+            /**
+             * システムインジケーター非表示
+             */
+            hideSystemIndicator() {
+                const indicator = document.getElementById('systemIndicator');
+                indicator.style.display = 'none';
+            }
+            
+            /**
+             * デバッグ情報取得（外部アクセス用）
+             */
+            getFullDebugInfo() {
+                return {
+                    system: {
+                        boundingBoxActive: this.isBoundingBoxActive,
+                        responsiveActive: this.isResponsiveActive,
+                        boundingBoxSystem: !!this.boundingBoxSystem,
+                        responsiveSystem: !!this.responsiveSystem
+                    },
+                    modules: {
+                        PureBoundingBoxCore: !!window.PureBoundingBoxCore,
+                        PureBoundingBoxUI: !!window.PureBoundingBoxUI,
+                        ResponsiveSpineFitIntegration: !!window.ResponsiveSpineFitIntegration,
+                        ElementObserverAdvanced: !!window.ElementObserverAdvanced
+                    },
+                    elements: {
+                        spine: {
+                            position: this.spineElement.getBoundingClientRect(),
+                            transform: window.getComputedStyle(this.spineElement).transform
+                        },
+                        background: {
+                            size: this.backgroundElement.getBoundingClientRect()
+                        }
+                    },
+                    performance: { ...this.debugInfo }
+                };
+            }
+        }
+        
+        // システム初期化をDOM読み込み後に実行
+        let integratedSystem;
+        
+        const initSystem = () => {
+            integratedSystem = new IntegratedResponsiveSpineSystem();
+            
+            // グローバル参照（デバッグ用）
+            window.integratedSystem = integratedSystem;
+            
+            console.log('🚀 統合レスポンシブSpineシステム起動完了');
+            console.log('🔧 デバッグ: F12コンソールで "integratedSystem" アクセス可能');
+        };
+        
+        // システムステータス更新ヘルパー
+        const updateSystemStatus = (message) => {
+            const statusEl = document.getElementById('systemStatus');
+            if (statusEl) {
+                const timestamp = new Date().toLocaleTimeString();
+                statusEl.textContent = `[${timestamp}] ${message}`;
+            }
+        };
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSystem);
+        } else {
+            initSystem();
+        }
+        
+        // デバッグ用グローバル関数
+        window.debugIntegratedSystem = () => {
+            if (!integratedSystem) {
+                console.log('❌ システムが初期化されていません');
+                return;
+            }
+            
+            console.log('🎯 統合レスポンシブSpineシステム デバッグ情報:');
+            console.table(integratedSystem.getFullDebugInfo());
+        };
+    </script>
+</body>
+</html>

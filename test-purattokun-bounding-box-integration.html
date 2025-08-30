@@ -185,7 +185,7 @@
         </div>
         
         <div class="canvas-container">
-            <canvas id="spine-canvas" width="800" height="600"></canvas>
+            <canvas id="spine-canvas" width="300" height="200"></canvas>
         </div>
     </div>
     
@@ -235,8 +235,8 @@
         <div>マイクロモジュール読み込み中...</div>
     </div>
 
-    <!-- Spine WebGL（マニュアル準拠） -->
-    <script src="assets/js/libs/spine-webgl.js"></script>
+    <!-- Spine WebGL（v4.1.24 CDN版 - index.html準拠） -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
     
     <!-- マイクロモジュール（マニュアル準拠） -->
     <script src="micromodules/spine-loader/PureSpineLoader.js"></script>
@@ -352,19 +352,70 @@
             async initWebGL() {
                 this.log('🎮 WebGL初期化中...');
                 
-                this.gl = this.canvas.getContext('webgl', { alpha: true });
+                // 🎯 アルファ/透明度処理の詳細設定
+                this.gl = this.canvas.getContext('webgl', { 
+                    alpha: true, 
+                    premultipliedAlpha: true,  // プリマルチプライアルファを有効化（index.html準拠）
+                    antialias: true,           // アンチエイリアシング有効化
+                    depth: false,              // デプステスト無効化
+                    stencil: false             // ステンシルテスト無効化
+                });
                 if (!this.gl) {
                     throw new Error('WebGL未対応');
                 }
                 
-                // シェーダー初期化（v3.0マニュアル：直接アクセス）
+                // 🎯 WebGLアルファ・ブレンド詳細設定
+                this.gl.enable(this.gl.BLEND);
+                
+                // プリマルチプライアルファに適したブレンド設定
+                this.gl.blendFuncSeparate(
+                    this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA,     // RGB用ブレンド
+                    this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA      // Alpha用ブレンド
+                );
+                
+                // アルファテスト設定（透明度カットオフ）
+                this.gl.enable(this.gl.SAMPLE_ALPHA_TO_COVERAGE);
+                
+                // 元の動作していた方式に戻す（シェーダー+バッチャー）
                 this.shader = spine.Shader.newTwoColoredTextured(this.gl);
                 this.batcher = new spine.PolygonBatcher(this.gl);
                 
-                // AssetManager初期化（v3.0マニュアル：直接アクセス）
-                this.assetManager = new spine.AssetManager(this.gl);
+                // AssetManager初期化（index.html準拠 - basePathあり）
+                this.assetManager = new spine.AssetManager(this.gl, '/assets/spine/characters/purattokun/');
                 
-                this.log('✅ WebGL初期化完了');
+                // 🎯 テクスチャフィルタリング設定の詳細調整
+                this.setupTextureFiltering();
+                
+                this.log('✅ WebGL初期化完了（プリマルチプライアルファ対応+テクスチャフィルタリング）');
+            }
+            
+            // 🎯 テクスチャフィルタリング詳細設定
+            setupTextureFiltering() {
+                this.log('🖼️ テクスチャフィルタリング設定中...');
+                
+                // WebGLコンテキストでテクスチャ設定をオーバーライド
+                const originalBindTexture = this.gl.bindTexture.bind(this.gl);
+                const originalTexParameteri = this.gl.texParameteri.bind(this.gl);
+                
+                this.gl.bindTexture = (target, texture) => {
+                    const result = originalBindTexture(target, texture);
+                    
+                    if (target === this.gl.TEXTURE_2D && texture) {
+                        // 🎯 テクスチャフィルタリング: NEAREST (ピクセルパーフェクト)
+                        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+                        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+                        
+                        // 🎯 テクスチャ境界処理: CLAMP_TO_EDGE (境界をクランプ)
+                        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+                        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+                        
+                        this.log('🎯 テクスチャパラメータ設定: NEAREST + CLAMP_TO_EDGE');
+                    }
+                    
+                    return result;
+                };
+                
+                this.log('✅ テクスチャフィルタリング設定完了');
             }
             
             async initMicromodules() {
@@ -412,9 +463,9 @@
                         this.log('📦 PureSpineLoader検証完了');
                     }
                     
-                    // 直接AssetManagerによる実際の読み込み（成功パターン）
-                    this.assetManager.loadText('assets/spine/characters/purattokun/purattokun.json');
-                    this.assetManager.loadTextureAtlas('assets/spine/characters/purattokun/purattokun.atlas');
+                    // 直接AssetManagerによる実際の読み込み（index.html準拠 - 相対パス）
+                    this.assetManager.loadText('purattokun.json');
+                    this.assetManager.loadTextureAtlas('purattokun.atlas');
                     
                     // 読み込み完了を待機
                     const checkLoaded = () => {
@@ -437,20 +488,19 @@
                 try {
                     this.log('🎯 Purattokun Skeleton設定中...');
                     
-                    // AtlasとSkeletonData読み込み
-                    const atlas = this.assetManager.get('assets/spine/characters/purattokun/purattokun.atlas');
+                    // AtlasとSkeletonData読み込み（index.html準拠 - 相対パス）
+                    const atlas = this.assetManager.get('purattokun.atlas');
                     const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
                     const skeletonJson = new spine.SkeletonJson(atlasLoader);
-                    const skeletonData = skeletonJson.readSkeletonData(this.assetManager.get('assets/spine/characters/purattokun/purattokun.json'));
+                    const skeletonData = skeletonJson.readSkeletonData(this.assetManager.get('purattokun.json'));
                     
                     // Skeleton作成
                     this.skeleton = new spine.Skeleton(skeletonData);
-                    this.skeleton.scaleX = 0.5;
-                    this.skeleton.scaleY = 0.5;
                     
-                    // 🎯 座標設定（v3.0マニュアル基準：画面中央）
+                    // 🎯 座標・スケール設定（元の位置に戻す）
                     this.skeleton.x = this.canvas.width / 2;
                     this.skeleton.y = this.canvas.height / 2;
+                    this.skeleton.scaleX = this.skeleton.scaleY = 0.5;
                     
                     // AnimationState作成
                     const stateData = new spine.AnimationStateData(skeletonData);
@@ -460,6 +510,8 @@
                     if (skeletonData.animations && skeletonData.animations.length > 0) {
                         this.animationState.setAnimation(0, skeletonData.animations[0].name, true);
                     }
+                    
+                    // レンダラーは描画時に作成（元の方式）
                     
                     this.purattokunLoaded = true;
                     this.updateStatus('purattokun-status', '読み込み完了');
@@ -477,34 +529,35 @@
             startRenderLoop() {
                 this.log('🎬 描画ループ開始');
                 
-                // 30FPS制御（改良版：自然なタイミング）
-                let lastTime = Date.now();
+                // index.html準拠のシンプル描画ループ
+                let lastTime = Date.now() / 1000;
                 
                 const render = () => {
                     if (!this.purattokunLoaded) return;
                     
-                    const now = Date.now();
-                    const deltaTime = (now - lastTime) / 1000; // 秒単位
+                    const now = Date.now() / 1000;
+                    const deltaTime = now - lastTime;
                     lastTime = now;
                     
-                    // 30FPS相当のdelta（最大制限付き）
-                    const targetDelta = Math.min(deltaTime, 0.033); // 30FPS = 0.033秒
-                    
-                    this.animationState.update(targetDelta);
+                    this.animationState.update(deltaTime);
                     this.animationState.apply(this.skeleton);
                     this.skeleton.updateWorldTransform();
                     
-                    // 画面クリア
+                    // 元の複雑な描画方式（動作確認済み）+ ブレンド設定
                     this.gl.clearColor(0, 0, 0, 0);
                     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
                     
-                    // 描画設定（v3.0マニュアル：直接アクセス）
+                    // WebGLブレンド設定（口パクの黒枠対策）
+                    this.gl.enable(this.gl.BLEND);
+                    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+                    
+                    // 描画設定
                     this.shader.bind();
                     this.shader.setUniformi(spine.Shader.SAMPLER, 0);
                     this.shader.setUniform4x4f(spine.Shader.MVP_MATRIX, 
                         this.createProjectionMatrix().values);
                     
-                    // Skeleton描画（v3.0マニュアル：直接アクセス）
+                    // Skeleton描画
                     this.batcher.begin(this.shader);
                     const renderer = new spine.SkeletonRenderer(this.gl);
                     renderer.draw(this.batcher, this.skeleton);
