@@ -401,6 +401,8 @@
             
             // ウィンドウリサイズテスト用 + BB比率保持機能
             let resizeTimeout;
+            
+            // 1. ウィンドウリサイズ監視
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
@@ -409,6 +411,22 @@
                     maintainBBRatioAfterResize();
                 }, 100);
             });
+            
+            // 2. heroSectionサイズ変更監視（ResizeObserver）
+            const heroSection = document.getElementById('test-hero');
+            if (heroSection) {
+                const resizeObserver = new ResizeObserver(entries => {
+                    for (const entry of entries) {
+                        clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            log('📐 ヒーローセクションリサイズ検出 - BB比率保持実行', 'info');
+                            // 🎯 BB比率保持機能: 編集サイズを維持
+                            maintainBBRatioAfterResize();
+                        }, 100);
+                    }
+                });
+                resizeObserver.observe(heroSection);
+            }
         }
         
         // BB比率保持機能: ウィンドウリサイズ後に編集サイズを維持
