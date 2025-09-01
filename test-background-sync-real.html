@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏢 縦横比問題解決・実用Spineバウンディングボックステスト</title>
+    <style>
+        /* 基本リセット */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .test-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .test-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 🔑 重要：シーンコンテナ（レスポンシブ基準） */
+        .scene-container {
+            position: relative;           /* 子要素の絶対位置基準 */
+            width: 100%;                 /* 画面幅に合わせる */
+            max-width: 1200px;           /* 最大幅制限 */
+            margin: 0 auto;              /* 中央寄せ */
+            background: white;           
+            border-radius: 10px;         
+            overflow: hidden;            /* はみ出し防止 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 🎨 重要：背景画像（基準となる要素） */
+        .background-image {
+            width: 100%;                 /* コンテナ幅に合わせる */
+            height: auto;                /* 縦横比維持 */
+            display: block;              /* inline要素の隙間除去 */
+            user-select: none;           /* ドラッグ防止 */
+        }
+
+        /* 🎮 重要：Spineキャラクター用Canvas（ぷらっとくん） */
+        #purattokun-canvas {
+            position: absolute;          /* 背景画像上に重ねる */
+            left: 35%;                   /* 背景画像基準の位置（調整可能） */
+            top: 75%;                    /* 背景画像基準の位置（調整可能） */
+            transform: translate(-50%, -50%); /* 中央寄せ */
+            width: 25%;                  /* 🔑 背景画像と同じ比例拡縮 */
+            aspect-ratio: 3/2;           /* 🔑 縦横比固定（潰れ防止） */
+            z-index: 10;                 /* 前面表示 */
+            display: none;               /* 初期は非表示（JS読み込み後に表示） */
+            cursor: pointer;             /* クリック可能表示 */
+            data-character-name: "purattokun"; /* キャラクター識別用 */
+        }
+
+        /* 📱 モバイル用スタイル */
+        @media (max-width: 768px) {
+            #purattokun-canvas {
+                width: 30%;              /* モバイルで少し大きく */
+                left: 50%;               /* 中央寄り */
+            }
+        }
+
+        /* コントロールパネル */
+        .control-panel {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .control-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .primary-button {
+            background: #28a745;
+            color: white;
+        }
+        
+        .primary-button:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .secondary-button {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .secondary-button:hover {
+            background: #5a6268;
+        }
+        
+        .danger-button {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .danger-button:hover {
+            background: #c82333;
+        }
+
+        /* 情報パネル */
+        .info-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-success { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-danger { background: #dc3545; }
+
+        /* ログ表示 */
+        .log-container {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        /* 機能説明 */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .feature-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 縦横比テスト用スタイル */
+        .aspect-test-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .aspect-info {
+            background: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        /* レスポンシブテスト用 */
+        .responsive-test-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🏢 縦横比問題解決・実用Spineバウンディングボックステスト</h1>
+        <p>実際の背景画像とSpineデータを使用したリアルなテスト環境です。</p>
+        <p><strong>キー機能:</strong> 縦横比維持・レスポンシブ対応・自動ピンシステム</p>
+    </div>
+    
+    <!-- 🏢 リアルなScene Container -->
+    <div class="scene-container">
+        <!-- 実際の背景画像 -->
+        <img src="assets/images/クラウドパートナーTOP.png" alt="背景" class="background-image">
+        
+        <!-- 実際のSpineキャラクター用Canvas -->
+        <canvas id="purattokun-canvas"></canvas>
+    </div>
+
+    <!-- 縦横比テストコントロール -->
+    <div class="aspect-test-controls">
+        <button class="control-button secondary-button" onclick="testAspectRatio()">
+            📍 縦横比検証開始
+        </button>
+        <button class="control-button secondary-button" onclick="toggleResponsiveInfo()">
+            📱 レスポンシブ情報表示
+        </button>
+        <div class="aspect-info" id="aspect-info">
+            アスペクト比: 測定中...
+        </div>
+    </div>
+
+    <!-- コントロールパネル -->
+    <div class="control-panel">
+        <button class="control-button primary-button" onclick="initializeSpineAndBB()">
+            🎮 Spine初期化 + バウンディングボックス
+        </button>
+        <button class="control-button primary-button" onclick="testBBAutoPin()">
+            📍 自動ピンテスト
+        </button>
+        <button class="control-button secondary-button" onclick="showSystemStatus()">
+            ⚙️ システム状態
+        </button>
+        <button class="control-button secondary-button" onclick="performResizeTest()">
+            📏 リサイズテスト
+        </button>
+        <button class="control-button danger-button" onclick="clearAllData()">
+            🗑️ 全データクリア
+        </button>
+    </div>
+
+    <!-- 機能説明 -->
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h3>🏢 実環境テスト</h3>
+            <p>実際のプロジェクトと同じ構成でテストできます：</p>
+            <ul>
+                <li>実際の背景画像: クラウドパートナーTOP.png</li>
+                <li>実際のSpineデータ: purattokun.json/.atlas/.png</li>
+                <li>index.htmlと同一のCSS構成・aspect-ratio対応</li>
+                <li>レスポンシブデザイン完全再現</li>
+            </ul>
+        </div>
+        
+        <div class="feature-card">
+            <h3>🔍 縦横比問題解決</h3>
+            <p>以下の技術で縦横比問題を根本解決：</p>
+            <ul>
+                <li><code>aspect-ratio: 3/2</code> でCanvas縦横比固定</li>
+                <li><code>width: 25%</code> で背景画像と比例拡縮</li>
+                <li><code>height: auto</code> で背景画像の縦横比維持</li>
+                <li>レスポンシブブレイクポイントでモバイル対応</li>
+            </ul>
+        </div>
+        
+        <div class="feature-card">
+            <h3>🔧 バウンディングボックス自動ピン</h3>
+            <p>Phase 2の高度な自動ピンシステム：</p>
+            <ul>
+                <li>背景要素の自動検出</li>
+                <li>9アンカーポイント最適化</li>
+                <li>ウィンドウリサイズ時の比率保持</li>
+                <li>右クリックメニュー操作</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- システム状態表示 -->
+    <div class="info-panel">
+        <h3>📊 システム状態</h3>
+        <div id="system-status">
+            <div class="status-line">
+                <span class="status-indicator status-warning"></span>
+                <span>システムチェック中...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- レスポンシブ情報表示 -->
+    <div class="responsive-test-info" id="responsive-info">
+        <div>Window: <span id="window-size">-</span></div>
+        <div>Scene: <span id="scene-size">-</span></div>
+        <div>Background: <span id="bg-size">-</span></div>
+        <div>Canvas: <span id="canvas-size">-</span></div>
+        <div>Aspect Ratio: <span id="aspect-ratio">-</span></div>
+    </div>
+
+    <!-- ログ表示 -->
+    <div class="log-container" id="log-display">
+        🏢 実用Spineバウンディングボックステストログ - 初期化中...\n
+    </div>
+
+    <!-- Spine WebGLライブラリ -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    
+    <!-- 成功事例ベースシステムではPureSpineLoaderは不要 -->
+    
+    <!-- 必要なモジュール読み込み -->
+    <script src="micromodules/element-observer/ElementObserverCore.js"></script>
+    <script src="micromodules/element-observer/ElementObserverTransform.js"></script>
+    <script src="micromodules/element-observer/ElementObserverWebGL.js"></script>
+    <script src="micromodules/element-observer/ElementObserverResponsive.js"></script>
+    <script src="micromodules/element-observer/ElementObserverAdvanced.js"></script>
+    
+    <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxAutoPin.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
+
+    <script>
+        // グローバル変数
+        // spineLoaderは成功事例ベースでは不要
+        // spineDataは成功事例ベースでは不要
+        let skeleton = null;
+        let animationState = null;
+        let renderer = null;
+        let currentBoundingBox = null;
+        let canvas = null;
+        let gl = null;
+        let logDisplay = null;
+        let responsiveInterval = null;
+        let renderLoop = null;
+        
+        // ログ関数
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : '📋';
+            const logMessage = `[${timestamp}] ${icon} ${message}\n`;
+            
+            if (logDisplay) {
+                logDisplay.textContent += logMessage;
+                logDisplay.scrollTop = logDisplay.scrollHeight;
+            }
+            
+            console.log(`${icon} ${message}`);
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            canvas = document.getElementById('purattokun-canvas');
+            logDisplay = document.getElementById('log-display');
+            
+            log('🊀 実用Spineバウンディングボックステスト開始', 'info');
+            
+            // モジュール確認
+            await checkSystemModules();
+            
+            // 縦横比情報初期表示
+            updateAspectInfo();
+            
+            // イベントリスナー設定
+            setupEventListeners();
+            
+            log('✅ 初期化完了 - テスト準備完了', 'success');
+        });
+
+        // モジュール確認
+        async function checkSystemModules() {
+            const modules = [
+                { name: 'Spine WebGL', obj: window.spine },
+                { name: 'Spine AssetManager', obj: window.spine?.AssetManager },
+                { name: 'ElementObserverCore', obj: window.ElementObserverCore },
+                { name: 'ElementObserverAdvanced', obj: window.ElementObserverAdvanced },
+                { name: 'PureBoundingBoxCore', obj: window.PureBoundingBoxCore },
+                { name: 'PureBoundingBoxUI', obj: window.PureBoundingBoxUI },
+                { name: 'PureBoundingBoxAutoPin', obj: window.PureBoundingBoxAutoPin },
+                { name: 'PureBoundingBox', obj: window.PureBoundingBox }
+            ];
+            
+            let allLoaded = true;
+            let statusHtml = '';
+            
+            for (const module of modules) {
+                const loaded = (module.name === 'Spine WebGL') ? 
+                    (typeof module.obj === 'object' && module.obj !== null) :
+                    (typeof module.obj === 'function');
+                const statusClass = loaded ? 'status-success' : 'status-danger';
+                const statusText = loaded ? '読み込み済み' : '読み込み失敗';
+                
+                statusHtml += `
+                    <div class="status-line">
+                        <span class="status-indicator ${statusClass}"></span>
+                        <span>${module.name}: ${statusText}</span>
+                    </div>
+                `;
+                
+                if (!loaded) {
+                    allLoaded = false;
+                    log(`❌ ${module.name} モジュールが見つかりません`, 'error');
+                } else {
+                    log(`✅ ${module.name} モジュール読み込み成功`, 'success');
+                }
+            }
+            
+            document.getElementById('system-status').innerHTML = statusHtml;
+            
+            if (allLoaded) {
+                log('🎉 全モジュール読み込み成功', 'success');
+            } else {
+                log('⚠️ 一部モジュールの読み込みに失敗しました', 'warning');
+            }
+        }
+
+        // イベントリスナー設定
+        function setupEventListeners() {
+            // キャンバスクリックでバウンディングボックス表示
+            canvas.addEventListener('click', (e) => {
+                if (skeleton) {
+                    e.stopPropagation();
+                    testBBAutoPin();
+                }
+            });
+            
+            // ウィンドウリサイズ監視
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    updateAspectInfo();
+                    updateResponsiveInfo();
+                    log('📏 ウィンドウリサイズ検出 - 縦横比情報更新', 'info');
+                }, 100);
+            });
+        }
+
+        // Spine初期化（成功事例ベース版）
+        async function initializeSpineAndBB() {
+            try {
+                // 初期化メッセージは上で実行済み
+                
+                log('🎮 成功事例ベース Spine初期化開始 (SceneRendererベース)', 'info');
+                
+                // Canvas初期設定（成功事例準拠）
+                canvas.width = canvas.clientWidth || 300;
+                canvas.height = canvas.clientHeight || 200;
+                
+                log(`📐 Canvas初期設定: ${canvas.width}x${canvas.height} (CSS: ${canvas.clientWidth}x${canvas.clientHeight})`, 'info');
+                
+                // WebGLコンテキスト取得（成功事例準拠）
+                gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) {
+                    throw new Error('WebGLコンテキストの取得に失敗しました');
+                }
+                log('✅ WebGLコンテキスト取得成功', 'success');
+                
+                // アセットマネージャー作成（成功事例準拠）
+                const assetManager = new spine.AssetManager(gl);
+                
+                const spineFile = 'assets/spine/characters/purattokun/purattokun.json';
+                const atlasFile = 'assets/spine/characters/purattokun/purattokun.atlas';
+                
+                assetManager.loadText(spineFile);
+                assetManager.loadTextureAtlas(atlasFile);
+                
+                // アセット読み込み待ち（成功事例準拠）
+                await new Promise((resolve, reject) => {
+                    let checkCount = 0;
+                    const checkAssets = () => {
+                        if (assetManager.isLoadingComplete()) {
+                            resolve();
+                        } else if (checkCount++ < 100) {
+                            setTimeout(checkAssets, 100);
+                        } else {
+                            reject(new Error('アセット読み込みタイムアウト'));
+                        }
+                    };
+                    checkAssets();
+                });
+                log('✅ Spineアセット読み込み完了', 'success');
+                
+                // Skeleton作成（成功事例準拠）
+                const atlas = assetManager.require(atlasFile);
+                const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+                const skeletonJson = new spine.SkeletonJson(atlasLoader);
+                const skeletonData = skeletonJson.readSkeletonData(assetManager.require(spineFile));
+                
+                skeleton = new spine.Skeleton(skeletonData);
+                const stateData = new spine.AnimationStateData(skeletonData);
+                animationState = new spine.AnimationState(stateData);
+                
+                // レンダラー作成（成功事例準拠 - SceneRenderer使用）
+                renderer = new spine.SceneRenderer(canvas, gl);
+                
+                // キャラクター位置・スケール設定（成功事例準拠）
+                skeleton.scaleX = skeleton.scaleY = 0.6;
+                skeleton.x = 0;  // 成功事例準拠（後でCanvasサイズ調整時に更新）
+                skeleton.y = 0;  // 成功事例準拠（後でCanvasサイズ調整時に更新）
+                skeleton.setToSetupPose();
+                skeleton.updateWorldTransform();
+                
+                // 初期アニメーション設定
+                if (skeletonData.animations.length > 0) {
+                    const firstAnim = skeletonData.animations[0].name;
+                    animationState.setAnimation(0, firstAnim, true);
+                    log(`🎨 初期アニメーション: ${firstAnim}`, 'success');
+                }
+                
+                // Canvas表示
+                canvas.style.display = 'block';
+                
+                // レンダリングループ開始
+                startRenderLoop();
+                
+                log('✅ 成功事例ベース Spine初期化完了', 'success');
+                log('🔧 SceneRenderer使用によりdrawOrderエラーを回避', 'info');
+                
+            } catch (error) {
+                log(`❌ Spine初期化エラー: ${error.message}`, 'error');
+                console.error('Spine初期化エラー:', error);
+            }
+        }
+        
+        // Spineテスト（デバッグ用）
+        async function testSpineSystem() {
+            try {
+                log('🧪 Spineシステムテスト開始', 'info');
+                
+                if (!window.spine) {
+                    throw new Error('Spine WebGLライブラリが読み込まれていません');
+                }
+                
+                log(`🎯 Spine WebGLライブラリテスト:`, 'info');
+                log(`  - spine: ${typeof window.spine}`, 'info');
+                log(`  - AssetManager: ${typeof window.spine?.AssetManager}`, 'info');
+                log(`  - SceneRenderer: ${typeof window.spine?.SceneRenderer}`, 'info');
+                log(`  - Skeleton: ${typeof window.spine?.Skeleton}`, 'info');
+                log('✅ Spine WebGLライブラリテスト完了', 'success');
+                
+                return { success: true };
+                
+            } catch (error) {
+                log(`❌ Spine WebGLテストエラー: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+        
+        // レンダリングループ（成功事例ベース - SceneRenderer版）
+        function startRenderLoop() {
+            let lastTime = Date.now();
+            let debugFrameCount = 0; // デバッグ用フレームカウンター
+            let isResized = false; // リサイズフラグ
+            let lastResizeLog = 0; // 最後のリサイズログ時刻
+            
+            function render() {
+                const now = Date.now();
+                const delta = (now - lastTime) / 1000;
+                lastTime = now;
+                
+                // Canvas描画サイズ更新（必要時のみ）
+                const newWidth = canvas.clientWidth || 200;
+                const newHeight = canvas.clientHeight || 200;
+                
+                if (canvas.width !== newWidth || canvas.height !== newHeight) {
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    // キャラクター位置は(0,0)を維持（正常表示位置）
+                    skeleton.x = 0;
+                    skeleton.y = 0;
+                    isResized = true;
+                    
+                    if (now - lastResizeLog > 500) {
+                        log(`📐 Canvas リサイズ: ${canvas.width}x${canvas.height}, skeleton位置維持: x=${skeleton.x}, y=${skeleton.y} (0,0=正常)`, 'info');
+                        lastResizeLog = now;
+                    }
+                }
+                
+                // 初期5フレームのデバッグ情報出力（初期化時のみ）
+                if (debugFrameCount < 5) {
+                    log(`🎯 フレーム${debugFrameCount + 1}: skeleton.x=${skeleton.x}, skeleton.y=${skeleton.y}, canvas=${canvas.width}x${canvas.height}`, 'info');
+                    debugFrameCount++;
+                }
+                
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                
+                // アニメーション更新
+                animationState.update(delta);
+                animationState.apply(skeleton);
+                skeleton.updateWorldTransform();
+                
+                // 背景クリア（半透明背景）
+                gl.clearColor(0.0, 0.0, 0.0, 0.1);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                
+                // カメラ設定（シンプル設定）
+                const camera = renderer.camera;
+                camera.position.x = canvas.width / 2;  // Canvas中央にカメラ配置
+                camera.position.y = canvas.height / 2; // Canvas中央にカメラ配置
+                camera.setViewport(canvas.width, canvas.height);
+                
+                // リサイズ時の追加デバッグ情報
+                if (isResized && now - lastResizeLog <= 100) {
+                    log(`🎮 カメラ設定: position=(${camera.position.x}, ${camera.position.y}), viewport=${canvas.width}x${canvas.height}`, 'info');
+                    isResized = false;
+                }
+                
+                // 描画実行（SceneRenderer版）
+                renderer.begin();
+                renderer.drawSkeleton(skeleton, true);
+                renderer.end();
+                
+                requestAnimationFrame(render);
+            }
+            render();
+            
+            log('✅ Spine描画ループ開始', 'success');
+        }
+
+        // バウンディングボックス自動ピンテスト
+        async function testBBAutoPin() {
+            try {
+                if (!skeleton) {
+                    log('⚠️ 先にSpineを初期化してください', 'warning');
+                    return;
+                }
+                
+                log('📋 バウンディングボックス自動ピンテスト開始', 'info');
+                
+                // 既存のバウンディングボックスをクリーンアップ
+                if (currentBoundingBox) {
+                    currentBoundingBox.cleanup();
+                    currentBoundingBox = null;
+                }
+                
+                // 新しいバウンディングボックス作成
+                currentBoundingBox = new PureBoundingBox({
+                    targetElement: canvas,
+                    nodeId: 'purattokun-canvas'
+                });
+                
+                // 実行
+                const result = await currentBoundingBox.execute();
+                
+                if (result.success) {
+                    log('✅ バウンディングボックス作成成功', 'success');
+                    log(`📊 初期bounds: ${JSON.stringify(result.bounds)}`, 'info');
+                    
+                    // 自動ピン情報表示
+                    if (currentBoundingBox.ui && currentBoundingBox.ui.autoPin) {
+                        const autoPinState = currentBoundingBox.ui.autoPin.getState();
+                        log(`📍 AutoPin状態: アクティブピン${autoPinState.activePinsCount}個`, 'info');
+                    }
+                } else {
+                    log(`❌ バウンディングボックス作成失敗: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ バウンディングボックステストエラー: ${error.message}`, 'error');
+                console.error('バウンディングボックステストエラー:', error);
+            }
+        }
+        
+        // 縦横比テスト
+        function testAspectRatio() {
+            log('📍 縦横比検証開始', 'info');
+            
+            updateAspectInfo();
+            
+            const sceneContainer = document.querySelector('.scene-container');
+            const backgroundImage = document.querySelector('.background-image');
+            
+            if (sceneContainer && backgroundImage) {
+                const sceneRect = sceneContainer.getBoundingClientRect();
+                const bgRect = backgroundImage.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                
+                log(`📏 シーンコンテナ: ${sceneRect.width.toFixed(0)} × ${sceneRect.height.toFixed(0)}`, 'info');
+                log(`🎨 背景画像: ${bgRect.width.toFixed(0)} × ${bgRect.height.toFixed(0)}`, 'info');
+                log(`🎭 Canvas: ${canvasRect.width.toFixed(0)} × ${canvasRect.height.toFixed(0)}`, 'info');
+                
+                // 縦横比計算
+                const bgAspect = (bgRect.width / bgRect.height).toFixed(3);
+                const canvasAspect = (canvasRect.width / canvasRect.height).toFixed(3);
+                
+                log(`📏 背景アスペクト比: ${bgAspect}`, 'info');
+                log(`📏 Canvasアスペクト比: ${canvasAspect} (目標: 1.500)`, 'info');
+                
+                // CSS設定確認
+                const canvasStyles = window.getComputedStyle(canvas);
+                log(`📝 CSS width: ${canvasStyles.width}`, 'info');
+                log(`📝 CSS aspect-ratio: ${canvasStyles.aspectRatio || '設定なし'}`, 'info');
+                
+                // 縦横比チェック
+                const targetAspect = 1.5; // 3:2
+                const aspectDiff = Math.abs(parseFloat(canvasAspect) - targetAspect);
+                
+                if (aspectDiff < 0.01) {
+                    log('✅ 縦横比検証: 正常', 'success');
+                } else {
+                    log(`⚠️ 縦横比偏差: ${aspectDiff.toFixed(3)} (許容値: 0.01)`, 'warning');
+                }
+                
+            } else {
+                log('❌ 縦横比テスト: 要素が見つかりません', 'error');
+            }
+        }
+        
+        // 縦横比情報更新
+        function updateAspectInfo() {
+            const aspectInfo = document.getElementById('aspect-info');
+            if (!aspectInfo) return;
+            
+            const canvasRect = canvas.getBoundingClientRect();
+            const aspect = (canvasRect.width / canvasRect.height).toFixed(3);
+            
+            aspectInfo.textContent = `アスペクト比: ${aspect} (目標: 1.500) | Canvas: ${canvasRect.width.toFixed(0)}×${canvasRect.height.toFixed(0)}`;
+        }
+        
+        // レスポンシブ情報表示切り替え
+        function toggleResponsiveInfo() {
+            const info = document.getElementById('responsive-info');
+            if (info.style.display === 'none' || !info.style.display) {
+                info.style.display = 'block';
+                startResponsiveMonitoring();
+                log('📱 レスポンシブ情報表示開始', 'info');
+            } else {
+                info.style.display = 'none';
+                stopResponsiveMonitoring();
+                log('📱 レスポンシブ情報表示停止', 'info');
+            }
+        }
+        
+        // レスポンシブ監視開始
+        function startResponsiveMonitoring() {
+            if (responsiveInterval) return;
+            
+            responsiveInterval = setInterval(updateResponsiveInfo, 100);
+        }
+        
+        // レスポンシブ監視停止
+        function stopResponsiveMonitoring() {
+            if (responsiveInterval) {
+                clearInterval(responsiveInterval);
+                responsiveInterval = null;
+            }
+        }
+        
+        // レスポンシブ情報更新
+        function updateResponsiveInfo() {
+            const windowSize = document.getElementById('window-size');
+            const sceneSize = document.getElementById('scene-size');
+            const bgSize = document.getElementById('bg-size');
+            const canvasSize = document.getElementById('canvas-size');
+            const aspectRatio = document.getElementById('aspect-ratio');
+            
+            if (windowSize) windowSize.textContent = `${window.innerWidth} × ${window.innerHeight}`;
+            
+            const sceneContainer = document.querySelector('.scene-container');
+            if (sceneContainer && sceneSize) {
+                const rect = sceneContainer.getBoundingClientRect();
+                sceneSize.textContent = `${rect.width.toFixed(0)} × ${rect.height.toFixed(0)}`;
+            }
+            
+            const backgroundImage = document.querySelector('.background-image');
+            if (backgroundImage && bgSize) {
+                const rect = backgroundImage.getBoundingClientRect();
+                bgSize.textContent = `${rect.width.toFixed(0)} × ${rect.height.toFixed(0)}`;
+            }
+            
+            if (canvas && canvasSize && aspectRatio) {
+                const rect = canvas.getBoundingClientRect();
+                canvasSize.textContent = `${rect.width.toFixed(0)} × ${rect.height.toFixed(0)}`;
+                
+                const aspect = (rect.width / rect.height).toFixed(3);
+                aspectRatio.textContent = aspect + ' (target: 1.500)';
+            }
+        }
+        
+        // リサイズテスト
+        function performResizeTest() {
+            log('📏 リサイズテスト開始', 'info');
+            
+            const sceneContainer = document.querySelector('.scene-container');
+            if (!sceneContainer) {
+                log('❌ シーンコンテナが見つかりません', 'error');
+                return;
+            }
+            
+            // テストサイズ
+            const testSizes = [
+                { width: '800px', name: '小さめ' },
+                { width: '1000px', name: '中サイズ' },
+                { width: '1200px', name: '大きめ' }
+            ];
+            
+            let currentStep = 0;
+            
+            function nextResize() {
+                if (currentStep >= testSizes.length) {
+                    // 元のサイズに戻す
+                    sceneContainer.style.width = '';
+                    log('✅ リサイズテスト完了', 'success');
+                    updateAspectInfo();
+                    return;
+                }
+                
+                const size = testSizes[currentStep];
+                log(`📏 ${size.name}サイズに変更: ${size.width}`, 'info');
+                
+                sceneContainer.style.width = size.width;
+                
+                setTimeout(() => {
+                    updateAspectInfo();
+                    currentStep++;
+                    setTimeout(nextResize, 2000);
+                }, 1000);
+            }
+            
+            nextResize();
+        }
+        
+        // システム状態表示
+        function showSystemStatus() {
+            log('📊 システム状態表示', 'info');
+            
+            // 成功事例ベースシステム状態
+            if (skeleton && animationState && renderer) {
+                log('✅ Spineシステム: 正常動作中', 'success');
+                log(`  - Skeleton: x=${skeleton.x}, y=${skeleton.y}`, 'info');
+                log(`  - Renderer: ${renderer.constructor.name}`, 'info');
+                log(`🎨 アニメーション: ${skeleton.data.animations.length}個`, 'info');
+            } else {
+                log('⚠️ Spineシステム: 未初期化', 'warning');
+            }
+            
+            // バウンディングボックス状態
+            if (currentBoundingBox) {
+                const state = currentBoundingBox.getState();
+                log(`📊 バウンディングボックス状態: ${JSON.stringify(state)}`, 'info');
+                
+                if (currentBoundingBox.ui && currentBoundingBox.ui.autoPin) {
+                    const autoPinState = currentBoundingBox.ui.autoPin.getState();
+                    log(`📍 AutoPin状態: ${JSON.stringify(autoPinState)}`, 'info');
+                }
+            } else {
+                log('⚠️ バウンディングボックス: 非アクティブ', 'warning');
+            }
+            
+            // 縦横比情報
+            testAspectRatio();
+        }
+        
+        // 全データクリア
+        function clearAllData() {
+            log('🗑️ 全データクリア開始', 'info');
+            
+            // バウンディングボックスクリーンアップ
+            if (currentBoundingBox) {
+                currentBoundingBox.cleanup();
+                currentBoundingBox = null;
+                log('✅ バウンディングボックスクリーンアップ完了', 'success');
+            }
+            
+            // Spineシステムクリーンアップ
+            // 成功事例ベースではシンプルなクリーンアップ
+            skeleton = null;
+            animationState = null;
+            renderer = null;
+            gl = null;
+            log('✅ 成功事例ベースシステムクリーンアップ完了', 'success');
+            
+            // Canvas非表示
+            if (canvas) {
+                canvas.style.display = 'none';
+            }
+            
+            // localStorageクリア
+            let clearedCount = 0;
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.startsWith('bb-') || key.startsWith('original-bounds-') || key.includes('purattokun'))) {
+                    keys.push(key);
+                }
+            }
+            
+            keys.forEach(key => {
+                localStorage.removeItem(key);
+                clearedCount++;
+            });
+            
+            log(`✅ localStorageクリア完了: ${clearedCount}個のキーを削除`, 'success');
+            
+            // ログクリア
+            if (logDisplay) {
+                logDisplay.textContent = '🗑️ 全データクリア完了\n';
+            }
+            
+            log('✅ 全データクリア完了', 'success');
+        }
+        
+        // クリーンアップ
+        window.addEventListener('beforeunload', () => {
+            if (currentBoundingBox) {
+                currentBoundingBox.cleanup();
+            }
+            // 成功事例ベースシステムクリーンアップ
+            if (responsiveInterval) {
+                clearInterval(responsiveInterval);
+            }
+        });
+        
+        // デバッグ用グローバル関数（成功事例ベース版）
+        window.spineSystem = () => ({ skeleton, animationState, renderer });
+        window.skeleton = () => skeleton;
+        window.animationState = () => animationState;
+        window.currentBoundingBox = () => currentBoundingBox;
+        window.testSpineSystem = testSpineSystem;
+        window.logTest = (message, type) => log(message, type);
+    </script>
+</body>
+</html>

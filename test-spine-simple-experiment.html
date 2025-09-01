@@ -296,7 +296,7 @@
                     checkLoading();
                 });
                 
-                // スケルトン初期化
+                // スケルトン初期化（drawOrder検証強化）
                 log('🦴 スケルトン初期化中...', 'info');
                 
                 const atlas = assetManager.get('atlas');
@@ -308,12 +308,48 @@
                 skeleton.scaleY = CONFIG.scale;
                 skeleton.x = CONFIG.canvasWidth / 2;
                 skeleton.y = CONFIG.canvasHeight * 0.8;
+                
+                // **🔍 初期化直後のskeleton状態詳細診断**
+                log('🔍 Skeleton初期状態診断中...', 'info');
+                console.log('🔍 Skeleton初期状態:', {
+                    skeletonExists: !!skeleton,
+                    slotsExists: !!skeleton.slots,
+                    slotsLength: skeleton.slots ? skeleton.slots.length : 0,
+                    drawOrderExists: !!skeleton.drawOrder,
+                    drawOrderType: typeof skeleton.drawOrder,
+                    drawOrderLength: skeleton.drawOrder ? skeleton.drawOrder.length : 0,
+                    drawOrderIsArray: Array.isArray(skeleton.drawOrder)
+                });
+                
+                // **🚨 drawOrder初期検証**
+                if (!skeleton.drawOrder) {
+                    log('⚠️ drawOrder初期状態でundefined - 手動初期化実行', 'warning');
+                    if (skeleton.slots && skeleton.slots.length > 0) {
+                        skeleton.drawOrder = skeleton.slots.slice();
+                        log(`🔧 drawOrder手動初期化: ${skeleton.drawOrder.length}スロット`, 'info');
+                    } else {
+                        throw new Error('slotsもdrawOrderも利用不可 - Skeleton初期化失敗');
+                    }
+                }
+                
                 skeleton.updateWorldTransform();
+                
+                // **🔍 updateWorldTransform後の状態再確認**
+                console.log('🔍 updateWorldTransform後の状態:', {
+                    drawOrderExists: !!skeleton.drawOrder,
+                    drawOrderLength: skeleton.drawOrder ? skeleton.drawOrder.length : 0,
+                    drawOrderIsArray: Array.isArray(skeleton.drawOrder),
+                    firstSlot: skeleton.drawOrder && skeleton.drawOrder[0] ? 'OK' : 'NG'
+                });
+                
+                if (!skeleton.drawOrder || !Array.isArray(skeleton.drawOrder) || skeleton.drawOrder.length === 0) {
+                    throw new Error('updateWorldTransform後もdrawOrder問題が継続 - Skeleton初期化失敗');
+                }
                 
                 // アニメーション初期化
                 animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
                 
-                log('✅ スケルトン・アニメーション初期化完了', 'success');
+                log('✅ スケルトン・アニメーション初期化完了（drawOrder検証済み）', 'success');
                 log('🎬 デフォルトアニメーション（taiki）を開始します', 'info');
                 
                 // デフォルトアニメーション再生
@@ -357,40 +393,124 @@
             }
         }
         
-        // 描画ループ
+        // 描画ループ（緊急修正版 - drawOrder徹底検証）
         function startRenderLoop() {
+            let animationId = null; // レンダリングループID管理
+            
             const render = (timestamp) => {
+                // 緊急停止条件の徹底チェック
                 if (!spineApp || !skeleton || !animationState) {
+                    log('⚠️ 必要オブジェクト未初期化 - レンダリング停止', 'warning');
                     return;
                 }
                 
                 try {
+                    // **🚨 drawOrder状態の詳細診断（緊急追加）**
+                    if (!skeleton.drawOrder) {
+                        log('❌ skeleton.drawOrder が undefined - レンダリング緊急停止', 'error');
+                        console.error('❌ skeleton.drawOrder詳細診断:', {
+                            drawOrder: skeleton.drawOrder,
+                            slots: skeleton.slots,
+                            slotsLength: skeleton.slots ? skeleton.slots.length : 'undefined',
+                            skeletonState: !!skeleton,
+                            updateCallStatus: 'skeleton.updateWorldTransform() 実行前'
+                        });
+                        return; // 緊急停止
+                    }
+                    
+                    if (!Array.isArray(skeleton.drawOrder)) {
+                        log('❌ skeleton.drawOrder が配列ではありません - レンダリング緊急停止', 'error');
+                        console.error('❌ drawOrder型エラー:', {
+                            drawOrderType: typeof skeleton.drawOrder,
+                            drawOrderValue: skeleton.drawOrder,
+                            isArray: Array.isArray(skeleton.drawOrder)
+                        });
+                        return; // 緊急停止
+                    }
+                    
+                    if (skeleton.drawOrder.length === 0) {
+                        log('⚠️ skeleton.drawOrder が空配列 - スキップ', 'warning');
+                        console.warn('⚠️ drawOrder空配列:', {
+                            slotsCount: skeleton.slots ? skeleton.slots.length : 0,
+                            drawOrderLength: skeleton.drawOrder.length
+                        });
+                        // 空配列の場合は描画をスキップするが、ループは継続
+                        animationId = requestAnimationFrame(render);
+                        return;
+                    }
+                    
                     // アニメーション更新（60fps想定）
                     animationState.update(0.016);
                     animationState.apply(skeleton);
                     skeleton.updateWorldTransform();
+                    
+                    // **🔍 updateWorldTransform後のdrawOrder再検証**
+                    if (!skeleton.drawOrder || !Array.isArray(skeleton.drawOrder)) {
+                        log('❌ updateWorldTransform後にdrawOrderが破損 - 手動再構築試行', 'error');
+                        console.error('❌ updateWorldTransform後のdrawOrder状態:', {
+                            drawOrder: skeleton.drawOrder,
+                            slotsAvailable: !!skeleton.slots,
+                            slotsLength: skeleton.slots ? skeleton.slots.length : 0
+                        });
+                        
+                        // **🛠️ drawOrder手動再構築（緊急対応）**
+                        if (skeleton.slots && skeleton.slots.length > 0) {
+                            log('🔧 drawOrder手動再構築を試行', 'info');
+                            skeleton.drawOrder = skeleton.slots.slice(); // スロットの浅いコピー
+                            console.log('🔧 手動再構築結果:', {
+                                newDrawOrderLength: skeleton.drawOrder.length,
+                                sampleSlot: skeleton.drawOrder[0]
+                            });
+                        } else {
+                            log('❌ slots配列も利用不可 - レンダリング完全停止', 'error');
+                            return;
+                        }
+                    }
                     
                     // 画面クリア
                     const gl = spineApp.context.gl;
                     gl.clearColor(0, 0, 0, 0);
                     gl.clear(gl.COLOR_BUFFER_BIT);
                     
-                    // Spine描画
+                    // **🎨 Spine描画（drawOrder検証済み）**
                     spineApp.sceneRenderer.begin();
                     spineApp.sceneRenderer.drawSkeleton(skeleton, false);
                     spineApp.sceneRenderer.end();
                     
+                    // 正常描画完了時のみ次フレーム予約
+                    animationId = requestAnimationFrame(render);
+                    
                 } catch (error) {
-                    log(`❌ 描画エラー: ${error.message}`, 'error');
-                    console.error('描画エラー:', error);
-                    return; // 描画ループ停止
+                    log(`❌ 描画エラー（緊急停止）: ${error.message}`, 'error');
+                    console.error('❌ 完全エラー情報:', {
+                        error: error,
+                        stack: error.stack,
+                        skeletonState: !!skeleton,
+                        drawOrder: skeleton ? skeleton.drawOrder : 'skeleton undefined',
+                        animationState: !!animationState,
+                        spineApp: !!spineApp
+                    });
+                    
+                    // **🚨 エラー時は完全停止（無限ループ防止）**
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                        animationId = null;
+                    }
+                    return;
                 }
-                
-                requestAnimationFrame(render);
             };
             
-            log('🔄 描画ループ開始', 'info');
-            requestAnimationFrame(render);
+            log('🔄 描画ループ開始（drawOrder検証強化版）', 'info');
+            animationId = requestAnimationFrame(render);
+            
+            // **🛠️ 緊急停止用グローバル関数**
+            window.emergencyStopRender = () => {
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                    log('🚨 レンダリングループ緊急停止実行', 'error');
+                }
+            };
         }
         
         // ログクリア

@@ -497,6 +497,25 @@
                     // Skeleton作成
                     this.skeleton = new spine.Skeleton(skeletonData);
                     
+                    // 🔧 重要: drawOrder初期化（エラー修正）
+                    this.skeleton.setToSetupPose();
+                    this.skeleton.updateWorldTransform();
+                    
+                    // 🔍 drawOrder確認ログ（デバッグ）
+                    this.log(`🔍 初期化後のdrawOrder: ${!!this.skeleton.drawOrder} (配列長: ${this.skeleton.drawOrder?.length || 'N/A'})`);
+                    
+                    if (!this.skeleton.drawOrder) {
+                        this.log('❌ 初期化後もdrawOrderが存在しません - 手動設定を試行');
+                        // 手動でdrawOrderを設定（フォールバック）
+                        if (this.skeleton.slots && this.skeleton.slots.length > 0) {
+                            this.skeleton.drawOrder = [...this.skeleton.slots];
+                            this.log(`✅ drawOrder手動設定完了 (配列長: ${this.skeleton.drawOrder.length})`);
+                        } else {
+                            this.log('❌ slots配列も存在しません - 致命的エラー');
+                            throw new Error('Skeletonの初期化に失敗しました（slots/drawOrder共に存在しません）');
+                        }
+                    }
+                    
                     // 🎯 座標・スケール設定（元の位置に戻す）
                     this.skeleton.x = this.canvas.width / 2;
                     this.skeleton.y = this.canvas.height / 2;
@@ -529,46 +548,160 @@
             startRenderLoop() {
                 this.log('🎬 描画ループ開始');
                 
-                // index.html準拠のシンプル描画ループ
+                // レンダリング停止フラグ
+                this.renderingStopped = false;
+                this.firstRenderLogged = false;
+                
+                // index.html準拠のシンプル描画ループ + 安全性チェック強化
                 let lastTime = Date.now() / 1000;
                 
                 const render = () => {
+                    // レンダリング停止チェック
+                    if (this.renderingStopped) {
+                        this.log('⏹️ レンダリングループ停止済み');
+                        return;
+                    }
+                    
                     if (!this.purattokunLoaded) return;
                     
-                    const now = Date.now() / 1000;
-                    const deltaTime = now - lastTime;
-                    lastTime = now;
-                    
-                    this.animationState.update(deltaTime);
-                    this.animationState.apply(this.skeleton);
-                    this.skeleton.updateWorldTransform();
-                    
-                    // 元の複雑な描画方式（動作確認済み）+ ブレンド設定
-                    this.gl.clearColor(0, 0, 0, 0);
-                    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-                    
-                    // WebGLブレンド設定（口パクの黒枠対策）
-                    this.gl.enable(this.gl.BLEND);
-                    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-                    
-                    // 描画設定
-                    this.shader.bind();
-                    this.shader.setUniformi(spine.Shader.SAMPLER, 0);
-                    this.shader.setUniform4x4f(spine.Shader.MVP_MATRIX, 
-                        this.createProjectionMatrix().values);
-                    
-                    // Skeleton描画
-                    this.batcher.begin(this.shader);
-                    const renderer = new spine.SkeletonRenderer(this.gl);
-                    renderer.draw(this.batcher, this.skeleton);
-                    this.batcher.end();
-                    
-                    this.shader.unbind();
-                    
-                    requestAnimationFrame(render);
+                    try {
+                        // 🔍 Skeleton詳細検証
+                        if (!this.skeleton) {
+                            this.log('❌ skeleton が null/undefined です');
+                            this.stopRendering();
+                            return;
+                        }
+                        
+                        // 🔍 drawOrderプロパティの存在確認
+                        if (!this.skeleton.drawOrder) {
+                            this.log('❌ skeleton.drawOrder が存在しません');
+                            this.log('🔍 skeleton プロパティ一覧:', Object.keys(this.skeleton));
+                            this.log('🔍 skeleton.drawOrder値:', this.skeleton.drawOrder);
+                            this.stopRendering();
+                            return;
+                        }
+                        
+                        // 🔍 drawOrderが配列であることを確認
+                        if (!Array.isArray(this.skeleton.drawOrder)) {
+                            this.log('❌ skeleton.drawOrder が配列ではありません');
+                            this.log('🔍 drawOrder型:', typeof this.skeleton.drawOrder);
+                            this.log('🔍 drawOrder値:', this.skeleton.drawOrder);
+                            this.stopRendering();
+                            return;
+                        }
+                        
+                        const now = Date.now() / 1000;
+                        const deltaTime = now - lastTime;
+                        lastTime = now;
+                        
+                        this.animationState.update(deltaTime);
+                        this.animationState.apply(this.skeleton);
+                        this.skeleton.updateWorldTransform();
+                        
+                        // 🔍 updateWorldTransform後の再検証
+                        if (!this.skeleton.drawOrder || !Array.isArray(this.skeleton.drawOrder)) {
+                            this.log('❌ updateWorldTransform後にdrawOrderが無効になりました');
+                            this.log('🔍 skeleton.drawOrder:', this.skeleton.drawOrder);
+                            this.stopRendering();
+                            return;
+                        }
+                        
+                        // 元の複雑な描画方式（動作確認済み）+ ブレンド設定
+                        this.gl.clearColor(0, 0, 0, 0);
+                        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+                        
+                        // WebGLブレンド設定（口パクの黒枠対策）
+                        this.gl.enable(this.gl.BLEND);
+                        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+                        
+                        // 描画設定
+                        this.shader.bind();
+                        this.shader.setUniformi(spine.Shader.SAMPLER, 0);
+                        this.shader.setUniform4x4f(spine.Shader.MVP_MATRIX, 
+                            this.createProjectionMatrix().values);
+                        
+                        // 🔍 renderer作成前の最終チェック
+                        if (!this.skeleton || !this.skeleton.drawOrder) {
+                            this.log('❌ 描画直前でskeleton/drawOrderが無効です');
+                            this.shader.unbind();
+                            this.stopRendering();
+                            return;
+                        }
+                        
+                        // Skeleton描画（安全化）
+                        this.batcher.begin(this.shader);
+                        const renderer = new spine.SkeletonRenderer(this.gl);
+                        
+                        // 🔍 draw()実行直前の最終チェック（初回のみログ出力）
+                        if (!this.firstRenderLogged) {
+                            this.log(`🔍 描画実行: drawOrder配列長=${this.skeleton.drawOrder.length}`);
+                            this.firstRenderLogged = true;
+                        }
+                        
+                        renderer.draw(this.batcher, this.skeleton);
+                        this.batcher.end();
+                        
+                        this.shader.unbind();
+                        
+                        requestAnimationFrame(render);
+                        
+                    } catch (error) {
+                        this.log(`❌ レンダリングエラー発生: ${error.message}`);
+                        this.log('📍 エラースタック:', error.stack);
+                        this.log('🔍 エラー発生時のskeleton状態:');
+                        this.logSkeletonState();
+                        this.stopRendering();
+                    }
                 };
                 
                 requestAnimationFrame(render);
+            }
+            
+            // レンダリング停止関数
+            stopRendering() {
+                this.renderingStopped = true;
+                this.log('🚨 レンダリングループを緊急停止しました');
+                this.updateStatus('purattokun-status', 'レンダリング停止');
+            }
+            
+            // レンダリング再開関数（デバッグ用）
+            resumeRendering() {
+                if (!this.renderingStopped) {
+                    this.log('⚠️ レンダリングは既に実行中です');
+                    return;
+                }
+                
+                this.log('🔄 レンダリング再開を試行...');
+                this.logSkeletonState();
+                
+                if (this.skeleton && this.skeleton.drawOrder) {
+                    this.renderingStopped = false;
+                    this.firstRenderLogged = false;
+                    this.startRenderLoop();
+                    this.log('✅ レンダリング再開成功');
+                } else {
+                    this.log('❌ skeletonまたはdrawOrderが無効なため再開できません');
+                }
+            }
+            
+            // Skeleton状態ログ出力
+            logSkeletonState() {
+                if (!this.skeleton) {
+                    this.log('🔍 skeleton: null/undefined');
+                    return;
+                }
+                
+                this.log('🔍 skeleton詳細状態:');
+                this.log(`  - 存在: ${!!this.skeleton}`);
+                this.log(`  - drawOrder: ${!!this.skeleton.drawOrder} (type: ${typeof this.skeleton.drawOrder})`);
+                this.log(`  - slots: ${!!this.skeleton.slots} (length: ${this.skeleton.slots?.length || 'N/A'})`);
+                this.log(`  - bones: ${!!this.skeleton.bones} (length: ${this.skeleton.bones?.length || 'N/A'})`);
+                this.log(`  - data: ${!!this.skeleton.data}`);
+                
+                if (this.skeleton.drawOrder) {
+                    this.log(`  - drawOrder配列長: ${this.skeleton.drawOrder.length}`);
+                    this.log(`  - drawOrder先頭要素: ${this.skeleton.drawOrder[0]?.name || 'N/A'}`);
+                }
             }
             
             createProjectionMatrix() {
@@ -831,6 +964,28 @@
                     skeleton: window.integration.skeleton,
                     boundingBox: window.integration.boundingBox
                 });
+                
+                // Skeleton詳細状態も表示
+                if (window.integration.logSkeletonState) {
+                    window.integration.logSkeletonState();
+                }
+            }
+        };
+        
+        // 🔧 レンダリング制御関数
+        window.stopRendering = () => {
+            if (window.integration && window.integration.stopRendering) {
+                window.integration.stopRendering();
+            } else {
+                console.log('❌ 統合システムまたはstopRendering関数が存在しません');
+            }
+        };
+        
+        window.resumeRendering = () => {
+            if (window.integration && window.integration.resumeRendering) {
+                window.integration.resumeRendering();
+            } else {
+                console.log('❌ 統合システムまたはresumeRendering関数が存在しません');
             }
         };
     </script>
