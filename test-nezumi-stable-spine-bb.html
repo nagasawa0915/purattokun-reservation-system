@@ -1,272 +1,398 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>🐱 Purattokun + StableSpineRenderer + BoundingBox テスト</title>
     <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #2E86AB 0%, #A23B72 100%);
-            color: white;
-            min-height: 100vh;
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #2e86ab 0%, #a23b72 100%);
+        color: white;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .subtitle {
+        font-size: 1.2em;
+        opacity: 0.9;
+        margin-top: 10px;
+      }
+
+      .canvas-container {
+        position: relative;
+        width: 300px;
+        height: 300px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        overflow: hidden;
+      }
+
+      #spine-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+
+      .controls {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        bottom: 20px;
+        width: 280px;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 20px;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      .control-group {
+        margin-bottom: 15px;
+      }
+
+      .control-group h3 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #ffd700;
+      }
+
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 8px 12px;
+        margin: 5px 0;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 12px;
+      }
+
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      .btn.success {
+        background: rgba(76, 175, 80, 0.8);
+      }
+
+      .btn.danger {
+        background: rgba(244, 67, 54, 0.8);
+      }
+
+      .btn.primary {
+        background: rgba(33, 150, 243, 0.8);
+      }
+
+      .log {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 350px;
+        max-height: 250px;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        z-index: 1000;
+      }
+
+      .status {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 15px;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .status-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 5px 0;
+        font-size: 13px;
+      }
+
+      .status-label {
+        color: #ccc;
+      }
+
+      .status-value {
+        color: #ffd700;
+        font-weight: bold;
+      }
+
+      .loading {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        padding: 30px;
+        border-radius: 10px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        z-index: 1000;
+      }
+
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #ffd700;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        100% {
+          transform: rotate(360deg);
         }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin: 0;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        .subtitle {
-            font-size: 1.2em;
-            opacity: 0.9;
-            margin-top: 10px;
-        }
-        
-        .canvas-container {
-            position: relative;
-            width: 800px;
-            height: 600px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            overflow: hidden;
-        }
-        
-        #spine-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-        
-        .controls {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            min-width: 250px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .control-group {
-            margin-bottom: 15px;
-        }
-        
-        .control-group h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            color: #ffd700;
-        }
-        
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 8px 12px;
-            margin: 5px 0;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 12px;
-        }
-        
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .btn.success {
-            background: rgba(76, 175, 80, 0.8);
-        }
-        
-        .btn.danger {
-            background: rgba(244, 67, 54, 0.8);
-        }
-        
-        .btn.primary {
-            background: rgba(33, 150, 243, 0.8);
-        }
-        
-        .log {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 350px;
-            max-height: 250px;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            padding: 10px;
-            border-radius: 5px;
-            overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .status {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .status-item {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-            font-size: 13px;
-        }
-        
-        .status-label {
-            color: #ccc;
-        }
-        
-        .status-value {
-            color: #ffd700;
-            font-weight: bold;
-        }
-        
-        .loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 1000;
-        }
-        
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #ffd700;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* バウンディングボックス表示用のz-indexを確保 */
-        .bounding-box-overlay {
-            z-index: 999 !important;
-        }
+      }
+
+      /* バウンディングボックス表示用のz-indexを確保 */
+      .bounding-box-overlay {
+        z-index: 999 !important;
+      }
+
+      /* スクロールバーのスタイリング */
+      .controls::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .controls::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+
+      .controls::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+      }
+
+      .controls::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>🐱 Purattokun + StableSpineRenderer + BoundingBox</h1>
-            <div class="subtitle">最新安定版 - 黒枠問題完全解決 + BB統合テスト + 自動アニメーション検出</div>
+      <div class="header">
+        <h1>🐱 Purattokun + StableSpineRenderer + BoundingBox</h1>
+        <div class="subtitle">
+          最新安定版 - 黒枠問題完全解決 + BB統合テスト + 自動アニメーション検出
         </div>
-        
-        <div class="canvas-container">
-            <canvas id="spine-canvas" width="800" height="600"></canvas>
-        </div>
+      </div>
+
+      <div class="canvas-container">
+        <canvas id="spine-canvas" width="800" height="600"></canvas>
+      </div>
     </div>
-    
+
     <div class="status" id="status-panel">
-        <h3 style="margin: 0 0 10px 0; color: #ffd700;">📊 システム状態</h3>
-        <div class="status-item">
-            <span class="status-label">StableSpineRenderer:</span>
-            <span class="status-value" id="renderer-status">初期化中</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Purattokun読み込み:</span>
-            <span class="status-value" id="nezumi-status">待機中</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">バウンディングボックス:</span>
-            <span class="status-value" id="bbox-status">待機中</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">統合状態:</span>
-            <span class="status-value" id="integration-status">準備中</span>
-        </div>
+      <h3 style="margin: 0 0 10px 0; color: #ffd700">📊 システム状態</h3>
+      <div class="status-item">
+        <span class="status-label">StableSpineRenderer:</span>
+        <span class="status-value" id="renderer-status">初期化中</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Purattokun読み込み:</span>
+        <span class="status-value" id="nezumi-status">待機中</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">バウンディングボックス:</span>
+        <span class="status-value" id="bbox-status">待機中</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">統合状態:</span>
+        <span class="status-value" id="integration-status">準備中</span>
+      </div>
     </div>
-    
+
     <div class="controls">
-        <div class="control-group">
-            <h3>⭐ StableSpineRenderer</h3>
-            <button class="btn primary" id="init-renderer">レンダラー初期化</button>
-            <button class="btn" id="load-nezumi">Purattokun読み込み</button>
-            <button class="btn" id="play-search">待機アニメーション</button>
-            <button class="btn" id="play-kettei">やられアニメーション</button>
-        </div>
-        
-        <div class="control-group">
-            <h3>📦 バウンディングボックス</h3>
-            <button class="btn" id="create-bbox">BB作成</button>
-            <button class="btn" id="toggle-bbox">BB表示切替</button>
-            <button class="btn" id="test-resize">リサイズテスト</button>
-            <button class="btn danger" id="cleanup-bbox">BBクリーンアップ</button>
-        </div>
-        
-        <div class="control-group">
-            <h3>🧪 統合テスト</h3>
-            <button class="btn success" id="full-test">完全統合テスト</button>
-            <button class="btn" id="performance-test">パフォーマンステスト</button>
-            <button class="btn danger" id="reset-all">全リセット</button>
-        </div>
-        
-        <div class="control-group">
-            <h3>🔧 デバッグ</h3>
-            <button class="btn" id="debug-info">システム情報表示</button>
-            <button class="btn" id="clear-log">ログクリア</button>
-        </div>
+      <div class="control-group">
+        <h3>⭐ StableSpineRenderer</h3>
+        <button class="btn primary" id="init-renderer">レンダラー初期化</button>
+        <button class="btn" id="load-nezumi">Purattokun読み込み</button>
+        <button class="btn" id="play-search">待機アニメーション</button>
+        <button class="btn" id="play-kettei">やられアニメーション</button>
+      </div>
+
+      <div class="control-group">
+        <h3>📦 バウンディングボックス</h3>
+        <button class="btn" id="create-bbox">BB作成</button>
+        <button class="btn" id="toggle-bbox">BB表示切替</button>
+        <button class="btn" id="test-resize">リサイズテスト</button>
+        <button class="btn danger" id="cleanup-bbox">BBクリーンアップ</button>
+      </div>
+
+      <div class="control-group">
+        <h3>🧪 統合テスト</h3>
+        <button class="btn success" id="full-test">完全統合テスト</button>
+        <button class="btn" id="performance-test">パフォーマンステスト</button>
+        <button class="btn danger" id="reset-all">全リセット</button>
+      </div>
+
+      <div class="control-group">
+        <h3>📐 Canvas サイズ変更</h3>
+        <label
+          >幅:
+          <input
+            type="number"
+            id="canvas-width"
+            value="800"
+            min="100"
+            max="1200"
+            style="width: 80px; margin: 5px"
+        /></label>
+        <label
+          >高さ:
+          <input
+            type="number"
+            id="canvas-height"
+            value="600"
+            min="100"
+            max="900"
+            style="width: 80px; margin: 5px"
+        /></label>
+        <button class="btn primary" id="resize-canvas">Canvas リサイズ</button>
+        <button class="btn" id="reset-canvas">元のサイズに戻す</button>
+      </div>
+
+      <div class="control-group">
+        <h3>🎯 自動最適化</h3>
+        <button class="btn success" id="detect-bounds">境界検出テスト</button>
+        <button class="btn primary" id="apply-optimal">最適サイズ適用</button>
+        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
+          キャラクターの実際のサイズを自動検出してCanvasを最適化
+        </p>
+      </div>
+
+      <div class="control-group">
+        <h3>🧪 手動テスト</h3>
+        <button class="btn" id="test-small">小サイズテスト (300x200)</button>
+        <button class="btn" id="test-medium">中サイズテスト (500x400)</button>
+        <button class="btn" id="test-large">元サイズ (800x600)</button>
+        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
+          手動でCSS表示サイズをテスト
+        </p>
+      </div>
+
+      <div class="control-group">
+        <h3>🔧 キャラクターサイズ保持テスト</h3>
+        <button class="btn success" id="test-preserve-small">
+          保持小 (300x200)
+        </button>
+        <button class="btn success" id="test-preserve-medium">
+          保持中 (500x400)
+        </button>
+        <button class="btn" id="test-preserve-large">保持大 (800x600)</button>
+        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
+          キャラクターサイズを保持してCanvas表示サイズ変更
+        </p>
+      </div>
+
+      <div class="control-group">
+        <h3>📏 キャラクタースケール調整</h3>
+        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
+          横スケール(X): 
+          <input type="range" id="character-scale-x" min="0.3" max="2.0" step="0.05" value="1.35" 
+                 style="width: 120px; margin: 0 5px;">
+          <span id="scale-x-value">1.35</span>
+        </label>
+        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
+          縦スケール(Y): 
+          <input type="range" id="character-scale-y" min="0.3" max="2.0" step="0.05" value="1.0" 
+                 style="width: 120px; margin: 0 5px;">
+          <span id="scale-y-value">1.0</span>
+        </label>
+        <button class="btn success" id="apply-scale">スケール適用</button>
+        <button class="btn" id="reset-scale">理想的な比率に戻す</button>
+        <button class="btn" id="auto-ratio">自然な比率検出</button>
+      </div>
+
+      <div class="control-group">
+        <h3>📍 キャラクター位置調整</h3>
+        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
+          X位置: 
+          <input type="range" id="character-x" min="0" max="800" step="10" value="100" 
+                 style="width: 120px; margin: 0 5px;">
+          <span id="x-value">100</span>
+        </label>
+        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
+          Y位置: 
+          <input type="range" id="character-y" min="-200" max="600" step="10" value="-100" 
+                 style="width: 120px; margin: 0 5px;">
+          <span id="y-value">-100</span>
+        </label>
+        <button class="btn success" id="apply-position">位置適用</button>
+        <button class="btn" id="center-character">中央に配置</button>
+        <button class="btn" id="reset-position">位置リセット</button>
+      </div>
+
+      <div class="control-group">
+        <h3>🔧 デバッグ</h3>
+        <button class="btn" id="debug-info">システム情報表示</button>
+        <button class="btn" id="clear-log">ログクリア</button>
+      </div>
     </div>
-    
+
     <div class="log" id="log-panel">
-        <div style="color: #ffd700; margin-bottom: 10px;">📝 システムログ</div>
+      <div style="color: #ffd700; margin-bottom: 10px">📝 システムログ</div>
     </div>
-    
+
     <div class="loading" id="loading-screen">
-        <div class="spinner"></div>
-        <div>StableSpineRenderer + BB システム読み込み中...</div>
+      <div class="spinner"></div>
+      <div>StableSpineRenderer + BB システム読み込み中...</div>
     </div>
 
     <!-- Spine WebGL -->
     <script src="assets/js/libs/spine-webgl.js"></script>
-    
+
     <!-- StableSpineRenderer -->
     <script src="micromodules/spine-renderer/StableSpineRenderer.js"></script>
-    
+
     <!-- バウンディングボックスマイクロモジュール -->
     <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
@@ -275,475 +401,1054 @@
     <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
 
     <script>
-        /**
-         * 🎯 Nezumi + StableSpineRenderer + BoundingBox 統合システム
-         * 
-         * 特徴:
-         * - StableSpineRendererによる確実なSpine表示（黒枠問題解決済み）
-         * - PureBoundingBoxによる高度なバウンディングボックス編集
-         * - リアルタイム統合テスト機能
-         */
-        class NezumiStableSpineBBIntegration {
-            constructor() {
-                this.canvas = document.getElementById('spine-canvas');
-                
-                // StableSpineRenderer
-                this.spineRenderer = null;
-                
-                // PureBoundingBox
-                this.boundingBox = null;
-                
-                // 状態管理
-                this.rendererInitialized = false;
-                this.nezumiLoaded = false;
-                this.bboxCreated = false;
-                this.integrationComplete = false;
-                
-                this.init();
-            }
-            
-            async init() {
-                this.log('🚀 Nezumi StableSpine + BB統合システム初期化開始');
-                
-                try {
-                    // ライブラリ確認
-                    await this.checkDependencies();
-                    
-                    // UI初期化
-                    this.initUI();
-                    
-                    this.hideLoading();
-                    this.log('✅ 初期化完了 - レンダラー初期化ボタンを押してください');
-                    this.updateStatus('integration-status', '初期化完了');
-                    
-                } catch (error) {
-                    this.log(`❌ 初期化エラー: ${error.message}`);
-                    this.hideLoading();
-                    this.updateStatus('integration-status', '初期化失敗');
-                }
-            }
-            
-            async checkDependencies() {
-                this.log('🔍 ライブラリ依存関係確認中...');
-                
-                // Spine WebGL確認
-                if (typeof window.spine === 'undefined') {
-                    throw new Error('Spine WebGLライブラリが見つかりません');
-                }
-                
-                // StableSpineRenderer確認
-                if (typeof window.StableSpineRenderer === 'undefined') {
-                    throw new Error('StableSpineRendererが見つかりません');
-                }
-                
-                // PureBoundingBox確認
-                if (typeof window.PureBoundingBox === 'undefined') {
-                    throw new Error('PureBoundingBoxが見つかりません');
-                }
-                
-                this.log('✅ 全ライブラリ確認完了');
-            }
-            
-            initUI() {
-                this.log('🎨 UI初期化中...');
-                
-                // StableSpineRenderer制御
-                document.getElementById('init-renderer').addEventListener('click', () => this.initRenderer());
-                document.getElementById('load-nezumi').addEventListener('click', () => this.loadNezumi());
-                document.getElementById('play-search').addEventListener('click', () => this.playAnimation('taiki'));
-                document.getElementById('play-kettei').addEventListener('click', () => this.playAnimation('yarare'));
-                
-                // バウンディングボックス制御
-                document.getElementById('create-bbox').addEventListener('click', () => this.createBoundingBox());
-                document.getElementById('toggle-bbox').addEventListener('click', () => this.toggleBoundingBox());
-                document.getElementById('test-resize').addEventListener('click', () => this.testResize());
-                document.getElementById('cleanup-bbox').addEventListener('click', () => this.cleanupBoundingBox());
-                
-                // 統合テスト
-                document.getElementById('full-test').addEventListener('click', () => this.fullIntegrationTest());
-                document.getElementById('performance-test').addEventListener('click', () => this.performanceTest());
-                document.getElementById('reset-all').addEventListener('click', () => this.resetAll());
-                
-                // デバッグ
-                document.getElementById('debug-info').addEventListener('click', () => this.showDebugInfo());
-                document.getElementById('clear-log').addEventListener('click', () => this.clearLog());
-                
-                this.log('✅ UI初期化完了');
-            }
-            
-            async initRenderer() {
-                this.log('⭐ StableSpineRenderer初期化中...');
-                this.updateStatus('renderer-status', '初期化中');
-                
-                try {
-                    // StableSpineRenderer作成（canvasも同時に指定）
-                    this.spineRenderer = new StableSpineRenderer({
-                        canvas: this.canvas,
-                        character: 'purattokun',
-                        basePath: '/assets/spine/characters/',
-                        // defaultAnimation: 自動検出される！（purattokuんの場合は'taiki'が選択される）
-                        debug: true,
-                        logCallback: (message, level) => this.log(`[Renderer] ${message}`)
-                    });
-                    
-                    // 初期化実行
-                    await this.spineRenderer.initialize();
-                    
-                    this.rendererInitialized = true;
-                    this.updateStatus('renderer-status', '初期化完了');
-                    this.log('✅ StableSpineRenderer初期化完了');
-                    this.log('📝 Nezumi読み込みボタンを押してください');
-                    
-                } catch (error) {
-                    this.log(`❌ StableSpineRenderer初期化エラー: ${error.message}`);
-                    this.updateStatus('renderer-status', '初期化失敗');
-                }
-            }
-            
-            async loadNezumi() {
-                if (!this.rendererInitialized) {
-                    this.log('⚠️ 先にレンダラーを初期化してください');
-                    return;
-                }
-                
-                this.log('🐱 purattokun読み込み開始...');
-                this.updateStatus('nezumi-status', '読み込み中');
-                
-                try {
-                    // StableSpineRendererは initialize() で全て完了
-                    // 既に読み込み・描画・アニメーション全て開始済み
-                    
-                    // 初期アニメーション（自動検出されたものがそのまま使用される）
-                    // 追加のplayAnimationは不要（initialize()で自動開始）
-                    
-                    this.nezumiLoaded = true;
-                    this.updateStatus('nezumi-status', '読み込み完了');
-                    this.log('✅ purattokun読み込み完了 - 自動検出アニメーション再生中');
-                    
-                } catch (error) {
-                    this.log(`❌ Nezumi読み込みエラー: ${error.message}`);
-                    this.updateStatus('nezumi-status', '読み込み失敗');
-                }
-            }
-            
-            playAnimation(animationName) {
-                if (!this.nezumiLoaded) {
-                    this.log('⚠️ 先にNezumiを読み込んでください');
-                    return;
-                }
-                
-                try {
-                    this.spineRenderer.playAnimation(animationName);
-                    this.log(`🎭 アニメーション再生: ${animationName}`);
-                } catch (error) {
-                    this.log(`❌ アニメーション再生エラー: ${error.message}`);
-                }
-            }
-            
-            async createBoundingBox() {
-                if (!this.nezumiLoaded) {
-                    this.log('⚠️ 先にNezumiを読み込んでください');
-                    return;
-                }
-                
-                this.log('📦 バウンディングボックス作成中...');
-                this.updateStatus('bbox-status', '作成中');
-                
-                try {
-                    // PureBoundingBox作成
-                    this.boundingBox = new window.PureBoundingBox({
-                        targetElement: this.canvas,
-                        nodeId: 'purattokun-spine-bb-canvas'
-                    });
-                    
-                    // バウンディングボックス実行
-                    const result = await this.boundingBox.execute({ 
-                        visible: true,
-                        interactive: true,
-                        showHandles: true
-                    });
-                    
-                    if (result.success) {
-                        this.bboxCreated = true;
-                        this.updateStatus('bbox-status', '作成完了');
-                        this.log('✅ バウンディングボックス作成完了');
-                        this.log(`📊 Bounds: x=${result.bounds.x}, y=${result.bounds.y}, w=${result.bounds.width}, h=${result.bounds.height}`);
-                    } else {
-                        this.log(`❌ バウンディングボックス作成失敗: ${result.error}`);
-                        this.updateStatus('bbox-status', '作成失敗');
-                    }
-                    
-                } catch (error) {
-                    this.log(`❌ バウンディングボックスエラー: ${error.message}`);
-                    this.updateStatus('bbox-status', 'エラー');
-                }
-            }
-            
-            toggleBoundingBox() {
-                if (!this.boundingBox) {
-                    this.log('⚠️ バウンディングボックスが作成されていません');
-                    return;
-                }
-                
-                try {
-                    const state = this.boundingBox.getState();
-                    if (state.bounds && state.bounds.visible) {
-                        this.boundingBox.hide();
-                        this.log('👻 バウンディングボックス非表示');
-                    } else {
-                        this.boundingBox.show();
-                        this.log('👁️ バウンディングボックス表示');
-                    }
-                } catch (error) {
-                    this.log(`❌ 表示切替エラー: ${error.message}`);
-                }
-            }
-            
-            testResize() {
-                if (!this.boundingBox) {
-                    this.log('⚠️ バウンディングボックスが作成されていません');
-                    return;
-                }
-                
-                this.log('🔧 リサイズテスト実行中...');
-                
-                try {
-                    // テスト用のリサイズ実行
-                    const currentBounds = this.boundingBox.getBounds();
-                    const newWidth = currentBounds.width * 1.2;
-                    const newHeight = currentBounds.height * 1.2;
-                    
-                    this.boundingBox.resize(newWidth, newHeight);
-                    this.log(`✅ リサイズテスト完了: ${newWidth.toFixed(0)} x ${newHeight.toFixed(0)}`);
-                } catch (error) {
-                    this.log(`❌ リサイズテストエラー: ${error.message}`);
-                }
-            }
-            
-            cleanupBoundingBox() {
-                if (!this.boundingBox) {
-                    this.log('⚠️ バウンディングボックスが作成されていません');
-                    return;
-                }
-                
-                try {
-                    this.boundingBox.cleanup();
-                    this.boundingBox = null;
-                    this.bboxCreated = false;
-                    this.updateStatus('bbox-status', 'クリーンアップ完了');
-                    this.log('🧹 バウンディングボックスクリーンアップ完了');
-                } catch (error) {
-                    this.log(`❌ クリーンアップエラー: ${error.message}`);
-                }
-            }
-            
-            async fullIntegrationTest() {
-                this.log('🧪 完全統合テスト開始');
-                this.updateStatus('integration-status', '統合テスト中');
-                
-                try {
-                    // 1. レンダラー初期化確認
-                    if (!this.rendererInitialized) {
-                        await this.initRenderer();
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                    
-                    // 2. Nezumi読み込み確認
-                    if (!this.nezumiLoaded) {
-                        await this.loadNezumi();
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
-                    
-                    // 3. バウンディングボックス作成確認
-                    if (!this.bboxCreated) {
-                        await this.createBoundingBox();
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                    
-                    // 4. 動作テスト
-                    if (this.rendererInitialized && this.nezumiLoaded && this.bboxCreated) {
-                        this.log('🎯 動作テスト実行中...');
-                        
-                        // アニメーション切り替えテスト
-                        this.playAnimation('yarare');
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        this.playAnimation('taiki');
-                        
-                        // バウンディングボックス表示テスト
-                        this.toggleBoundingBox();
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        this.testResize();
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        this.toggleBoundingBox();
-                        
-                        this.integrationComplete = true;
-                        this.updateStatus('integration-status', '統合テスト成功');
-                        this.log('🎉 完全統合テスト成功！全機能正常動作確認');
-                        
-                    } else {
-                        this.log('❌ 統合テスト失敗 - 一部機能が動作していません');
-                        this.updateStatus('integration-status', '統合テスト失敗');
-                    }
-                    
-                } catch (error) {
-                    this.log(`❌ 統合テストエラー: ${error.message}`);
-                    this.updateStatus('integration-status', 'エラー');
-                }
-            }
-            
-            async performanceTest() {
-                this.log('⚡ パフォーマンステスト開始');
-                
-                const startTime = Date.now();
-                
-                try {
-                    // レンダラーパフォーマンス
-                    if (this.spineRenderer) {
-                        const renderStart = Date.now();
-                        for (let i = 0; i < 10; i++) {
-                            this.playAnimation(i % 2 === 0 ? 'taiki' : 'yarare');
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                        }
-                        const renderTime = Date.now() - renderStart;
-                        this.log(`📊 レンダラーパフォーマンス: ${renderTime}ms (10回切り替え)`);
-                    }
-                    
-                    // バウンディングボックスパフォーマンス
-                    if (this.boundingBox) {
-                        const bboxStart = Date.now();
-                        for (let i = 0; i < 5; i++) {
-                            this.toggleBoundingBox();
-                            await new Promise(resolve => setTimeout(resolve, 50));
-                        }
-                        const bboxTime = Date.now() - bboxStart;
-                        this.log(`📊 BBパフォーマンス: ${bboxTime}ms (5回切り替え)`);
-                    }
-                    
-                    const totalTime = Date.now() - startTime;
-                    this.log(`⚡ パフォーマンステスト完了: 総時間 ${totalTime}ms`);
-                    
-                } catch (error) {
-                    this.log(`❌ パフォーマンステストエラー: ${error.message}`);
-                }
-            }
-            
-            resetAll() {
-                this.log('🔄 全リセット実行中...');
-                
-                try {
-                    // バウンディングボックスクリーンアップ
-                    if (this.boundingBox) {
-                        this.cleanupBoundingBox();
-                    }
-                    
-                    // スパインレンダラーストップ
-                    if (this.spineRenderer) {
-                        this.spineRenderer.stop();
-                        this.spineRenderer = null;
-                    }
-                    
-                    // 状態リセット
-                    this.rendererInitialized = false;
-                    this.nezumiLoaded = false;
-                    this.bboxCreated = false;
-                    this.integrationComplete = false;
-                    
-                    // ステータス更新
-                    this.updateStatus('renderer-status', 'リセット完了');
-                    this.updateStatus('nezumi-status', '待機中');
-                    this.updateStatus('bbox-status', '待機中');
-                    this.updateStatus('integration-status', 'リセット完了');
-                    
-                    // キャンバスクリア
-                    const ctx = this.canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                    }
-                    
-                    this.log('✅ 全リセット完了');
-                    
-                } catch (error) {
-                    this.log(`❌ リセットエラー: ${error.message}`);
-                }
-            }
-            
-            showDebugInfo() {
-                this.log('🔍 システム情報表示');
-                
-                const info = {
-                    rendererInitialized: this.rendererInitialized,
-                    nezumiLoaded: this.nezumiLoaded,
-                    bboxCreated: this.bboxCreated,
-                    integrationComplete: this.integrationComplete,
-                    canvasSize: `${this.canvas.width}x${this.canvas.height}`,
-                    spineRenderer: !!this.spineRenderer,
-                    boundingBox: !!this.boundingBox
-                };
-                
-                Object.entries(info).forEach(([key, value]) => {
-                    this.log(`  ${key}: ${value}`);
-                });
-                
-                // グローバル変数確認
-                this.log('📚 ライブラリ状況:');
-                this.log(`  spine: ${typeof window.spine}`);
-                this.log(`  StableSpineRenderer: ${typeof window.StableSpineRenderer}`);
-                this.log(`  PureBoundingBox: ${typeof window.PureBoundingBox}`);
-            }
-            
-            clearLog() {
-                const logPanel = document.getElementById('log-panel');
-                logPanel.innerHTML = '<div style="color: #ffd700; margin-bottom: 10px;">📝 システムログ</div>';
-                this.log('🧹 ログクリア完了');
-            }
-            
-            log(message) {
-                const logPanel = document.getElementById('log-panel');
-                const timestamp = new Date().toLocaleTimeString();
-                const logEntry = document.createElement('div');
-                logEntry.style.marginBottom = '3px';
-                logEntry.innerHTML = `<span style="color: #666">[${timestamp}]</span> ${message}`;
-                logPanel.appendChild(logEntry);
-                
-                // スクロール調整
-                logPanel.scrollTop = logPanel.scrollHeight;
-                
-                // コンソールにも出力
-                console.log(`[NezumiStableSpineBB] ${message}`);
-            }
-            
-            updateStatus(elementId, status) {
-                const element = document.getElementById(elementId);
-                if (element) {
-                    element.textContent = status;
-                }
-            }
-            
-            hideLoading() {
-                const loadingScreen = document.getElementById('loading-screen');
-                if (loadingScreen) {
-                    loadingScreen.style.display = 'none';
-                }
-            }
+      /**
+       * 🎯 Nezumi + StableSpineRenderer + BoundingBox 統合システム
+       *
+       * 特徴:
+       * - StableSpineRendererによる確実なSpine表示（黒枠問題解決済み）
+       * - PureBoundingBoxによる高度なバウンディングボックス編集
+       * - リアルタイム統合テスト機能
+       */
+      class NezumiStableSpineBBIntegration {
+        constructor() {
+          this.canvas = document.getElementById("spine-canvas");
+
+          // StableSpineRenderer
+          this.spineRenderer = null;
+
+          // PureBoundingBox
+          this.boundingBox = null;
+
+          // 状態管理
+          this.rendererInitialized = false;
+          this.nezumiLoaded = false;
+          this.bboxCreated = false;
+          this.integrationComplete = false;
+
+          this.init();
         }
-        
-        // 🚀 システム起動
-        window.addEventListener('load', async () => {
-            // ライブラリ読み込み待機
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            console.log('🎯 Nezumi + StableSpineRenderer + BoundingBox 統合システム起動');
-            
-            // システム初期化
-            window.nezumiIntegration = new NezumiStableSpineBBIntegration();
-            
-            // デバッグ用グローバル関数
-            window.debugNezumiSystem = () => {
-                if (window.nezumiIntegration) {
-                    window.nezumiIntegration.showDebugInfo();
-                }
+
+        async init() {
+          this.log("🚀 Nezumi StableSpine + BB統合システム初期化開始");
+
+          try {
+            // ライブラリ確認
+            await this.checkDependencies();
+
+            // UI初期化
+            this.initUI();
+
+            this.hideLoading();
+            this.log("✅ 初期化完了 - レンダラー初期化ボタンを押してください");
+            this.updateStatus("integration-status", "初期化完了");
+          } catch (error) {
+            this.log(`❌ 初期化エラー: ${error.message}`);
+            this.hideLoading();
+            this.updateStatus("integration-status", "初期化失敗");
+          }
+        }
+
+        async checkDependencies() {
+          this.log("🔍 ライブラリ依存関係確認中...");
+
+          // Spine WebGL確認
+          if (typeof window.spine === "undefined") {
+            throw new Error("Spine WebGLライブラリが見つかりません");
+          }
+
+          // StableSpineRenderer確認
+          if (typeof window.StableSpineRenderer === "undefined") {
+            throw new Error("StableSpineRendererが見つかりません");
+          }
+
+          // PureBoundingBox確認
+          if (typeof window.PureBoundingBox === "undefined") {
+            throw new Error("PureBoundingBoxが見つかりません");
+          }
+
+          this.log("✅ 全ライブラリ確認完了");
+        }
+
+        initUI() {
+          this.log("🎨 UI初期化中...");
+
+          // StableSpineRenderer制御
+          document
+            .getElementById("init-renderer")
+            .addEventListener("click", () => this.initRenderer());
+          document
+            .getElementById("load-nezumi")
+            .addEventListener("click", () => this.loadNezumi());
+          document
+            .getElementById("play-search")
+            .addEventListener("click", () => this.playAnimation("taiki"));
+          document
+            .getElementById("play-kettei")
+            .addEventListener("click", () => this.playAnimation("yarare"));
+
+          // バウンディングボックス制御
+          document
+            .getElementById("create-bbox")
+            .addEventListener("click", () => this.createBoundingBox());
+          document
+            .getElementById("toggle-bbox")
+            .addEventListener("click", () => this.toggleBoundingBox());
+          document
+            .getElementById("test-resize")
+            .addEventListener("click", () => this.testResize());
+          document
+            .getElementById("cleanup-bbox")
+            .addEventListener("click", () => this.cleanupBoundingBox());
+
+          // 統合テスト
+          document
+            .getElementById("full-test")
+            .addEventListener("click", () => this.fullIntegrationTest());
+          document
+            .getElementById("performance-test")
+            .addEventListener("click", () => this.performanceTest());
+          document
+            .getElementById("reset-all")
+            .addEventListener("click", () => this.resetAll());
+
+          // Canvas サイズ制御
+          document
+            .getElementById("resize-canvas")
+            .addEventListener("click", () => this.resizeCanvas());
+          document
+            .getElementById("reset-canvas")
+            .addEventListener("click", () => this.resetCanvasSize());
+
+          // 自動最適化制御
+          document
+            .getElementById("detect-bounds")
+            .addEventListener("click", () => this.calculateOptimalCanvasSize());
+          document
+            .getElementById("apply-optimal")
+            .addEventListener("click", () => this.applyOptimalCanvasSize());
+
+          // 手動テスト制御
+          document
+            .getElementById("test-small")
+            .addEventListener("click", () =>
+              this.changeCanvasDisplaySize(300, 200)
+            );
+          document
+            .getElementById("test-medium")
+            .addEventListener("click", () =>
+              this.changeCanvasDisplaySize(500, 400)
+            );
+          document
+            .getElementById("test-large")
+            .addEventListener("click", () =>
+              this.changeCanvasDisplaySize(800, 600)
+            );
+
+          // キャラクターサイズ保持テスト制御
+          document
+            .getElementById("test-preserve-small")
+            .addEventListener("click", () =>
+              this.testCanvasSizeWithCharacterPreservation(300, 200)
+            );
+          document
+            .getElementById("test-preserve-medium")
+            .addEventListener("click", () =>
+              this.testCanvasSizeWithCharacterPreservation(500, 400)
+            );
+          document
+            .getElementById("test-preserve-large")
+            .addEventListener("click", () =>
+              this.testCanvasSizeWithCharacterPreservation(800, 600)
+            );
+
+          // スケール調整
+          document
+            .getElementById("character-scale-x")
+            .addEventListener("input", (e) => this.updateScaleDisplay('x', e.target.value));
+          document
+            .getElementById("character-scale-y")
+            .addEventListener("input", (e) => this.updateScaleDisplay('y', e.target.value));
+          document
+            .getElementById("apply-scale")
+            .addEventListener("click", () => this.applyCharacterScale());
+          document
+            .getElementById("reset-scale")
+            .addEventListener("click", () => this.resetCharacterScale());
+          document
+            .getElementById("auto-ratio")
+            .addEventListener("click", () => this.detectNaturalRatio());
+
+          // 位置調整
+          document
+            .getElementById("character-x")
+            .addEventListener("input", (e) => this.updatePositionDisplay('x', e.target.value));
+          document
+            .getElementById("character-y")
+            .addEventListener("input", (e) => this.updatePositionDisplay('y', e.target.value));
+          document
+            .getElementById("apply-position")
+            .addEventListener("click", () => this.applyCharacterPosition());
+          document
+            .getElementById("center-character")
+            .addEventListener("click", () => this.centerCharacter());
+          document
+            .getElementById("reset-position")
+            .addEventListener("click", () => this.resetCharacterPosition());
+
+          // デバッグ
+          document
+            .getElementById("debug-info")
+            .addEventListener("click", () => this.showDebugInfo());
+          document
+            .getElementById("clear-log")
+            .addEventListener("click", () => this.clearLog());
+
+          this.log("✅ UI初期化完了");
+        }
+
+        async initRenderer() {
+          this.log("⭐ StableSpineRenderer初期化中...");
+          this.updateStatus("renderer-status", "初期化中");
+
+          try {
+            // StableSpineRenderer作成（canvasも同時に指定）
+            this.spineRenderer = new StableSpineRenderer({
+              canvas: this.canvas,
+              character: "purattokun",
+              basePath: "/assets/spine/characters/",
+              // defaultAnimation: 自動検出される！（purattokuんの場合は'taiki'が選択される）
+              debug: true,
+              logCallback: (message, level) =>
+                this.log(`[Renderer] ${message}`),
+            });
+
+            // 初期化実行
+            await this.spineRenderer.initialize();
+
+            this.rendererInitialized = true;
+            this.updateStatus("renderer-status", "初期化完了");
+            this.log("✅ StableSpineRenderer初期化完了");
+            this.log("📝 Nezumi読み込みボタンを押してください");
+          } catch (error) {
+            this.log(`❌ StableSpineRenderer初期化エラー: ${error.message}`);
+            this.updateStatus("renderer-status", "初期化失敗");
+          }
+        }
+
+        async loadNezumi() {
+          if (!this.rendererInitialized) {
+            this.log("⚠️ 先にレンダラーを初期化してください");
+            return;
+          }
+
+          this.log("🐱 purattokun読み込み開始...");
+          this.updateStatus("nezumi-status", "読み込み中");
+
+          try {
+            // StableSpineRendererは initialize() で全て完了
+            // 既に読み込み・描画・アニメーション全て開始済み
+
+            // 初期アニメーション（自動検出されたものがそのまま使用される）
+            // 追加のplayAnimationは不要（initialize()で自動開始）
+
+            this.nezumiLoaded = true;
+            this.updateStatus("nezumi-status", "読み込み完了");
+            this.log(
+              "✅ purattokun読み込み完了 - 自動検出アニメーション再生中"
+            );
+
+            // 現在の位置・スケールをUIに同期
+            setTimeout(() => {
+              this.syncPositionUI();
+            }, 100);
+          } catch (error) {
+            this.log(`❌ Nezumi読み込みエラー: ${error.message}`);
+            this.updateStatus("nezumi-status", "読み込み失敗");
+          }
+        }
+
+        playAnimation(animationName) {
+          if (!this.nezumiLoaded) {
+            this.log("⚠️ 先にNezumiを読み込んでください");
+            return;
+          }
+
+          try {
+            this.spineRenderer.playAnimation(animationName);
+            this.log(`🎭 アニメーション再生: ${animationName}`);
+          } catch (error) {
+            this.log(`❌ アニメーション再生エラー: ${error.message}`);
+          }
+        }
+
+        async createBoundingBox() {
+          if (!this.nezumiLoaded) {
+            this.log("⚠️ 先にNezumiを読み込んでください");
+            return;
+          }
+
+          this.log("📦 バウンディングボックス作成中...");
+          this.updateStatus("bbox-status", "作成中");
+
+          try {
+            // PureBoundingBox作成
+            this.boundingBox = new window.PureBoundingBox({
+              targetElement: this.canvas,
+              nodeId: "purattokun-spine-bb-canvas",
+            });
+
+            // バウンディングボックス実行
+            const result = await this.boundingBox.execute({
+              visible: true,
+              interactive: true,
+              showHandles: true,
+            });
+
+            if (result.success) {
+              this.bboxCreated = true;
+              this.updateStatus("bbox-status", "作成完了");
+              this.log("✅ バウンディングボックス作成完了");
+              this.log(
+                `📊 Bounds: x=${result.bounds.x}, y=${result.bounds.y}, w=${result.bounds.width}, h=${result.bounds.height}`
+              );
+            } else {
+              this.log(`❌ バウンディングボックス作成失敗: ${result.error}`);
+              this.updateStatus("bbox-status", "作成失敗");
+            }
+          } catch (error) {
+            this.log(`❌ バウンディングボックスエラー: ${error.message}`);
+            this.updateStatus("bbox-status", "エラー");
+          }
+        }
+
+        toggleBoundingBox() {
+          if (!this.boundingBox) {
+            this.log("⚠️ バウンディングボックスが作成されていません");
+            return;
+          }
+
+          try {
+            const state = this.boundingBox.getState();
+            if (state.bounds && state.bounds.visible) {
+              this.boundingBox.hide();
+              this.log("👻 バウンディングボックス非表示");
+            } else {
+              this.boundingBox.show();
+              this.log("👁️ バウンディングボックス表示");
+            }
+          } catch (error) {
+            this.log(`❌ 表示切替エラー: ${error.message}`);
+          }
+        }
+
+        testResize() {
+          if (!this.boundingBox) {
+            this.log("⚠️ バウンディングボックスが作成されていません");
+            return;
+          }
+
+          this.log("🔧 リサイズテスト実行中...");
+
+          try {
+            // テスト用のリサイズ実行
+            const currentBounds = this.boundingBox.getBounds();
+            const newWidth = currentBounds.width * 1.2;
+            const newHeight = currentBounds.height * 1.2;
+
+            this.boundingBox.resize(newWidth, newHeight);
+            this.log(
+              `✅ リサイズテスト完了: ${newWidth.toFixed(
+                0
+              )} x ${newHeight.toFixed(0)}`
+            );
+          } catch (error) {
+            this.log(`❌ リサイズテストエラー: ${error.message}`);
+          }
+        }
+
+        cleanupBoundingBox() {
+          if (!this.boundingBox) {
+            this.log("⚠️ バウンディングボックスが作成されていません");
+            return;
+          }
+
+          try {
+            this.boundingBox.cleanup();
+            this.boundingBox = null;
+            this.bboxCreated = false;
+            this.updateStatus("bbox-status", "クリーンアップ完了");
+            this.log("🧹 バウンディングボックスクリーンアップ完了");
+          } catch (error) {
+            this.log(`❌ クリーンアップエラー: ${error.message}`);
+          }
+        }
+
+        async fullIntegrationTest() {
+          this.log("🧪 完全統合テスト開始");
+          this.updateStatus("integration-status", "統合テスト中");
+
+          try {
+            // 1. レンダラー初期化確認
+            if (!this.rendererInitialized) {
+              await this.initRenderer();
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+
+            // 2. Nezumi読み込み確認
+            if (!this.nezumiLoaded) {
+              await this.loadNezumi();
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+            }
+
+            // 3. バウンディングボックス作成確認
+            if (!this.bboxCreated) {
+              await this.createBoundingBox();
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+
+            // 4. 動作テスト
+            if (
+              this.rendererInitialized &&
+              this.nezumiLoaded &&
+              this.bboxCreated
+            ) {
+              this.log("🎯 動作テスト実行中...");
+
+              // アニメーション切り替えテスト
+              this.playAnimation("yarare");
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+              this.playAnimation("taiki");
+
+              // バウンディングボックス表示テスト
+              this.toggleBoundingBox();
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+              this.testResize();
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+              this.toggleBoundingBox();
+
+              this.integrationComplete = true;
+              this.updateStatus("integration-status", "統合テスト成功");
+              this.log("🎉 完全統合テスト成功！全機能正常動作確認");
+            } else {
+              this.log("❌ 統合テスト失敗 - 一部機能が動作していません");
+              this.updateStatus("integration-status", "統合テスト失敗");
+            }
+          } catch (error) {
+            this.log(`❌ 統合テストエラー: ${error.message}`);
+            this.updateStatus("integration-status", "エラー");
+          }
+        }
+
+        async performanceTest() {
+          this.log("⚡ パフォーマンステスト開始");
+
+          const startTime = Date.now();
+
+          try {
+            // レンダラーパフォーマンス
+            if (this.spineRenderer) {
+              const renderStart = Date.now();
+              for (let i = 0; i < 10; i++) {
+                this.playAnimation(i % 2 === 0 ? "taiki" : "yarare");
+                await new Promise((resolve) => setTimeout(resolve, 100));
+              }
+              const renderTime = Date.now() - renderStart;
+              this.log(
+                `📊 レンダラーパフォーマンス: ${renderTime}ms (10回切り替え)`
+              );
+            }
+
+            // バウンディングボックスパフォーマンス
+            if (this.boundingBox) {
+              const bboxStart = Date.now();
+              for (let i = 0; i < 5; i++) {
+                this.toggleBoundingBox();
+                await new Promise((resolve) => setTimeout(resolve, 50));
+              }
+              const bboxTime = Date.now() - bboxStart;
+              this.log(`📊 BBパフォーマンス: ${bboxTime}ms (5回切り替え)`);
+            }
+
+            const totalTime = Date.now() - startTime;
+            this.log(`⚡ パフォーマンステスト完了: 総時間 ${totalTime}ms`);
+          } catch (error) {
+            this.log(`❌ パフォーマンステストエラー: ${error.message}`);
+          }
+        }
+
+        resetAll() {
+          this.log("🔄 全リセット実行中...");
+
+          try {
+            // バウンディングボックスクリーンアップ
+            if (this.boundingBox) {
+              this.cleanupBoundingBox();
+            }
+
+            // スパインレンダラーストップ
+            if (this.spineRenderer) {
+              this.spineRenderer.stop();
+              this.spineRenderer = null;
+            }
+
+            // 状態リセット
+            this.rendererInitialized = false;
+            this.nezumiLoaded = false;
+            this.bboxCreated = false;
+            this.integrationComplete = false;
+
+            // ステータス更新
+            this.updateStatus("renderer-status", "リセット完了");
+            this.updateStatus("nezumi-status", "待機中");
+            this.updateStatus("bbox-status", "待機中");
+            this.updateStatus("integration-status", "リセット完了");
+
+            // キャンバスクリア
+            const ctx = this.canvas.getContext("2d");
+            if (ctx) {
+              ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            this.log("✅ 全リセット完了");
+          } catch (error) {
+            this.log(`❌ リセットエラー: ${error.message}`);
+          }
+        }
+
+        showDebugInfo() {
+          this.log("🔍 システム情報表示");
+
+          const info = {
+            rendererInitialized: this.rendererInitialized,
+            nezumiLoaded: this.nezumiLoaded,
+            bboxCreated: this.bboxCreated,
+            integrationComplete: this.integrationComplete,
+            canvasSize: `${this.canvas.width}x${this.canvas.height}`,
+            spineRenderer: !!this.spineRenderer,
+            boundingBox: !!this.boundingBox,
+          };
+
+          Object.entries(info).forEach(([key, value]) => {
+            this.log(`  ${key}: ${value}`);
+          });
+
+          // グローバル変数確認
+          this.log("📚 ライブラリ状況:");
+          this.log(`  spine: ${typeof window.spine}`);
+          this.log(
+            `  StableSpineRenderer: ${typeof window.StableSpineRenderer}`
+          );
+          this.log(`  PureBoundingBox: ${typeof window.PureBoundingBox}`);
+        }
+
+        clearLog() {
+          const logPanel = document.getElementById("log-panel");
+          logPanel.innerHTML =
+            '<div style="color: #ffd700; margin-bottom: 10px;">📝 システムログ</div>';
+          this.log("🧹 ログクリア完了");
+        }
+
+        log(message) {
+          const logPanel = document.getElementById("log-panel");
+          const timestamp = new Date().toLocaleTimeString();
+          const logEntry = document.createElement("div");
+          logEntry.style.marginBottom = "3px";
+          logEntry.innerHTML = `<span style="color: #666">[${timestamp}]</span> ${message}`;
+          logPanel.appendChild(logEntry);
+
+          // スクロール調整
+          logPanel.scrollTop = logPanel.scrollHeight;
+
+          // コンソールにも出力
+          console.log(`[NezumiStableSpineBB] ${message}`);
+        }
+
+        updateStatus(elementId, status) {
+          const element = document.getElementById(elementId);
+          if (element) {
+            element.textContent = status;
+          }
+        }
+
+        hideLoading() {
+          const loadingScreen = document.getElementById("loading-screen");
+          if (loadingScreen) {
+            loadingScreen.style.display = "none";
+          }
+        }
+
+        // 📐 Canvas リサイズ機能
+        resizeCanvas() {
+          try {
+            const widthInput = document.getElementById("canvas-width");
+            const heightInput = document.getElementById("canvas-height");
+            const newWidth = parseInt(widthInput.value);
+            const newHeight = parseInt(heightInput.value);
+
+            if (!newWidth || !newHeight || newWidth < 100 || newHeight < 100) {
+              this.log("❌ 無効なサイズです（最小100px）");
+              return;
+            }
+
+            this.log(
+              `🔄 Canvas リサイズ開始: ${this.canvas.width}x${this.canvas.height} → ${newWidth}x${newHeight}`
+            );
+
+            // Canvas属性を変更
+            this.canvas.width = newWidth;
+            this.canvas.height = newHeight;
+
+            this.log(
+              `✅ Canvas リサイズ完了: ${this.canvas.width}x${this.canvas.height}`
+            );
+
+            // WebGLコンテキストがある場合は再初期化が必要
+            if (this.spineRenderer && this.nezumiLoaded) {
+              this.log("🔄 WebGL再初期化が推奨されます");
+
+              // WebGLビューポートも更新
+              const gl = this.canvas.getContext("webgl");
+              if (gl) {
+                gl.viewport(0, 0, newWidth, newHeight);
+                this.log("✅ WebGL ビューポート更新完了");
+              }
+            }
+          } catch (error) {
+            this.log(`❌ Canvas リサイズエラー: ${error.message}`);
+          }
+        }
+
+        resetCanvasSize() {
+          try {
+            const widthInput = document.getElementById("canvas-width");
+            const heightInput = document.getElementById("canvas-height");
+
+            // 元のサイズに戻す
+            widthInput.value = 800;
+            heightInput.value = 600;
+
+            // リサイズ実行
+            this.resizeCanvas();
+
+            this.log("✅ Canvas サイズを元に戻しました");
+          } catch (error) {
+            this.log(`❌ Canvas リセットエラー: ${error.message}`);
+          }
+        }
+
+        // 🎯 自動サイズ算出機能
+        calculateOptimalCanvasSize() {
+          try {
+            if (!this.spineRenderer || !this.spineRenderer.skeleton) {
+              this.log("❌ Spine skeleton が読み込まれていません");
+              return null;
+            }
+
+            this.log("🔍 キャラクター境界検出開始...");
+
+            // Spineスケルトンの境界取得
+            const skeleton = this.spineRenderer.skeleton;
+
+            // 境界情報を格納する変数
+            const offset = new spine.Vector2();
+            const size = new spine.Vector2();
+            const temp = [];
+
+            // Spine公式API: getBounds
+            skeleton.getBounds(offset, size, temp);
+
+            // 境界情報をログ出力
+            this.log(`📏 検出された境界:`);
+            this.log(
+              `   オフセット: (${offset.x.toFixed(2)}, ${offset.y.toFixed(2)})`
+            );
+            this.log(`   サイズ: ${size.x.toFixed(2)} x ${size.y.toFixed(2)}`);
+
+            // 最適Canvasサイズ計算（余白20px）
+            const padding = 40; // 余白
+            const optimalWidth = Math.ceil(size.x) + padding;
+            const optimalHeight = Math.ceil(size.y) + padding;
+
+            const result = {
+              detected: {
+                offset: { x: offset.x, y: offset.y },
+                size: { width: size.x, height: size.y },
+              },
+              optimal: {
+                width: optimalWidth,
+                height: optimalHeight,
+              },
+              reduction: {
+                fromWidth: this.canvas.width,
+                fromHeight: this.canvas.height,
+                reductionRatio:
+                  ((this.canvas.width * this.canvas.height -
+                    optimalWidth * optimalHeight) /
+                    (this.canvas.width * this.canvas.height)) *
+                  100,
+              },
             };
-        });
+
+            this.log(`🎯 最適サイズ: ${optimalWidth} x ${optimalHeight}`);
+            this.log(
+              `📊 サイズ削減: ${result.reduction.reductionRatio.toFixed(1)}%`
+            );
+
+            return result;
+          } catch (error) {
+            this.log(`❌ 境界検出エラー: ${error.message}`);
+            console.error("境界検出エラー:", error);
+            return null;
+          }
+        }
+
+        // 🎯 自動サイズ適用機能（修正版：CSSサイズ変更）
+        async applyOptimalCanvasSize() {
+          try {
+            const optimalSizeInfo = this.calculateOptimalCanvasSize();
+
+            if (!optimalSizeInfo) {
+              this.log("❌ 最適サイズの計算に失敗しました");
+              return;
+            }
+
+            const { width, height } = optimalSizeInfo.optimal;
+
+            this.log("🔄 CSS表示サイズを変更中...");
+
+            // 🆕 重要: CSS表示サイズを変更（これが実際の見た目を変える）
+            const container = document.querySelector(".canvas-container");
+            container.style.width = width + "px";
+            container.style.height = height + "px";
+
+            this.log(`📐 コンテナサイズ変更: ${width}x${height}`);
+
+            // Canvas内部解像度も合わせて変更
+            this.canvas.width = width;
+            this.canvas.height = height;
+
+            // WebGLビューポート更新
+            if (this.spineRenderer && this.spineRenderer.gl) {
+              this.spineRenderer.gl.viewport(0, 0, width, height);
+              this.log("🔧 WebGLビューポート更新完了");
+            }
+
+            // UI入力フィールドも更新
+            document.getElementById("canvas-width").value = width;
+            document.getElementById("canvas-height").value = height;
+
+            // 🆕 BBサイズも自動更新
+            if (this.boundingBox) {
+              this.log("📦 BB再作成中...");
+              await this.cleanupBoundingBox();
+              await new Promise((resolve) => setTimeout(resolve, 100));
+              await this.createBoundingBox();
+              this.log("✅ 新しいサイズでBB作成完了");
+            }
+
+            this.log(`✅ 最適表示サイズ適用完了: ${width}x${height}`);
+            this.log(
+              `📈 表示サイズ削減効果: ${optimalSizeInfo.reduction.reductionRatio.toFixed(
+                1
+              )}%`
+            );
+            this.log(`🎯 無駄な空白を除去しました`);
+
+            return optimalSizeInfo;
+          } catch (error) {
+            this.log(`❌ 最適サイズ適用エラー: ${error.message}`);
+          }
+        }
+
+        // 🆕 CSS表示サイズ変更機能（修正版：キャラクターサイズ保持）
+        changeCanvasDisplaySize(width, height) {
+          try {
+            this.log(`🔄 Canvas表示サイズ変更: ${width}x${height}`);
+
+            // コンテナサイズ変更
+            const container = document.querySelector(".canvas-container");
+            container.style.width = width + "px";
+            container.style.height = height + "px";
+
+            // 🎯 重要: Canvas内部解像度は高解像度で維持
+            const scale = Math.max(width / 800, height / 600, 0.5); // 最低0.5倍まで
+            const internalWidth = Math.max(width, 800 * scale);
+            const internalHeight = Math.max(height, 600 * scale);
+
+            this.log(
+              `📏 内部解像度: ${internalWidth}x${internalHeight} (scale: ${scale.toFixed(
+                2
+              )})`
+            );
+
+            // Canvas内部解像度設定
+            this.canvas.width = internalWidth;
+            this.canvas.height = internalHeight;
+
+            // 🎯 Canvas CSS サイズを明示的に設定（100%ではなく）
+            this.canvas.style.width = width + "px";
+            this.canvas.style.height = height + "px";
+
+            // WebGLビューポート更新
+            if (this.spineRenderer && this.spineRenderer.gl) {
+              this.spineRenderer.gl.viewport(
+                0,
+                0,
+                internalWidth,
+                internalHeight
+              );
+              this.log("🔧 WebGLビューポート更新完了");
+            }
+
+            // Spineキャラクターの位置調整（必要に応じて）
+            if (this.spineRenderer && this.spineRenderer.skeleton) {
+              // キャラクターを中央に配置
+              const centerX = internalWidth / 2;
+              const centerY = internalHeight / 2;
+
+              // 既存のtransform値を保持して位置調整
+              this.spineRenderer.skeleton.x = centerX;
+              this.spineRenderer.skeleton.y = centerY;
+
+              this.log(`🎯 キャラクター位置調整: (${centerX}, ${centerY})`);
+            }
+
+            this.log(
+              `✅ 表示サイズ変更完了: 表示${width}x${height}, 内部${internalWidth}x${internalHeight}`
+            );
+          } catch (error) {
+            this.log(`❌ 表示サイズ変更エラー: ${error.message}`);
+          }
+        }
+
+        // 🆕 キャラクターサイズ保持テスト機能
+        testCanvasSizeWithCharacterPreservation(displayWidth, displayHeight) {
+          try {
+            this.log(
+              `🧪 キャラクターサイズ保持テスト: ${displayWidth}x${displayHeight}`
+            );
+
+            // 現在のキャラクター情報を保存
+            let characterScale = 1;
+            let characterX = 400; // デフォルト中央
+            let characterY = 300;
+
+            if (this.spineRenderer && this.spineRenderer.skeleton) {
+              characterScale = this.spineRenderer.skeleton.scaleX;
+              characterX = this.spineRenderer.skeleton.x;
+              characterY = this.spineRenderer.skeleton.y;
+              this.log(
+                `📋 現在のキャラクター情報: scale=${characterScale}, pos=(${characterX}, ${characterY})`
+              );
+            }
+
+            // Canvas表示サイズ変更
+            this.changeCanvasDisplaySize(displayWidth, displayHeight);
+
+            // キャラクタースケールを元に戻す
+            if (this.spineRenderer && this.spineRenderer.skeleton) {
+              this.spineRenderer.skeleton.scaleX = characterScale;
+              this.spineRenderer.skeleton.scaleY = characterScale;
+              this.log(`🔄 キャラクタースケール復元: ${characterScale}`);
+            }
+          } catch (error) {
+            this.log(`❌ キャラクターサイズ保持テストエラー: ${error.message}`);
+          }
+        }
+
+        // 🎯 スケール調整機能
+        updateScaleDisplay(axis, value) {
+          document.getElementById(`scale-${axis}-value`).textContent = value;
+        }
+
+        applyCharacterScale() {
+          if (!this.spineRenderer || !this.spineRenderer.skeleton) {
+            this.log('⚠️ キャラクターが読み込まれていません');
+            return;
+          }
+
+          const scaleXValue = parseFloat(document.getElementById('character-scale-x').value);
+          const scaleYValue = parseFloat(document.getElementById('character-scale-y').value);
+          
+          try {
+            // 🎯 X・Y別々のスケール適用
+            this.spineRenderer.setTransform(null, null, scaleXValue, scaleYValue);
+            
+            this.log(`✅ キャラクタースケール適用: X=${scaleXValue}, Y=${scaleYValue} (比率 ${(scaleYValue/scaleXValue).toFixed(2)})`);
+            
+            // BBが作成されている場合は再作成
+            if (this.boundingBox) {
+              this.log('📦 スケール変更によりBB再作成中...');
+              setTimeout(async () => {
+                await this.cleanupBoundingBox();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await this.createBoundingBox();
+              }, 100);
+            }
+          } catch (error) {
+            this.log(`❌ スケール適用エラー: ${error.message}`);
+          }
+        }
+
+        resetCharacterScale() {
+          document.getElementById('character-scale-x').value = '1.35';
+          document.getElementById('character-scale-y').value = '1.0';
+          document.getElementById('scale-x-value').textContent = '1.35';
+          document.getElementById('scale-y-value').textContent = '1.0';
+          this.applyCharacterScale();
+          this.log('🔄 スケールを理想的な比率に戻しました（X=1.35, Y=1.0）');
+        }
+
+        // 🎯 自然な比率検出機能
+        detectNaturalRatio() {
+          if (!this.spineRenderer || !this.spineRenderer.skeleton) {
+            this.log('⚠️ キャラクターが読み込まれていません');
+            return;
+          }
+
+          // よく使われるキャラクター比率を試す
+          const commonRatios = [
+            { x: 1.0, y: 1.3, name: '縦長' },
+            { x: 1.3, y: 1.0, name: '横長' },
+            { x: 1.0, y: 1.2, name: '少し縦長' },
+            { x: 1.2, y: 1.0, name: '少し横長' },
+            { x: 1.0, y: 1.0, name: '正方形' }
+          ];
+
+          this.log('🔍 自然な比率を検出中...');
+          
+          // 最初の比率（縦長）を試す
+          const ratio = commonRatios[0];
+          document.getElementById('character-scale-x').value = ratio.x;
+          document.getElementById('character-scale-y').value = ratio.y;
+          document.getElementById('scale-x-value').textContent = ratio.x;
+          document.getElementById('scale-y-value').textContent = ratio.y;
+          
+          this.applyCharacterScale();
+          this.log(`💡 試行: ${ratio.name} (X=${ratio.x}, Y=${ratio.y}) - 自然に見えるか確認してください`);
+          this.log('🎯 スライダーで微調整して最適な比率を見つけてください');
+        }
+
+        // 🎯 位置調整機能
+        updatePositionDisplay(axis, value) {
+          document.getElementById(`${axis}-value`).textContent = value;
+        }
+
+        applyCharacterPosition() {
+          if (!this.spineRenderer || !this.spineRenderer.skeleton) {
+            this.log('⚠️ キャラクターが読み込まれていません');
+            return;
+          }
+
+          const xValue = parseInt(document.getElementById('character-x').value);
+          const yValue = parseInt(document.getElementById('character-y').value);
+          
+          try {
+            this.spineRenderer.setTransform(xValue, yValue, null, null);
+            this.log(`✅ キャラクター位置適用: (${xValue}, ${yValue})`);
+            
+            // BBが作成されている場合は再作成
+            if (this.boundingBox) {
+              this.log('📦 位置変更によりBB再作成中...');
+              setTimeout(async () => {
+                await this.cleanupBoundingBox();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await this.createBoundingBox();
+              }, 100);
+            }
+          } catch (error) {
+            this.log(`❌ 位置適用エラー: ${error.message}`);
+          }
+        }
+
+        centerCharacter() {
+          const canvasWidth = this.canvas ? this.canvas.width : 800;
+          const canvasHeight = this.canvas ? this.canvas.height : 600;
+          
+          const centerX = canvasWidth / 2;
+          const centerY = canvasHeight / 2;
+          
+          // UIを更新
+          document.getElementById('character-x').value = centerX;
+          document.getElementById('character-y').value = centerY;
+          document.getElementById('x-value').textContent = centerX;
+          document.getElementById('y-value').textContent = centerY;
+          
+          // 適用
+          this.applyCharacterPosition();
+          this.log(`📍 キャラクターを中央に配置: (${centerX}, ${centerY})`);
+        }
+
+        resetCharacterPosition() {
+          // デフォルト位置に戻す
+          document.getElementById('character-x').value = '100';
+          document.getElementById('character-y').value = '-100';
+          document.getElementById('x-value').textContent = '100';
+          document.getElementById('y-value').textContent = '-100';
+          
+          this.applyCharacterPosition();
+          this.log('🔄 位置をデフォルトに戻しました');
+        }
+
+        // 🎯 現在の位置を取得してUIに反映（読み込み後の同期用）
+        syncPositionUI() {
+          if (this.spineRenderer && this.spineRenderer.skeleton) {
+            const x = Math.round(this.spineRenderer.skeleton.x);
+            const y = Math.round(this.spineRenderer.skeleton.y);
+            const scaleX = this.spineRenderer.skeleton.scaleX;
+            const scaleY = this.spineRenderer.skeleton.scaleY;
+            
+            // 🎯 現在のスケール比率を詳細ログ出力
+            this.log(`🔍 現在のスケール詳細: scaleX=${scaleX}, scaleY=${scaleY}, 比率=${(scaleY/scaleX).toFixed(3)}`);
+            
+            // スケールが異なる場合の処理（コメントアウトして現在の状態を確認）
+            let scale = scaleX;
+            // if (Math.abs(scaleX - scaleY) > 0.01) {
+            //   this.spineRenderer.skeleton.scaleY = scaleX;
+            //   this.log(`🔄 スケール統一: scaleY ${scaleY} → ${scaleX} (等倍維持)`);
+            //   scale = scaleX;
+            // }
+            
+            // UI同期
+            document.getElementById('character-x').value = x;
+            document.getElementById('character-y').value = y;
+            document.getElementById('x-value').textContent = x;
+            document.getElementById('y-value').textContent = y;
+            document.getElementById('character-scale-x').value = scaleX;
+            document.getElementById('character-scale-y').value = scaleY;
+            document.getElementById('scale-x-value').textContent = scaleX;
+            document.getElementById('scale-y-value').textContent = scaleY;
+            
+            this.log(`🔄 UI同期完了: 位置(${x}, ${y}), 現在スケール${scale}`);
+            
+            // 🎯 推奨スケール比率を提案
+            if (Math.abs(scaleX - scaleY) > 0.01) {
+              const ratio = scaleY / scaleX;
+              this.log(`💡 このキャラクターの自然な縦横比: Y軸 ${ratio.toFixed(2)}倍 がオリジナル設計かもしれません`);
+            }
+          }
+        }
+      }
+
+      // 🚀 システム起動
+      window.addEventListener("load", async () => {
+        // ライブラリ読み込み待機
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        console.log(
+          "🎯 Nezumi + StableSpineRenderer + BoundingBox 統合システム起動"
+        );
+
+        // システム初期化
+        window.nezumiIntegration = new NezumiStableSpineBBIntegration();
+
+        // デバッグ用グローバル関数
+        window.debugNezumiSystem = () => {
+          if (window.nezumiIntegration) {
+            window.nezumiIntegration.showDebugInfo();
+          }
+        };
+      });
     </script>
-</body>
+  </body>
 </html>

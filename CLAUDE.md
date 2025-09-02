@@ -126,6 +126,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **📋 完成資料**: 
 - **モジュール本体**: `micromodules/spine-renderer/StableSpineRenderer.js`
 - **完全マニュアル**: `docs/manuals/STABLE_SPINE_RENDERER_GUIDE.md`
+- **Canvas品質設定**: `docs/manuals/CANVAS_QUALITY_SETTINGS_GUIDE.md` - デスクトップアプリ統合用4段階品質システム
 - **テストファイル**: `test-stable-spine-renderer.html`
 - **解決記録**: `docs/troubleshooting/Spine口周り黒枠問題完全解決記録.md`
 
