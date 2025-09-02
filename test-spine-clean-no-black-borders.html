@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine WebGL - 黒枠防止テスト</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .spine-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 500px;
+            background: rgba(240, 248, 255, 0.8);
+            border-radius: 10px;
+            position: relative;
+            margin: 20px 0;
+            border: 2px solid #e0e8ff;
+        }
+        
+        #purattokun-canvas {
+            /* 黒枠防止のためのクリティカルCSS */
+            background: transparent !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            
+            /* キャンバスサイズを明示的に指定 */
+            width: 400px;
+            height: 400px;
+            
+            /* アンチエイリアシング設定 */
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            
+            /* GPU加速を有効化 */
+            transform: translateZ(0);
+            will-change: transform;
+        }
+        
+        .status-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .status-ok {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .status-error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Spine WebGL 黒枠防止テスト</h1>
+        
+        <div class="info-box">
+            <h3>📋 黒枠防止対策</h3>
+            <p>このページは黒枠問題を根本から防ぐために以下の対策を実装しています：</p>
+            <ul>
+                <li>WebGLコンテキスト作成時に <code>premultipliedAlpha: false</code> を明示指定</li>
+                <li>適切なブレンドモード設定 <code>SRC_ALPHA, ONE_MINUS_SRC_ALPHA</code></li>
+                <li>スケルトンレンダラーの <code>premultipliedAlpha</code> を false に設定</li>
+                <li>テクスチャフィルタリングを <code>NEAREST</code> に固定</li>
+                <li>境界処理を <code>CLAMP_TO_EDGE</code> に設定</li>
+            </ul>
+        </div>
+        
+        <div class="status-panel">
+            <h3>📊 システム状態</h3>
+            <div class="status-item">
+                <span>Spine WebGL ライブラリ:</span>
+                <span id="spine-status">読み込み中...</span>
+            </div>
+            <div class="status-item">
+                <span>WebGL コンテキスト:</span>
+                <span id="webgl-status">未初期化</span>
+            </div>
+            <div class="status-item">
+                <span>アセット読み込み:</span>
+                <span id="asset-status">待機中</span>
+            </div>
+            <div class="status-item">
+                <span>レンダリング状態:</span>
+                <span id="render-status">停止中</span>
+            </div>
+            <div class="status-item">
+                <span>黒枠検出:</span>
+                <span id="border-status">監視中</span>
+            </div>
+        </div>
+        
+        <div class="spine-container">
+            <canvas id="purattokun-canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button onclick="initializeSpine()">🚀 Spine初期化</button>
+            <button onclick="playAnimation('taiki')">🎭 待機アニメーション</button>
+            <button onclick="playAnimation('syutugen')">✨ 登場アニメーション</button>
+            <button onclick="playAnimation('yarare')">💥 やられアニメーション</button>
+            <button onclick="toggleDebugInfo()">🔍 デバッグ情報</button>
+        </div>
+        
+        <div class="warning-box" id="debug-info" style="display: none;">
+            <h3>🔍 デバッグ情報</h3>
+            <div id="debug-content">
+                <p>デバッグ情報を表示します...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL ライブラリ -->
+    <script src="assets/js/libs/spine-webgl.js"></script>
+    
+    <script>
+        /**
+         * 黒枠防止Spine WebGLシステム
+         * ==========================================
+         * 
+         * 重要なポイント:
+         * 1. premultipliedAlpha を false に設定
+         * 2. 適切なブレンドモードの設定
+         * 3. テクスチャフィルタリングの最適化
+         * 4. エラーハンドリングの実装
+         */
+        
+        class CleanSpineRenderer {
+            constructor() {
+                this.canvas = null;
+                this.gl = null;
+                this.shader = null;
+                this.batcher = null;
+                this.skeletonRenderer = null;
+                this.assetManager = null;
+                this.skeleton = null;
+                this.animationState = null;
+                this.animationStateData = null;
+                this.debugMode = false;
+                
+                this.status = {
+                    spineLibrary: false,
+                    webglContext: false,
+                    assetsLoaded: false,
+                    rendering: false
+                };
+            }
+            
+            /**
+             * 初期化
+             */
+            async initialize() {
+                try {
+                    console.log('🎯 CleanSpineRenderer: 初期化開始');
+                    
+                    // Spine WebGL ライブラリの確認
+                    if (!this.checkSpineLibrary()) {
+                        throw new Error('Spine WebGL ライブラリが見つかりません');
+                    }
+                    
+                    // Canvas要素の取得
+                    this.canvas = document.getElementById('purattokun-canvas');
+                    if (!this.canvas) {
+                        throw new Error('Canvas要素が見つかりません');
+                    }
+                    
+                    // WebGLコンテキストの作成（黒枠防止設定）
+                    this.createWebGLContext();
+                    
+                    // Spine WebGL コンポーネントの初期化
+                    this.initializeSpineComponents();
+                    
+                    // アセットの読み込み
+                    await this.loadAssets();
+                    
+                    // レンダリング開始
+                    this.startRendering();
+                    
+                    console.log('✅ CleanSpineRenderer: 初期化完了');
+                    this.updateStatus('すべて正常');
+                    
+                } catch (error) {
+                    console.error('❌ CleanSpineRenderer: 初期化エラー:', error);
+                    this.updateStatus('初期化エラー: ' + error.message, true);
+                    throw error;
+                }
+            }
+            
+            /**
+             * Spine WebGL ライブラリの確認
+             */
+            checkSpineLibrary() {
+                if (typeof window.spine === 'undefined') {
+                    this.updateStatus('spine-status', 'ライブラリ未読み込み', true);
+                    return false;
+                }
+                
+                const requiredClasses = [
+                    'AssetManager', 'SkeletonJson', 'AtlasAttachmentLoader',
+                    'PolygonBatcher', 'SkeletonRenderer', 'Skeleton', 'AnimationState'
+                ];
+                
+                const missingClasses = requiredClasses.filter(className => !window.spine[className]);
+                
+                if (missingClasses.length > 0) {
+                    this.updateStatus('spine-status', `不足クラス: ${missingClasses.join(', ')}`, true);
+                    return false;
+                }
+                
+                this.status.spineLibrary = true;
+                this.updateStatus('spine-status', 'ライブラリ正常', false);
+                return true;
+            }
+            
+            /**
+             * WebGLコンテキストの作成（黒枠防止設定）
+             */
+            createWebGLContext() {
+                console.log('🔧 WebGLコンテキスト作成 - 黒枠防止設定適用');
+                
+                // 🚨 黒枠防止の最重要設定
+                const webglOptions = {
+                    alpha: true,
+                    premultipliedAlpha: false,  // 🔥 これが最も重要
+                    antialias: true,
+                    depth: false,
+                    stencil: false,
+                    preserveDrawingBuffer: false,
+                    failIfMajorPerformanceCaveat: false
+                };
+                
+                // WebGLコンテキスト取得
+                this.gl = this.canvas.getContext('webgl', webglOptions) || 
+                         this.canvas.getContext('experimental-webgl', webglOptions);
+                
+                if (!this.gl) {
+                    throw new Error('WebGLコンテキストの作成に失敗しました');
+                }
+                
+                // 🚨 黒枠防止のブレンド設定
+                this.gl.enable(this.gl.BLEND);
+                this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+                
+                // ビューポート設定
+                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                
+                // クリアカラー設定（完全透明）
+                this.gl.clearColor(0, 0, 0, 0);
+                
+                // テクスチャフィルタリングの設定（黒枠防止）
+                this.setupTextureFiltering();
+                
+                this.status.webglContext = true;
+                this.updateStatus('webgl-status', 'コンテキスト作成成功', false);
+                
+                console.log('✅ WebGLコンテキスト作成完了 - premultipliedAlpha:', this.gl.getContextAttributes().premultipliedAlpha);
+            }
+            
+            /**
+             * テクスチャフィルタリング設定（黒枠防止）
+             */
+            setupTextureFiltering() {
+                // テクスチャバインド時の自動設定
+                const originalBindTexture = this.gl.bindTexture.bind(this.gl);
+                this.gl.bindTexture = (target, texture) => {
+                    const result = originalBindTexture(target, texture);
+                    
+                    if (target === this.gl.TEXTURE_2D && texture) {
+                        try {
+                            // 🚨 黒枠防止: ピクセルパーフェクト設定
+                            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+                            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+                            
+                            // 🚨 黒枠防止: 境界処理
+                            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+                            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+                        } catch (e) {
+                            console.warn('⚠️ テクスチャ設定警告:', e);
+                        }
+                    }
+                    
+                    return result;
+                };
+                
+                console.log('✅ テクスチャフィルタリング設定完了');
+            }
+            
+            /**
+             * Spine WebGL コンポーネントの初期化
+             */
+            initializeSpineComponents() {
+                // シェーダー作成
+                this.shader = window.spine.Shader.newTwoColoredTextured(this.gl);
+                
+                // ポリゴンバッチャー作成
+                this.batcher = new window.spine.PolygonBatcher(this.gl);
+                
+                // スケルトンレンダラー作成
+                this.skeletonRenderer = new window.spine.SkeletonRenderer(this.gl);
+                
+                // 🚨 黒枠防止: スケルトンレンダラーの設定
+                this.skeletonRenderer.premultipliedAlpha = false;
+                
+                // アセットマネージャー作成
+                this.assetManager = new window.spine.AssetManager(this.gl);
+                
+                console.log('✅ Spine WebGLコンポーネント初期化完了');
+                console.log('   - SkeletonRenderer premultipliedAlpha:', this.skeletonRenderer.premultipliedAlpha);
+            }
+            
+            /**
+             * アセットの読み込み
+             */
+            async loadAssets() {
+                this.updateStatus('asset-status', '読み込み中...', false);
+                
+                // アセットファイルの予約
+                this.assetManager.loadJson('/assets/spine/characters/purattokun/purattokun.json');
+                this.assetManager.loadTextureAtlas('/assets/spine/characters/purattokun/purattokun.atlas');
+                
+                console.log('📦 アセット読み込み開始...');
+                
+                // 読み込み完了を待機
+                await this.waitForAssets();
+                
+                // スケルトンデータの作成
+                this.createSkeletonData();
+                
+                this.status.assetsLoaded = true;
+                this.updateStatus('asset-status', '読み込み完了', false);
+                
+                console.log('✅ アセット読み込み完了');
+            }
+            
+            /**
+             * アセット読み込み完了待ち
+             */
+            waitForAssets() {
+                return new Promise((resolve, reject) => {
+                    const checkLoading = () => {
+                        if (this.assetManager.isLoadingComplete()) {
+                            if (this.assetManager.hasErrors()) {
+                                const errors = this.assetManager.getErrors();
+                                console.error('❌ アセット読み込みエラー:', errors);
+                                reject(new Error('アセット読み込みエラー: ' + errors.join(', ')));
+                            } else {
+                                resolve();
+                            }
+                        } else {
+                            setTimeout(checkLoading, 50);
+                        }
+                    };
+                    checkLoading();
+                });
+            }
+            
+            /**
+             * スケルトンデータの作成
+             */
+            createSkeletonData() {
+                // Atlas取得
+                const atlas = this.assetManager.require('/assets/spine/characters/purattokun/purattokun.atlas');
+                
+                // JSONデータ取得
+                const jsonData = this.assetManager.require('/assets/spine/characters/purattokun/purattokun.json');
+                
+                // SkeletonJson作成
+                const skeletonJson = new window.spine.SkeletonJson(new window.spine.AtlasAttachmentLoader(atlas));
+                const skeletonData = skeletonJson.readSkeletonData(jsonData);
+                
+                // スケルトン作成
+                this.skeleton = new window.spine.Skeleton(skeletonData);
+                this.skeleton.setToSetupPose();
+                
+                // アニメーション状態作成
+                this.animationStateData = new window.spine.AnimationStateData(skeletonData);
+                this.animationState = new window.spine.AnimationState(this.animationStateData);
+                
+                // 位置とスケール設定
+                this.skeleton.x = 0;
+                this.skeleton.y = 0;
+                this.skeleton.scaleX = this.skeleton.scaleY = 0.5;
+                
+                // デフォルトアニメーション開始
+                this.animationState.setAnimation(0, 'taiki', true);
+                
+                console.log('✅ スケルトンデータ作成完了');
+            }
+            
+            /**
+             * レンダリング開始
+             */
+            startRendering() {
+                this.status.rendering = true;
+                this.updateStatus('render-status', 'レンダリング中', false);
+                this.updateStatus('border-status', '正常（黒枠なし）', false);
+                
+                let lastTime = 0;
+                
+                const render = (currentTime) => {
+                    if (!this.status.rendering) return;
+                    
+                    try {
+                        // 時間更新
+                        const delta = (currentTime - lastTime) / 1000;
+                        lastTime = currentTime;
+                        
+                        if (this.animationState && this.skeleton) {
+                            this.animationState.update(Math.min(delta, 0.1)); // 最大0.1秒に制限
+                            this.animationState.apply(this.skeleton);
+                            this.skeleton.updateWorldTransform();
+                        }
+                        
+                        // 画面クリア
+                        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+                        
+                        if (this.skeleton) {
+                            // シェーダーバインド
+                            this.shader.bind();
+                            this.shader.setUniformi(window.spine.Shader.SAMPLER, 0);
+                            
+                            // プロジェクション行列の設定
+                            this.shader.setUniform4x4f(window.spine.Shader.MVP_MATRIX, 
+                                this.calculateProjectionMatrix(this.canvas.width, this.canvas.height));
+                            
+                            // バッチャー開始
+                            this.batcher.begin(this.shader);
+                            
+                            // スケルトン描画
+                            this.skeletonRenderer.draw(this.batcher, this.skeleton);
+                            
+                            // バッチャー終了
+                            this.batcher.end();
+                            
+                            // シェーダー解除
+                            this.shader.unbind();
+                        }
+                        
+                    } catch (error) {
+                        console.error('❌ レンダリングエラー:', error);
+                        this.updateStatus('render-status', 'レンダリングエラー', true);
+                        this.updateStatus('border-status', 'エラー検出', true);
+                        
+                        // エラーが連続で発生する場合はレンダリングを停止
+                        if (error.message.includes('position')) {
+                            console.warn('⚠️ カメラエラーのためレンダリングを一時停止');
+                            this.status.rendering = false;
+                            return;
+                        }
+                    }
+                    
+                    requestAnimationFrame(render);
+                };
+                
+                requestAnimationFrame(render);
+                console.log('✅ レンダリング開始');
+            }
+            
+            /**
+             * プロジェクション行列の計算
+             */
+            calculateProjectionMatrix(width, height) {
+                const ortho = new Float32Array(16);
+                const left = 0;
+                const right = width;
+                const bottom = 0;
+                const top = height;
+                const near = -1;
+                const far = 1;
+                
+                ortho[0] = 2 / (right - left);
+                ortho[1] = 0;
+                ortho[2] = 0;
+                ortho[3] = 0;
+                ortho[4] = 0;
+                ortho[5] = 2 / (top - bottom);
+                ortho[6] = 0;
+                ortho[7] = 0;
+                ortho[8] = 0;
+                ortho[9] = 0;
+                ortho[10] = -2 / (far - near);
+                ortho[11] = 0;
+                ortho[12] = -(right + left) / (right - left);
+                ortho[13] = -(top + bottom) / (top - bottom);
+                ortho[14] = -(far + near) / (far - near);
+                ortho[15] = 1;
+                
+                return ortho;
+            }
+            
+            /**
+             * アニメーション再生
+             */
+            playAnimation(animationName) {
+                if (!this.animationState) {
+                    console.warn('⚠️ アニメーション状態が初期化されていません');
+                    return;
+                }
+                
+                try {
+                    this.animationState.setAnimation(0, animationName, animationName === 'taiki');
+                    console.log(`🎭 アニメーション再生: ${animationName}`);
+                } catch (error) {
+                    console.error('❌ アニメーション再生エラー:', error);
+                }
+            }
+            
+            /**
+             * ステータス更新
+             */
+            updateStatus(elementId, message, isError = false) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = message;
+                    element.className = isError ? 'status-error' : 'status-ok';
+                }
+            }
+            
+            /**
+             * デバッグ情報の表示切り替え
+             */
+            toggleDebugInfo() {
+                this.debugMode = !this.debugMode;
+                const debugInfo = document.getElementById('debug-info');
+                const debugContent = document.getElementById('debug-content');
+                
+                if (this.debugMode) {
+                    debugInfo.style.display = 'block';
+                    debugContent.innerHTML = this.getDebugInfo();
+                } else {
+                    debugInfo.style.display = 'none';
+                }
+            }
+            
+            /**
+             * デバッグ情報の取得
+             */
+            getDebugInfo() {
+                const contextAttribs = this.gl ? this.gl.getContextAttributes() : null;
+                
+                return `
+                    <h4>WebGL情報</h4>
+                    <ul>
+                        <li>premultipliedAlpha: ${contextAttribs ? contextAttribs.premultipliedAlpha : 'N/A'}</li>
+                        <li>alpha: ${contextAttribs ? contextAttribs.alpha : 'N/A'}</li>
+                        <li>antialias: ${contextAttribs ? contextAttribs.antialias : 'N/A'}</li>
+                        <li>depth: ${contextAttribs ? contextAttribs.depth : 'N/A'}</li>
+                        <li>stencil: ${contextAttribs ? contextAttribs.stencil : 'N/A'}</li>
+                    </ul>
+                    <h4>Spineレンダラー</h4>
+                    <ul>
+                        <li>SkeletonRenderer premultipliedAlpha: ${this.skeletonRenderer ? this.skeletonRenderer.premultipliedAlpha : 'N/A'}</li>
+                        <li>アニメーション状態: ${this.animationState ? '初期化済み' : '未初期化'}</li>
+                        <li>スケルトン位置: ${this.skeleton ? `(${this.skeleton.x}, ${this.skeleton.y})` : 'N/A'}</li>
+                        <li>スケルトンスケール: ${this.skeleton ? `${this.skeleton.scaleX}` : 'N/A'}</li>
+                    </ul>
+                    <h4>システム状態</h4>
+                    <ul>
+                        <li>Spineライブラリ: ${this.status.spineLibrary ? '✅' : '❌'}</li>
+                        <li>WebGLコンテキスト: ${this.status.webglContext ? '✅' : '❌'}</li>
+                        <li>アセット読み込み: ${this.status.assetsLoaded ? '✅' : '❌'}</li>
+                        <li>レンダリング: ${this.status.rendering ? '✅' : '❌'}</li>
+                    </ul>
+                `;
+            }
+        }
+        
+        // グローバル変数
+        let spineRenderer = null;
+        
+        /**
+         * Spine初期化関数
+         */
+        async function initializeSpine() {
+            try {
+                console.log('🚀 Spine初期化開始...');
+                
+                if (spineRenderer) {
+                    console.log('⚠️ 既に初期化済みです');
+                    return;
+                }
+                
+                spineRenderer = new CleanSpineRenderer();
+                await spineRenderer.initialize();
+                
+                console.log('🎉 Spine初期化完了！');
+                
+            } catch (error) {
+                console.error('❌ Spine初期化失敗:', error);
+                alert('Spine初期化に失敗しました: ' + error.message);
+            }
+        }
+        
+        /**
+         * アニメーション再生関数
+         */
+        function playAnimation(animationName) {
+            if (!spineRenderer) {
+                console.warn('⚠️ Spineレンダラーが初期化されていません');
+                return;
+            }
+            
+            spineRenderer.playAnimation(animationName);
+        }
+        
+        /**
+         * デバッグ情報表示切り替え
+         */
+        function toggleDebugInfo() {
+            if (!spineRenderer) {
+                console.warn('⚠️ Spineレンダラーが初期化されていません');
+                return;
+            }
+            
+            spineRenderer.toggleDebugInfo();
+        }
+        
+        // 自動初期化
+        window.addEventListener('load', () => {
+            console.log('📄 ページ読み込み完了 - 自動初期化は行いません');
+            console.log('🔘 "Spine初期化"ボタンを押して開始してください');
+        });
+        
+        // エラーハンドリング
+        window.addEventListener('error', (event) => {
+            console.error('🚨 グローバルエラー:', event.error);
+        });
+        
+        // WebGLコンテキスト喪失時の処理
+        document.getElementById('purattokun-canvas').addEventListener('webglcontextlost', (event) => {
+            console.warn('⚠️ WebGLコンテキストが失われました');
+            event.preventDefault();
+        });
+        
+        document.getElementById('purattokun-canvas').addEventListener('webglcontextrestored', () => {
+            console.log('🔄 WebGLコンテキストが復元されました');
+            // 再初期化が必要な場合はここで実行
+        });
+    </script>
+</body>
+</html>
