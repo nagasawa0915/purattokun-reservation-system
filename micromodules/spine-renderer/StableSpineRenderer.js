@@ -30,10 +30,10 @@ class StableSpineRenderer {
     constructor(config = {}) {
         // 設定のマージ（デフォルト値は成功パターンから抽出）
         this.config = {
-            // Canvas設定
+            // Canvas設定（サイズはHTMLの設定を優先）
             canvas: config.canvas || '#spine-canvas',
-            canvasWidth: config.canvasWidth || 400,
-            canvasHeight: config.canvasHeight || 400,
+            canvasWidth: config.canvasWidth,  // undefined可（HTMLサイズ使用）
+            canvasHeight: config.canvasHeight,  // undefined可（HTMLサイズ使用）
             
             // キャラクター設定（デフォルトなし - 必須パラメータ）
             character: config.character,
@@ -47,8 +47,8 @@ class StableSpineRenderer {
                 scaleY: config.position?.scaleY ?? 0.55
             },
             
-            // アニメーション設定
-            defaultAnimation: config.defaultAnimation || 'taiki',
+            // アニメーション設定（自動検出対応）
+            defaultAnimation: config.defaultAnimation,  // undefined可能（自動検出される）
             
             // デバッグ設定
             debug: config.debug || false,
@@ -188,9 +188,15 @@ class StableSpineRenderer {
             throw new Error(`Canvas要素が見つかりません: ${this.config.canvas}`);
         }
         
-        // Canvas属性設定
-        this.canvas.width = this.config.canvasWidth;
-        this.canvas.height = this.config.canvasHeight;
+        // Canvas属性設定（既存サイズを尊重、設定がある場合のみ変更）
+        if (this.config.canvasWidth && this.config.canvasHeight) {
+            this.canvas.width = this.config.canvasWidth;
+            this.canvas.height = this.config.canvasHeight;
+            this.log(`📏 Canvasサイズ変更: ${this.config.canvasWidth}x${this.config.canvasHeight}`, 'info');
+        } else {
+            // 既存のHTMLサイズを使用
+            this.log(`📏 既存Canvasサイズ使用: ${this.canvas.width}x${this.canvas.height}`, 'info');
+        }
         
         this.log('✅ Canvas初期化成功', 'success');
     }
@@ -311,11 +317,65 @@ class StableSpineRenderer {
         const animationStateData = new window.spine.AnimationStateData(this.skeleton.data);
         this.animationState = new window.spine.AnimationState(animationStateData);
         
+        // 🎯 自動アニメーション検出（汎用性確保）
+        const finalAnimation = this.autoDetectDefaultAnimation();
+        
         // デフォルトアニメーション設定
-        this.animationState.setAnimation(0, this.config.defaultAnimation, true);
+        this.animationState.setAnimation(0, finalAnimation, true);
         
         this.log('✅ スケルトン初期化完了', 'success');
-        this.log(`🎬 デフォルトアニメーション: ${this.config.defaultAnimation}`, 'info');
+        this.log(`🎬 使用アニメーション: ${finalAnimation}`, 'info');
+    }
+    
+    /**
+     * 🎯 自動アニメーション検出機能（汎用性確保）
+     * 
+     * キャラクター固有のアニメーション名を知らなくても自動的に適切なアニメーションを選択
+     * 優先順位:
+     * 1. ユーザー指定（config.defaultAnimation）
+     * 2. 一般的な待機アニメーション（taiki, search, idle, default）
+     * 3. 最初に見つかったアニメーション
+     */
+    autoDetectDefaultAnimation() {
+        // 利用可能アニメーション取得
+        const availableAnimations = this.skeleton.data.animations.map(anim => anim.name);
+        this.log(`🔍 検出されたアニメーション: [${availableAnimations.join(', ')}]`, 'info');
+        
+        // 1. ユーザー指定がある場合は優先
+        if (this.config.defaultAnimation && availableAnimations.includes(this.config.defaultAnimation)) {
+            this.log(`✅ ユーザー指定アニメーション使用: ${this.config.defaultAnimation}`, 'success');
+            return this.config.defaultAnimation;
+        } else if (this.config.defaultAnimation && !availableAnimations.includes(this.config.defaultAnimation)) {
+            this.log(`⚠️ 指定されたアニメーション '${this.config.defaultAnimation}' が見つかりません`, 'warning');
+        }
+        
+        // 2. 優先順位付きの候補リスト
+        const candidates = [
+            'taiki',    // purattokun標準
+            'search',   // nezumi標準
+            'idle',     // 一般的な待機
+            'default',  // デフォルト名
+            'animation', // よくある名前
+            'loop'      // ループアニメーション
+        ];
+        
+        // 最初に見つかった候補を使用
+        for (const candidate of candidates) {
+            if (availableAnimations.includes(candidate)) {
+                this.log(`🎯 自動検出成功: ${candidate}`, 'success');
+                return candidate;
+            }
+        }
+        
+        // 3. 最後の手段：最初のアニメーション
+        if (availableAnimations.length > 0) {
+            const firstAnimation = availableAnimations[0];
+            this.log(`🔄 フォールバック: 最初のアニメーション '${firstAnimation}' を使用`, 'warning');
+            return firstAnimation;
+        }
+        
+        // 4. アニメーションが全く無い場合（エラー）
+        throw new Error(`❌ アニメーションが見つかりません。キャラクター '${this.config.character}' のSpineファイルを確認してください。`);
     }
     
     /**

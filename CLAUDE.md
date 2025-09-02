@@ -101,6 +101,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **黒枠問題完全解決**: `premultipliedAlpha: true` 固定化により口周りの黒枠根本解決
 - **毎回確実動作実現**: AIセッション間での実装ばらつき問題の完全解決
 - **完全マニュアル作成**: 133セクションの詳細マニュアル・API仕様書完成
+- **🎯 自動アニメーション検出機能実装**: キャラクター固有アニメーション名の自動検出・完全汎用性実現
+- **🎨 縦横比問題完全解決**: HTMLCanvasサイズ優先による歪み問題根本解決
 
 **🎯 StableSpineRenderer完成成果**:
 1. **⭐ StableSpineRenderer.js**: 黒枠問題完全解決・安定動作保証の最高推奨モジュール
@@ -111,6 +113,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **黒枠問題の根本原因**: `premultipliedAlpha: false` がSpine口周りの黒枠原因と特定
 - **成功パターン移植戦略**: `test-spine-basic-loading.html` の動作確認済み設定を完全移植
 - **AI実装ばらつき解決**: 設定固定化により毎回同じ結果を保証するモジュール設計
+- **🎯 完全汎用性の実現**: 自動アニメーション検出により任意のSpineキャラクター対応
+- **🎨 縦横比問題の根本原因**: Canvas強制リサイズ（400x400）による歪み発生と解決策確立
 
 **📋 StableSpineRenderer設計方針**:
 1. **成功パターン固定化**: 動作確認済みの設定を変更禁止として固定

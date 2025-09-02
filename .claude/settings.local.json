@@ -4,7 +4,8 @@
       "WebFetch(domain:unpkg.com)",
       "Bash(sed:*)",
       "Bash(find:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": [],
