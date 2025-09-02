@@ -401,8 +401,8 @@
     <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
     
     <!-- 🎯 Phase 1: UIController + LogSystem マイクロモジュール -->
-    <script src="micromodules/nezumi-integration/LogSystem.js"></script>
-    <script src="micromodules/nezumi-integration/UIController.js"></script>
+    <script src="micromodules/spine-integration/LogSystem.js"></script>
+    <script src="micromodules/spine-integration/UIController.js"></script>
 
     <script>
       /**
@@ -430,13 +430,13 @@
           this.integrationComplete = false;
 
           // 🎯 Phase 1: UIController + LogSystem マイクロモジュール統合
-          this.logSystem = new NezumiLogSystem({
+          this.logSystem = new SpineLogSystem({
             logLevel: 'info',
             maxLogs: 1000,
             showTimestamp: true,
             enableConsole: true,
             enableHtml: true,
-            prefix: '[NezumiStableSpineBB]'
+            prefix: '[StableSpineBB]'
           });
           this.uiController = null;
 
@@ -444,14 +444,14 @@
         }
 
         async init() {
-          this.log("🚀 Nezumi StableSpine + BB統合システム初期化開始");
+          this.log("🚀 StableSpine + BB統合システム初期化開始");
 
           try {
             // ライブラリ確認
             await this.checkDependencies();
 
             // 🎯 Phase 1: UIController マイクロモジュール初期化
-            this.uiController = new NezumiUIController(this, this.logSystem);  // logSystem = this.logSystem
+            this.uiController = new SpineUIController(this, this.logSystem);  // logSystem = this.logSystem
             this.uiController.initUI();
 
             this.uiController.hideLoading();

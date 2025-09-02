@@ -1,5 +1,6 @@
-// このファイルは削除予定 - spine-integration/LogSystem.js に移行済み
- * ねずみ統合システム ログ管理マイクロモジュール
+/**
+ * SpineLogSystem.js
+ * Spine統合システム ログ管理マイクロモジュール
  * 
  * 責務:
  * - 多機能ログ出力・管理システム
@@ -15,7 +16,7 @@
  * - パフォーマンス最適化
  * 
  * 使用方法:
- * const logSystem = new NezumiLogSystem({
+ * const logSystem = new SpineLogSystem({
  *   logLevel: 'info',
  *   maxLogs: 1000,
  *   showTimestamp: true,
@@ -27,7 +28,7 @@
  * logSystem.error('エラーメッセージ');
  */
 
-class NezumiLogSystem {
+class SpineLogSystem {
     constructor(options = {}) {
         // 設定オプション
         this.options = {
@@ -36,7 +37,7 @@ class NezumiLogSystem {
             showTimestamp: options.showTimestamp !== false,
             enableConsole: options.enableConsole !== false,
             enableHtml: options.enableHtml !== false,
-            prefix: options.prefix || '[NezumiStableSpineBB]',
+            prefix: options.prefix || '[StableSpineBB]',
             ...options
         };
 
@@ -349,17 +350,17 @@ class NezumiLogSystem {
 
 // グローバル公開
 if (typeof window !== 'undefined') {
-    window.NezumiLogSystem = NezumiLogSystem;
+    window.SpineLogSystem = SpineLogSystem;
 }
 
 // CommonJS対応
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = NezumiLogSystem;
+    module.exports = SpineLogSystem;
 }
 
 // AMD対応
 if (typeof define === 'function' && define.amd) {
     define([], function() {
-        return NezumiLogSystem;
+        return SpineLogSystem;
     });
 }

@@ -1,5 +1,6 @@
-// このファイルは削除予定 - spine-integration/UIController.js に移行済み
- * ねずみ統合システム UI制御マイクロモジュール
+/**
+ * SpineUIController.js
+ * Spine統合システム UI制御マイクロモジュール
  * 
  * 責務:
  * - DOM イベントリスナー初期化
@@ -13,9 +14,9 @@
  * - 他システムとの疎結合
  */
 
-class NezumiUIController {
+class SpineUIController {
     constructor(parent, logSystem) {
-        this.parent = parent;  // NezumiStableSpineBBインスタンス
+        this.parent = parent;  // StableSpineBBインスタンス
         this.logSystem = logSystem;
     }
 
@@ -170,9 +171,9 @@ class NezumiUIController {
         }
 
         // キャラクター情報
-        if (this.parent.nezumiLoaded && this.parent.spineRenderer.skeleton) {
+        if (this.parent.characterLoaded && this.parent.spineRenderer.skeleton) {
             const skeleton = this.parent.spineRenderer.skeleton;
-            this.logSystem.log(`🐭 Character Scale: ${skeleton.scaleX}, ${skeleton.scaleY}`);
+            this.logSystem.log(`🎭 Character Scale: ${skeleton.scaleX}, ${skeleton.scaleY}`);
             this.logSystem.log(`📍 Character Position: ${skeleton.x}, ${skeleton.y}`);
         }
 
@@ -189,10 +190,10 @@ class NezumiUIController {
 
 // グローバル公開
 if (typeof window !== 'undefined') {
-    window.NezumiUIController = NezumiUIController;
+    window.SpineUIController = SpineUIController;
 }
 
 // CommonJS対応
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = NezumiUIController;
+    module.exports = SpineUIController;
 }
