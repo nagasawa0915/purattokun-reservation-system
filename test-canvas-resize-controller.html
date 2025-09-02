@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎯 CanvasResizeController マイクロモジュール テスト</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .subtitle {
+        font-size: 1.2em;
+        opacity: 0.9;
+        margin-top: 10px;
+      }
+
+      .test-section {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .canvas-container {
+        position: relative;
+        width: 400px;
+        height: 300px;
+        margin: 20px auto;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        overflow: hidden;
+      }
+
+      #test-canvas {
+        width: 100%;
+        height: 100%;
+        border-radius: 15px;
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .control-group {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 10px;
+      }
+
+      .control-group h4 {
+        margin: 0 0 10px 0;
+        color: #ffd700;
+      }
+
+      .input-group {
+        margin: 10px 0;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.9em;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 8px;
+        border-radius: 5px;
+        border: none;
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+      }
+
+      .btn {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9em;
+        margin: 5px;
+        transition: all 0.3s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .btn.primary {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+      }
+
+      .btn.success {
+        background: linear-gradient(45deg, #51cf66, #40c057);
+      }
+
+      .info-display {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 15px;
+        font-family: monospace;
+        font-size: 0.9em;
+      }
+
+      .log-area {
+        background: rgba(0, 0, 0, 0.4);
+        padding: 15px;
+        border-radius: 10px;
+        height: 200px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 0.8em;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin: 15px 0;
+      }
+
+      .status-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .status-label {
+        display: block;
+        font-size: 0.8em;
+        opacity: 0.8;
+        margin-bottom: 5px;
+      }
+
+      .status-value {
+        font-weight: bold;
+        font-size: 1.1em;
+      }
+
+      /* 縦横比制御UI */
+      .aspect-ratio-controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin: 10px 0;
+      }
+
+      .btn.aspect-locked {
+        background: linear-gradient(45deg, #51cf66, #40c057);
+        color: white;
+      }
+
+      .btn.aspect-unlocked {
+        background: linear-gradient(45deg, #ff8c00, #ff7700);
+        color: white;
+      }
+
+      #unified-scale-group {
+        transition: opacity 0.3s ease;
+      }
+
+      #unified-scale-group.hidden {
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
+      .scale-controls-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 15px 0 10px 0;
+      }
+
+      .scale-status {
+        font-size: 0.9em;
+        opacity: 0.8;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- ヘッダー -->
+      <div class="header">
+        <h1>🎯 CanvasResizeController マイクロモジュール</h1>
+        <div class="subtitle">Canvas サイズ制御専用モジュールのテスト環境</div>
+      </div>
+
+      <!-- ステータス表示 -->
+      <div class="test-section">
+        <h3>📊 ステータス</h3>
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-label">モジュール:</span>
+            <span class="status-value" id="module-status">読み込み中</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Canvas サイズ:</span>
+            <span class="status-value" id="canvas-size">-</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">表示サイズ:</span>
+            <span class="status-value" id="display-size">-</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">最後の操作:</span>
+            <span class="status-value" id="last-operation">未実行</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas表示エリア -->
+      <div class="test-section">
+        <h3>🎨 テスト Canvas</h3>
+        <div class="canvas-container" id="canvas-container">
+          <canvas id="test-canvas" width="400" height="300"></canvas>
+        </div>
+        
+        <div class="info-display">
+          <strong>現在の Canvas 情報:</strong>
+          <div id="canvas-info">読み込み待機中...</div>
+        </div>
+      </div>
+
+      <!-- 操作パネル -->
+      <div class="test-section">
+        <h3>🔧 操作パネル</h3>
+        <div class="controls">
+          <!-- 手動リサイズ -->
+          <div class="control-group">
+            <h4>📐 手動リサイズ</h4>
+            <div class="input-group">
+              <label>幅 (px):</label>
+              <input type="number" id="manual-width" value="400" min="100" max="1200">
+            </div>
+            <div class="input-group">
+              <label>高さ (px):</label>
+              <input type="number" id="manual-height" value="300" min="100" max="800">
+            </div>
+            <button class="btn primary" id="manual-resize">手動リサイズ</button>
+            <button class="btn" id="reset-canvas">デフォルトに戻す</button>
+          </div>
+
+          <!-- プリセットサイズ -->
+          <div class="control-group">
+            <h4>📱 プリセットサイズ</h4>
+            <button class="btn" onclick="testResize(320, 240)">320x240</button>
+            <button class="btn" onclick="testResize(640, 480)">640x480</button>
+            <button class="btn" onclick="testResize(800, 600)">800x600</button>
+            <button class="btn" onclick="testResize(1024, 768)">1024x768</button>
+          </div>
+
+          <!-- 表示サイズテスト -->
+          <div class="control-group">
+            <h4>🎨 表示サイズテスト</h4>
+            <div class="input-group">
+              <label>表示幅 (px):</label>
+              <input type="number" id="display-width" value="300" min="100" max="800">
+            </div>
+            <div class="input-group">
+              <label>表示高さ (px):</label>
+              <input type="number" id="display-height" value="200" min="100" max="600">
+            </div>
+            <button class="btn success" id="change-display">表示サイズ変更</button>
+            <button class="btn" onclick="testDisplaySize(200, 150)">小 (200x150)</button>
+            <button class="btn" onclick="testDisplaySize(500, 400)">大 (500x400)</button>
+          </div>
+
+          <!-- キャラクター制御テスト -->
+          <div class="control-group">
+            <h4>⚖️ キャラクター制御テスト</h4>
+            
+            <!-- 縦横比制御設定 -->
+            <div class="input-group">
+              <div class="aspect-ratio-controls">
+                <button class="btn" id="aspect-lock-toggle" title="縦横比ロック切り替え">🔗 比率ロック: ON</button>
+                <button class="btn" id="reset-aspect" title="縦横比を1:1にリセット">📐 比率リセット</button>
+              </div>
+            </div>
+            
+            <!-- スケール制御 -->
+            <div class="input-group">
+              <label>X軸スケール: <span id="scale-x-display">1.0</span></label>
+              <input type="range" id="character-scale-x" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+            <div class="input-group">
+              <label>Y軸スケール: <span id="scale-y-display">1.0</span></label>
+              <input type="range" id="character-scale-y" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+            
+            <!-- 統合スケール（縦横比ロック時用） -->
+            <div class="input-group" id="unified-scale-group">
+              <label>統合スケール: <span id="scale-unified-display">1.0</span></label>
+              <input type="range" id="character-scale-unified" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+            
+            <!-- 位置制御 -->
+            <div class="input-group">
+              <label>X座標:</label>
+              <input type="number" id="character-x" value="200" min="0" max="800" step="10">
+            </div>
+            <div class="input-group">
+              <label>Y座標:</label>
+              <input type="number" id="character-y" value="150" min="0" max="600" step="10">
+            </div>
+            
+            <!-- 操作ボタン -->
+            <div class="button-group">
+              <button class="btn success" id="apply-character">キャラクター設定適用</button>
+              <button class="btn" id="center-character">中央配置</button>
+              <button class="btn" id="test-aspect-ratios">縦横比テスト</button>
+            </div>
+          </div>
+
+          <!-- テスト機能 -->
+          <div class="control-group">
+            <h4>🧪 テスト機能</h4>
+            <button class="btn" id="test-webgl">WebGL対応テスト</button>
+            <button class="btn" id="test-config">設定値テスト</button>
+            <button class="btn" id="clear-log">ログクリア</button>
+            <button class="btn success" id="full-test">全機能テスト</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ログ表示 -->
+      <div class="test-section">
+        <h3>📋 動作ログ</h3>
+        <div class="log-area" id="log-area"></div>
+      </div>
+    </div>
+
+    <!-- CanvasResizeController モジュール -->
+    <script src="micromodules/canvas-resize/CanvasResizeController.js"></script>
+
+    <script>
+      /**
+       * 🎯 CanvasResizeController マイクロモジュール テスト環境
+       * 
+       * 機能テスト項目:
+       * 1. 基本リサイズ機能
+       * 2. デフォルトリセット機能  
+       * 3. 表示サイズ変更機能
+       * 4. WebGL対応確認
+       * 5. 設定値カスタマイズ
+       */
+      class CanvasResizeControllerTest {
+        constructor() {
+          this.canvas = document.getElementById("test-canvas");
+          this.logArea = document.getElementById("log-area");
+          
+          // CanvasResizeController インスタンス作成
+          this.resizer = new CanvasResizeController({
+            canvas: this.canvas,
+            spineRenderer: null, // テスト環境ではSpineなし
+            onLog: (message) => this.addLog(message),
+            onError: (message) => this.addLog(`🔴 ${message}`),
+            enableLogging: true,
+          });
+
+          // キャラクター制御テスト用のモックSpineRenderer作成
+          this.createMockSpineRenderer();
+          
+          this.setupEventListeners();
+          this.updateCanvasInfo();
+          this.addLog("🚀 CanvasResizeController テスト環境 起動完了");
+          this.updateStatus("module-status", "正常読み込み");
+        }
+
+        setupEventListeners() {
+          // 手動リサイズ
+          document.getElementById("manual-resize").addEventListener("click", () => {
+            const width = parseInt(document.getElementById("manual-width").value);
+            const height = parseInt(document.getElementById("manual-height").value);
+            this.testManualResize(width, height);
+          });
+
+          // デフォルトリセット
+          document.getElementById("reset-canvas").addEventListener("click", () => {
+            this.testReset();
+          });
+
+          // 表示サイズ変更
+          document.getElementById("change-display").addEventListener("click", () => {
+            const width = parseInt(document.getElementById("display-width").value);
+            const height = parseInt(document.getElementById("display-height").value);
+            this.testDisplaySizeChange(width, height);
+          });
+
+          // テスト機能
+          document.getElementById("test-webgl").addEventListener("click", () => {
+            this.testWebGLSupport();
+          });
+
+          document.getElementById("test-config").addEventListener("click", () => {
+            this.testConfiguration();
+          });
+
+          document.getElementById("clear-log").addEventListener("click", () => {
+            this.clearLog();
+          });
+
+          document.getElementById("full-test").addEventListener("click", () => {
+            this.runFullTest();
+          });
+
+          // 縦横比ロック制御
+          this.aspectRatioLocked = true;
+          document.getElementById("aspect-lock-toggle").addEventListener("click", () => {
+            this.toggleAspectRatioLock();
+          });
+
+          document.getElementById("reset-aspect").addEventListener("click", () => {
+            this.resetAspectRatio();
+          });
+
+          // X軸スケール制御
+          document.getElementById("character-scale-x").addEventListener("input", (e) => {
+            const value = parseFloat(e.target.value);
+            document.getElementById("scale-x-display").textContent = value.toFixed(1);
+            
+            if (this.aspectRatioLocked) {
+              // 縦横比ロック時はY軸も同期
+              document.getElementById("character-scale-y").value = value;
+              document.getElementById("scale-y-display").textContent = value.toFixed(1);
+              document.getElementById("character-scale-unified").value = value;
+              document.getElementById("scale-unified-display").textContent = value.toFixed(1);
+            }
+            
+            this.applyRealTimeScale();
+          });
+
+          // Y軸スケール制御
+          document.getElementById("character-scale-y").addEventListener("input", (e) => {
+            const value = parseFloat(e.target.value);
+            document.getElementById("scale-y-display").textContent = value.toFixed(1);
+            
+            if (this.aspectRatioLocked) {
+              // 縦横比ロック時はX軸も同期
+              document.getElementById("character-scale-x").value = value;
+              document.getElementById("scale-x-display").textContent = value.toFixed(1);
+              document.getElementById("character-scale-unified").value = value;
+              document.getElementById("scale-unified-display").textContent = value.toFixed(1);
+            }
+            
+            this.applyRealTimeScale();
+          });
+
+          // 統合スケール制御（縦横比ロック時）
+          document.getElementById("character-scale-unified").addEventListener("input", (e) => {
+            const value = parseFloat(e.target.value);
+            document.getElementById("scale-unified-display").textContent = value.toFixed(1);
+            
+            if (this.aspectRatioLocked) {
+              // 両軸を同期
+              document.getElementById("character-scale-x").value = value;
+              document.getElementById("scale-x-display").textContent = value.toFixed(1);
+              document.getElementById("character-scale-y").value = value;
+              document.getElementById("scale-y-display").textContent = value.toFixed(1);
+            }
+            
+            this.applyRealTimeScale();
+          });
+
+          document.getElementById("apply-character").addEventListener("click", () => {
+            const scaleX = parseFloat(document.getElementById("character-scale-x").value);
+            const scaleY = parseFloat(document.getElementById("character-scale-y").value);
+            const x = parseInt(document.getElementById("character-x").value);
+            const y = parseInt(document.getElementById("character-y").value);
+            this.testIndependentScaleControl(scaleX, scaleY, x, y);
+          });
+
+          document.getElementById("center-character").addEventListener("click", () => {
+            this.testCharacterCenter();
+          });
+
+          document.getElementById("test-aspect-ratios").addEventListener("click", () => {
+            this.testAspectRatioPresets();
+          });
+        }
+
+        // 🔧 手動リサイズテスト
+        testManualResize(width, height) {
+          this.addLog(`\n🔄 手動リサイズテスト: ${width}x${height}`);
+          
+          // v2.0では正方形リサイズのみサポート
+          const size = Math.max(width, height);
+          const result = this.resizer.resizeCanvas(size);
+          
+          if (result) {
+            this.updateStatus("last-operation", `手動リサイズ ${size}x${size}`);
+            this.addLog(`✅ 手動リサイズ成功（正方形: ${size}x${size}）`);
+            // リサイズ後にキャラクターを再描画
+            this.drawMockCharacter();
+          } else {
+            this.addLog(`❌ 手動リサイズ失敗`);
+          }
+          
+          this.updateCanvasInfo();
+        }
+
+        // 🔄 デフォルトリセットテスト
+        testReset() {
+          this.addLog(`\n🔄 デフォルトリセットテスト`);
+          
+          const result = this.resizer.resetCanvas();
+          
+          if (result) {
+            this.updateStatus("last-operation", "デフォルトリセット");
+            this.addLog(`✅ リセット成功`);
+            // リセット後にキャラクターを再描画
+            this.drawMockCharacter();
+          } else {
+            this.addLog(`❌ リセット失敗`);
+          }
+          
+          this.updateCanvasInfo();
+        }
+
+        // 🎨 表示サイズ変更テスト
+        testDisplaySizeChange(displayWidth, displayHeight) {
+          this.addLog(`\n🎨 表示サイズ変更テスト: ${displayWidth}x${displayHeight}`);
+          
+          // v2.0では固定表示サイズとCanvas解像度の組み合わせで制御
+          const size = Math.max(displayWidth, displayHeight);
+          
+          // Canvas解像度変更
+          const resizeResult = this.resizer.resizeCanvas(size);
+          
+          if (resizeResult) {
+            // 表示サイズ設定（Canvas Manager経由）
+            if (this.resizer.canvasManager) {
+              this.resizer.canvasManager.setFixedDisplaySize(size);
+            }
+            
+            this.updateStatus("last-operation", `表示サイズ変更 ${size}x${size}`);
+            this.addLog(`✅ 表示サイズ変更成功（正方形: ${size}x${size}）`);
+            this.addLog(`📏 結果: Canvas解像度${size}x${size}, 表示サイズ${size}x${size}px`);
+            // サイズ変更後にキャラクターを再描画
+            this.drawMockCharacter();
+          } else {
+            this.addLog(`❌ 表示サイズ変更失敗`);
+          }
+          
+          this.updateCanvasInfo();
+        }
+
+        // 🔧 WebGL対応テスト
+        testWebGLSupport() {
+          this.addLog(`\n🔧 WebGL対応テスト`);
+          
+          // WebGLコンテキスト作成テスト
+          const gl = this.canvas.getContext("webgl", { premultipliedAlpha: true }) || 
+                     this.canvas.getContext("webgl2", { premultipliedAlpha: true });
+          
+          if (gl) {
+            this.addLog(`✅ WebGLコンテキスト作成成功（透明背景対応）`);
+            this.addLog(`📏 WebGLビューポート: ${gl.drawingBufferWidth}x${gl.drawingBufferHeight}`);
+            
+            // 透明背景設定
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            
+            // ビューポート更新テスト（v2.0 API使用）
+            if (this.resizer && this.resizer.canvasManager) {
+              this.resizer.canvasManager.updateWebGLViewport();
+            }
+            this.updateStatus("last-operation", "WebGL対応テスト");
+          } else {
+            this.addLog(`❌ WebGLコンテキスト作成失敗`);
+          }
+        }
+
+        // ⚙️ 設定値テスト
+        testConfiguration() {
+          this.addLog(`\n⚙️ 設定値テスト`);
+          
+          // 現在の設定を表示（v2.0 API使用）
+          const currentState = this.resizer.getState();
+          this.addLog(`📋 現在の設定:`);
+          this.addLog(`   デフォルトサイズ: ${currentState.config.defaultSize}px`);
+          this.addLog(`   固定表示サイズ: ${currentState.config.fixedDisplaySize}px`);
+          this.addLog(`   透明背景: ${currentState.config.transparentBackground}`);
+          this.addLog(`   BB統合機能: ${currentState.config.enableBB}`);
+          
+          // 設定値変更テスト
+          this.resizer.updateConfig({
+            defaultSize: 300,
+            fixedDisplaySize: 250,
+          });
+          
+          const newState = this.resizer.getState();
+          this.addLog(`🔄 設定変更後:`);
+          this.addLog(`   デフォルトサイズ: ${newState.config.defaultSize}px`);
+          this.addLog(`   固定表示サイズ: ${newState.config.fixedDisplaySize}px`);
+          
+          this.updateStatus("last-operation", "設定値テスト");
+        }
+
+        // ⚖️ 独立スケール制御テスト
+        testIndependentScaleControl(scaleX, scaleY, x, y) {
+          this.addLog(`\n⚖️ 独立スケール制御テスト: X軸${scaleX}, Y軸${scaleY}, 位置(${x}, ${y})`);
+          
+          let success = true;
+          
+          // 独立スケール設定
+          if (scaleX !== undefined && scaleY !== undefined) {
+            this.mockSkeleton.scaleX = scaleX;
+            this.mockSkeleton.scaleY = scaleY;
+            this.addLog(`✅ 独立スケール設定成功: X軸${scaleX}, Y軸${scaleY}`);
+            
+            // 縦横比の計算と表示
+            const aspectRatio = (scaleX / scaleY).toFixed(2);
+            this.addLog(`📐 現在の縦横比: ${aspectRatio} (X:Y = ${scaleX}:${scaleY})`);
+          }
+          
+          // 位置設定
+          if (x !== undefined && y !== undefined) {
+            this.mockSkeleton.x = x;
+            this.mockSkeleton.y = y;
+            this.addLog(`✅ 位置設定成功: (${x}, ${y})`);
+          }
+          
+          if (success) {
+            const statusText = `独立スケール X:${scaleX} Y:${scaleY}${x !== undefined ? ` 位置(${x},${y})` : ''}`;
+            this.updateStatus("last-operation", statusText);
+            // キャラクター再描画
+            this.drawMockCharacter();
+          }
+          
+          this.updateCanvasInfo();
+          return success;
+        }
+
+        // 🔗 縦横比ロック切り替え
+        toggleAspectRatioLock() {
+          this.aspectRatioLocked = !this.aspectRatioLocked;
+          const button = document.getElementById("aspect-lock-toggle");
+          const unifiedGroup = document.getElementById("unified-scale-group");
+          
+          if (this.aspectRatioLocked) {
+            button.textContent = "🔗 比率ロック: ON";
+            button.classList.remove("aspect-unlocked");
+            button.classList.add("aspect-locked");
+            unifiedGroup.classList.remove("hidden");
+            
+            // ロック時は現在のX軸値でY軸を同期
+            const currentX = parseFloat(document.getElementById("character-scale-x").value);
+            document.getElementById("character-scale-y").value = currentX;
+            document.getElementById("scale-y-display").textContent = currentX.toFixed(1);
+            document.getElementById("character-scale-unified").value = currentX;
+            document.getElementById("scale-unified-display").textContent = currentX.toFixed(1);
+            
+            this.addLog("🔗 縦横比ロック: ON - X軸の値でY軸を統一しました");
+          } else {
+            button.textContent = "🔓 比率ロック: OFF";
+            button.classList.remove("aspect-locked");
+            button.classList.add("aspect-unlocked");
+            unifiedGroup.classList.add("hidden");
+            
+            this.addLog("🔓 縦横比ロック: OFF - X軸とY軸を独立制御できます");
+          }
+          
+          this.applyRealTimeScale();
+        }
+
+        // 📐 縦横比リセット
+        resetAspectRatio() {
+          this.addLog("\n📐 縦横比リセット: 1:1に設定");
+          
+          // 両軸を1.0に設定
+          document.getElementById("character-scale-x").value = 1.0;
+          document.getElementById("scale-x-display").textContent = "1.0";
+          document.getElementById("character-scale-y").value = 1.0;
+          document.getElementById("scale-y-display").textContent = "1.0";
+          document.getElementById("character-scale-unified").value = 1.0;
+          document.getElementById("scale-unified-display").textContent = "1.0";
+          
+          this.mockSkeleton.scaleX = 1.0;
+          this.mockSkeleton.scaleY = 1.0;
+          
+          this.addLog("✅ 縦横比リセット完了: 正方形（1:1）");
+          this.drawMockCharacter();
+          this.updateStatus("last-operation", "縦横比リセット");
+        }
+
+        // ⚡ リアルタイムスケール適用
+        applyRealTimeScale() {
+          const scaleX = parseFloat(document.getElementById("character-scale-x").value);
+          const scaleY = parseFloat(document.getElementById("character-scale-y").value);
+          
+          this.mockSkeleton.scaleX = scaleX;
+          this.mockSkeleton.scaleY = scaleY;
+          
+          // リアルタイム描画更新
+          this.drawMockCharacter();
+          
+          // 縦横比情報を更新
+          const aspectRatio = (scaleX / scaleY).toFixed(2);
+          this.updateStatus("canvas-size", `${this.canvas.width}x${this.canvas.height} (比率:${aspectRatio})`);
+        }
+
+        // 🎭 縦横比プリセットテスト
+        testAspectRatioPresets() {
+          this.addLog("\n🎭 縦横比プリセットテスト開始");
+          
+          const presets = [
+            { name: "正方形", x: 1.0, y: 1.0 },
+            { name: "横長 (16:9)", x: 1.6, y: 0.9 },
+            { name: "縦長 (9:16)", x: 0.9, y: 1.6 },
+            { name: "超横長 (21:9)", x: 2.1, y: 0.9 },
+            { name: "超縦長", x: 0.5, y: 2.0 },
+          ];
+          
+          let currentIndex = 0;
+          
+          const testNextPreset = () => {
+            if (currentIndex >= presets.length) {
+              this.addLog("🎉 縦横比プリセットテスト完了");
+              this.resetAspectRatio();
+              return;
+            }
+            
+            const preset = presets[currentIndex];
+            this.addLog(`📐 テスト${currentIndex + 1}: ${preset.name} (${preset.x}:${preset.y})`);
+            
+            // 縦横比ロックを解除
+            if (this.aspectRatioLocked) {
+              this.toggleAspectRatioLock();
+            }
+            
+            // プリセット値を設定
+            document.getElementById("character-scale-x").value = preset.x;
+            document.getElementById("scale-x-display").textContent = preset.x.toFixed(1);
+            document.getElementById("character-scale-y").value = preset.y;
+            document.getElementById("scale-y-display").textContent = preset.y.toFixed(1);
+            
+            this.applyRealTimeScale();
+            
+            currentIndex++;
+            setTimeout(testNextPreset, 1500); // 1.5秒間隔で次のプリセット
+          };
+          
+          testNextPreset();
+          this.updateStatus("last-operation", "縦横比プリセットテスト");
+        }
+
+        // 🎯 キャラクター中央配置テスト
+        testCharacterCenter() {
+          this.addLog(`\n🎯 キャラクター中央配置テスト`);
+          
+          const result = this.resizer.centerCharacter();
+          
+          if (result) {
+            this.updateStatus("last-operation", "キャラクター中央配置");
+            this.addLog(`✅ 中央配置成功`);
+            // 中央配置後にキャラクターを再描画
+            this.drawMockCharacter();
+          } else {
+            this.addLog(`❌ 中央配置失敗`);
+          }
+          
+          this.updateCanvasInfo();
+          return result;
+        }
+
+        // 🧪 全機能総合テスト
+        async runFullTest() {
+          this.addLog(`\n🧪 全機能総合テスト開始（独立スケール制御対応版）`);
+          
+          // テストシーケンス
+          const tests = [
+            () => this.testManualResize(320, 240),
+            () => new Promise(r => setTimeout(r, 1000)),
+            () => this.testIndependentScaleControl(0.5, 0.8, 100, 100),
+            () => new Promise(r => setTimeout(r, 1500)),
+            () => this.testManualResize(640, 480),
+            () => new Promise(r => setTimeout(r, 1000)),
+            () => this.testIndependentScaleControl(2.0, 1.2, 300, 200),
+            () => new Promise(r => setTimeout(r, 1500)),
+            () => this.toggleAspectRatioLock(), // 縦横比ロック解除
+            () => new Promise(r => setTimeout(r, 500)),
+            () => this.testIndependentScaleControl(1.5, 0.7, 200, 150), // 横長テスト
+            () => new Promise(r => setTimeout(r, 1500)),
+            () => this.testIndependentScaleControl(0.6, 1.8, 200, 150), // 縦長テスト
+            () => new Promise(r => setTimeout(r, 1500)),
+            () => this.testCharacterCenter(),
+            () => new Promise(r => setTimeout(r, 1000)),
+            () => this.resetAspectRatio(), // 縦横比リセット
+            () => new Promise(r => setTimeout(r, 1000)),
+            () => this.toggleAspectRatioLock(), // 縦横比ロック再有効化
+            () => new Promise(r => setTimeout(r, 500)),
+            () => this.testDisplaySizeChange(300, 200),
+            () => new Promise(r => setTimeout(r, 1000)),
+            () => this.testReset(),
+            () => new Promise(r => setTimeout(r, 1000)),
+            () => this.testWebGLSupport(),
+            () => this.testConfiguration(),
+          ];
+          
+          for (const test of tests) {
+            await test();
+          }
+          
+          this.addLog(`🎉 全機能総合テスト完了（独立スケール制御機能を含む）`);
+          this.updateStatus("last-operation", "全機能総合テスト（独立スケール版）");
+        }
+
+        // 📊 Canvas情報更新
+        updateCanvasInfo() {
+          const canvas = this.canvas;
+          const container = document.getElementById("canvas-container");
+          
+          const info = `
+Canvas物理サイズ: ${canvas.width} x ${canvas.height}px
+Canvas CSS サイズ: ${canvas.style.width || 'auto'} x ${canvas.style.height || 'auto'}
+コンテナサイズ: ${container.offsetWidth} x ${container.offsetHeight}px
+          `.trim();
+          
+          document.getElementById("canvas-info").textContent = info;
+          this.updateStatus("canvas-size", `${canvas.width}x${canvas.height}`);
+          this.updateStatus("display-size", `${container.offsetWidth}x${container.offsetHeight}`);
+        }
+
+        // 📋 ログ追加
+        addLog(message) {
+          const timestamp = new Date().toLocaleTimeString();
+          this.logArea.innerHTML += `[${timestamp}] ${message}\n`;
+          this.logArea.scrollTop = this.logArea.scrollHeight;
+        }
+
+        // 🗑️ ログクリア
+        clearLog() {
+          this.logArea.innerHTML = "";
+          this.addLog("📋 ログをクリアしました");
+        }
+
+        // 🎭 モックSpineRenderer作成（キャラクター制御テスト用）
+        createMockSpineRenderer() {
+          this.mockSkeleton = {
+            scaleX: 1.0,
+            scaleY: 1.0,
+            x: this.canvas.width / 2,
+            y: this.canvas.height / 2
+          };
+
+          this.mockSpineRenderer = {
+            skeleton: this.mockSkeleton
+          };
+
+          // CanvasResizeControllerにモックSpineRendererを設定
+          this.resizer.spineRenderer = this.mockSpineRenderer;
+          this.resizer.characterController.spineRenderer = this.mockSpineRenderer;
+
+          this.addLog("🎭 モックSpineRenderer作成完了");
+          this.drawMockCharacter();
+        }
+
+        // 🎨 モックキャラクター描画（独立スケール対応）
+        drawMockCharacter() {
+          const ctx = this.canvas.getContext('2d');
+          if (!ctx) return;
+
+          // Canvas をクリア
+          ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          // 背景にグリッド描画（縦横比の確認用）
+          this.drawGrid(ctx);
+
+          // モックキャラクター（楕円）を描画
+          ctx.save();
+          
+          // スケールと位置を適用
+          const skeleton = this.mockSkeleton;
+          const baseSize = 30; // 基本サイズ30px
+          const radiusX = baseSize * skeleton.scaleX;
+          const radiusY = baseSize * skeleton.scaleY;
+          
+          ctx.fillStyle = '#ff6b6b';
+          ctx.strokeStyle = '#ee5a52';
+          ctx.lineWidth = 3;
+          
+          // 楕円を描画（独立スケール対応）
+          ctx.beginPath();
+          ctx.ellipse(skeleton.x, skeleton.y, radiusX, radiusY, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.stroke();
+          
+          // 目を描画（楕円形に対応）
+          ctx.fillStyle = 'white';
+          const eyeRadiusX = radiusX / 6;
+          const eyeRadiusY = radiusY / 6;
+          const eyeOffsetX = radiusX / 3;
+          const eyeOffsetY = radiusY / 3;
+          
+          ctx.beginPath();
+          ctx.ellipse(skeleton.x - eyeOffsetX, skeleton.y - eyeOffsetY, eyeRadiusX, eyeRadiusY, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(skeleton.x + eyeOffsetX, skeleton.y - eyeOffsetY, eyeRadiusX, eyeRadiusY, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          // 瞳を描画
+          ctx.fillStyle = 'black';
+          const pupilRadiusX = radiusX / 12;
+          const pupilRadiusY = radiusY / 12;
+          
+          ctx.beginPath();
+          ctx.ellipse(skeleton.x - eyeOffsetX, skeleton.y - eyeOffsetY, pupilRadiusX, pupilRadiusY, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(skeleton.x + eyeOffsetX, skeleton.y - eyeOffsetY, pupilRadiusX, pupilRadiusY, 0, 0, 2 * Math.PI);
+          ctx.fill();
+
+          // スケール情報を表示
+          ctx.fillStyle = 'white';
+          ctx.font = '14px Arial';
+          ctx.fillText(`X: ${skeleton.scaleX.toFixed(1)}`, skeleton.x - radiusX, skeleton.y + radiusY + 20);
+          ctx.fillText(`Y: ${skeleton.scaleY.toFixed(1)}`, skeleton.x + radiusX - 40, skeleton.y + radiusY + 20);
+          
+          // 縦横比表示
+          const aspectRatio = (skeleton.scaleX / skeleton.scaleY).toFixed(2);
+          ctx.fillText(`比率: ${aspectRatio}`, skeleton.x - 30, skeleton.y + radiusY + 40);
+
+          ctx.restore();
+        }
+
+        // 📏 グリッド描画（縦横比確認用）
+        drawGrid(ctx) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+          ctx.lineWidth = 1;
+          
+          const gridSize = 20;
+          
+          // 縦線
+          for (let x = 0; x < this.canvas.width; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, this.canvas.height);
+            ctx.stroke();
+          }
+          
+          // 横線
+          for (let y = 0; y < this.canvas.height; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(this.canvas.width, y);
+            ctx.stroke();
+          }
+          
+          // 中央線（強調）
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.lineWidth = 2;
+          
+          ctx.beginPath();
+          ctx.moveTo(this.canvas.width / 2, 0);
+          ctx.lineTo(this.canvas.width / 2, this.canvas.height);
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.moveTo(0, this.canvas.height / 2);
+          ctx.lineTo(this.canvas.width, this.canvas.height / 2);
+          ctx.stroke();
+          
+          ctx.restore();
+        }
+
+        // 📊 ステータス更新
+        updateStatus(elementId, value) {
+          document.getElementById(elementId).textContent = value;
+        }
+      }
+
+      // 🌐 グローバル関数（ボタンから呼び出し用）
+      function testResize(width, height) {
+        window.testController.testManualResize(width, height);
+      }
+
+      function testDisplaySize(width, height) {
+        window.testController.testDisplaySizeChange(width, height);
+      }
+
+      // 🚀 初期化
+      document.addEventListener("DOMContentLoaded", () => {
+        window.testController = new CanvasResizeControllerTest();
+      });
+    </script>
+  </body>
+</html>
