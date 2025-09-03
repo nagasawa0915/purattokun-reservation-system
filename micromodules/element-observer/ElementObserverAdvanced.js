@@ -7,7 +7,7 @@
  * - PureBoundingBox高度統合・次世代座標制御
  */
 
-class ElementObserverAdvanced extends ElementObserverCore {
+class ElementObserverAdvanced extends ElementObserver {
     constructor() {
         super();  // Phase 1基本機能継承
         

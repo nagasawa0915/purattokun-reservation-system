@@ -415,9 +415,12 @@
             layoutAnchor.style.top = '50%';
             layoutAnchor.style.width = '150px';
             layoutAnchor.style.height = '100px';
+            layoutAnchor.style.zIndex = '1000'; // 前面表示
+            layoutAnchor.style.backgroundColor = 'rgba(255, 107, 107, 0.8)'; // 背景色強化
             
             const interactive = document.createElement('div');
             interactive.className = 'interactive';
+            interactive.textContent = 'TEST ELEMENT'; // 視認性向上
             
             // Canvas要素作成（WebGL用）
             const canvas = document.createElement('canvas');
