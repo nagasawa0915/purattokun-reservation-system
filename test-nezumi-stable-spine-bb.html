@@ -277,96 +277,27 @@
         <button class="btn danger" id="reset-all">全リセット</button>
       </div>
 
-      <div class="control-group">
-        <h3>📐 Canvas 解像度変更（正方形）</h3>
-        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
-          解像度サイズ: 
-          <input type="number" id="canvas-size" value="800" min="100" max="1200" step="50"
-                 style="width: 80px; margin: 0 5px;" oninput="window.nezumiIntegration.updateCanvasSizeDisplay()">
-          <span id="canvas-size-display">800x800</span> px
-        </label>
-        <button class="btn primary" id="resize-canvas">解像度適用</button>
-        <button class="btn" id="reset-canvas">デフォルト (800x800)</button>
-        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
-          Canvas物理解像度（描画品質）を変更
+      <!-- 🎯 CanvasResizeController マイクロモジュール統合 -->
+      <div class="control-group canvas-resize-module">
+        <h3>🎛️ Canvas制御システム（マイクロモジュール）</h3>
+        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0 10px 0">
+          iframe統合による完全分離UI・デスクトップアプリ対応
         </p>
-      </div>
-
-      <div class="control-group">
-        <h3>🎯 自動最適化</h3>
-        <button class="btn success" id="detect-bounds">境界検出テスト</button>
-        <button class="btn primary" id="apply-optimal">最適サイズ適用</button>
-        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
-          キャラクターの実際のサイズを自動検出してCanvasを最適化
-        </p>
-      </div>
-
-      <div class="control-group">
-        <h3>🧪 表示サイズテスト</h3>
-        <button class="btn" id="test-medium">中サイズ表示 (400x400)</button>
-        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
-          表示サイズ確認（BBでリサイズ可能）
-        </p>
-      </div>
-
-
-      <div class="control-group">
-        <h3>📏 キャラクタースケール調整</h3>
-        <!-- 🔒 スケールロック機能 -->
-        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
-          <input type="checkbox" id="scale-lock" style="margin-right: 5px;">
-          🔒 縦横同期ロック
-        </label>
         
-        <!-- 横スケール -->
-        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
-          横スケール(X): 
-          <input type="range" id="character-scale-x" min="0.3" max="2.0" step="0.05" value="1.35" 
-                 style="width: 120px; margin: 0 5px;" oninput="updateScaleRealtime('x')">
-          <span id="scale-x-value">1.35</span>
-        </label>
-        
-        <!-- 縦スケール -->
-        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
-          縦スケール(Y): 
-          <input type="range" id="character-scale-y" min="0.3" max="2.0" step="0.05" value="1.0" 
-                 style="width: 120px; margin: 0 5px;" oninput="updateScaleRealtime('y')">
-          <span id="scale-y-value">1.0</span>
-        </label>
-        
-        <button class="btn" id="reset-scale">理想比率 (X:1.35, Y:1.0)</button>
-        <button class="btn" id="auto-ratio">自然な比率検出</button>
-      </div>
-
-      <div class="control-group">
-        <h3>📍 キャラクター位置調整</h3>
-        <!-- X位置：中間から開始 -->
-        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
-          X位置: 
-          <input type="range" id="character-x" min="-400" max="1200" step="10" value="400" 
-                 style="width: 120px; margin: 0 5px;" oninput="updatePositionRealtime('x')">
-          <span id="x-value">400</span>
-        </label>
-        
-        <!-- Y位置：中間から開始 -->
-        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
-          Y位置: 
-          <input type="range" id="character-y" min="-400" max="800" step="10" value="200" 
-                 style="width: 120px; margin: 0 5px;" oninput="updatePositionRealtime('y')">
-          <span id="y-value">200</span>
-        </label>
-        
-        <button class="btn" id="center-character">中央に配置</button>
-        <button class="btn" id="reset-position">デフォルト位置</button>
-        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
-          リアルタイム移動・中間位置から調整可能
-        </p>
-      </div>
-
-      <div class="control-group">
-        <h3>🔧 デバッグ</h3>
-        <button class="btn" id="debug-info">システム情報表示</button>
-        <button class="btn" id="clear-log">ログクリア</button>
+        <!-- CanvasResizeController UI iframe -->
+        <iframe 
+          src="./micromodules/canvas-resize/ui.html" 
+          id="canvas-resize-iframe"
+          width="100%" 
+          height="500"
+          frameborder="0"
+          style="
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+          ">
+        </iframe>
       </div>
     </div>
 
@@ -1767,6 +1698,279 @@
           window.nezumiIntegration.updatePositionRealtime(axis);
         }
       };
+
+      // 🎛️ CanvasResizeController iframe 通信システム
+      class CanvasResizeIframeHandler {
+        constructor() {
+          this.iframe = null;
+          this.iframeLoaded = false;
+          this.setupIframeCommunication();
+        }
+
+        setupIframeCommunication() {
+          // iframe読み込み完了を待機
+          window.addEventListener('load', () => {
+            this.iframe = document.getElementById('canvas-resize-iframe');
+            if (this.iframe) {
+              this.iframe.onload = () => {
+                this.iframeLoaded = true;
+                this.log('🎛️ CanvasResizeController iframe 読み込み完了');
+              };
+            }
+          });
+
+          // postMessage受信ハンドラー
+          window.addEventListener('message', (event) => {
+            this.handleIframeMessage(event);
+          });
+        }
+
+        handleIframeMessage(event) {
+          // iframe からのメッセージを検証
+          if (!this.iframe || event.source !== this.iframe.contentWindow) {
+            return;
+          }
+
+          const { type, data } = event.data;
+          
+          if (!window.nezumiIntegration) {
+            console.warn('⚠️ NezumiIntegration not ready');
+            return;
+          }
+
+          this.log(`📨 iframe メッセージ受信: ${type}`);
+
+          switch (type) {
+            // Canvas解像度制御
+            case 'canvasResize':
+              this.handleCanvasResize(data);
+              break;
+            case 'canvasReset':
+              this.handleCanvasReset();
+              break;
+
+            // スケール制御
+            case 'scaleChanged':
+              this.handleScaleChange(data);
+              break;
+            case 'scaleReset':
+              this.handleScaleReset(data);
+              break;
+            case 'naturalRatioDetect':
+              this.handleNaturalRatio(data);
+              break;
+
+            // 位置制御
+            case 'positionChanged':
+              this.handlePositionChange(data);
+              break;
+            case 'positionReset':
+              this.handlePositionReset(data);
+              break;
+            case 'centerCharacter':
+              this.handleCenterCharacter(data);
+              break;
+
+            // その他の機能
+            case 'detectBounds':
+              this.handleDetectBounds();
+              break;
+            case 'applyOptimal':
+              this.handleApplyOptimal();
+              break;
+            case 'testMedium':
+              this.handleTestMedium();
+              break;
+            case 'debugInfo':
+              this.handleDebugInfo();
+              break;
+            case 'clearLog':
+              this.handleClearLog();
+              break;
+
+            // UI状態管理
+            case 'uiReady':
+              this.handleUIReady(data);
+              break;
+            case 'uiLog':
+              this.handleUILog(data);
+              break;
+
+            default:
+              this.log(`❓ 未知のメッセージタイプ: ${type}`);
+              break;
+          }
+        }
+
+        // Canvas解像度制御
+        handleCanvasResize(data) {
+          const integration = window.nezumiIntegration;
+          
+          // Canvas解像度変更を実行
+          integration.canvas.width = data.size;
+          integration.canvas.height = data.size;
+          
+          // WebGLビューポート更新
+          if (integration.spineRenderer) {
+            const gl = integration.canvas.getContext('webgl');
+            if (gl) {
+              gl.viewport(0, 0, data.size, data.size);
+            }
+          }
+          
+          this.log(`✅ Canvas解像度変更完了: ${data.size}x${data.size}`);
+        }
+
+        handleCanvasReset() {
+          this.handleCanvasResize({ size: 800 });
+          this.log('🔄 Canvas解像度をデフォルトにリセット');
+        }
+
+        // スケール制御
+        handleScaleChange(data) {
+          const integration = window.nezumiIntegration;
+          if (integration.spineRenderer && integration.spineRenderer.skeleton) {
+            integration.spineRenderer.setTransform(null, null, data.scaleX, data.scaleY);
+            
+            // オレンジBB表示
+            integration.showCharacterAdjustmentBB();
+            
+            this.log(`📏 スケール変更: X=${data.scaleX}, Y=${data.scaleY}`);
+          }
+        }
+
+        handleScaleReset(data) {
+          this.handleScaleChange(data);
+          this.log('🔄 スケールを理想比率にリセット');
+        }
+
+        handleNaturalRatio(data) {
+          this.handleScaleChange(data);
+          this.log('💡 自然な比率を適用');
+        }
+
+        // 位置制御
+        handlePositionChange(data) {
+          const integration = window.nezumiIntegration;
+          if (integration.spineRenderer && integration.spineRenderer.skeleton) {
+            integration.spineRenderer.setTransform(data.x, data.y, null, null);
+            
+            // オレンジBB表示
+            integration.showCharacterAdjustmentBB();
+            
+            // 頻繁な呼び出しのため、ログは控えめに
+          }
+        }
+
+        handlePositionReset(data) {
+          this.handlePositionChange(data);
+          this.log('🔄 位置をデフォルトにリセット');
+        }
+
+        handleCenterCharacter(data) {
+          this.handlePositionChange(data);
+          this.log('🎯 キャラクターを中央に配置');
+        }
+
+        // その他機能
+        handleDetectBounds() {
+          const integration = window.nezumiIntegration;
+          if (integration.detectOptimalCanvasSize) {
+            integration.detectOptimalCanvasSize();
+          }
+          this.log('🎯 境界検出テスト実行');
+        }
+
+        handleApplyOptimal() {
+          const integration = window.nezumiIntegration;
+          if (integration.calculateOptimalCanvasSize) {
+            integration.calculateOptimalCanvasSize();
+          }
+          this.log('⚡ 最適サイズ適用実行');
+        }
+
+        handleTestMedium() {
+          const integration = window.nezumiIntegration;
+          if (integration.changeCanvasDisplaySize) {
+            integration.changeCanvasDisplaySize(400, 400);
+          }
+          this.log('🧪 中サイズ表示テスト実行');
+        }
+
+        handleDebugInfo() {
+          const integration = window.nezumiIntegration;
+          if (integration.showDebugInfo) {
+            integration.showDebugInfo();
+          }
+        }
+
+        handleClearLog() {
+          const logPanel = document.getElementById('log-panel');
+          if (logPanel) {
+            logPanel.innerHTML = '<div style="color: #ffd700; margin-bottom: 10px">📝 システムログ</div>';
+          }
+          this.log('🗑️ ログクリア完了');
+        }
+
+        // UI管理
+        handleUIReady(data) {
+          this.log('✅ iframe UI 初期化完了');
+          
+          // 初期状態を iframe に送信
+          this.syncUIState();
+        }
+
+        handleUILog(data) {
+          // iframe からのログを統合
+          this.log(`[iframe] ${data.message}`);
+        }
+
+        // iframe に状態を同期
+        syncUIState() {
+          if (!this.iframeLoaded || !this.iframe) return;
+
+          const integration = window.nezumiIntegration;
+          if (!integration) return;
+
+          const state = {
+            canvasSize: integration.canvas ? Math.min(integration.canvas.width, integration.canvas.height) : 800,
+            scaleX: integration.spineRenderer?.skeleton?.scaleX || 1.35,
+            scaleY: integration.spineRenderer?.skeleton?.scaleY || 1.0,
+            positionX: integration.spineRenderer?.skeleton?.x || 400,
+            positionY: integration.spineRenderer?.skeleton?.y || 200
+          };
+
+          this.sendToIframe('updateUIState', state);
+        }
+
+        // iframe にメッセージ送信
+        sendToIframe(type, data) {
+          if (this.iframeLoaded && this.iframe) {
+            this.iframe.contentWindow.postMessage({
+              type: type,
+              data: data,
+              timestamp: Date.now(),
+              source: 'MainPage'
+            }, '*');
+          }
+        }
+
+        // BBフィードバック送信
+        sendBBFeedback(type) {
+          this.sendToIframe('showBBFeedback', { type: type });
+        }
+
+        log(message) {
+          if (window.nezumiIntegration && window.nezumiIntegration.log) {
+            window.nezumiIntegration.log(message);
+          } else {
+            console.log(`[CanvasResizeHandler] ${message}`);
+          }
+        }
+      }
+
+      // グローバルハンドラーを初期化
+      window.canvasResizeHandler = new CanvasResizeIframeHandler();
 
       // 🚀 システム起動
       window.addEventListener("load", async () => {

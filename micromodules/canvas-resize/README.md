@@ -1,267 +1,229 @@
-# 🎯 CanvasResizeController.js
+# CanvasResizeController マイクロモジュール
 
-Canvas物理サイズ・表示サイズ制御専用マイクロモジュール
+🎛️ **HTML iframe統合による完全分離型Canvas制御UI**
 
-## 📋 概要
+## 概要
 
-**CanvasResizeController** は、HTML5 Canvas要素のサイズ制御を専門とするマイクロモジュールです。
-手動リサイズ、自動最適化、WebGL対応など、Canvas操作に必要な機能を軽量・シンプルに提供します。
+CanvasResizeControllerは、iframe + postMessage通信を使用してCanvas制御UIを完全に分離したマイクロモジュールです。HTMLサイトとElectronデスクトップアプリの両方で同一のUIを利用できます。
 
-### ✨ 主な機能
+## 特徴
 
-- 🔄 **手動リサイズ** - 任意サイズへの物理サイズ変更
-- 🎯 **自動最適化** - Spineキャラクター境界に基づく最適サイズ算出
-- 🎨 **表示サイズ変更** - 高解像度保持付き表示サイズ制御
-- 🔄 **リセット機能** - デフォルトサイズへの復元
-- 🔧 **WebGL対応** - ビューポート自動更新
-- ⚙️ **設定カスタマイズ** - 各種パラメータのカスタマイズ
+- ✅ **完全分離設計**: iframe による CSS・JavaScript の完全分離
+- ✅ **双方向通信**: postMessage による安全な通信システム  
+- ✅ **デスクトップアプリ対応**: Electron等での再利用可能
+- ✅ **リアルタイムUI**: スライダー操作による即座の反映
+- ✅ **オレンジBB連携**: 視覚フィードバック機能統合
+- ✅ **状態同期**: iframe ⟷ メインページ間の双方向同期
 
-## 🚀 特徴
+## ファイル構成
 
-### v3.0システム開発哲学準拠
-- **シンプル設計** - Canvas操作のみに特化
-- **軽量実装** - 350行程度のコンパクトな実装  
-- **単一責任** - Canvasサイズ制御のみを担当
-- **独立動作** - 他システムに依存しない設計
+```
+micromodules/canvas-resize/
+├── ui.html          # UI専用HTMLファイル（独立実行可能）
+├── ui.css           # UI専用スタイル（完全分離）
+├── ui.js            # iframe側制御JavaScript
+└── README.md        # 本ファイル（使用方法・API仕様）
+```
 
-### 高度な機能
-- **高解像度保持** - 表示サイズ変更時の品質維持
-- **Spine統合** - Spineキャラクター境界の自動検出
-- **WebGL最適化** - ビューポート自動同期
-- **エラーハンドリング** - 堅牢なエラー処理
+## 基本的な使用方法
 
-## 📦 インストール
+### 1. HTML側での統合
 
 ```html
-<!-- HTML に直接読み込み -->
-<script src="micromodules/canvas-resize/CanvasResizeController.js"></script>
+<!-- メインHTMLファイルに iframe を埋め込み -->
+<div class="canvas-controls">
+  <iframe 
+    src="./micromodules/canvas-resize/ui.html" 
+    id="canvas-resize-iframe"
+    width="100%" 
+    height="500"
+    frameborder="0">
+  </iframe>
+</div>
 ```
 
-## 🎯 基本的な使用方法
-
-### 1. インスタンス作成
+### 2. JavaScript側での通信処理
 
 ```javascript
-// 基本設定で作成
-const resizer = new CanvasResizeController();
-
-// カスタム設定で作成
-const resizer = new CanvasResizeController({
-  minSize: 100,           // 最小サイズ（px）
-  defaultWidth: 800,      // デフォルト幅
-  defaultHeight: 600,     // デフォルト高さ
-  padding: 40,            // 自動最適化時の余白
-  enableLogging: true,    // ログ出力ON/OFF
-  onLog: console.log,     // ログコールバック
-  onError: console.error, // エラーコールバック
-});
-```
-
-### 2. 基本操作
-
-```javascript
-const canvas = document.getElementById('my-canvas');
-
-// 手動リサイズ
-resizer.resize(canvas, 640, 480);
-
-// デフォルトサイズにリセット  
-resizer.resetToDefault(canvas);
-
-// WebGLビューポート更新
-resizer.updateWebGLViewport(canvas);
-```
-
-### 3. 高度な機能
-
-```javascript
-// Spineキャラクター基準の自動最適化
-const optimalInfo = resizer.calculateOptimalSize(spineRenderer);
-if (optimalInfo) {
-  resizer.applyOptimalSize(canvas, spineRenderer);
-}
-
-// 高解像度保持付き表示サイズ変更
-resizer.changeDisplaySize(canvas, 400, 300, spineRenderer, {
-  containerSelector: '.canvas-container',
-  centerCharacter: true
-});
-```
-
-## 📚 API リファレンス
-
-### メソッド一覧
-
-#### `resize(canvas, width, height, options)`
-Canvas物理サイズを変更します。
-
-**パラメータ:**
-- `canvas` - 対象のCanvas要素
-- `width` - 新しい幅（px）
-- `height` - 新しい高さ（px）
-- `options` - オプション設定
-
-**戻り値:** `boolean` - 成功/失敗
-
-#### `resetToDefault(canvas, options)`
-デフォルトサイズに復元します。
-
-#### `calculateOptimalSize(spineRenderer)`
-Spineキャラクターの境界に基づいて最適サイズを計算します。
-
-**戻り値:** `Object|null` - 最適化情報
-
-#### `applyOptimalSize(canvas, spineRenderer, options)`
-計算された最適サイズを適用します。
-
-#### `changeDisplaySize(canvas, displayWidth, displayHeight, spineRenderer, options)`
-高解像度を保持したまま表示サイズを変更します。
-
-#### `updateWebGLViewport(canvas)`
-WebGLビューポートを更新します。
-
-#### `updateConfig(newConfig)`
-設定値を更新します。
-
-#### `getConfig()`
-現在の設定値を取得します。
-
-## 🧪 テスト環境
-
-専用のテスト環境が用意されています：
-
-```bash
-# サーバー起動
-python server.py
-
-# テストページアクセス
-http://localhost:8000/test-canvas-resize-controller.html
-```
-
-### テスト項目
-- ✅ 基本リサイズ機能
-- ✅ デフォルトリセット機能
-- ✅ 表示サイズ変更機能
-- ✅ WebGL対応確認
-- ✅ 設定値カスタマイズ
-- ✅ 総合動作テスト
-
-## 🔧 設定オプション
-
-```javascript
-{
-  minSize: 100,              // 最小サイズ（px）
-  defaultWidth: 800,         // デフォルト幅
-  defaultHeight: 600,        // デフォルト高さ
-  padding: 40,               // 自動最適化時の余白
-  minScale: 0.5,             // 最小スケール比率
-  enableLogging: true,       // ログ出力ON/OFF
-  onLog: console.log,        // ログコールバック関数
-  onError: console.error,    // エラーコールバック関数
-}
-```
-
-## 📊 パフォーマンス
-
-- **ファイルサイズ**: ~15KB（コメント込み）
-- **実行時メモリ**: 最小限
-- **処理速度**: 高速（同期処理）
-- **互換性**: モダンブラウザ全対応
-
-## 🔄 他モジュールとの連携
-
-### StableSpineRenderer との統合
-
-```javascript
-// StableSpineRenderer + CanvasResizeController
-const spineRenderer = window.StableSpineRenderer.createForCharacter({
-  canvas: canvas,
-  characterName: 'purattokun'
-});
-
-const resizer = new CanvasResizeController();
-
-// Spine境界基準の自動最適化
-resizer.applyOptimalSize(canvas, spineRenderer);
-```
-
-### バウンディングボックスシステムとの統合
-
-```javascript
-// Canvas サイズ変更後にBB再作成
-resizer.resize(canvas, 400, 300);
-
-if (boundingBoxSystem) {
-  await boundingBoxSystem.recreate();
-}
-```
-
-## 🎯 使用例・応用
-
-### 1. レスポンシブ Canvas
-
-```javascript
-function makeCanvasResponsive() {
-  const resizer = new CanvasResizeController();
+// postMessage 受信ハンドラー
+window.addEventListener('message', (event) => {
+  const { type, data } = event.data;
   
-  window.addEventListener('resize', () => {
-    const container = document.querySelector('.canvas-container');
-    const newWidth = container.offsetWidth;
-    const newHeight = container.offsetHeight;
-    
-    resizer.changeDisplaySize(canvas, newWidth, newHeight);
+  switch (type) {
+    case 'canvasResize':
+      canvas.width = data.size;
+      canvas.height = data.size;
+      break;
+    case 'scaleChanged':
+      spineRenderer.setTransform(null, null, data.scaleX, data.scaleY);
+      break;
+    // その他のイベント処理...
+  }
+});
+```
+
+## API仕様
+
+### iframe → メインページ（送信）
+
+| メッセージタイプ | データ | 説明 |
+|-----------------|--------|------|
+| `canvasResize` | `{size: number}` | Canvas解像度変更 |
+| `canvasReset` | `{}` | Canvas解像度リセット |
+| `scaleChanged` | `{axis, scaleX, scaleY}` | リアルタイムスケール変更 |
+| `positionChanged` | `{axis, x, y}` | リアルタイム位置変更 |
+| `scaleReset` | `{scaleX, scaleY}` | スケールリセット |
+| `positionReset` | `{x, y}` | 位置リセット |
+| `centerCharacter` | `{x, y}` | 中央配置 |
+| `naturalRatioDetect` | `{scaleX, scaleY}` | 自然比率検出 |
+| `detectBounds` | `{}` | 境界検出テスト |
+| `applyOptimal` | `{}` | 最適サイズ適用 |
+| `testMedium` | `{}` | 中サイズテスト |
+| `debugInfo` | `{}` | デバッグ情報表示 |
+| `clearLog` | `{}` | ログクリア |
+| `uiReady` | `{state}` | UI初期化完了 |
+| `uiLog` | `{message}` | iframeログメッセージ |
+
+### メインページ → iframe（送信）
+
+| メッセージタイプ | データ | 説明 |
+|-----------------|--------|------|
+| `updateUIState` | `{canvasSize, scaleX, scaleY, positionX, positionY}` | UI状態更新 |
+| `showBBFeedback` | `{type}` | BBビジュアルフィードバック |
+| `logMessage` | `{message}` | ログメッセージ送信 |
+
+## 実装例：test-nezumi-stable-spine-bb.html
+
+現在の統合実装では以下の機能が動作しています：
+
+### 完全統合済み機能
+
+1. **Canvas解像度制御**
+   - 正方形サイズ入力（100-1200px）
+   - リアルタイム表示更新
+   - WebGLビューポート同期更新
+
+2. **キャラクタースケール調整**  
+   - 比率ロック機能（Y/X比率保持）
+   - リアルタイムスケール変更
+   - オレンジBB視覚フィードバック
+
+3. **キャラクター位置調整**
+   - リアルタイム位置変更  
+   - 中央配置・リセット機能
+   - オレンジBB視覚フィードバック
+
+4. **自動最適化機能**
+   - 境界検出テスト
+   - 最適サイズ適用
+   - 表示サイズテスト
+
+### 通信処理クラス
+
+`CanvasResizeIframeHandler` クラスが以下を担当：
+
+- iframe読み込み管理
+- postMessage通信処理  
+- 状態同期（メイン ⟷ iframe）
+- 既存機能との統合
+- ログ統合管理
+
+## デスクトップアプリでの使用
+
+```javascript
+// Electron等での利用例
+const { BrowserWindow } = require('electron');
+
+// 専用ウィンドウでUI表示
+const controlWindow = new BrowserWindow({
+  width: 300,
+  height: 600,
+  webPreferences: {
+    nodeIntegration: false,
+    contextIsolation: true
+  }
+});
+
+// マイクロモジュールUIを直接読み込み
+controlWindow.loadFile('micromodules/canvas-resize/ui.html');
+
+// IPCでメインプロセスと通信
+controlWindow.webContents.on('ipc-message', (event, message) => {
+  // Canvas制御処理...
+});
+```
+
+## カスタマイズ
+
+### UIスタイルのカスタマイズ
+
+`ui.css` を編集してスタイルを変更：
+
+```css
+/* テーマカラー変更例 */
+:root {
+  --primary-color: #your-color;
+  --accent-color: #your-accent;
+}
+
+.control-group {
+  /* カスタムスタイル */
+}
+```
+
+### 機能拡張
+
+`ui.js` に新しい制御機能を追加：
+
+```javascript
+// 新機能追加例
+handleCustomFunction(data) {
+  this.sendToParent('customFunction', {
+    // カスタムデータ
   });
 }
 ```
 
-### 2. 動的品質調整
+## トラブルシューティング
+
+### よくある問題
+
+1. **iframe が読み込まれない**
+   - ファイルパスを確認
+   - HTTPサーバー経由で実行（file://プロトコルは制限あり）
+
+2. **postMessage が届かない**
+   - セキュリティチェック（origin確認）  
+   - iframe読み込み完了待機
+
+3. **機能が動作しない**
+   - ブラウザのF12コンソールでエラー確認
+   - iframe内のコンソールも確認
+
+### デバッグ方法
 
 ```javascript
-function adjustCanvasQuality(qualityLevel) {
-  const resizer = new CanvasResizeController();
-  const baseSize = { width: 800, height: 600 };
-  
-  const scales = {
-    low: 0.5,     // 400x300
-    medium: 0.75, // 600x450  
-    high: 1.0,    // 800x600
-    ultra: 1.5    // 1200x900
-  };
-  
-  const scale = scales[qualityLevel] || 1.0;
-  const newWidth = baseSize.width * scale;
-  const newHeight = baseSize.height * scale;
-  
-  resizer.resize(canvas, newWidth, newHeight);
-}
+// iframe内でのデバッグ
+console.log('[CanvasResizeUI]', '状態:', this.state);
+
+// メインページでのデバッグ  
+window.canvasResizeHandler.log('デバッグメッセージ');
 ```
 
-## 🚨 注意事項
+## 将来の拡張予定
 
-- Canvas物理サイズ変更時はWebGLコンテキストの再初期化が推奨されます
-- 極端に大きなサイズ（4096px超）は避けてください
-- Spine統合機能は `spine.js` ライブラリが必要です
-
-## 📋 更新履歴
-
-### v1.0.0 (2025-09-02)
-- ✅ 初期リリース
-- ✅ 基本リサイズ機能実装
-- ✅ 自動最適化機能実装
-- ✅ WebGL対応実装
-- ✅ テスト環境構築完了
-
-## 🤝 貢献
-
-このモジュールは v3.0システム開発哲学に基づいて開発されています：
-- シンプル・軽量・複雑化回避
-- 必要最小限の機能実装
-- 既存機能の安定化優先
-
-## 📄 ライセンス
-
-このプロジェクトの一部として提供されています。
+- [ ] React/Vue.js版UI作成
+- [ ] Web Components対応
+- [ ] npm パッケージ化
+- [ ] TypeScript対応
+- [ ] より多くのCanvas制御機能
 
 ---
 
-**🎯 CanvasResizeController - Canvas操作の決定版マイクロモジュール**
+## 更新履歴
+
+**v1.0.0** (2025-01-XX)
+- 初回リリース
+- iframe + postMessage 基本実装
+- test-nezumi-stable-spine-bb.html 統合完了
+- オレンジBB連携機能実装

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas Resize Controller</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <!-- 🎯 Canvas制御UI専用モジュール -->
+  <div class="canvas-resize-ui">
+    
+    <!-- Canvas解像度制御 -->
+    <div class="control-group">
+      <h3>📐 Canvas 解像度変更（正方形）</h3>
+      <label class="control-label">
+        解像度サイズ: 
+        <input type="number" id="canvas-size" value="800" min="100" max="1200" step="50"
+               class="size-input">
+        <span id="canvas-size-display">800x800</span> px
+      </label>
+      <div class="button-group">
+        <button class="btn primary" id="resize-canvas">解像度適用</button>
+        <button class="btn" id="reset-canvas">デフォルト (800x800)</button>
+      </div>
+      <p class="help-text">Canvas物理解像度（描画品質）を変更</p>
+    </div>
+
+    <!-- 自動最適化 -->
+    <div class="control-group">
+      <h3>🎯 自動最適化</h3>
+      <div class="button-group">
+        <button class="btn success" id="detect-bounds">境界検出テスト</button>
+        <button class="btn primary" id="apply-optimal">最適サイズ適用</button>
+      </div>
+      <p class="help-text">キャラクターの実際のサイズを自動検出してCanvasを最適化</p>
+    </div>
+
+    <!-- 表示サイズテスト -->
+    <div class="control-group">
+      <h3>🧪 表示サイズテスト</h3>
+      <div class="button-group">
+        <button class="btn" id="test-medium">中サイズ表示 (400x400)</button>
+      </div>
+      <p class="help-text">表示サイズ確認（BBでリサイズ可能）</p>
+    </div>
+
+    <!-- キャラクタースケール調整 -->
+    <div class="control-group">
+      <h3>📏 キャラクタースケール調整</h3>
+      
+      <!-- スケールロック機能 -->
+      <label class="control-label checkbox-label">
+        <input type="checkbox" id="scale-lock">
+        🔒 縦横同期ロック
+      </label>
+      
+      <!-- 横スケール -->
+      <label class="control-label">
+        横スケール(X): 
+        <input type="range" id="character-scale-x" min="0.3" max="2.0" step="0.05" value="1.35" 
+               class="range-input">
+        <span id="scale-x-value">1.35</span>
+      </label>
+      
+      <!-- 縦スケール -->
+      <label class="control-label">
+        縦スケール(Y): 
+        <input type="range" id="character-scale-y" min="0.3" max="2.0" step="0.05" value="1.0" 
+               class="range-input">
+        <span id="scale-y-value">1.0</span>
+      </label>
+      
+      <div class="button-group">
+        <button class="btn" id="reset-scale">理想比率 (X:1.35, Y:1.0)</button>
+        <button class="btn" id="auto-ratio">自然な比率検出</button>
+      </div>
+    </div>
+
+    <!-- キャラクター位置調整 -->
+    <div class="control-group">
+      <h3>📍 キャラクター位置調整</h3>
+      
+      <!-- X位置 -->
+      <label class="control-label">
+        X位置: 
+        <input type="range" id="character-x" min="-400" max="1200" step="10" value="400" 
+               class="range-input">
+        <span id="x-value">400</span>
+      </label>
+      
+      <!-- Y位置 -->
+      <label class="control-label">
+        Y位置: 
+        <input type="range" id="character-y" min="-400" max="800" step="10" value="200" 
+               class="range-input">
+        <span id="y-value">200</span>
+      </label>
+      
+      <div class="button-group">
+        <button class="btn" id="center-character">中央に配置</button>
+        <button class="btn" id="reset-position">デフォルト位置</button>
+      </div>
+      <p class="help-text">リアルタイム移動・中間位置から調整可能</p>
+    </div>
+
+    <!-- デバッグ制御 -->
+    <div class="control-group">
+      <h3>🔧 デバッグ</h3>
+      <div class="button-group">
+        <button class="btn" id="debug-info">システム情報表示</button>
+        <button class="btn" id="clear-log">ログクリア</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="ui.js"></script>
+</body>
+</html>
