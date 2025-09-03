@@ -41,12 +41,13 @@
         width: 300px;
         height: 300px;
         margin: 0 auto;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        overflow: hidden;
+        /* 🎯 視覚的装飾を削除 - キャラクターのみを際立たせる */
+        background: transparent;
+        /* border-radius: 15px; */
+        /* box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); */
+        /* backdrop-filter: blur(10px); */
+        /* border: 1px solid rgba(255, 255, 255, 0.2); */
+        overflow: visible; /* BBが表示されるようにvisibleに変更 */
       }
 
       #spine-canvas {
@@ -56,6 +57,8 @@
         width: 100%;
         height: 100%;
         z-index: 1;
+        /* 🎯 Canvas背景も透明に */
+        background: transparent;
       }
 
       .controls {
@@ -275,29 +278,18 @@
       </div>
 
       <div class="control-group">
-        <h3>📐 Canvas サイズ変更</h3>
-        <label
-          >幅:
-          <input
-            type="number"
-            id="canvas-width"
-            value="800"
-            min="100"
-            max="1200"
-            style="width: 80px; margin: 5px"
-        /></label>
-        <label
-          >高さ:
-          <input
-            type="number"
-            id="canvas-height"
-            value="600"
-            min="100"
-            max="900"
-            style="width: 80px; margin: 5px"
-        /></label>
-        <button class="btn primary" id="resize-canvas">Canvas リサイズ</button>
-        <button class="btn" id="reset-canvas">元のサイズに戻す</button>
+        <h3>📐 Canvas 解像度変更（正方形）</h3>
+        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
+          解像度サイズ: 
+          <input type="number" id="canvas-size" value="800" min="100" max="1200" step="50"
+                 style="width: 80px; margin: 0 5px;" oninput="window.nezumiIntegration.updateCanvasSizeDisplay()">
+          <span id="canvas-size-display">800x800</span> px
+        </label>
+        <button class="btn primary" id="resize-canvas">解像度適用</button>
+        <button class="btn" id="reset-canvas">デフォルト (800x800)</button>
+        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
+          Canvas物理解像度（描画品質）を変更
+        </p>
       </div>
 
       <div class="control-group">
@@ -310,65 +302,65 @@
       </div>
 
       <div class="control-group">
-        <h3>🧪 手動テスト</h3>
-        <button class="btn" id="test-small">小サイズテスト (300x200)</button>
-        <button class="btn" id="test-medium">中サイズテスト (500x400)</button>
-        <button class="btn" id="test-large">元サイズ (800x600)</button>
+        <h3>🧪 表示サイズテスト</h3>
+        <button class="btn" id="test-medium">中サイズ表示 (400x400)</button>
         <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
-          手動でCSS表示サイズをテスト
+          表示サイズ確認（BBでリサイズ可能）
         </p>
       </div>
 
-      <div class="control-group">
-        <h3>🔧 キャラクターサイズ保持テスト</h3>
-        <button class="btn success" id="test-preserve-small">
-          保持小 (300x200)
-        </button>
-        <button class="btn success" id="test-preserve-medium">
-          保持中 (500x400)
-        </button>
-        <button class="btn" id="test-preserve-large">保持大 (800x600)</button>
-        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
-          キャラクターサイズを保持してCanvas表示サイズ変更
-        </p>
-      </div>
 
       <div class="control-group">
         <h3>📏 キャラクタースケール調整</h3>
+        <!-- 🔒 スケールロック機能 -->
+        <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
+          <input type="checkbox" id="scale-lock" style="margin-right: 5px;">
+          🔒 縦横同期ロック
+        </label>
+        
+        <!-- 横スケール -->
         <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
           横スケール(X): 
           <input type="range" id="character-scale-x" min="0.3" max="2.0" step="0.05" value="1.35" 
-                 style="width: 120px; margin: 0 5px;">
+                 style="width: 120px; margin: 0 5px;" oninput="updateScaleRealtime('x')">
           <span id="scale-x-value">1.35</span>
         </label>
+        
+        <!-- 縦スケール -->
         <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
           縦スケール(Y): 
           <input type="range" id="character-scale-y" min="0.3" max="2.0" step="0.05" value="1.0" 
-                 style="width: 120px; margin: 0 5px;">
+                 style="width: 120px; margin: 0 5px;" oninput="updateScaleRealtime('y')">
           <span id="scale-y-value">1.0</span>
         </label>
-        <button class="btn success" id="apply-scale">スケール適用</button>
-        <button class="btn" id="reset-scale">理想的な比率に戻す</button>
+        
+        <button class="btn" id="reset-scale">理想比率 (X:1.35, Y:1.0)</button>
         <button class="btn" id="auto-ratio">自然な比率検出</button>
       </div>
 
       <div class="control-group">
         <h3>📍 キャラクター位置調整</h3>
+        <!-- X位置：中間から開始 -->
         <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
           X位置: 
-          <input type="range" id="character-x" min="0" max="800" step="10" value="100" 
-                 style="width: 120px; margin: 0 5px;">
-          <span id="x-value">100</span>
+          <input type="range" id="character-x" min="-400" max="1200" step="10" value="400" 
+                 style="width: 120px; margin: 0 5px;" oninput="updatePositionRealtime('x')">
+          <span id="x-value">400</span>
         </label>
+        
+        <!-- Y位置：中間から開始 -->
         <label style="color: white; font-size: 12px; display: block; margin: 5px 0;">
           Y位置: 
-          <input type="range" id="character-y" min="-200" max="600" step="10" value="-100" 
-                 style="width: 120px; margin: 0 5px;">
-          <span id="y-value">-100</span>
+          <input type="range" id="character-y" min="-400" max="800" step="10" value="200" 
+                 style="width: 120px; margin: 0 5px;" oninput="updatePositionRealtime('y')">
+          <span id="y-value">200</span>
         </label>
-        <button class="btn success" id="apply-position">位置適用</button>
+        
         <button class="btn" id="center-character">中央に配置</button>
-        <button class="btn" id="reset-position">位置リセット</button>
+        <button class="btn" id="reset-position">デフォルト位置</button>
+        <p style="font-size: 0.8em; color: #ccc; margin: 5px 0">
+          リアルタイム移動・中間位置から調整可能
+        </p>
       </div>
 
       <div class="control-group">
@@ -453,6 +445,9 @@
             // 🎯 Phase 1: UIController マイクロモジュール初期化
             this.uiController = new SpineUIController(this, this.logSystem);  // logSystem = this.logSystem
             this.uiController.initUI();
+
+            // 🎨 Canvas操作ボタンの拡張（オレンジBB表示機能）
+            this.enhanceCanvasButtons();
 
             this.uiController.hideLoading();
             this.log("✅ 初期化完了 - レンダラー初期化ボタンを押してください");
@@ -578,6 +573,9 @@
               nodeId: "purattokun-spine-bb-canvas",
             });
 
+            // 🎯 BBとCanvas統合動作のコールバック設定
+            this.setupBBCanvasIntegration();
+
             // バウンディングボックス実行
             const result = await this.boundingBox.execute({
               visible: true,
@@ -589,6 +587,7 @@
               this.bboxCreated = true;
               this.uiController.updateStatus("bbox-status", "作成完了");
               this.log("✅ バウンディングボックス作成完了");
+              this.log("🔗 BB+Canvas統合動作機能を有効化");
               this.log(
                 `📊 Bounds: x=${result.bounds.x}, y=${result.bounds.y}, w=${result.bounds.width}, h=${result.bounds.height}`
               );
@@ -826,29 +825,30 @@
 
         // 🎯 Phase 1: updateStatus(), hideLoading() はUIController.jsに移行済み
 
-        // 📐 Canvas リサイズ機能
+        // 📐 Canvas 解像度リサイズ機能（正方形）
         resizeCanvas() {
           try {
-            const widthInput = document.getElementById("canvas-width");
-            const heightInput = document.getElementById("canvas-height");
-            const newWidth = parseInt(widthInput.value);
-            const newHeight = parseInt(heightInput.value);
+            const sizeInput = document.getElementById("canvas-size");
+            const newSize = parseInt(sizeInput.value);
 
-            if (!newWidth || !newHeight || newWidth < 100 || newHeight < 100) {
-              this.log("❌ 無効なサイズです（最小100px）");
+            if (!newSize || newSize < 100 || newSize > 1200) {
+              this.log("❌ 無効なサイズです（100-1200px）");
               return;
             }
 
             this.log(
-              `🔄 Canvas リサイズ開始: ${this.canvas.width}x${this.canvas.height} → ${newWidth}x${newHeight}`
+              `🔄 Canvas解像度リサイズ開始: ${this.canvas.width}x${this.canvas.height} → ${newSize}x${newSize}`
             );
 
-            // Canvas属性を変更
-            this.canvas.width = newWidth;
-            this.canvas.height = newHeight;
+            // Canvas属性を正方形に変更
+            this.canvas.width = newSize;
+            this.canvas.height = newSize;
+
+            // 表示も更新
+            document.getElementById("canvas-size-display").textContent = `${newSize}x${newSize}`;
 
             this.log(
-              `✅ Canvas リサイズ完了: ${this.canvas.width}x${this.canvas.height}`
+              `✅ Canvas解像度リサイズ完了: ${this.canvas.width}x${this.canvas.height}`
             );
 
             // WebGLコンテキストがある場合は再初期化が必要
@@ -858,30 +858,41 @@
               // WebGLビューポートも更新
               const gl = this.canvas.getContext("webgl");
               if (gl) {
-                gl.viewport(0, 0, newWidth, newHeight);
+                gl.viewport(0, 0, newSize, newSize);
                 this.log("✅ WebGL ビューポート更新完了");
               }
             }
           } catch (error) {
-            this.log(`❌ Canvas リサイズエラー: ${error.message}`);
+            this.log(`❌ Canvas解像度リサイズエラー: ${error.message}`);
           }
         }
 
         resetCanvasSize() {
           try {
-            const widthInput = document.getElementById("canvas-width");
-            const heightInput = document.getElementById("canvas-height");
+            const sizeInput = document.getElementById("canvas-size");
 
-            // 元のサイズに戻す
-            widthInput.value = 800;
-            heightInput.value = 600;
+            // デフォルトサイズに戻す
+            sizeInput.value = 800;
+            
+            // 表示更新
+            document.getElementById("canvas-size-display").textContent = "800x800";
 
             // リサイズ実行
             this.resizeCanvas();
 
-            this.log("✅ Canvas サイズを元に戻しました");
+            this.log("✅ Canvas解像度をデフォルト(800x800)に戻しました");
           } catch (error) {
-            this.log(`❌ Canvas リセットエラー: ${error.message}`);
+            this.log(`❌ Canvas解像度リセットエラー: ${error.message}`);
+          }
+        }
+
+        // 🎯 リアルタイム Canvas サイズ表示更新
+        updateCanvasSizeDisplay() {
+          const sizeInput = document.getElementById("canvas-size");
+          const displaySpan = document.getElementById("canvas-size-display");
+          if (sizeInput && displaySpan) {
+            const size = sizeInput.value;
+            displaySpan.textContent = `${size}x${size}`;
           }
         }
 
@@ -1105,35 +1116,66 @@
           }
         }
 
-        // 🎯 Phase 1: updateScaleDisplay() はUIController.jsに移行済み
-
-        applyCharacterScale() {
+        // 🎯 リアルタイムスケール調整（比率保持ロック機能付き + オレンジBB表示）
+        updateScaleRealtime(axis) {
           if (!this.spineRenderer || !this.spineRenderer.skeleton) {
             this.log('⚠️ キャラクターが読み込まれていません');
             return;
           }
 
-          const scaleXValue = parseFloat(document.getElementById('character-scale-x').value);
-          const scaleYValue = parseFloat(document.getElementById('character-scale-y').value);
+          const scaleXInput = document.getElementById('character-scale-x');
+          const scaleYInput = document.getElementById('character-scale-y');
+          const scaleLock = document.getElementById('scale-lock');
+          
+          // 🔒 比率保持ロック機能
+          if (scaleLock.checked) {
+            // 初回ロック時または比率が未記録の場合、現在の比率を記録
+            if (!this.scaleRatio) {
+              this.scaleRatio = parseFloat(scaleYInput.value) / parseFloat(scaleXInput.value);
+              this.log(`🔒 比率ロック開始: Y/X = ${this.scaleRatio.toFixed(3)}`);
+            }
+            
+            if (axis === 'x') {
+              // Xを変更した場合、Yを比率に従って自動調整
+              const newX = parseFloat(scaleXInput.value);
+              const newY = newX * this.scaleRatio;
+              scaleYInput.value = newY.toFixed(2);
+              this.log(`🔄 比率保持: X=${newX} → Y=${newY.toFixed(2)} (比率${this.scaleRatio.toFixed(3)})`);
+            } else if (axis === 'y') {
+              // Yを変更した場合、Xを比率に従って自動調整
+              const newY = parseFloat(scaleYInput.value);
+              const newX = newY / this.scaleRatio;
+              scaleXInput.value = newX.toFixed(2);
+              this.log(`🔄 比率保持: Y=${newY} → X=${newX.toFixed(2)} (比率${this.scaleRatio.toFixed(3)})`);
+            }
+          } else {
+            // ロック解除時は比率をクリア
+            this.scaleRatio = null;
+          }
+
+          const scaleXValue = parseFloat(scaleXInput.value);
+          const scaleYValue = parseFloat(scaleYInput.value);
           
           try {
-            // 🎯 X・Y別々のスケール適用
+            // リアルタイム適用
             this.spineRenderer.setTransform(null, null, scaleXValue, scaleYValue);
             
-            this.log(`✅ キャラクタースケール適用: X=${scaleXValue}, Y=${scaleYValue} (比率 ${(scaleYValue/scaleXValue).toFixed(2)})`);
+            // 表示値更新
+            document.getElementById('scale-x-value').textContent = scaleXValue;
+            document.getElementById('scale-y-value').textContent = scaleYValue;
+
+            // 🎨 スケール調整中はオレンジBBを表示（視覚フィードバック）
+            this.showCharacterAdjustmentBB();
             
-            // BBが作成されている場合は再作成
-            if (this.boundingBox) {
-              this.log('📦 スケール変更によりBB再作成中...');
-              setTimeout(async () => {
-                await this.cleanupBoundingBox();
-                await new Promise(resolve => setTimeout(resolve, 100));
-                await this.createBoundingBox();
-              }, 100);
-            }
           } catch (error) {
-            this.log(`❌ スケール適用エラー: ${error.message}`);
+            this.log(`❌ リアルタイムスケールエラー: ${error.message}`);
           }
+        }
+
+        applyCharacterScale() {
+          // リアルタイム対応により、この関数は基本的に不要
+          // ただし互換性のために残す
+          this.updateScaleRealtime();
         }
 
         resetCharacterScale() {
@@ -1175,32 +1217,49 @@
           this.log('🎯 スライダーで微調整して最適な比率を見つけてください');
         }
 
-        // 🎯 Phase 1: updatePositionDisplay() はUIController.jsに移行済み
-
-        applyCharacterPosition() {
+        // 🎯 リアルタイム位置調整
+        updatePositionRealtime(axis) {
           if (!this.spineRenderer || !this.spineRenderer.skeleton) {
-            this.log('⚠️ キャラクターが読み込まれていません');
-            return;
+            return; // ログなしで静かに終了（頻繁に呼ばれるため）
           }
 
           const xValue = parseInt(document.getElementById('character-x').value);
           const yValue = parseInt(document.getElementById('character-y').value);
           
           try {
+            // リアルタイム適用
             this.spineRenderer.setTransform(xValue, yValue, null, null);
-            this.log(`✅ キャラクター位置適用: (${xValue}, ${yValue})`);
             
-            // BBが作成されている場合は再作成
-            if (this.boundingBox) {
-              this.log('📦 位置変更によりBB再作成中...');
-              setTimeout(async () => {
-                await this.cleanupBoundingBox();
-                await new Promise(resolve => setTimeout(resolve, 100));
-                await this.createBoundingBox();
-              }, 100);
-            }
+            // 表示値更新
+            document.getElementById('x-value').textContent = xValue;
+            document.getElementById('y-value').textContent = yValue;
+
+            // 🎨 位置調整中はオレンジBBを表示（視覚フィードバック）
+            this.showCharacterAdjustmentBB();
+            
           } catch (error) {
-            this.log(`❌ 位置適用エラー: ${error.message}`);
+            // リアルタイムなのでエラーログは控えめに
+            console.warn('位置更新エラー:', error.message);
+          }
+        }
+
+        applyCharacterPosition() {
+          // リアルタイム対応により、この関数は基本的に不要
+          // ただし互換性のために残す
+          this.updatePositionRealtime();
+          
+          // BBが作成されている場合は再作成
+          if (this.boundingBox) {
+            const xValue = parseInt(document.getElementById('character-x').value);
+            const yValue = parseInt(document.getElementById('character-y').value);
+            this.log(`✅ キャラクター位置確定: (${xValue}, ${yValue})`);
+            
+            this.log('📦 位置変更によりBB再作成中...');
+            setTimeout(async () => {
+              await this.cleanupBoundingBox();
+              await new Promise(resolve => setTimeout(resolve, 100));
+              await this.createBoundingBox();
+            }, 100);
           }
         }
 
@@ -1271,7 +1330,443 @@
             }
           }
         }
+
+        // 🔗 BBとCanvas統合動作システム
+        setupBBCanvasIntegration() {
+          this.log("🔗 BB+Canvas統合動作システム設定中...");
+          
+          // BBのイベントハンドラーをオーバーライドして統合動作を追加
+          const originalBounds = this.boundingBox.bounds;
+          const originalEvents = this.boundingBox.events;
+          
+          // 🎯 ドラッグ開始時のオーバーライド
+          if (originalEvents && originalEvents.onPointerDown) {
+            const originalPointerDown = originalEvents.onPointerDown.bind(originalEvents);
+            originalEvents.onPointerDown = (event) => {
+              this.log("🖱️ BB+Canvas統合ドラッグ開始");
+              this.bbDragStart = {
+                canvasX: this.canvas.offsetLeft,
+                canvasY: this.canvas.offsetTop,
+                characterX: this.spineRenderer?.skeleton?.x || 0,
+                characterY: this.spineRenderer?.skeleton?.y || 0,
+              };
+              return originalPointerDown(event);
+            };
+          }
+          
+          // 🎯 ドラッグ移動時のオーバーライド
+          if (originalEvents && originalEvents.onPointerMove) {
+            const originalPointerMove = originalEvents.onPointerMove.bind(originalEvents);
+            originalEvents.onPointerMove = (event) => {
+              const result = originalPointerMove(event);
+              
+              // BBが移動した場合、Canvas+キャラクターも一緒に移動
+              if (originalEvents.isDragging && this.bbDragStart) {
+                this.syncCanvasWithBB();
+              }
+              
+              return result;
+            };
+          }
+          
+          // 🎯 リサイズ時のオーバーライド（ハンドル操作）
+          if (originalBounds && originalBounds.resize) {
+            const originalResize = originalBounds.resize.bind(originalBounds);
+            originalBounds.resize = (newWidth, newHeight) => {
+              this.log(`🔄 BB+Canvas統合リサイズ: ${newWidth}x${newHeight}`);
+              
+              // 元のリサイズ実行
+              const result = originalResize(newWidth, newHeight);
+              
+              // Canvas表示サイズも連動して変更
+              this.syncCanvasSizeWithBB(newWidth, newHeight);
+              
+              return result;
+            };
+          }
+          
+          this.log("✅ BB+Canvas統合動作システム設定完了");
+        }
+
+        // 🔗 BBの移動にCanvasを同期
+        syncCanvasWithBB() {
+          if (!this.boundingBox || !this.spineRenderer) return;
+          
+          try {
+            // BBの現在位置を取得
+            const bbBounds = this.boundingBox.getBounds();
+            
+            if (this.bbDragStart && bbBounds) {
+              // 移動量を計算
+              const deltaX = bbBounds.x - (this.bbDragStart.canvasX || 0);
+              const deltaY = bbBounds.y - (this.bbDragStart.canvasY || 0);
+              
+              // キャラクターの位置も同期して移動
+              if (this.spineRenderer.skeleton) {
+                const newCharacterX = this.bbDragStart.characterX + deltaX;
+                const newCharacterY = this.bbDragStart.characterY + deltaY;
+                
+                this.spineRenderer.setTransform(newCharacterX, newCharacterY, null, null);
+                this.syncPositionUI();
+                
+                this.log(`🔄 統合移動: BB(${bbBounds.x}, ${bbBounds.y}) → キャラ(${newCharacterX}, ${newCharacterY})`);
+              }
+            }
+          } catch (error) {
+            this.log(`⚠️ Canvas同期エラー: ${error.message}`);
+          }
+        }
+
+        // 🔗 BBのサイズ変更にCanvasサイズを同期
+        syncCanvasSizeWithBB(newWidth, newHeight) {
+          try {
+            this.log(`🔄 Canvas表示サイズ同期: ${newWidth}x${newHeight}`);
+            
+            // Canvas表示サイズを変更（高解像度保持）
+            this.changeCanvasDisplaySize(newWidth, newHeight);
+            
+            // キャラクタースケールも連動調整（オプション）
+            if (this.spineRenderer && this.spineRenderer.skeleton) {
+              // BBサイズの変化比率でキャラクタースケールを調整
+              const scaleRatio = Math.min(newWidth / 300, newHeight / 300); // 基準サイズ300pxと仮定
+              const newScale = Math.max(0.5, Math.min(2.0, scaleRatio)); // 0.5-2.0倍に制限
+              
+              this.spineRenderer.setTransform(null, null, newScale, newScale);
+              this.syncPositionUI();
+              
+              this.log(`🔄 統合スケール調整: ${newScale.toFixed(2)}倍`);
+            }
+          } catch (error) {
+            this.log(`⚠️ Canvas サイズ同期エラー: ${error.message}`);
+          }
+        }
+
+        // 🎨 CanvasのBBをオレンジ色で表示する機能
+        async showCanvasResizeMode() {
+          this.log("🎨 CanvasリサイズモードBB表示開始");
+          
+          // 既存のCanvasリサイズBBがあれば削除
+          await this.hideCanvasResizeMode();
+          
+          try {
+            // Canvas用のオレンジ色BBを作成
+            this.canvasResizeBB = new window.PureBoundingBox({
+              targetElement: this.canvas,
+              nodeId: "canvas-resize-bb-orange",
+            });
+
+            // BB実行（オレンジ色でカスタマイズ）
+            const result = await this.canvasResizeBB.execute({
+              visible: true,
+              interactive: false, // Canvas操作モードなので編集不可
+              showHandles: false, // ハンドル非表示
+            });
+
+            if (result.success) {
+              // BBの色をオレンジに変更
+              this.customizeCanvasBBColor();
+              
+              this.canvasResizeMode = true;
+              this.log("✅ CanvasオレンジBB表示完了");
+              
+              // Canvas情報をログに表示
+              const displaySize = `${document.querySelector('.canvas-container').offsetWidth}x${document.querySelector('.canvas-container').offsetHeight}`;
+              const resolution = `${this.canvas.width}x${this.canvas.height}`;
+              this.log(`📊 Canvas情報: 表示${displaySize} | 解像度${resolution}`);
+              
+            } else {
+              this.log(`❌ CanvasオレンジBB作成失敗: ${result.error}`);
+            }
+            
+          } catch (error) {
+            this.log(`❌ CanvasオレンジBB表示エラー: ${error.message}`);
+          }
+        }
+
+        async hideCanvasResizeMode() {
+          try {
+            if (this.canvasResizeBB) {
+              this.canvasResizeBB.cleanup();
+              this.canvasResizeBB = null;
+            }
+            
+            this.canvasResizeMode = false;
+            this.log("👻 CanvasオレンジBB非表示完了");
+            
+          } catch (error) {
+            this.log(`❌ CanvasオレンジBB非表示エラー: ${error.message}`);
+          }
+        }
+
+        // BBをオレンジ色にカスタマイズ（強化版）
+        customizeCanvasBBColor() {
+          try {
+            // 少し待ってからDOMが構築されるのを待つ
+            setTimeout(() => {
+              // 複数の方法でBB要素を探す
+              let bbContainer = document.querySelector('[data-node-id="canvas-resize-bb-orange"]');
+              
+              if (!bbContainer) {
+                // 別のセレクターで試す
+                bbContainer = document.querySelector('[id*="canvas-resize-bb"]');
+              }
+              
+              if (!bbContainer) {
+                // PureBoundingBoxの一般的なセレクターで試す
+                const allBBs = document.querySelectorAll('[class*="bounding"], [class*="bb-"], [data-node-id]');
+                bbContainer = Array.from(allBBs).find(el => 
+                  el.getAttribute('data-node-id') === 'canvas-resize-bb-orange' ||
+                  (el.id && el.id.includes('canvas-resize-bb'))
+                );
+              }
+              
+              if (bbContainer) {
+                this.log(`🎯 Canvas BB要素発見: ${bbContainer.tagName}.${bbContainer.className}`);
+                
+                // 🎨 強制的にオレンジ色を適用（Canvas操作用）
+                bbContainer.style.cssText += `
+                  border: 3px solid #FF6B35 !important;
+                  background-color: rgba(255, 107, 53, 0.1) !important;
+                  box-shadow: 0 0 15px rgba(255, 107, 53, 0.4) !important;
+                `;
+                
+                // 🚫 ハンドルを完全に削除
+                const handles = bbContainer.querySelectorAll('[class*="handle"], [class*="resize"], [style*="cursor"], .handle, .resize-handle');
+                handles.forEach(handle => {
+                  handle.style.display = 'none !important';
+                  handle.remove(); // 完全に削除
+                });
+                
+                // 子要素も全てオレンジに強制変更とハンドル削除
+                const allChildren = bbContainer.querySelectorAll('*');
+                allChildren.forEach(child => {
+                  // ハンドル関連クラス名・スタイルをチェック
+                  const isHandle = child.className && (
+                    child.className.includes('handle') || 
+                    child.className.includes('resize') ||
+                    child.className.includes('corner') ||
+                    child.className.includes('edge')
+                  );
+                  
+                  const hasHandleCursor = child.style.cursor && (
+                    child.style.cursor.includes('resize') ||
+                    child.style.cursor === 'pointer' ||
+                    child.style.cursor === 'move'
+                  );
+                  
+                  if (isHandle || hasHandleCursor) {
+                    child.style.display = 'none !important';
+                    child.remove();
+                    return;
+                  }
+                  
+                  // その他の要素はオレンジに強制変更
+                  if (child.style.borderColor || child.style.border || child.tagName === 'DIV') {
+                    child.style.borderColor = '#FF6B35 !important';
+                  }
+                  if (child.style.backgroundColor || child.tagName === 'DIV') {
+                    child.style.backgroundColor = 'rgba(255, 107, 53, 0.1) !important';
+                  }
+                });
+                
+                // マウスイベントを無効化（編集できないように）
+                bbContainer.style.pointerEvents = 'none !important';
+                
+                this.log("✅ Canvas BBオレンジ色カスタマイズ＆ハンドル完全削除完了");
+              } else {
+                this.log("⚠️ Canvas BB要素が見つかりません");
+                // デバッグ用：現在のDOM状況をログ出力
+                const allElements = document.querySelectorAll('[data-node-id], [class*="bound"], [id*="bb"]');
+                this.log(`🔍 BB関連要素数: ${allElements.length}`);
+                allElements.forEach(el => {
+                  this.log(`  - ${el.tagName}.${el.className} [${el.getAttribute('data-node-id') || el.id}]`);
+                });
+              }
+            }, 100); // 100ms待機でDOM構築を確実にする
+            
+          } catch (error) {
+            this.log(`❌ Canvas BB色変更エラー: ${error.message}`);
+          }
+        }
+
+        // 🎨 キャラクター調整時のオレンジBB表示機能
+        async showCharacterAdjustmentBB() {
+          // 既にキャラクター調整BBが表示中の場合は何もしない（頻繁な呼び出し対策）
+          if (this.characterAdjustmentBBActive) {
+            return;
+          }
+
+          try {
+            // Canvas要素を対象にしたオレンジBB（キャラクター位置の視覚フィードバック）
+            this.characterAdjustmentBB = new window.PureBoundingBox({
+              targetElement: this.canvas,
+              nodeId: "character-adjustment-bb-orange",
+            });
+
+            // BB実行（オレンジ色・ハンドルなし・非インタラクティブ）
+            const result = await this.characterAdjustmentBB.execute({
+              visible: true,
+              interactive: false, // 編集不可
+              showHandles: false, // ハンドル非表示
+            });
+
+            if (result.success) {
+              this.characterAdjustmentBBActive = true;
+
+              // BBの色をオレンジに変更（キャラクター調整用）
+              setTimeout(() => {
+                this.customizeCharacterAdjustmentBBColor();
+              }, 50);
+
+              // 2秒後に自動非表示（操作の邪魔にならないように）
+              clearTimeout(this.characterAdjustmentTimeout);
+              this.characterAdjustmentTimeout = setTimeout(async () => {
+                await this.hideCharacterAdjustmentBB();
+              }, 2000);
+
+              this.log("✅ キャラクター調整用オレンジBB表示");
+            } else {
+              this.log(`❌ キャラクター調整BB作成失敗: ${result.error}`);
+            }
+
+          } catch (error) {
+            this.log(`❌ キャラクター調整BB表示エラー: ${error.message}`);
+          }
+        }
+
+        async hideCharacterAdjustmentBB() {
+          try {
+            if (this.characterAdjustmentBB) {
+              this.characterAdjustmentBB.cleanup();
+              this.characterAdjustmentBB = null;
+            }
+            
+            this.characterAdjustmentBBActive = false;
+            clearTimeout(this.characterAdjustmentTimeout);
+            
+          } catch (error) {
+            this.log(`❌ キャラクター調整BB非表示エラー: ${error.message}`);
+          }
+        }
+
+        // キャラクター調整用BBをオレンジ色にカスタマイズ
+        customizeCharacterAdjustmentBBColor() {
+          try {
+            // 複数の方法でBB要素を探す
+            let bbContainer = document.querySelector('[data-node-id="character-adjustment-bb-orange"]');
+            
+            if (!bbContainer) {
+              // 別のセレクターで試す
+              bbContainer = document.querySelector('[id*="character-adjustment-bb"]');
+            }
+            
+            if (!bbContainer) {
+              // PureBoundingBoxの一般的なセレクターで試す
+              const allBBs = document.querySelectorAll('[class*="bounding"], [class*="bb-"], [data-node-id]');
+              bbContainer = Array.from(allBBs).find(el => 
+                el.getAttribute('data-node-id') === 'character-adjustment-bb-orange' ||
+                (el.id && el.id.includes('character-adjustment-bb'))
+              );
+            }
+            
+            if (bbContainer) {
+              this.log(`🎯 キャラクター調整BB要素発見: ${bbContainer.tagName}.${bbContainer.className}`);
+              
+              // 🎨 強制的にオレンジ色を適用（キャラクター調整用）
+              bbContainer.style.cssText += `
+                border: 2px solid #FF6B35 !important;
+                background-color: rgba(255, 107, 53, 0.15) !important;
+                box-shadow: 0 0 10px rgba(255, 107, 53, 0.3) !important;
+              `;
+              
+              // 🚫 ハンドルを完全に削除
+              const handles = bbContainer.querySelectorAll('[class*="handle"], [class*="resize"], [style*="cursor"]');
+              handles.forEach(handle => {
+                handle.style.display = 'none';
+                handle.remove();
+              });
+              
+              // 子要素のハンドル・リサイザーも削除
+              const allChildren = bbContainer.querySelectorAll('*');
+              allChildren.forEach(child => {
+                if (child.className && (
+                  child.className.includes('handle') || 
+                  child.className.includes('resize') ||
+                  child.style.cursor === 'pointer' ||
+                  child.style.cursor === 'move'
+                )) {
+                  child.remove();
+                  return;
+                }
+                
+                // その他の要素は薄いオレンジに
+                if (child.style.borderColor || child.style.border) {
+                  child.style.borderColor = '#FF6B35';
+                }
+              });
+              
+              // マウスイベントを無効化（編集できないように）
+              bbContainer.style.pointerEvents = 'none';
+              
+              this.log("✅ キャラクター調整BBオレンジ色カスタマイズ完了");
+            } else {
+              this.log("⚠️ キャラクター調整BB要素が見つかりません");
+            }
+            
+          } catch (error) {
+            this.log(`❌ キャラクター調整BB色変更エラー: ${error.message}`);
+          }
+        }
+
+        // Canvas操作関連ボタンにリサイズモード表示機能を統合
+        enhanceCanvasButtons() {
+          const canvasButtons = [
+            'resize-canvas',
+            'reset-canvas', 
+            'detect-bounds',
+            'apply-optimal',
+            'test-medium'
+          ];
+          
+          canvasButtons.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+              // 既存のクリックイベントを保持
+              const originalOnClick = button.onclick;
+              
+              button.onclick = async () => {
+                // CanvasオレンジBB表示
+                await this.showCanvasResizeMode();
+                
+                // 元の機能実行
+                if (originalOnClick) {
+                  originalOnClick.call(this);
+                }
+                
+                // 3秒後に自動非表示（操作の邪魔にならないように）
+                setTimeout(async () => {
+                  await this.hideCanvasResizeMode();
+                }, 3000);
+              };
+            }
+          });
+          
+          this.log("🔧 Canvas操作ボタンにオレンジBB表示機能を統合");
+        }
       }
+
+      // 🎯 グローバル関数定義（HTML inlineから呼び出し用）
+      window.updateScaleRealtime = function(axis) {
+        if (window.nezumiIntegration) {
+          window.nezumiIntegration.updateScaleRealtime(axis);
+        }
+      };
+
+      window.updatePositionRealtime = function(axis) {
+        if (window.nezumiIntegration) {
+          window.nezumiIntegration.updatePositionRealtime(axis);
+        }
+      };
 
       // 🚀 システム起動
       window.addEventListener("load", async () => {
