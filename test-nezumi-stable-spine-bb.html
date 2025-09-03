@@ -36,21 +36,33 @@
         margin-top: 10px;
       }
 
-      .canvas-container {
+      /* 🎯 複数キャラクター対応スタイル */
+      .characters-container {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        margin: 0 auto;
+        max-width: 800px;
+      }
+
+      .character-container {
         position: relative;
         width: 300px;
         height: 300px;
-        margin: 0 auto;
         /* 🎯 視覚的装飾を削除 - キャラクターのみを際立たせる */
         background: transparent;
-        /* border-radius: 15px; */
-        /* box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); */
-        /* backdrop-filter: blur(10px); */
-        /* border: 1px solid rgba(255, 255, 255, 0.2); */
         overflow: visible; /* BBが表示されるようにvisibleに変更 */
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        transition: all 0.3s ease;
       }
 
-      #spine-canvas {
+      .character-container:hover {
+        border-color: rgba(255, 215, 0, 0.5);
+        box-shadow: 0 4px 16px rgba(255, 215, 0, 0.2);
+      }
+
+      .character-container canvas {
         position: absolute;
         top: 0;
         left: 0;
@@ -59,6 +71,35 @@
         z-index: 1;
         /* 🎯 Canvas背景も透明に */
         background: transparent;
+        /* 🎯 歪み防止: アスペクト比を維持 */
+        object-fit: contain;
+        image-rendering: pixelated;
+      }
+
+      .character-label {
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #ffd700;
+        font-size: 14px;
+        font-weight: 600;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      /* レスポンシブ対応 */
+      @media (max-width: 768px) {
+        .characters-container {
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+        }
+        
+        .character-container {
+          width: 250px;
+          height: 250px;
+        }
       }
 
       .controls {
@@ -228,8 +269,19 @@
         </div>
       </div>
 
-      <div class="canvas-container">
-        <canvas id="spine-canvas" width="800" height="600"></canvas>
+      <!-- 🎯 複数キャラクター対応コンテナ -->
+      <div class="characters-container">
+        <!-- ぷらっとくん -->
+        <div class="character-container" id="purattokun-container">
+          <canvas id="purattokun-canvas" width="300" height="300"></canvas>
+          <div class="character-label">🐱 ぷらっとくん</div>
+        </div>
+        
+        <!-- ねずみちゃん -->
+        <div class="character-container" id="nezumi-container">
+          <canvas id="nezumi-canvas" width="300" height="300"></canvas>
+          <div class="character-label">🐭 ねずみちゃん</div>
+        </div>
       </div>
     </div>
 
@@ -255,11 +307,19 @@
 
     <div class="controls">
       <div class="control-group">
-        <h3>⭐ StableSpineRenderer</h3>
+        <h3>⭐ 複数キャラクター制御</h3>
         <button class="btn primary" id="init-renderer">レンダラー初期化</button>
-        <button class="btn" id="load-nezumi">Purattokun読み込み</button>
-        <button class="btn" id="play-search">待機アニメーション</button>
-        <button class="btn" id="play-kettei">やられアニメーション</button>
+        <button class="btn" id="load-purattokun">🐱 Purattokun読み込み</button>
+        <button class="btn" id="load-nezumi">🐭 Nezumi読み込み</button>
+        <button class="btn" id="load-all-characters">🌟 全キャラクター読み込み</button>
+      </div>
+
+      <!-- 🎯 キャラクター個別制御 -->
+      <div class="control-group">
+        <h3>🎮 キャラクター制御</h3>
+        <div id="character-controls">
+          <p style="color: #ccc; font-size: 12px;">キャラクターを選択すると制御パネルが表示されます</p>
+        </div>
       </div>
 
       <div class="control-group">
@@ -331,36 +391,45 @@
     <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
     
-    <!-- 🎯 Phase 1: UIController + LogSystem マイクロモジュール -->
+    <!-- 🎯 Phase 1: LogSystem マイクロモジュール -->
     <script src="micromodules/spine-integration/LogSystem.js"></script>
-    <script src="micromodules/spine-integration/UIController.js"></script>
 
     <script>
       /**
-       * 🎯 Nezumi + StableSpineRenderer + BoundingBox 統合システム
+       * 🎯 多キャラクター + StableSpineRenderer + BoundingBox 統合システム
        *
        * 特徴:
+       * - 複数キャラクター対応（purattokun + nezumi）
        * - StableSpineRendererによる確実なSpine表示（黒枠問題解決済み）
        * - PureBoundingBoxによる高度なバウンディングボックス編集
-       * - リアルタイム統合テスト機能
+       * - キャラクター選択・制御統合システム
        */
-      class NezumiStableSpineBBIntegration {
+      class MultiCharacterStableSpineBBIntegration {
         constructor() {
-          this.canvas = document.getElementById("spine-canvas");
+          // 🎯 複数キャラクター管理
+          this.characters = {
+            purattokun: {
+              canvas: document.getElementById("purattokun-canvas"),
+              renderer: null,
+              boundingBox: null,
+              loaded: false
+            },
+            nezumi: {
+              canvas: document.getElementById("nezumi-canvas"), 
+              renderer: null,
+              boundingBox: null,
+              loaded: false
+            }
+          };
 
-          // StableSpineRenderer
-          this.spineRenderer = null;
-
-          // PureBoundingBox
-          this.boundingBox = null;
+          // 現在選択中のキャラクター
+          this.selectedCharacter = null;
 
           // 状態管理
           this.rendererInitialized = false;
-          this.nezumiLoaded = false;
-          this.bboxCreated = false;
           this.integrationComplete = false;
 
-          // 🎯 Phase 1: UIController + LogSystem マイクロモジュール統合
+          // 🎯 LogSystem マイクロモジュール統合
           this.logSystem = new SpineLogSystem({
             logLevel: 'info',
             maxLogs: 1000,
@@ -369,9 +438,15 @@
             enableHtml: true,
             prefix: '[StableSpineBB]'
           });
-          this.uiController = null;
 
           this.init();
+
+          // ウィンドウリサイズ時のCanvas解像度調整
+          window.addEventListener('resize', () => {
+            setTimeout(() => {
+              this.handleWindowResize();
+            }, 100);
+          });
         }
 
         async init() {
@@ -381,25 +456,31 @@
             // ライブラリ確認
             await this.checkDependencies();
 
-            // 🎯 Phase 1: UIController マイクロモジュール初期化
-            this.uiController = new SpineUIController(this, this.logSystem);  // logSystem = this.logSystem
-            this.uiController.initUI();
+            // 🎯 複数キャラクター用UIイベント設定
+            this.setupMultiCharacterEventListeners();
 
             // 🎨 Canvas操作ボタンの拡張（オレンジBB表示機能）
             this.enhanceCanvasButtons();
 
-            this.uiController.hideLoading();
+            // 読み込み画面を非表示
+            this.hideLoading();
+            
             this.log("✅ 初期化完了 - レンダラー初期化ボタンを押してください");
-            this.uiController.updateStatus("integration-status", "初期化完了");
+            this.updateStatus("integration-status", "初期化完了");
           } catch (error) {
             this.log(`❌ 初期化エラー: ${error.message}`);
-            this.uiController?.hideLoading();
-            this.uiController?.updateStatus("integration-status", "初期化失敗");
+            this.updateStatus("integration-status", "初期化失敗");
+            this.hideLoading(); // エラー時も読み込み画面を非表示
           }
         }
 
         async checkDependencies() {
           this.log("🔍 ライブラリ依存関係確認中...");
+
+          // SpineLogSystem確認
+          if (typeof window.SpineLogSystem === "undefined") {
+            throw new Error("SpineLogSystemが見つかりません");
+          }
 
           // Spine WebGL確認
           if (typeof window.spine === "undefined") {
@@ -419,66 +500,250 @@
           this.log("✅ 全ライブラリ確認完了");
         }
 
-        // 🎯 Phase 1: initUI()メソッドはUIController.jsに移行済み
+        // 🎯 複数キャラクター用UIイベント設定
+        setupMultiCharacterEventListeners() {
+          // レンダラー初期化
+          const initRendererBtn = document.getElementById("init-renderer");
+          if (initRendererBtn) {
+            initRendererBtn.onclick = () => this.initRenderer();
+          }
+
+          // 個別キャラクター読み込み
+          const loadPurattokuBtn = document.getElementById("load-purattokun");
+          if (loadPurattokuBtn) {
+            loadPurattokuBtn.onclick = () => this.loadPurattokun();
+          }
+
+          const loadNezumiBtn = document.getElementById("load-nezumi");
+          if (loadNezumiBtn) {
+            loadNezumiBtn.onclick = () => this.loadNezumi();
+          }
+
+          // 全キャラクター読み込み
+          const loadAllBtn = document.getElementById("load-all-characters");
+          if (loadAllBtn) {
+            loadAllBtn.onclick = () => this.loadAllCharacters();
+          }
+
+          // キャラクター選択設定
+          this.setupCharacterSelection('purattokun');
+          this.setupCharacterSelection('nezumi');
+
+          this.log("✅ 複数キャラクター用イベントリスナー設定完了");
+        }
 
         async initRenderer() {
-          this.log("⭐ StableSpineRenderer初期化中...");
-          this.uiController.updateStatus("renderer-status", "初期化中");
+          this.log("⭐ 複数キャラクター用レンダラー初期化中...");
+          this.updateStatus("renderer-status", "初期化中");
 
           try {
-            // StableSpineRenderer作成（canvasも同時に指定）
-            this.spineRenderer = new StableSpineRenderer({
-              canvas: this.canvas,
-              character: "purattokun",
-              basePath: "/assets/spine/characters/",
-              // defaultAnimation: 自動検出される！（purattokuんの場合は'taiki'が選択される）
-              debug: true,
-              logCallback: (message, level) =>
-                this.log(`[Renderer] ${message}`),
-            });
-
-            // 初期化実行
-            await this.spineRenderer.initialize();
-
             this.rendererInitialized = true;
-            this.uiController.updateStatus("renderer-status", "初期化完了");
-            this.log("✅ StableSpineRenderer初期化完了");
-            this.log("📝 Nezumi読み込みボタンを押してください");
+            this.updateStatus("renderer-status", "初期化完了");
+            this.log("✅ 複数キャラクターシステム初期化完了");
+            this.log("📝 キャラクター読み込みボタンを押してください");
           } catch (error) {
-            this.log(`❌ StableSpineRenderer初期化エラー: ${error.message}`);
-            this.uiController.updateStatus("renderer-status", "初期化失敗");
+            this.log(`❌ レンダラー初期化エラー: ${error.message}`);
+            this.updateStatus("renderer-status", "初期化失敗");
           }
         }
 
-        async loadNezumi() {
+        // 🎯 個別キャラクター読み込みメソッド
+        async loadCharacter(characterId) {
           if (!this.rendererInitialized) {
             this.log("⚠️ 先にレンダラーを初期化してください");
             return;
           }
 
-          this.log("🐱 purattokun読み込み開始...");
-          this.uiController.updateStatus("nezumi-status", "読み込み中");
+          const character = this.characters[characterId];
+          if (!character) {
+            this.log(`❌ 未知のキャラクター: ${characterId}`);
+            return;
+          }
+
+          this.log(`🎯 ${characterId} 読み込み開始...`);
 
           try {
-            // StableSpineRendererは initialize() で全て完了
-            // 既に読み込み・描画・アニメーション全て開始済み
+            // StableSpineRenderer作成（1:1の理想比率で設定）
+            character.renderer = new StableSpineRenderer({
+              canvas: character.canvas,
+              character: characterId,
+              basePath: "/assets/spine/characters/",
+              debug: true,
+              position: {
+                x: 100,
+                y: -100,
+                scaleX: 1.0,  // 1:1の理想比率
+                scaleY: 1.0   // 1:1の理想比率
+              },
+              logCallback: (message, level) =>
+                this.log(`[${characterId}] ${message}`),
+            });
 
-            // 初期アニメーション（自動検出されたものがそのまま使用される）
-            // 追加のplayAnimationは不要（initialize()で自動開始）
+            // 初期化実行
+            await character.renderer.initialize();
+            character.loaded = true;
 
-            this.nezumiLoaded = true;
-            this.uiController.updateStatus("nezumi-status", "読み込み完了");
-            this.log(
-              "✅ purattokun読み込み完了 - 自動検出アニメーション再生中"
-            );
+            // Canvas解像度を正しく設定（歪み防止）
+            this.fixCanvasAspectRatio(character.canvas);
 
-            // 現在の位置・スケールをUIに同期
-            setTimeout(() => {
-              this.syncPositionUI();
-            }, 100);
+            this.log(`✅ ${characterId} 読み込み完了`);
+            
+            // キャラクターコンテナにクリックイベント追加
+            this.setupCharacterSelection(characterId);
+            
+            // 初回選択（最初に読み込まれたキャラクター）
+            if (!this.selectedCharacter) {
+              this.selectCharacter(characterId);
+            }
+
           } catch (error) {
-            this.log(`❌ Nezumi読み込みエラー: ${error.message}`);
-            this.uiController.updateStatus("nezumi-status", "読み込み失敗");
+            this.log(`❌ ${characterId} 読み込み失敗: ${error.message}`);
+          }
+        }
+
+        // Purattokun読み込み
+        async loadPurattokun() {
+          return this.loadCharacter('purattokun');
+        }
+
+        // 全キャラクター読み込み
+        async loadAllCharacters() {
+          this.log("🌟 全キャラクター読み込み開始...");
+          await this.loadPurattokun();
+          await new Promise(resolve => setTimeout(resolve, 500)); // 0.5秒待機
+          await this.loadNezumi();
+          this.log("🌟 全キャラクター読み込み完了");
+        }
+
+        // Nezumi読み込み（新しい個別読み込みメソッドを使用）
+        async loadNezumi() {
+          return this.loadCharacter('nezumi');
+        }
+
+        // 🎯 キャラクター選択システム
+        setupCharacterSelection(characterId) {
+          const container = document.getElementById(`${characterId}-container`);
+          if (!container) return;
+
+          container.style.cursor = 'pointer';
+          container.addEventListener('click', () => {
+            this.selectCharacter(characterId);
+          });
+        }
+
+        selectCharacter(characterId) {
+          // 既存選択を解除
+          if (this.selectedCharacter) {
+            this.deselectCharacter(this.selectedCharacter);
+          }
+
+          this.selectedCharacter = characterId;
+          
+          // 視覚的フィードバック
+          const container = document.getElementById(`${characterId}-container`);
+          container.style.borderColor = '#ff6b35';
+          container.style.boxShadow = '0 4px 20px rgba(255, 107, 53, 0.4)';
+          
+          // キャラクター制御パネル更新
+          this.updateCharacterControlPanel(characterId);
+          
+          // BBを表示
+          this.showCharacterBB(characterId);
+          
+          // CanvasResizeControllerに選択キャラクターを通知
+          this.notifyCanvasResizeController(characterId);
+          
+          this.log(`🎯 キャラクター選択: ${characterId}`);
+        }
+
+        deselectCharacter(characterId) {
+          const container = document.getElementById(`${characterId}-container`);
+          container.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+          container.style.boxShadow = '';
+          
+          // BBを非表示
+          this.hideCharacterBB(characterId);
+        }
+
+        updateCharacterControlPanel(characterId) {
+          const controlsDiv = document.getElementById('character-controls');
+          if (!controlsDiv) return;
+
+          controlsDiv.innerHTML = `
+            <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">
+              🎯 選択中: ${characterId === 'purattokun' ? '🐱 ぷらっとくん' : '🐭 ねずみちゃん'}
+            </div>
+            <button class="btn" onclick="window.multiCharacterSystem.playCharacterAnimation('${characterId}', 'taiki')">待機アニメーション</button>
+            <button class="btn" onclick="window.multiCharacterSystem.playCharacterAnimation('${characterId}', 'kettei')">やられアニメーション</button>
+            <button class="btn" onclick="window.multiCharacterSystem.toggleCharacterBB('${characterId}')">BB表示切替</button>
+          `;
+        }
+
+        // 🎯 BB管理システム
+        async showCharacterBB(characterId) {
+          const character = this.characters[characterId];
+          if (!character || !character.loaded) return;
+
+          try {
+            // 既存BBがあれば削除
+            if (character.boundingBox) {
+              character.boundingBox.cleanup();
+            }
+
+            // 新しいBB作成
+            character.boundingBox = new PureBoundingBox({
+              targetElement: character.canvas,
+              nodeId: `${characterId}-spine-bb-canvas`,
+            });
+
+            // BB実行（表示）
+            const result = await character.boundingBox.execute({ visible: true });
+            
+            if (result.success) {
+              this.log(`✅ ${characterId} BB作成完了`);
+            } else {
+              this.log(`❌ ${characterId} BB作成失敗: ${result.error}`);
+            }
+          } catch (error) {
+            this.log(`❌ ${characterId} BB作成エラー: ${error.message}`);
+          }
+        }
+
+        hideCharacterBB(characterId) {
+          const character = this.characters[characterId];
+          if (character && character.boundingBox) {
+            character.boundingBox.hide();
+          }
+        }
+
+        toggleCharacterBB(characterId) {
+          const character = this.characters[characterId];
+          if (!character || !character.boundingBox) return;
+
+          // BB状態確認して切り替え
+          const state = character.boundingBox.getState();
+          if (state.uiState.visible) {
+            character.boundingBox.hide();
+            this.log(`🔍 ${characterId} BB非表示`);
+          } else {
+            character.boundingBox.show();
+            this.log(`🔍 ${characterId} BB表示`);
+          }
+        }
+
+        // キャラクター個別アニメーション再生
+        playCharacterAnimation(characterId, animationName) {
+          const character = this.characters[characterId];
+          if (!character || !character.loaded) {
+            this.log(`⚠️ ${characterId}が読み込まれていません`);
+            return;
+          }
+
+          try {
+            character.renderer.playAnimation(animationName);
+            this.log(`🎬 ${characterId}: ${animationName} アニメーション再生`);
+          } catch (error) {
+            this.log(`❌ ${characterId} アニメーション再生エラー: ${error.message}`);
           }
         }
 
@@ -503,7 +768,7 @@
           }
 
           this.log("📦 バウンディングボックス作成中...");
-          this.uiController.updateStatus("bbox-status", "作成中");
+          this.updateStatus("bbox-status", "作成中");
 
           try {
             // PureBoundingBox作成
@@ -524,7 +789,7 @@
 
             if (result.success) {
               this.bboxCreated = true;
-              this.uiController.updateStatus("bbox-status", "作成完了");
+              this.updateStatus("bbox-status", "作成完了");
               this.log("✅ バウンディングボックス作成完了");
               this.log("🔗 BB+Canvas統合動作機能を有効化");
               this.log(
@@ -532,11 +797,11 @@
               );
             } else {
               this.log(`❌ バウンディングボックス作成失敗: ${result.error}`);
-              this.uiController.updateStatus("bbox-status", "作成失敗");
+              this.updateStatus("bbox-status", "作成失敗");
             }
           } catch (error) {
             this.log(`❌ バウンディングボックスエラー: ${error.message}`);
-            this.uiController.updateStatus("bbox-status", "エラー");
+            this.updateStatus("bbox-status", "エラー");
           }
         }
 
@@ -595,7 +860,7 @@
             this.boundingBox.cleanup();
             this.boundingBox = null;
             this.bboxCreated = false;
-            this.uiController.updateStatus("bbox-status", "クリーンアップ完了");
+            this.updateStatus("bbox-status", "クリーンアップ完了");
             this.log("🧹 バウンディングボックスクリーンアップ完了");
           } catch (error) {
             this.log(`❌ クリーンアップエラー: ${error.message}`);
@@ -604,7 +869,7 @@
 
         async fullIntegrationTest() {
           this.log("🧪 完全統合テスト開始");
-          this.uiController.updateStatus("integration-status", "統合テスト中");
+          this.updateStatus("integration-status", "統合テスト中");
 
           try {
             // 1. レンダラー初期化確認
@@ -646,15 +911,15 @@
               this.toggleBoundingBox();
 
               this.integrationComplete = true;
-              this.uiController.updateStatus("integration-status", "統合テスト成功");
+              this.updateStatus("integration-status", "統合テスト成功");
               this.log("🎉 完全統合テスト成功！全機能正常動作確認");
             } else {
               this.log("❌ 統合テスト失敗 - 一部機能が動作していません");
-              this.uiController.updateStatus("integration-status", "統合テスト失敗");
+              this.updateStatus("integration-status", "統合テスト失敗");
             }
           } catch (error) {
             this.log(`❌ 統合テストエラー: ${error.message}`);
-            this.uiController.updateStatus("integration-status", "エラー");
+            this.updateStatus("integration-status", "エラー");
           }
         }
 
@@ -717,10 +982,10 @@
             this.integrationComplete = false;
 
             // ステータス更新
-            this.uiController.updateStatus("renderer-status", "リセット完了");
-            this.uiController.updateStatus("nezumi-status", "待機中");
-            this.uiController.updateStatus("bbox-status", "待機中");
-            this.uiController.updateStatus("integration-status", "リセット完了");
+            this.updateStatus("renderer-status", "リセット完了");
+            this.updateStatus("nezumi-status", "待機中");
+            this.updateStatus("bbox-status", "待機中");
+            this.updateStatus("integration-status", "リセット完了");
 
             // キャンバスクリア
             const ctx = this.canvas.getContext("2d");
@@ -741,6 +1006,104 @@
          */
         log(message) {
           this.logSystem.log(message);
+        }
+
+        // 簡単なステータス更新メソッド
+        updateStatus(statusId, message) {
+          const statusElement = document.getElementById(statusId);
+          if (statusElement) {
+            statusElement.textContent = message;
+          }
+        }
+
+        // 読み込み画面を非表示にする
+        hideLoading() {
+          const loadingScreen = document.getElementById("loading-screen");
+          if (loadingScreen) {
+            loadingScreen.style.display = "none";
+          }
+        }
+
+        // CanvasResizeControllerに選択キャラクター変更を通知
+        notifyCanvasResizeController(characterId) {
+          const character = this.characters[characterId];
+          if (!character || !character.loaded || !character.renderer) {
+            this.log(`⚠️ ${characterId} が読み込まれていないため、CanvasResizeController通知をスキップ`);
+            return;
+          }
+
+          try {
+            // 選択されたキャラクターのCanvas情報を取得
+            const canvas = character.canvas;
+            const renderer = character.renderer;
+            
+            // CanvasResizeControllerに送信するデータを準備
+            const targetData = {
+              characterId: characterId,
+              canvasId: canvas.id,
+              canvasElement: canvas,
+              currentScale: {
+                x: renderer.skeleton?.scaleX || 1.0,
+                y: renderer.skeleton?.scaleY || 1.0
+              },
+              currentPosition: {
+                x: renderer.skeleton?.x || 0,
+                y: renderer.skeleton?.y || 0
+              }
+            };
+
+            // CanvasResizeIframeHandlerを通じて通知
+            if (window.canvasResizeHandler) {
+              window.canvasResizeHandler.sendToIframe('characterSelected', targetData);
+              this.log(`🎛️ CanvasResizeController: ${characterId}をターゲットに設定`);
+            } else {
+              this.log('⚠️ CanvasResizeIframeHandlerが見つかりません');
+            }
+            
+          } catch (error) {
+            this.log(`❌ CanvasResizeController通知エラー: ${error.message}`);
+          }
+        }
+
+        // BBフィードバック送信（CanvasResizeController経由）
+        sendBBFeedback(type) {
+          if (window.canvasResizeHandler) {
+            window.canvasResizeHandler.sendBBFeedback(type);
+          }
+        }
+
+        // Canvas解像度とアスペクト比を修正（歪み防止）
+        fixCanvasAspectRatio(canvas) {
+          try {
+            // 親コンテナのサイズを取得
+            const container = canvas.parentElement;
+            const containerRect = container.getBoundingClientRect();
+            const containerSize = Math.min(containerRect.width, containerRect.height);
+            
+            // Canvas解像度を親コンテナサイズに合わせて正方形に設定
+            canvas.width = containerSize;
+            canvas.height = containerSize;
+            
+            // WebGLビューポートも更新
+            const gl = canvas.getContext('webgl');
+            if (gl) {
+              gl.viewport(0, 0, containerSize, containerSize);
+            }
+            
+            this.log(`🎯 Canvas解像度修正: ${containerSize}x${containerSize} (歪み防止)`);
+          } catch (error) {
+            this.log(`❌ Canvas解像度修正エラー: ${error.message}`);
+          }
+        }
+
+        // ウィンドウリサイズ時の処理
+        handleWindowResize() {
+          Object.keys(this.characters).forEach(characterId => {
+            const character = this.characters[characterId];
+            if (character && character.loaded && character.canvas) {
+              this.fixCanvasAspectRatio(character.canvas);
+            }
+          });
         }
 
         /**
@@ -1791,23 +2154,30 @@
           }
         }
 
-        // Canvas解像度制御
+        // Canvas解像度制御（複数キャラクター対応）
         handleCanvasResize(data) {
           const integration = window.nezumiIntegration;
-          
-          // Canvas解像度変更を実行
-          integration.canvas.width = data.size;
-          integration.canvas.height = data.size;
-          
-          // WebGLビューポート更新
-          if (integration.spineRenderer) {
-            const gl = integration.canvas.getContext('webgl');
+          if (!integration || !integration.selectedCharacter) {
+            this.log('⚠️ 選択されたキャラクターがありません');
+            return;
+          }
+
+          const character = integration.characters[integration.selectedCharacter];
+          if (character && character.loaded && character.renderer) {
+            // 選択されたキャラクターのCanvas解像度変更を実行
+            character.canvas.width = data.size;
+            character.canvas.height = data.size;
+            
+            // WebGLビューポート更新
+            const gl = character.canvas.getContext('webgl');
             if (gl) {
               gl.viewport(0, 0, data.size, data.size);
             }
+            
+            this.log(`✅ ${integration.selectedCharacter} Canvas解像度変更完了: ${data.size}x${data.size}`);
+          } else {
+            this.log('⚠️ 選択されたキャラクターが読み込まれていません');
           }
-          
-          this.log(`✅ Canvas解像度変更完了: ${data.size}x${data.size}`);
         }
 
         handleCanvasReset() {
@@ -1815,16 +2185,24 @@
           this.log('🔄 Canvas解像度をデフォルトにリセット');
         }
 
-        // スケール制御
+        // スケール制御（複数キャラクター対応）
         handleScaleChange(data) {
           const integration = window.nezumiIntegration;
-          if (integration.spineRenderer && integration.spineRenderer.skeleton) {
-            integration.spineRenderer.setTransform(null, null, data.scaleX, data.scaleY);
+          if (!integration || !integration.selectedCharacter) {
+            this.log('⚠️ 選択されたキャラクターがありません');
+            return;
+          }
+
+          const character = integration.characters[integration.selectedCharacter];
+          if (character && character.loaded && character.renderer && character.renderer.skeleton) {
+            character.renderer.setTransform(null, null, data.scaleX, data.scaleY);
             
-            // オレンジBB表示
-            integration.showCharacterAdjustmentBB();
+            // BBフィードバックを送信
+            integration.sendBBFeedback('scale');
             
-            this.log(`📏 スケール変更: X=${data.scaleX}, Y=${data.scaleY}`);
+            this.log(`📏 ${integration.selectedCharacter} スケール変更: X=${data.scaleX}, Y=${data.scaleY}`);
+          } else {
+            this.log('⚠️ 選択されたキャラクターが読み込まれていません');
           }
         }
 
@@ -1835,16 +2213,25 @@
 
         // handleNaturalRatio機能は削除済み
 
-        // 位置制御
+        // 位置制御（複数キャラクター対応）
         handlePositionChange(data) {
           const integration = window.nezumiIntegration;
-          if (integration.spineRenderer && integration.spineRenderer.skeleton) {
-            integration.spineRenderer.setTransform(data.x, data.y, null, null);
+          if (!integration || !integration.selectedCharacter) {
+            this.log('⚠️ 選択されたキャラクターがありません');
+            return;
+          }
+
+          const character = integration.characters[integration.selectedCharacter];
+          if (character && character.loaded && character.renderer && character.renderer.skeleton) {
+            character.renderer.setTransform(data.x, data.y, null, null);
             
-            // オレンジBB表示
-            integration.showCharacterAdjustmentBB();
+            // BBフィードバックを送信
+            integration.sendBBFeedback('position');
             
-            // 頻繁な呼び出しのため、ログは控えめに
+            // 頻繁な呼び出しのため、ログは控えめに（必要に応じて有効化）
+            // this.log(`📍 ${integration.selectedCharacter} 位置変更: X=${data.x}, Y=${data.y}`);
+          } else {
+            this.log('⚠️ 選択されたキャラクターが読み込まれていません');
           }
         }
 
@@ -1952,7 +2339,10 @@
         );
 
         // システム初期化
-        window.nezumiIntegration = new NezumiStableSpineBBIntegration();
+        window.multiCharacterSystem = new MultiCharacterStableSpineBBIntegration();
+        
+        // 後方互換性のために従来名も設定
+        window.nezumiIntegration = window.multiCharacterSystem;
 
         // デバッグ用グローバル関数
         window.debugNezumiSystem = () => {
