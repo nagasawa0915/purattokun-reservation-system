@@ -184,29 +184,17 @@ class PureBoundingBoxUI {
      */
     async initializeAutoPin() {
         try {
-            // ElementObserver Phase 3-B 確認
-            if (!window.ElementObserverAdvanced) {
-                console.warn('⚠️ ElementObserverAdvanced未検出 - 基本機能のみ利用');
-                return;
-            }
-            
             // PureBoundingBoxAutoPin 確認
             if (!window.PureBoundingBoxAutoPin) {
                 console.warn('⚠️ PureBoundingBoxAutoPin未検出 - 基本機能のみ利用');
                 return;
             }
             
-            // ElementObserver Phase 3-B 初期化
-            const observer = new window.ElementObserverAdvanced();
-            
-            // 基本初期化のみ（高度初期化は保存時に実行）
-            console.log('🎯 ElementObserver基本初期化開始');
-            
-            // 自動ピンシステム初期化
-            this.autoPin = new window.PureBoundingBoxAutoPin(this.core, observer);
+            // 自動ピンシステム初期化（ElementObserverなしでも動作）
+            this.autoPin = new window.PureBoundingBoxAutoPin(this.core, null);
             this.autoPinInitialized = true;
             
-            console.log('✅ 自動ピンシステム統合完了');
+            console.log('✅ 自動ピンシステム統合完了（独立動作モード）');
             
         } catch (error) {
             console.warn('⚠️ 自動ピンシステム無効 - 基本機能のみ利用:', error.message);

@@ -20,6 +20,14 @@ class PureBoundingBox {
         this.ui = new window.PureBoundingBoxUI(this.core);
         this.events = new window.PureBoundingBoxEvents(this.core, this.bounds, this.ui);
         
+        // 🎯 AutoPin統合（オプショナル）
+        if (window.PureBoundingBoxAutoPin) {
+            this.autoPin = new window.PureBoundingBoxAutoPin(this.core, null);
+            console.log('🎯 AutoPin機能統合完了');
+        } else {
+            console.log('⚠️ AutoPinモジュールが見つかりません（オプション機能のため問題なし）');
+        }
+        
         console.log('🚀 PureBoundingBox v5.0 マイクロモジュール版 初期化完了');
     }
     

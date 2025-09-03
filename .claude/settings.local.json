@@ -10,7 +10,8 @@
       "WebSearch",
       "Bash(python:*)",
       "Bash(curl:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": [],
