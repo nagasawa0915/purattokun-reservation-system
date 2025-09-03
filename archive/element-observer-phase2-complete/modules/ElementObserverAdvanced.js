@@ -1,30 +1,125 @@
 /**
- * ElementObserverAdvanced.js - Phase 2 アーカイブ済み
+ * ElementObserverAdvanced.js
  * 
- * このファイルは archive/element-observer-phase2-complete/modules/ に移動されました
- * AutoPin開発に集中するためPhase 1 BB特化版に戻します
- * 
- * 復元方法:
- * cp archive/element-observer-phase2-complete/modules/ElementObserverAdvanced.js ./
+ * 🚀 Phase 2統合制御システム - 高度座標系統合
+ * - 5座標系の完全統合・統一API提供
+ * - Transform・WebGL・Responsive機能の統合制御
+ * - PureBoundingBox高度統合・次世代座標制御
  */
 
-// Phase 2機能が必要な場合は、アーカイブから復元してください
-console.warn('ElementObserverAdvanced は Phase 2完全アーカイブ済みです。');
-console.info('復元方法: archive/element-observer-phase2-complete/modules/ から復元');
-
-// 軽量なダミークラス（エラー防止用）
-class ElementObserverAdvanced {
+class ElementObserverAdvanced extends ElementObserver {
     constructor() {
-        console.warn('ElementObserverAdvanced: Phase 2機能はアーカイブ済みです。Phase 1のElementObserverまたはElementObserverCoreをご利用ください。');
-    }
-
-    // 基本的なAPI互換性（エラー回避用）
-    initializeAdvanced() { return false; }
-    setUnifiedPosition() { return false; }
-    integratePureBoundingBox() { return false; }
-    cleanup() {}
+        super();  // Phase 1基本機能継承
         
-}
+        // Phase 2専用モジュール
+        this.transform = null;      // ElementObserverTransform
+        this.webgl = null;          // ElementObserverWebGL  
+        this.responsive = null;     // ElementObserverResponsive
+        
+        // 統合制御状態
+        this.integrationState = {
+            initialized: false,
+            activeModules: [],
+            coordinateSystemsActive: 0,
+            lastSyncTimestamp: 0
+        };
+        
+        // 5つの座標系管理
+        this.coordinateSystems = {
+            // 1. DOM座標系（%基準）
+            dom: {
+                x: 0, y: 0, unit: '%',
+                transform: 'translate(-50%, -50%)'
+            },
+            
+            // 2. CSS Transform座標系
+            transform: {
+                tx: 0, ty: 0, scale: 1, rotation: 0,
+                static: 'translate(-50%, -50%)',
+                dynamic: 'translate(0px, 0px)',
+                combined: null
+            },
+            
+            // 3. WebGL Canvas座標系
+            webgl: {
+                x: 0, y: 0, scale: 1,
+                camera: { x: 0, y: 0, zoom: 1 }
+            },
+            
+            // 4. Skeleton座標系（Spine）
+            skeleton: {
+                x: 0, y: 0, scaleX: 1, scaleY: 1,
+                bounds: null
+            },
+            
+            // 5. Canvas描画座標系
+            canvas: {
+                displayWidth: 0, displayHeight: 0,
+                bufferWidth: 0, bufferHeight: 0,
+                scaleRatio: { x: 1, y: 1 }
+            }
+        };
+        
+        // 統合コールバック
+        this.integrationCallbacks = new Set();
+        
+        // Phase 3-A 最適化設定
+        this.performanceOptimization = {
+            enabled: true,
+            batchCoordinateUpdates: true,
+            skipRedundantCalculations: true,
+            coordinateUpdateTimeout: null,
+            pendingCoordinateUpdate: null,
+            lastCoordinateUpdate: 0,
+            minUpdateInterval: 8  // ms (120fps対応)
+        };
+        
+        // 🌊 Phase 3-B 環境揺れ吸収システム
+        this.environmentObserver = {
+            activeObservations: new Map(),  // target -> observationData
+            frameRequestId: null,
+            pendingUpdates: new Map(),
+            epsilon: 0.5,  // ±0.5px誤差許容
+            lastDPR: window.devicePixelRatio || 1,
+            stableValues: new Map(),  // target -> lastStableRect
+            lastChangeTime: 0  // Phase 3-A+3-B統合最適化用
+        };
+        
+        // Phase 3-B 新機能: ピン機能
+        this.pinSystems = {
+            // 6.1 背景画像同期
+            backgroundSync: {
+                enabled: false,
+                backgroundElement: null,
+                spineElement: null,
+                anchor: 'center',
+                lastBackgroundRect: null,
+                syncCallback: null
+            },
+            
+            // 6.2 テキストRange ピン
+            textPin: {
+                enabled: false,
+                textRange: null,
+                spineElement: null,
+                position: 'end',
+                offset: { x: 0, y: 0 },
+                pinSpan: null
+            },
+            
+            // 6.3 画像ピン
+            imagePin: {
+                enabled: false,
+                imageElement: null,
+                spineElement: null,
+                anchor: 'br',
+                responsive: true,
+                lastImageRect: null
+            }
+        };
+        
+        console.log('🚀 ElementObserverAdvanced Phase 3-B拡張完了');
+    }
     
     /**
      * Phase 2高度初期化（WebGL対応要素用）

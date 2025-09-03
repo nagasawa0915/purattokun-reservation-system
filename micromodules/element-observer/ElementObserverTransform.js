@@ -1,11 +1,29 @@
 /**
- * ElementObserverTransform.js
+ * ElementObserverTransform.js - Phase 2 アーカイブ済み
  * 
- * 🎯 CSS Transform統合監視システム - Phase 2
- * - CSS Transform解析・合成・Matrix計算
- * - CSS変数との完全同期
- * - 複数transform値の自動合成・分解
+ * このファイルは archive/element-observer-phase2-complete/modules/ に移動されました
+ * AutoPin開発に集中するためPhase 1 BB特化版に戻します
+ * 
+ * 復元方法:
+ * cp archive/element-observer-phase2-complete/modules/ElementObserverTransform.js ./
  */
+
+// Phase 2機能が必要な場合は、アーカイブから復元してください
+console.warn('ElementObserverTransform は Phase 2完全アーカイブ済みです。');
+console.info('復元方法: archive/element-observer-phase2-complete/modules/ から復元');
+
+// 軽量なダミークラス（エラー防止用）
+class ElementObserverTransform {
+    constructor() {
+        console.warn('ElementObserverTransform: Phase 2機能はアーカイブ済みです。Phase 1のElementObserverまたはElementObserverCoreをご利用ください。');
+    }
+
+    // 基本的なAPI互換性（エラー回避用）
+    setCSSVariables() { return false; }
+    getCombinedTransform() { return 'translate(-50%, -50%)'; }
+    getCombinedMatrix() { return [1, 0, 0, 1, 0, 0]; }
+    cleanup() {}
+}
 
 class ElementObserverTransform {
     constructor(targetElement) {

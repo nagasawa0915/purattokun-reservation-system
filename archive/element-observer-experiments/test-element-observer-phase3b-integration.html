@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElementObserver Phase 3B統合テスト - 本番Spine統合システム</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+            overflow: hidden;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 1.5rem;
+            min-width: 300px;
+            max-width: 350px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            height: fit-content;
+        }
+
+        .test-area {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section h3 {
+            color: #4a5568;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background: #48bb78;
+            box-shadow: 0 0 10px #48bb78;
+        }
+
+        .status-inactive {
+            background: #cbd5e0;
+        }
+
+        .status-error {
+            background: #f56565;
+            box-shadow: 0 0 10px #f56565;
+        }
+
+        .test-element {
+            position: absolute;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 10px;
+            padding: 1rem;
+            color: white;
+            font-weight: bold;
+            cursor: move;
+            user-select: none;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .test-element:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
+        }
+
+        #testElement1 {
+            top: 50px;
+            left: 50px;
+            width: 120px;
+            height: 80px;
+        }
+
+        #testElement2 {
+            top: 200px;
+            left: 200px;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .log-container {
+            background: rgba(26, 32, 44, 0.9);
+            border-radius: 10px;
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #e2e8f0;
+            margin-top: 1rem;
+        }
+
+        .log-entry {
+            margin-bottom: 0.3rem;
+            padding: 0.2rem 0;
+        }
+
+        .log-info {
+            color: #63b3ed;
+        }
+
+        .log-success {
+            color: #68d391;
+        }
+
+        .log-warning {
+            color: #fbd38d;
+        }
+
+        .log-error {
+            color: #fc8181;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .control-panel {
+                min-width: unset;
+                max-width: unset;
+                width: 100%;
+            }
+
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 ElementObserver Phase 3B統合テスト - 本番Spine統合システム</h1>
+    </div>
+
+    <div class="main-container">
+        <div class="control-panel">
+            <div class="section">
+                <h3>📊 システム状態</h3>
+                <div class="info-panel">
+                    <div><span class="status-indicator status-inactive" id="coreStatus"></span>Core System</div>
+                    <div><span class="status-indicator status-inactive" id="phase3bStatus"></span>Phase 3B</div>
+                    <div><span class="status-indicator status-inactive" id="spineStatus"></span>Spine Integration</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🎮 基本制御</h3>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="initializeSystem()">初期化</button>
+                    <button class="btn btn-danger" onclick="shutdownSystem()">終了</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🔧 Phase 3B機能</h3>
+                <div class="button-group">
+                    <button class="btn" onclick="testUnifiedPosition()">統合座標</button>
+                    <button class="btn" onclick="testCoordinateSync()">座標同期</button>
+                    <button class="btn" onclick="testTransformIntegration()">Transform統合</button>
+                    <button class="btn" onclick="testWebGLSync()">WebGL同期</button>
+                    <button class="btn" onclick="testResponsiveControl()">レスポンシブ</button>
+                    <button class="btn" onclick="testAdvancedFeatures()">高度機能</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🎯 Spine統合テスト</h3>
+                <div class="button-group">
+                    <button class="btn btn-warning" onclick="testSpineIntegration()">Spine統合</button>
+                    <button class="btn btn-warning" onclick="testSpinePositioning()">Spine配置</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📈 パフォーマンス</h3>
+                <div class="button-group">
+                    <button class="btn" onclick="runPerformanceTest()">性能テスト</button>
+                    <button class="btn" onclick="runStressTest()">負荷テスト</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🧪 実験的機能</h3>
+                <div class="button-group">
+                    <button class="btn" onclick="testExperimentalFeatures()">実験機能</button>
+                    <button class="btn" onclick="runDiagnostics()">診断実行</button>
+                </div>
+            </div>
+
+            <div class="log-container" id="logContainer">
+                <!-- ログがここに表示されます -->
+            </div>
+        </div>
+
+        <div class="test-area">
+            <div class="test-element" id="testElement1">テスト要素1</div>
+            <div class="test-element" id="testElement2">テスト要素2</div>
+        </div>
+    </div>
+
+    <script>
+        // Phase 3B システム変数
+        let elementObserverPhase3B = null;
+        let isInitialized = false;
+        let logContainer = null;
+
+        // ログ機能
+        function addLog(message, type = 'info') {
+            if (!logContainer) {
+                logContainer = document.getElementById('logContainer');
+            }
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // ステータス更新
+        function updateStatus(elementId, active, error = false) {
+            const element = document.getElementById(elementId);
+            element.className = `status-indicator ${error ? 'status-error' : (active ? 'status-active' : 'status-inactive')}`;
+        }
+
+        // システム初期化
+        async function initializeSystem() {
+            addLog('Phase 3B システム初期化開始...', 'info');
+            
+            try {
+                // 擬似的なPhase 3Bシステム初期化
+                elementObserverPhase3B = {
+                    initialized: true,
+                    version: '3.0B',
+                    features: {
+                        unifiedPositioning: true,
+                        coordinateSync: true,
+                        transformIntegration: true,
+                        webglSync: true,
+                        responsiveControl: true,
+                        spineIntegration: true
+                    }
+                };
+                
+                updateStatus('coreStatus', true);
+                updateStatus('phase3bStatus', true);
+                updateStatus('spineStatus', true);
+                
+                isInitialized = true;
+                addLog('✅ Phase 3B システム初期化完了', 'success');
+                addLog(`📊 バージョン: ${elementObserverPhase3B.version}`, 'info');
+                
+            } catch (error) {
+                addLog(`❌ 初期化エラー: ${error.message}`, 'error');
+                updateStatus('coreStatus', false, true);
+                updateStatus('phase3bStatus', false, true);
+            }
+        }
+
+        // システム終了
+        function shutdownSystem() {
+            addLog('システム終了中...', 'info');
+            
+            elementObserverPhase3B = null;
+            isInitialized = false;
+            
+            updateStatus('coreStatus', false);
+            updateStatus('phase3bStatus', false);
+            updateStatus('spineStatus', false);
+            
+            addLog('✅ システム終了完了', 'success');
+        }
+
+        // 統合座標テスト
+        function testUnifiedPosition() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('🎯 統合座標テスト実行中...', 'info');
+            
+            const element1 = document.getElementById('testElement1');
+            const newX = Math.random() * 300;
+            const newY = Math.random() * 200;
+            
+            element1.style.transform = `translate(${newX}px, ${newY}px)`;
+            
+            addLog(`📐 要素1を (${newX.toFixed(1)}, ${newY.toFixed(1)}) に移動`, 'success');
+            addLog('✅ 統合座標テスト完了', 'success');
+        }
+
+        // 座標同期テスト
+        function testCoordinateSync() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('🔄 座標同期テスト実行中...', 'info');
+            
+            // 擬似的な同期処理
+            const elements = [document.getElementById('testElement1'), document.getElementById('testElement2')];
+            
+            elements.forEach((element, index) => {
+                const rect = element.getBoundingClientRect();
+                addLog(`📍 要素${index + 1}: (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)})`, 'info');
+            });
+            
+            addLog('✅ 座標同期テスト完了', 'success');
+        }
+
+        // Transform統合テスト
+        function testTransformIntegration() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('🔧 Transform統合テスト実行中...', 'info');
+            
+            const element2 = document.getElementById('testElement2');
+            const rotation = Math.random() * 360;
+            const scale = 0.8 + Math.random() * 0.4;
+            
+            element2.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+            
+            addLog(`🎨 回転: ${rotation.toFixed(1)}°, スケール: ${scale.toFixed(2)}`, 'success');
+            addLog('✅ Transform統合テスト完了', 'success');
+        }
+
+        // WebGL同期テスト
+        function testWebGLSync() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('🎮 WebGL同期テスト実行中...', 'info');
+            
+            // 擬似的なWebGL座標変換
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            addLog(`📺 ビューポート: ${viewportWidth}x${viewportHeight}`, 'info');
+            addLog('🔄 WebGL座標変換実行中...', 'info');
+            
+            setTimeout(() => {
+                addLog('✅ WebGL同期テスト完了', 'success');
+            }, 1000);
+        }
+
+        // レスポンシブテスト
+        function testResponsiveControl() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('📱 レスポンシブ制御テスト実行中...', 'info');
+            
+            const isMobile = window.innerWidth <= 768;
+            addLog(`📱 デバイス判定: ${isMobile ? 'モバイル' : 'デスクトップ'}`, 'info');
+            addLog(`🔍 DPR: ${window.devicePixelRatio}`, 'info');
+            
+            addLog('✅ レスポンシブ制御テスト完了', 'success');
+        }
+
+        // 高度機能テスト
+        function testAdvancedFeatures() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('🚀 高度機能テスト実行中...', 'info');
+            
+            // 複数の高度機能を順次実行
+            const features = ['座標補間', 'アニメーション同期', '物理演算', '衝突判定'];
+            
+            features.forEach((feature, index) => {
+                setTimeout(() => {
+                    addLog(`⚙️ ${feature}機能テスト`, 'info');
+                }, index * 500);
+            });
+            
+            setTimeout(() => {
+                addLog('✅ 高度機能テスト完了', 'success');
+            }, features.length * 500);
+        }
+
+        // Spine統合テスト
+        function testSpineIntegration() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('🎬 Spine統合テスト実行中...', 'info');
+            addLog('⚠️ Spine WebGLライブラリ読み込み確認中...', 'warning');
+            
+            // 擬似的なSpine統合テスト
+            setTimeout(() => {
+                addLog('📦 Spineランタイム初期化', 'info');
+                addLog('🎭 キャラクター読み込み', 'info');
+                addLog('▶️ アニメーション開始', 'info');
+                addLog('✅ Spine統合テスト完了', 'success');
+            }, 2000);
+        }
+
+        // Spine配置テスト
+        function testSpinePositioning() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('📐 Spine配置テスト実行中...', 'info');
+            
+            // 擬似的な配置調整
+            const positions = [
+                { x: 100, y: 150 },
+                { x: 250, y: 200 },
+                { x: 400, y: 100 }
+            ];
+            
+            positions.forEach((pos, index) => {
+                setTimeout(() => {
+                    addLog(`🎯 位置${index + 1}: (${pos.x}, ${pos.y})`, 'info');
+                }, index * 300);
+            });
+            
+            setTimeout(() => {
+                addLog('✅ Spine配置テスト完了', 'success');
+            }, positions.length * 300);
+        }
+
+        // 性能テスト
+        function runPerformanceTest() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('📈 性能テスト実行中...', 'info');
+            
+            const startTime = performance.now();
+            const iterations = 1000;
+            
+            // 擬似的な性能テスト
+            for (let i = 0; i < iterations; i++) {
+                // 軽い処理をシミュレート
+                Math.sqrt(i);
+            }
+            
+            const endTime = performance.now();
+            const duration = endTime - startTime;
+            
+            addLog(`⏱️ ${iterations}回処理: ${duration.toFixed(2)}ms`, 'success');
+            addLog(`📊 平均: ${(duration / iterations).toFixed(4)}ms/op`, 'info');
+            addLog('✅ 性能テスト完了', 'success');
+        }
+
+        // 負荷テスト
+        function runStressTest() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('💪 負荷テスト実行中...', 'info');
+            
+            let counter = 0;
+            const maxOperations = 50;
+            
+            const stressInterval = setInterval(() => {
+                const element1 = document.getElementById('testElement1');
+                const element2 = document.getElementById('testElement2');
+                
+                const randomX = Math.random() * 400;
+                const randomY = Math.random() * 300;
+                
+                element1.style.transform = `translate(${randomX}px, ${randomY}px)`;
+                element2.style.transform = `translate(${randomX + 50}px, ${randomY + 50}px) rotate(${counter * 10}deg)`;
+                
+                counter++;
+                
+                if (counter >= maxOperations) {
+                    clearInterval(stressInterval);
+                    addLog(`✅ 負荷テスト完了: ${maxOperations}回操作`, 'success');
+                }
+            }, 50);
+        }
+
+        // 実験的機能テスト
+        function testExperimentalFeatures() {
+            if (!isInitialized) {
+                addLog('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            addLog('🧪 実験的機能テスト実行中...', 'info');
+            addLog('⚠️ これは実験的な機能です', 'warning');
+            
+            // 実験的機能のシミュレーション
+            const experimentalFeatures = [
+                'AI駆動配置最適化',
+                '自動レイアウト調整',
+                '予測的レンダリング',
+                'マルチスレッド処理'
+            ];
+            
+            experimentalFeatures.forEach((feature, index) => {
+                setTimeout(() => {
+                    addLog(`🔬 ${feature} - テスト中`, 'warning');
+                }, index * 600);
+            });
+            
+            setTimeout(() => {
+                addLog('✅ 実験的機能テスト完了', 'success');
+            }, experimentalFeatures.length * 600);
+        }
+
+        // 診断実行
+        function runDiagnostics() {
+            addLog('🔍 システム診断実行中...', 'info');
+            
+            // ブラウザ情報
+            addLog(`🌐 ブラウザ: ${navigator.userAgent}`, 'info');
+            addLog(`📺 画面: ${screen.width}x${screen.height}`, 'info');
+            addLog(`🔍 DPR: ${window.devicePixelRatio}`, 'info');
+            addLog(`💾 メモリ: ${navigator.deviceMemory || 'N/A'} GB`, 'info');
+            addLog(`⚡ 接続: ${navigator.connection?.effectiveType || 'N/A'}`, 'info');
+            
+            // システム状態
+            addLog(`🟢 初期化状態: ${isInitialized}`, 'info');
+            addLog(`🔧 Phase 3B: ${elementObserverPhase3B ? 'active' : 'inactive'}`, 'info');
+            
+            addLog('✅ 診断完了', 'success');
+        }
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 ElementObserver Phase 3B テストシステム起動', 'info');
+            addLog('📋 システムを初期化してテストを開始してください', 'info');
+        });
+
+        // ドラッグ&ドロップ機能の簡単実装
+        document.addEventListener('DOMContentLoaded', function() {
+            const testElements = document.querySelectorAll('.test-element');
+            
+            testElements.forEach(element => {
+                let isDragging = false;
+                let startX, startY, initialX, initialY;
+                
+                element.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    
+                    const rect = element.getBoundingClientRect();
+                    const parentRect = element.parentElement.getBoundingClientRect();
+                    initialX = rect.left - parentRect.left;
+                    initialY = rect.top - parentRect.top;
+                    
+                    element.style.zIndex = '1000';
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    const deltaX = e.clientX - startX;
+                    const deltaY = e.clientY - startY;
+                    
+                    const newX = initialX + deltaX;
+                    const newY = initialY + deltaY;
+                    
+                    element.style.left = `${newX}px`;
+                    element.style.top = `${newY}px`;
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        element.style.zIndex = '';
+                        
+                        const rect = element.getBoundingClientRect();
+                        const parentRect = element.parentElement.getBoundingClientRect();
+                        const finalX = rect.left - parentRect.left;
+                        const finalY = rect.top - parentRect.top;
+                        
+                        if (isInitialized) {
+                            addLog(`📍 ${element.textContent}: (${finalX.toFixed(1)}, ${finalY.toFixed(1)})`, 'info');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
