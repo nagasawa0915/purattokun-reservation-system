@@ -13,8 +13,8 @@ class CanvasResizeUI {
       scaleY: 1.0,
       positionX: 0,    // 中央座標に修正
       positionY: 0,    // 中央座標に修正
-      scaleLock: false,
-      scaleRatio: null
+      scaleLock: true,    // デフォルトでロック有効
+      scaleRatio: 1.0 / 1.35    // Y/X の初期比率を設定
     };
 
     // 初期化
@@ -34,6 +34,11 @@ class CanvasResizeUI {
     
     // Canvas サイズ表示を初期化
     this.updateCanvasSizeDisplay();
+    
+    // スケールロックの初期状態をログに記録
+    if (this.state.scaleLock) {
+      this.log(`🔒 スケール比率ロック初期化: Y/X = ${this.state.scaleRatio.toFixed(3)} (デフォルト有効)`);
+    }
   }
 
   /**
@@ -91,12 +96,30 @@ class CanvasResizeUI {
   setupScaleEvents() {
     const scaleXInput = document.getElementById('character-scale-x');
     const scaleYInput = document.getElementById('character-scale-y');
+    const scaleXInputNumber = document.getElementById('character-scale-x-input');
+    const scaleYInputNumber = document.getElementById('character-scale-y-input');
     const scaleLock = document.getElementById('scale-lock');
     const resetScaleBtn = document.getElementById('reset-scale');
 
-    // リアルタイムスケール調整
-    scaleXInput.oninput = () => this.updateScaleRealtime('x');
-    scaleYInput.oninput = () => this.updateScaleRealtime('y');
+    // スライダー → 数値入力 同期
+    scaleXInput.oninput = () => {
+      scaleXInputNumber.value = scaleXInput.value;
+      this.updateScaleRealtime('x');
+    };
+    scaleYInput.oninput = () => {
+      scaleYInputNumber.value = scaleYInput.value;
+      this.updateScaleRealtime('y');
+    };
+
+    // 数値入力 → スライダー 同期
+    scaleXInputNumber.oninput = () => {
+      scaleXInput.value = scaleXInputNumber.value;
+      this.updateScaleRealtime('x');
+    };
+    scaleYInputNumber.oninput = () => {
+      scaleYInput.value = scaleYInputNumber.value;
+      this.updateScaleRealtime('y');
+    };
 
     // スケールロック
     scaleLock.onchange = () => {
@@ -123,21 +146,33 @@ class CanvasResizeUI {
   setupPositionEvents() {
     const positionXInput = document.getElementById('character-x');
     const positionYInput = document.getElementById('character-y');
+    const positionXInputNumber = document.getElementById('character-x-input');
+    const positionYInputNumber = document.getElementById('character-y-input');
     const centerBtn = document.getElementById('center-character');
-    const resetPositionBtn = document.getElementById('reset-position');
 
-    // リアルタイム位置調整
-    positionXInput.oninput = () => this.updatePositionRealtime('x');
-    positionYInput.oninput = () => this.updatePositionRealtime('y');
+    // スライダー → 数値入力 同期
+    positionXInput.oninput = () => {
+      positionXInputNumber.value = positionXInput.value;
+      this.updatePositionRealtime('x');
+    };
+    positionYInput.oninput = () => {
+      positionYInputNumber.value = positionYInput.value;
+      this.updatePositionRealtime('y');
+    };
+
+    // 数値入力 → スライダー 同期
+    positionXInputNumber.oninput = () => {
+      positionXInput.value = positionXInputNumber.value;
+      this.updatePositionRealtime('x');
+    };
+    positionYInputNumber.oninput = () => {
+      positionYInput.value = positionYInputNumber.value;
+      this.updatePositionRealtime('y');
+    };
 
     // 中央配置
     centerBtn.onclick = () => {
       this.centerCharacter();
-    };
-
-    // 位置リセット
-    resetPositionBtn.onclick = () => {
-      this.resetPosition();
     };
   }
 
@@ -155,6 +190,8 @@ class CanvasResizeUI {
   updateScaleRealtime(axis) {
     const scaleXInput = document.getElementById('character-scale-x');
     const scaleYInput = document.getElementById('character-scale-y');
+    const scaleXInputNumber = document.getElementById('character-scale-x-input');
+    const scaleYInputNumber = document.getElementById('character-scale-y-input');
 
     // 比率ロック処理
     if (this.state.scaleLock && this.state.scaleRatio !== null) {
@@ -163,6 +200,7 @@ class CanvasResizeUI {
         const newX = parseFloat(scaleXInput.value);
         const newY = newX * this.state.scaleRatio;
         scaleYInput.value = newY.toFixed(2);
+        scaleYInputNumber.value = newY.toFixed(2);
         this.state.scaleX = newX;
         this.state.scaleY = newY;
         this.log(`🔄 比率保持: X=${newX} → Y=${newY.toFixed(2)} (比率${this.state.scaleRatio.toFixed(3)})`);
@@ -171,6 +209,7 @@ class CanvasResizeUI {
         const newY = parseFloat(scaleYInput.value);
         const newX = newY / this.state.scaleRatio;
         scaleXInput.value = newX.toFixed(2);
+        scaleXInputNumber.value = newX.toFixed(2);
         this.state.scaleX = newX;
         this.state.scaleY = newY;
         this.log(`🔄 比率保持: Y=${newY} → X=${newX.toFixed(2)} (比率${this.state.scaleRatio.toFixed(3)})`);
@@ -219,6 +258,8 @@ class CanvasResizeUI {
     
     document.getElementById('character-scale-x').value = 1.35;
     document.getElementById('character-scale-y').value = 1.0;
+    document.getElementById('character-scale-x-input').value = 1.35;
+    document.getElementById('character-scale-y-input').value = 1.0;
     
     this.updateScaleDisplay();
     
@@ -244,6 +285,8 @@ class CanvasResizeUI {
     
     document.getElementById('character-x').value = this.state.positionX;
     document.getElementById('character-y').value = this.state.positionY;
+    document.getElementById('character-x-input').value = this.state.positionX;
+    document.getElementById('character-y-input').value = this.state.positionY;
     
     this.updatePositionDisplay();
     
@@ -255,26 +298,7 @@ class CanvasResizeUI {
     this.log('🎯 キャラクターを中央に配置');
   }
 
-  /**
-   * 位置リセット
-   */
-  resetPosition() {
-    // デフォルト位置も中央座標(0,0)に設定
-    this.state.positionX = 0;
-    this.state.positionY = 0;
-    
-    document.getElementById('character-x').value = this.state.positionX;
-    document.getElementById('character-y').value = this.state.positionY;
-    
-    this.updatePositionDisplay();
-    
-    this.sendToParent('positionReset', {
-      x: this.state.positionX,
-      y: this.state.positionY
-    });
-    
-    this.log('🔄 位置をデフォルト（中央）にリセット');
-  }
+  // resetPositionメソッドは削除（centerCharacterと重複のため）
 
   /**
    * 表示値更新
@@ -361,21 +385,25 @@ class CanvasResizeUI {
     if (data.scaleX !== undefined) {
       this.state.scaleX = data.scaleX;
       document.getElementById('character-scale-x').value = data.scaleX;
+      document.getElementById('character-scale-x-input').value = data.scaleX;
     }
 
     if (data.scaleY !== undefined) {
       this.state.scaleY = data.scaleY;
       document.getElementById('character-scale-y').value = data.scaleY;
+      document.getElementById('character-scale-y-input').value = data.scaleY;
     }
 
     if (data.positionX !== undefined) {
       this.state.positionX = data.positionX;
       document.getElementById('character-x').value = data.positionX;
+      document.getElementById('character-x-input').value = data.positionX;
     }
 
     if (data.positionY !== undefined) {
       this.state.positionY = data.positionY;
       document.getElementById('character-y').value = data.positionY;
+      document.getElementById('character-y-input').value = data.positionY;
     }
 
     // 表示値更新

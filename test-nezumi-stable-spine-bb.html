@@ -1770,9 +1770,7 @@
             case 'positionChanged':
               this.handlePositionChange(data);
               break;
-            case 'positionReset':
-              this.handlePositionReset(data);
-              break;
+            // positionReset機能は削除済み（centerCharacterと重複のため）
             case 'centerCharacter':
               this.handleCenterCharacter(data);
               break;
@@ -1850,10 +1848,7 @@
           }
         }
 
-        handlePositionReset(data) {
-          this.handlePositionChange(data);
-          this.log('🔄 位置をデフォルトにリセット');
-        }
+        // handlePositionReset機能は削除済み（centerCharacterと重複のため）
 
         handleCenterCharacter(data) {
           this.handlePositionChange(data);

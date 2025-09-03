@@ -33,24 +33,26 @@
       
       <!-- スケールロック機能 -->
       <label class="control-label checkbox-label">
-        <input type="checkbox" id="scale-lock">
+        <input type="checkbox" id="scale-lock" checked>
         🔒 縦横同期ロック
       </label>
       
       <!-- 横スケール -->
       <label class="control-label">
         横スケール(X): 
-        <input type="range" id="character-scale-x" min="0.3" max="2.0" step="0.05" value="1.35" 
+        <input type="range" id="character-scale-x" min="0.3" max="3.0" step="0.05" value="1.35" 
                class="range-input">
-        <span id="scale-x-value">1.35</span>
+        <input type="number" id="character-scale-x-input" min="0.3" max="3.0" step="0.05" value="1.35" 
+               class="size-input" style="width: 60px; margin-left: 5px;">
       </label>
       
       <!-- 縦スケール -->
       <label class="control-label">
         縦スケール(Y): 
-        <input type="range" id="character-scale-y" min="0.3" max="2.0" step="0.05" value="1.0" 
+        <input type="range" id="character-scale-y" min="0.3" max="3.0" step="0.05" value="1.0" 
                class="range-input">
-        <span id="scale-y-value">1.0</span>
+        <input type="number" id="character-scale-y-input" min="0.3" max="3.0" step="0.05" value="1.0" 
+               class="size-input" style="width: 60px; margin-left: 5px;">
       </label>
       
       <div class="button-group">
@@ -67,7 +69,8 @@
         X位置: 
         <input type="range" id="character-x" min="-400" max="1200" step="10" value="0" 
                class="range-input">
-        <span id="x-value">0</span>
+        <input type="number" id="character-x-input" min="-400" max="1200" step="10" value="0" 
+               class="size-input" style="width: 70px; margin-left: 5px;">
       </label>
       
       <!-- Y位置 -->
@@ -75,12 +78,12 @@
         Y位置: 
         <input type="range" id="character-y" min="-400" max="800" step="10" value="0" 
                class="range-input">
-        <span id="y-value">0</span>
+        <input type="number" id="character-y-input" min="-400" max="800" step="10" value="0" 
+               class="size-input" style="width: 70px; margin-left: 5px;">
       </label>
       
       <div class="button-group">
         <button class="btn" id="center-character">中央に配置</button>
-        <button class="btn" id="reset-position">デフォルト位置</button>
       </div>
       <p class="help-text">リアルタイム移動・中間位置から調整可能</p>
     </div>
