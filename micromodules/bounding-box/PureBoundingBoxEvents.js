@@ -235,6 +235,16 @@ class PureBoundingBoxEvents {
         if (this.actualDragStarted) {
             console.log('🎯 [COMMIT] 実際のドラッグが発生 - commitToPercent実行');
             
+            // commitToPercent実行前の確認
+            console.log('🔍 [COMMIT] this.core設定確認:', {
+                core: !!this.core,
+                coreConfig: !!this.core?.config,
+                targetElement: !!this.core?.config?.targetElement,
+                targetElementTag: this.core?.config?.targetElement?.tagName,
+                targetElementId: this.core?.config?.targetElement?.id,
+                commitToPercentType: typeof this.core?.commitToPercent
+            });
+            
             // 🆕 Phase 3: 見た目の中心基準でのコミット処理
             commitSuccess = this.core.commitToPercent();
             if (!commitSuccess) {

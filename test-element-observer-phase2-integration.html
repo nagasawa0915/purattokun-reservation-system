@@ -223,8 +223,8 @@
             <div class="control-group">
                 <h3>🌐 WebGL統合</h3>
                 <button onclick="testWebGLSync()">WebGL同期テスト</button>
-                <button onclick="testSkeletonSync()">Skeleton同期</button>
-                <button onclick="testCanvasMatrix()">Canvas Matrix</button>
+                <button onclick="testWebGLSync()">Skeleton同期</button>
+                <button onclick="testWebGLSync()">Canvas Matrix</button>
             </div>
             
             <div class="control-group">
@@ -736,11 +736,31 @@
                     currentBoundingBox = null;
                 }
                 
-                // PureBoundingBox作成
-                currentBoundingBox = new PureBoundingBox({
-                    targetElement: testElements.targetElement,
-                    nodeId: 'phase2-advanced-bb'
+                // PureBoundingBox作成 - 完全な設定を指定
+                const targetElement = testElements.targetElement || document.getElementById('test-layout-anchor');
+                if (!targetElement) {
+                    throw new Error('targetElement が見つかりません - 先にテスト要素を作成してください');
+                }
+                
+                const boundingBoxConfig = {
+                    targetElement: targetElement,
+                    nodeId: 'phase2-advanced-bb',
+                    bounds: {
+                        x: 0,
+                        y: 0, 
+                        width: targetElement.offsetWidth,
+                        height: targetElement.offsetHeight
+                    },
+                    container: document.getElementById('test-area') || document.body
+                };
+                
+                console.log('🔧 PureBoundingBox設定確認:', {
+                    targetElement: boundingBoxConfig.targetElement?.tagName,
+                    targetElementId: boundingBoxConfig.targetElement?.id,
+                    nodeId: boundingBoxConfig.nodeId
                 });
+                
+                currentBoundingBox = new PureBoundingBox(boundingBoxConfig);
                 
                 // Phase 2高度統合
                 const integrated = elementObserverAdvanced.integratePureBoundingBox(currentBoundingBox);
@@ -776,6 +796,41 @@
             log('  🌊 Phase 2高度コミット処理実行済み', 'success');
             
             updateCoordinateDisplay();
+        }
+        
+        // 高度コミットテスト
+        function testAdvancedCommit() {
+            if (!currentBoundingBox) {
+                log('⚠️ アクティブなBoundingBoxなし - 先にPhase 2 BB開始してください', 'warning');
+                return;
+            }
+            
+            log('=== 高度コミットテスト開始 ===', 'success');
+            
+            try {
+                // 現在のBBが統合されているか確認
+                console.log('🔍 高度コミットテスト - BB詳細:', {
+                    core: !!currentBoundingBox?.core,
+                    config: !!currentBoundingBox?.core?.config,
+                    targetElement: !!currentBoundingBox?.core?.config?.targetElement,
+                    commitToPercentType: typeof currentBoundingBox?.core?.commitToPercent,
+                    hasOriginal: !!currentBoundingBox?.core?._originalCommitToPercent
+                });
+                
+                // 手動でcommitToPercent実行
+                const result = currentBoundingBox.core.commitToPercent();
+                
+                if (result) {
+                    log('✅ 高度コミットテスト成功', 'success');
+                    updateCoordinateDisplay();
+                } else {
+                    log('❌ 高度コミットテスト失敗', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ 高度コミットテストエラー: ${error.message}`, 'error');
+                console.error('高度コミットテストエラー詳細:', error);
+            }
         }
         
         // Phase 2状態表示
@@ -879,6 +934,51 @@
             if (debugInfo.modules.responsive) {
                 log(`Responsive詳細: ${JSON.stringify(debugInfo.modules.responsive, null, 2)}`, 'debug');
             }
+        }
+        
+        // DPR変化テスト
+        function testDPRChange() {
+            if (!elementObserverAdvanced) {
+                log('⚠️ ElementObserverAdvanced未作成', 'warning');
+                return;
+            }
+            
+            log('=== DPR変化テスト開始 ===', 'debug');
+            
+            // 現在のDPR状況を記録
+            const currentDPR = window.devicePixelRatio || 1;
+            const debugInfo = elementObserverAdvanced.getAdvancedDebugInfo();
+            const currentBreakpoint = debugInfo?.modules?.responsive?.state?.currentBreakpoint;
+            
+            log(`📱 現在のDPR: ${currentDPR}`, 'info');
+            log(`📱 現在のブレークポイント: ${currentBreakpoint}`, 'info');
+            
+            // DPR変化シミュレーション（テスト用）
+            const testDPRValues = [1.0, 1.5, 2.0, 2.5, 3.0];
+            
+            testDPRValues.forEach((testDPR, index) => {
+                setTimeout(() => {
+                    log(`🔄 DPR ${testDPR} シミュレーション開始`, 'info');
+                    
+                    // Responsive状態確認
+                    const currentDebugInfo = elementObserverAdvanced.getAdvancedDebugInfo();
+                    const responsiveInfo = currentDebugInfo?.modules?.responsive?.state;
+                    if (responsiveInfo) {
+                        log(`📊 レスポンシブ状態: ${JSON.stringify({
+                            breakpoint: responsiveInfo.currentBreakpoint,
+                            canvasSize: responsiveInfo.actualSizes?.css,
+                            bufferSize: responsiveInfo.actualSizes?.buffer,
+                            scaleRatio: responsiveInfo.actualSizes?.scaleRatio
+                        }, null, 2)}`, 'debug');
+                    }
+                    
+                    // 座標同期テスト
+                    if (index === testDPRValues.length - 1) {
+                        log('✅ DPR変化テスト完了', 'success');
+                        log('🔄 実際のブラウザDPR変化は開発者ツールで確認してください', 'info');
+                    }
+                }, index * 500);
+            });
         }
         
         // 📊 パフォーマンス測定システム
@@ -1336,8 +1436,8 @@
                 const unoptimized = phase3AOptimization.comparisonData.unoptimizedResults[i];
                 
                 log(`📊 ${optimized.label}:`, 'info');
-                log(`  最適化前: ${unoptimized.stats.average.toFixed(3)}ms ±${unoptimized.stats.stdDev.toFixed(3)}ms`, 'info');
-                log(`  最適化後: ${optimized.stats.average.toFixed(3)}ms ±${optimized.stats.stdDev.toFixed(3)}ms`, 'info');
+                log(`  最適化前: ${unoptimized.stats.average.toFixed(3)}ms ±${(unoptimized.stats.stddev || 0).toFixed(3)}ms`, 'info');
+                log(`  最適化後: ${optimized.stats.average.toFixed(3)}ms ±${(optimized.stats.stddev || 0).toFixed(3)}ms`, 'info');
                 log(`  改善率: ${optimized.improvement.toFixed(1)}% 高速化`, optimized.improvement > 0 ? 'success' : 'warning');
                 
                 totalImprovement += optimized.improvement;

@@ -695,13 +695,24 @@ class ElementObserverAdvanced extends ElementObserver {
         }
         
         try {
+            // バウンディングボックス詳細確認
+            console.log('🔍 integratePureBoundingBox boundingBox詳細:', {
+                boundingBox: !!boundingBox,
+                core: !!boundingBox?.core,
+                coreConfig: !!boundingBox?.core?.config,
+                targetElement: !!boundingBox?.core?.config?.targetElement,
+                targetElementTag: boundingBox?.core?.config?.targetElement?.tagName,
+                targetElementId: boundingBox?.core?.config?.targetElement?.id,
+                originalCommitToPercent: typeof boundingBox?.core?.commitToPercent
+            });
+            
             // commitToPercent高度版に置き換え
             boundingBox.core._originalCommitToPercent = boundingBox.core.commitToPercent;
-            boundingBox.core.commitToPercent = this.advancedCommitToPercent.bind(this, boundingBox);
+            boundingBox.core.commitToPercent = () => this.advancedCommitToPercent(boundingBox);
             
             // enterEditingMode高度版に置き換え  
             boundingBox.core._originalEnterEditingMode = boundingBox.core.enterEditingMode;
-            boundingBox.core.enterEditingMode = this.advancedEnterEditingMode.bind(this, boundingBox);
+            boundingBox.core.enterEditingMode = () => this.advancedEnterEditingMode(boundingBox);
             
             console.log('✅ PureBoundingBox高度統合完了');
             return true;
@@ -718,8 +729,30 @@ class ElementObserverAdvanced extends ElementObserver {
     advancedCommitToPercent(boundingBox) {
         console.log('🌊 ElementObserver Phase 2高度版commitToPercent開始');
         
+        // バウンディングボックス設定確認
+        console.log('🔍 advancedCommitToPercent boundingBox設定:', {
+            boundingBox: !!boundingBox,
+            boundingBoxCore: !!boundingBox?.core,
+            boundingBoxConfig: !!boundingBox?.core?.config,
+            targetElement: !!boundingBox?.core?.config?.targetElement,
+            targetElementTag: boundingBox?.core?.config?.targetElement?.tagName,
+            targetElementId: boundingBox?.core?.config?.targetElement?.id,
+            nodeId: boundingBox?.core?.config?.nodeId
+        });
+        
+        // 必要な設定確認
+        if (!boundingBox || !boundingBox.core || !boundingBox.core.config || !boundingBox.core.config.targetElement) {
+            console.error('❌ advancedCommitToPercent: boundingBox設定が不正', {
+                boundingBox: !!boundingBox,
+                core: !!boundingBox?.core,
+                config: !!boundingBox?.core?.config,
+                targetElement: !!boundingBox?.core?.config?.targetElement
+            });
+            return false;
+        }
+        
         // Phase 1安全性チェック
-        const safetyCheck = this.isSafeForCoordinateSwap(boundingBox.config.targetElement);
+        const safetyCheck = this.isSafeForCoordinateSwap(boundingBox.core.config.targetElement);
         if (!safetyCheck.safe) {
             console.warn('⚠️ Phase 2座標スワップ不安全:', safetyCheck.reason);
             return false;
