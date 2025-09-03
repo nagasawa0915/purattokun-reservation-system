@@ -277,6 +277,14 @@
         <button class="btn danger" id="reset-all">全リセット</button>
       </div>
 
+      <!-- 🔧 デバッグ機能（iframeから移動） -->
+      <div class="control-group">
+        <h3>🔧 デバッグ機能</h3>
+        <button class="btn" id="debug-info-btn">💡 デバッグ情報表示</button>
+        <button class="btn" id="clear-log-btn">🗑️ ログクリア</button>
+        <button class="btn" id="console-debug">🖥️ コンソールログ</button>
+      </div>
+
       <!-- 🎯 CanvasResizeController マイクロモジュール統合 -->
       <div class="control-group canvas-resize-module">
         <h3>🎛️ Canvas制御システム（マイクロモジュール）</h3>
@@ -1756,9 +1764,7 @@
             case 'scaleReset':
               this.handleScaleReset(data);
               break;
-            case 'naturalRatioDetect':
-              this.handleNaturalRatio(data);
-              break;
+            // naturalRatioDetect機能は削除済み
 
             // 位置制御
             case 'positionChanged':
@@ -1771,22 +1777,7 @@
               this.handleCenterCharacter(data);
               break;
 
-            // その他の機能
-            case 'detectBounds':
-              this.handleDetectBounds();
-              break;
-            case 'applyOptimal':
-              this.handleApplyOptimal();
-              break;
-            case 'testMedium':
-              this.handleTestMedium();
-              break;
-            case 'debugInfo':
-              this.handleDebugInfo();
-              break;
-            case 'clearLog':
-              this.handleClearLog();
-              break;
+            // 削除済み機能: detectBounds, applyOptimal, testMedium, debugInfo, clearLog
 
             // UI状態管理
             case 'uiReady':
@@ -1844,10 +1835,7 @@
           this.log('🔄 スケールを理想比率にリセット');
         }
 
-        handleNaturalRatio(data) {
-          this.handleScaleChange(data);
-          this.log('💡 自然な比率を適用');
-        }
+        // handleNaturalRatio機能は削除済み
 
         // 位置制御
         handlePositionChange(data) {
@@ -1872,36 +1860,22 @@
           this.log('🎯 キャラクターを中央に配置');
         }
 
-        // その他機能
-        handleDetectBounds() {
-          const integration = window.nezumiIntegration;
-          if (integration.detectOptimalCanvasSize) {
-            integration.detectOptimalCanvasSize();
-          }
-          this.log('🎯 境界検出テスト実行');
-        }
-
-        handleApplyOptimal() {
-          const integration = window.nezumiIntegration;
-          if (integration.calculateOptimalCanvasSize) {
-            integration.calculateOptimalCanvasSize();
-          }
-          this.log('⚡ 最適サイズ適用実行');
-        }
-
-        handleTestMedium() {
-          const integration = window.nezumiIntegration;
-          if (integration.changeCanvasDisplaySize) {
-            integration.changeCanvasDisplaySize(400, 400);
-          }
-          this.log('🧪 中サイズ表示テスト実行');
-        }
-
+        // 削除済み機能のハンドラー
+        // handleDetectBounds, handleApplyOptimal, handleTestMedium は削除
+        
+        // 🔧 デバッグ機能をメインHTMLに移動
         handleDebugInfo() {
           const integration = window.nezumiIntegration;
-          if (integration.showDebugInfo) {
-            integration.showDebugInfo();
+          console.log('🔍 デバッグ情報:');
+          console.log('Canvas:', integration.canvas);
+          console.log('SpineRenderer:', integration.spineRenderer);
+          console.log('Skeleton:', integration.spineRenderer?.skeleton);
+          if (integration.spineRenderer?.skeleton) {
+            const skeleton = integration.spineRenderer.skeleton;
+            console.log(`位置: x=${skeleton.x}, y=${skeleton.y}`);
+            console.log(`スケール: scaleX=${skeleton.scaleX}, scaleY=${skeleton.scaleY}`);
           }
+          this.log('🔍 デバッグ情報をコンソールに出力');
         }
 
         handleClearLog() {
@@ -1909,6 +1883,7 @@
           if (logPanel) {
             logPanel.innerHTML = '<div style="color: #ffd700; margin-bottom: 10px">📝 システムログ</div>';
           }
+          console.clear();
           this.log('🗑️ ログクリア完了');
         }
 
@@ -1936,8 +1911,8 @@
             canvasSize: integration.canvas ? Math.min(integration.canvas.width, integration.canvas.height) : 800,
             scaleX: integration.spineRenderer?.skeleton?.scaleX || 1.35,
             scaleY: integration.spineRenderer?.skeleton?.scaleY || 1.0,
-            positionX: integration.spineRenderer?.skeleton?.x || 400,
-            positionY: integration.spineRenderer?.skeleton?.y || 200
+            positionX: integration.spineRenderer?.skeleton?.x || 0,
+            positionY: integration.spineRenderer?.skeleton?.y || 0
           };
 
           this.sendToIframe('updateUIState', state);
@@ -1990,6 +1965,54 @@
             window.nezumiIntegration.showDebugInfo();
           }
         };
+
+        // 🔧 デバッグボタンのイベントハンドラーを設定
+        const debugInfoBtn = document.getElementById('debug-info-btn');
+        const clearLogBtn = document.getElementById('clear-log-btn');
+        const consoleDebugBtn = document.getElementById('console-debug');
+
+        if (debugInfoBtn) {
+          debugInfoBtn.onclick = () => {
+            if (window.canvasResizeHandler) {
+              window.canvasResizeHandler.handleDebugInfo();
+            }
+          };
+        }
+
+        if (clearLogBtn) {
+          clearLogBtn.onclick = () => {
+            if (window.canvasResizeHandler) {
+              window.canvasResizeHandler.handleClearLog();
+            }
+          };
+        }
+
+        if (consoleDebugBtn) {
+          consoleDebugBtn.onclick = () => {
+            console.log('🖥️ システム状態:');
+            console.log('- nezumiIntegration:', window.nezumiIntegration);
+            console.log('- canvasResizeHandler:', window.canvasResizeHandler);
+            if (window.nezumiIntegration) {
+              const integration = window.nezumiIntegration;
+              console.log('- canvas:', integration.canvas);
+              console.log('- spineRenderer:', integration.spineRenderer);
+              console.log('- boundingBox:', integration.boundingBox);
+              if (integration.spineRenderer?.skeleton) {
+                console.log('- skeleton position:', {
+                  x: integration.spineRenderer.skeleton.x,
+                  y: integration.spineRenderer.skeleton.y
+                });
+                console.log('- skeleton scale:', {
+                  x: integration.spineRenderer.skeleton.scaleX,
+                  y: integration.spineRenderer.skeleton.scaleY
+                });
+              }
+            }
+            if (window.canvasResizeHandler) {
+              window.canvasResizeHandler.log('🖥️ コンソールログ出力完了');
+            }
+          };
+        }
       });
     </script>
   </body>

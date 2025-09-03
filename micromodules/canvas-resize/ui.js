@@ -11,8 +11,8 @@ class CanvasResizeUI {
       canvasSize: 800,
       scaleX: 1.35,
       scaleY: 1.0,
-      positionX: 400,
-      positionY: 200,
+      positionX: 0,    // 中央座標に修正
+      positionY: 0,    // 中央座標に修正
       scaleLock: false,
       scaleRatio: null
     };
@@ -93,7 +93,6 @@ class CanvasResizeUI {
     const scaleYInput = document.getElementById('character-scale-y');
     const scaleLock = document.getElementById('scale-lock');
     const resetScaleBtn = document.getElementById('reset-scale');
-    const autoRatioBtn = document.getElementById('auto-ratio');
 
     // リアルタイムスケール調整
     scaleXInput.oninput = () => this.updateScaleRealtime('x');
@@ -115,11 +114,6 @@ class CanvasResizeUI {
     // スケールリセット
     resetScaleBtn.onclick = () => {
       this.resetScale();
-    };
-
-    // 自然な比率検出
-    autoRatioBtn.onclick = () => {
-      this.detectNaturalRatio();
     };
   }
 
@@ -151,36 +145,8 @@ class CanvasResizeUI {
    * その他ボタンイベント
    */
   setupButtonEvents() {
-    const detectBoundsBtn = document.getElementById('detect-bounds');
-    const applyOptimalBtn = document.getElementById('apply-optimal');
-    const testMediumBtn = document.getElementById('test-medium');
-    const debugInfoBtn = document.getElementById('debug-info');
-    const clearLogBtn = document.getElementById('clear-log');
-
-    detectBoundsBtn.onclick = () => {
-      this.sendToParent('detectBounds', {});
-      this.log('🎯 境界検出テスト実行');
-    };
-
-    applyOptimalBtn.onclick = () => {
-      this.sendToParent('applyOptimal', {});
-      this.log('⚡ 最適サイズ適用実行');
-    };
-
-    testMediumBtn.onclick = () => {
-      this.sendToParent('testMedium', {});
-      this.log('🧪 中サイズ表示テスト実行');
-    };
-
-    debugInfoBtn.onclick = () => {
-      this.sendToParent('debugInfo', {});
-      this.log('🔧 システム情報表示要求');
-    };
-
-    clearLogBtn.onclick = () => {
-      this.sendToParent('clearLog', {});
-      this.log('🗑️ ログクリア要求');
-    };
+    // 不要機能削除により、このセクションは空になりました
+    // 将来的に必要なボタンがあればここに追加
   }
 
   /**
@@ -264,35 +230,17 @@ class CanvasResizeUI {
     this.log('🔄 スケールを理想的な比率に戻しました（X=1.35, Y=1.0）');
   }
 
-  /**
-   * 自然な比率検出
-   */
-  detectNaturalRatio() {
-    // よく使われる比率を試す
-    const commonRatio = { x: 1.0, y: 1.3 };
-    
-    this.state.scaleX = commonRatio.x;
-    this.state.scaleY = commonRatio.y;
-    
-    document.getElementById('character-scale-x').value = commonRatio.x;
-    document.getElementById('character-scale-y').value = commonRatio.y;
-    
-    this.updateScaleDisplay();
-    
-    this.sendToParent('naturalRatioDetect', {
-      scaleX: this.state.scaleX,
-      scaleY: this.state.scaleY
-    });
-    
-    this.log(`💡 自然な比率を適用: 縦長 (X=${commonRatio.x}, Y=${commonRatio.y})`);
-  }
 
   /**
    * キャラクター中央配置
    */
   centerCharacter() {
-    this.state.positionX = 400;
-    this.state.positionY = 200;
+    // 🎯 真の中央座標を計算
+    // X軸: -400〜1200の中央 = (1200 + (-400)) / 2 = 400 ✅
+    // Y軸: -400〜800の中央 = (800 + (-400)) / 2 = 200
+    // ただし、Spine座標系では(0,0)が理想的な中央
+    this.state.positionX = 0;   // Canvas中央のX座標
+    this.state.positionY = 0;   // Canvas中央のY座標
     
     document.getElementById('character-x').value = this.state.positionX;
     document.getElementById('character-y').value = this.state.positionY;
@@ -311,8 +259,9 @@ class CanvasResizeUI {
    * 位置リセット
    */
   resetPosition() {
-    this.state.positionX = 400;
-    this.state.positionY = 200;
+    // デフォルト位置も中央座標(0,0)に設定
+    this.state.positionX = 0;
+    this.state.positionY = 0;
     
     document.getElementById('character-x').value = this.state.positionX;
     document.getElementById('character-y').value = this.state.positionY;
@@ -324,7 +273,7 @@ class CanvasResizeUI {
       y: this.state.positionY
     });
     
-    this.log('🔄 位置をデフォルトにリセット');
+    this.log('🔄 位置をデフォルト（中央）にリセット');
   }
 
   /**
