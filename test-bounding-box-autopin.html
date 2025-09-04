@@ -314,11 +314,8 @@
         <!-- テスト用Hero Section -->
         <div class="hero-section" id="test-hero">
             <div class="background-image" id="background-element"></div>
-            <div class="spine-character" id="test-character">
-                🎮<br>
-                Spine<br>
-                Character
-            </div>
+            <!-- Spineキャラクター（マニュアル準拠実装） -->
+            <canvas id="spine-canvas" width="400" height="400" style="position: absolute; left: 30%; top: 50%; transform: translate(-50%, -50%); z-index: 200;"></canvas>
         </div>
         
         <!-- 追加の画像要素 -->
@@ -656,17 +653,12 @@
             testBasicBoundingBox();
         }
 
-        // イベントリスナー設定
+        // イベントリスナー設定（マニュアル準拠版）
         function setupEventListeners() {
-            // 初期化時はDOM要素を取得
-            const initialTestCharacter = document.getElementById('test-character');
-            if (initialTestCharacter) {
-                testCharacter = initialTestCharacter;
-                log(`✅ 初期イベントリスナー設定: ${testCharacter.id}`, 'info');
-                setupCharacterClickListener(testCharacter);
-            } else {
-                log('⚠️ 初期testCharacter要素が見つかりません - Spine読み込み後に設定されます', 'warning');
-            }
+            // Spineキャラクター読み込み後にtestCharacterが設定されるため、
+            // 初期化時は基本的なイベントリスナーのみ設定
+            log('⚠️ testCharacterはSpine読み込み後に設定されます', 'info');
+            log('💡 「📥 Spine読み込み」ボタンをクリックしてSpineキャラクターを読み込んでください', 'info');
             
             // 保存完了イベントの監視
             document.addEventListener('boundingBoxSaveCompleted', (event) => {
@@ -1150,44 +1142,29 @@
             }
         }
         
-        // Spineキャラクター読み込み
+        // マニュアル準拠: StableSpineRendererでSpineキャラクター実装
         async function loadSpineCharacter() {
             try {
-                log('🎮 Spineキャラクター読み込み開始', 'info');
+                log('🎮 Spineキャラクター読み込み開始（マニュアル準拠）', 'info');
                 log(`キャラクター: ${currentCharacterName}`, 'info');
                 
                 // 既存のレンダラーをクリーンアップ
                 if (spineRenderer) {
-                    spineRenderer.cleanup();
+                    if (typeof spineRenderer.cleanup === 'function') {
+                        spineRenderer.cleanup();
+                    }
                     spineRenderer = null;
                 }
                 
-                // Canvas要素を作成または取得
-                let canvas = document.getElementById('spine-canvas');
+                // Canvas要素を取得（HTML内で定義済み）
+                const canvas = document.getElementById('spine-canvas');
                 if (!canvas) {
-                    canvas = document.createElement('canvas');
-                    canvas.id = 'spine-canvas';
-                    canvas.width = 120;
-                    canvas.height = 120;
-                    canvas.className = 'spine-canvas';
-                    canvas.style.cssText = `
-                        position: absolute;
-                        left: 35%;
-                        top: 40%;
-                        transform: translate(-50%, -50%);
-                        z-index: 200;
-                        border: 2px solid #00ff00;
-                        border-radius: 4px;
-                        background: rgba(0, 0, 0, 0.1);
-                    `;
-                    
-                    // ヒーローセクションに追加
-                    const heroSection = document.getElementById('test-hero');
-                    heroSection.appendChild(canvas);
-                    
-                    log('✅ Spineキャンバス作成完了', 'success');
+                    log('❌ spine-canvas要素が見つかりません', 'error');
+                    return;
                 }
                 
+                log('✅ Canvas要素を確認', 'info');
+                log(`Canvas サイズ: ${canvas.width}×${canvas.height}px`, 'info');
                 
                 // Spine WebGL の読み込み確認
                 if (typeof spine === 'undefined') {
@@ -1201,40 +1178,39 @@
                     return;
                 }
                 
-                // StableSpineRenderer を使用してキャラクター作成
+                // マニュアル準拠: StableSpineRenderer.createForCharacter()を使用
+                log('🎯 StableSpineRenderer初期化中...（マニュアル準拠）', 'info');
+                
+                // 1行で作成・初期化（キャラクター名を指定）
                 spineRenderer = StableSpineRenderer.createForCharacter(currentCharacterName);
-                
-                // カスタムCanvas要素を設定
-                spineRenderer.canvas = canvas;
-                spineRenderer.canvasId = 'spine-canvas';
-                
-                // 初期化
                 await spineRenderer.initialize();
                 
-                // アニメーション開始（キャラクターに応じたデフォルト）
-                const defaultAnimation = currentCharacterName === 'purattokun' ? 'taiki' : 'search';
-                spineRenderer.playAnimation(defaultAnimation);
+                log(`✅ ${currentCharacterName} レンダリング成功`, 'success');
                 
-                log(`✅ ${currentCharacterName}キャラクター読み込み完了`, 'success');
-                log(`🎬 アニメーション再生: ${defaultAnimation}`, 'success');
+                // キャラクター別デフォルトアニメーション再生（マニュアル準拠）
+                if (currentCharacterName === 'purattokun') {
+                    spineRenderer.playAnimation('taiki');
+                    log('▶️ デフォルトアニメーション: taiki（purattokun用）', 'success');
+                } else if (currentCharacterName === 'nezumi') {
+                    spineRenderer.playAnimation('search');
+                    log('▶️ デフォルトアニメーション: search（nezumi用）', 'success');
+                } else {
+                    log(`⚠️ 未知のキャラクター: ${currentCharacterName}`, 'warning');
+                }
                 
-                
-                // テストキャラクター要素を非表示（Spineに切り替え）
-                testCharacter.style.display = 'none';
-                
-                // バウンディングボックス用のターゲット要素を更新
+                // Canvas要素をBB用のターゲット要素として設定
                 testCharacter = canvas;
                 
-                // 🔧 新しいcanvas要素にクリックイベントリスナーを設定
-                log(`🔧 Spine canvas (${canvas.id}) をtestCharacterとして設定`, 'info');
+                // 🔧 Canvas要素にクリックイベントリスナーを設定
+                log(`🔧 Spine canvas (${canvas.id}) をBBターゲットとして設定`, 'info');
                 setupCharacterClickListener(testCharacter);
                 
                 // 🔍 設定確認
-                log(`✅ testCharacter更新完了: ${testCharacter.id || testCharacter.tagName}`, 'success');
+                log(`✅ testCharacter設定完了: ${testCharacter.id || testCharacter.tagName}`, 'success');
                 
             } catch (error) {
                 log(`❌ Spineキャラクター読み込みエラー: ${error.message}`, 'error');
-                console.error('Spineキャラクター読み込みエラー:', error);
+                console.error('Spineキャラクター読み込みエラー詳細:', error);
             }
         }
         
