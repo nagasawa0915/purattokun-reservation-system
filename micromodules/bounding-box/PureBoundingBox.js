@@ -34,6 +34,10 @@ class PureBoundingBox {
             }
             
             this.autoPin = new window.PureBoundingBoxAutoPin(this.core, elementObserver);
+            
+            // 🎯 UIにAutoPin参照を渡す
+            this.ui.setAutoPinReference(this.autoPin);
+            
             console.log('🎯 AutoPin機能統合完了');
         } else {
             console.log('⚠️ AutoPinモジュールが見つかりません（オプション機能のため問題なし）');

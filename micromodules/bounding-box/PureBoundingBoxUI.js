@@ -190,17 +190,24 @@ class PureBoundingBoxUI {
                 return;
             }
             
-            // 自動ピンシステム初期化（ElementObserverなしでも動作）
-            this.autoPin = new window.PureBoundingBoxAutoPin(this.core, null);
+            // 🎯 修正: PureBoundingBoxで作成されるautoPinを待機
+            // UIでは独立してAutoPin作成せず、親から参照を受け取る
+            console.log('🔄 AutoPin初期化はPureBoundingBoxで実行されます');
             this.autoPinInitialized = true;
-            
-            console.log('✅ 自動ピンシステム統合完了（独立動作モード）');
             
         } catch (error) {
             console.warn('⚠️ 自動ピンシステム無効 - 基本機能のみ利用:', error.message);
             this.autoPin = null;
             this.autoPinInitialized = false;
         }
+    }
+    
+    /**
+     * 🎯 AutoPin参照の設定（PureBoundingBoxから呼び出される）
+     */
+    setAutoPinReference(autoPinInstance) {
+        this.autoPin = autoPinInstance;
+        console.log('✅ AutoPin参照をUIに設定完了:', !!autoPinInstance);
     }
     
     /**
@@ -978,10 +985,19 @@ class PureBoundingBoxUI {
             document.head.appendChild(style);
         }
         
-        // 背景要素の中央に表示
-        const targetRect = autoPinResult.pinConfig.targetElement.getBoundingClientRect();
-        pinIndicator.style.left = (targetRect.left + targetRect.width / 2 - 12) + 'px';
-        pinIndicator.style.top = (targetRect.top + targetRect.height / 2 - 12) + 'px';
+        // 安全チェック: pinConfigとtargetElementの存在を確認
+        if (!autoPinResult?.pinConfig?.targetElement) {
+            console.warn('⚠️ AutoPin フィードバック: targetElementが見つからないため、画面中央に表示');
+            // 画面中央にフォールバック表示
+            pinIndicator.style.left = '50%';
+            pinIndicator.style.top = '50%';
+            pinIndicator.style.transform = 'translate(-50%, -50%)';
+        } else {
+            // 背景要素の中央に表示
+            const targetRect = autoPinResult.pinConfig.targetElement.getBoundingClientRect();
+            pinIndicator.style.left = (targetRect.left + targetRect.width / 2 - 12) + 'px';
+            pinIndicator.style.top = (targetRect.top + targetRect.height / 2 - 12) + 'px';
+        }
         
         document.body.appendChild(pinIndicator);
         

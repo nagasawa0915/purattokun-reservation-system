@@ -11,13 +11,38 @@
 
 class PureBoundingBoxAutoPin {
     constructor(core, observer) {
+        console.log('🔍 AutoPin-Constructor-1: 初期化開始', {
+            core_exists: !!core,
+            observer_exists: !!observer,
+            observer_null: observer === null,
+            observer_undefined: observer === undefined
+        });
+        
         this.core = core;
         this.observer = observer; // ElementObserver Phase 1 instance
         this.activePins = new Map(); // nodeId -> pinConfig
         
+        console.log('🔍 AutoPin-Constructor-2: observer代入後確認', {
+            this_observer_exists: !!this.observer,
+            this_observer_null: this.observer === null,
+            this_observer_undefined: this.observer === undefined,
+            same_reference: this.observer === observer,
+            observer_type: typeof this.observer,
+            observer_constructor: this.observer ? this.observer.constructor.name : 'null/undefined'
+        });
+        
         // ElementObserver Phase 1 の基本機能確認
-        if (!this.observer || !this.observer.observe) {
-            console.warn('⚠️ ElementObserver Phase 1 が正しく初期化されていません');
+        if (!this.observer || typeof this.observer.observe !== 'function') {
+            console.warn('⚠️ AutoPin-Constructor-3: ElementObserver Phase 1 初期化時判定失敗', {
+                observer_exists: !!this.observer,
+                observe_type: this.observer ? typeof this.observer.observe : 'undefined',
+                observe_exists: this.observer ? 'observe' in this.observer : false
+            });
+        } else {
+            console.log('✅ AutoPin-Constructor-4: ElementObserver Phase 1 初期化時判定成功', {
+                observe_type: typeof this.observer.observe,
+                observer_methods: Object.getOwnPropertyNames(Object.getPrototypeOf(this.observer)).filter(name => typeof this.observer[name] === 'function')
+            });
         }
         
         // 背景検出設定
@@ -81,6 +106,13 @@ class PureBoundingBoxAutoPin {
             this.cleanupExistingPin(this.core.config.nodeId);
             
             // 4. 新しいピンの設定
+            console.log('🚀 createAutoPin呼び出し開始:', {
+                backgroundElement: backgroundElement ? this.getElementInfo(backgroundElement) : 'null',
+                spineElement: saveData.targetElement ? this.getElementInfo(saveData.targetElement) : 'null',
+                anchor: optimalAnchor,
+                bounds: saveData.bounds
+            });
+            
             const pinConfig = await this.createAutoPin({
                 targetElement: backgroundElement,
                 spineElement: saveData.targetElement,
@@ -88,8 +120,28 @@ class PureBoundingBoxAutoPin {
                 bounds: saveData.bounds
             });
             
+            console.log('📋 createAutoPin結果:', {
+                success: pinConfig?.success !== false,
+                fallbackMode: pinConfig?.fallbackMode,
+                hasId: !!pinConfig?.id,
+                pinConfig: pinConfig
+            });
+            
             // 5. ピン情報の記録
-            this.activePins.set(this.core.config.nodeId, pinConfig);
+            console.log('📝 ピン情報記録処理:', {
+                nodeId: this.core.config.nodeId,
+                pinConfig: pinConfig,
+                pinConfigValid: !!pinConfig,
+                pinConfigKeys: pinConfig ? Object.keys(pinConfig) : 'null/undefined'
+            });
+            
+            if (pinConfig && pinConfig.id) {
+                this.activePins.set(this.core.config.nodeId, pinConfig);
+                console.log('✅ アクティブピン登録完了:', this.core.config.nodeId);
+                console.log('📊 現在のアクティブピン数:', this.activePins.size);
+            } else {
+                console.error('❌ 無効なpinConfigのため登録スキップ:', pinConfig);
+            }
             
             // 6. 永続化
             this.saveActivePins();
@@ -408,22 +460,94 @@ class PureBoundingBoxAutoPin {
         
         const startTime = performance.now();
         
+        console.log('🔍 Phase 1-1: createAutoPin実行開始');
+        console.log('🔍 Phase 1-2: config検証', {
+            hasTargetElement: !!config.targetElement,
+            hasSpineElement: !!config.spineElement,
+            hasAnchor: !!config.anchor,
+            hasBounds: !!config.bounds,
+            configKeys: Object.keys(config)
+        });
+        
         try {
+            console.log('🔍 Phase 1-3: ElementObserver取得開始');
+            
+            // this.observer参照一貫性の詳細確認
+            console.log('🔍 Phase 1-3.1: this.observer詳細状況', {
+                this_observer_exists: !!this.observer,
+                this_observer_null: this.observer === null,
+                this_observer_undefined: this.observer === undefined,
+                this_observer_type: typeof this.observer,
+                this_observer_constructor: this.observer ? this.observer.constructor.name : 'null/undefined',
+                this_observer_id: this.observer ? this.observer.toString() : 'null/undefined'
+            });
+            
             // ElementObserver Phase 1 の基本チェック
             const observer = this.observer;
             
-            if (!observer || !observer.observe) {
-                console.warn('🚨 ElementObserver Phase 1 が利用できません。基本モードで動作します。');
-                return {
+            console.log('🔍 Phase 1-3.2: observer代入後参照確認', {
+                observer_same_reference: observer === this.observer,
+                observer_exists: !!observer,
+                observer_null: observer === null,
+                observer_undefined: observer === undefined
+            });
+            
+            console.log('🔍 Phase 1-4: observer基本情報', {
+                observer_exists: !!observer,
+                observer_null: observer === null,
+                observer_undefined: observer === undefined,
+                observe_exists: observer ? 'observe' in observer : 'no-observer',
+                observe_type: observer ? typeof observer.observe : 'undefined'
+            });
+            
+            if (!observer || typeof observer.observe !== 'function') {
+                console.warn('🚨 Phase 1-5: ElementObserver判定失敗 - 基本モードに切り替え', {
+                    observer_exists: !!observer,
+                    observe_type: observer ? typeof observer.observe : 'undefined',
+                    observer_methods: observer ? Object.getOwnPropertyNames(Object.getPrototypeOf(observer)) : [],
+                    observer_constructor: observer ? observer.constructor.name : 'null/undefined'
+                });
+                
+                const fallbackResult = {
                     success: false,
                     fallbackMode: true,
                     message: 'ElementObserver Phase 1が利用できないため、自動ピンは無効です',
                     config: config
                 };
+                
+                console.log('🔍 Phase 1-6: フォールバック結果返却', fallbackResult);
+                return fallbackResult;
+            }
+            
+            console.log('✅ Phase 1-7: ElementObserver判定成功 - 通常処理継続');
+            
+            // ElementObserverCore依存関係の詳細確認
+            console.log('🔍 Phase 2-1: ElementObserverCore依存関係確認開始');
+            console.log('🔍 Phase 2-2: ElementObserverCore状況', {
+                ElementObserverCore_exists: typeof window.ElementObserverCore !== 'undefined',
+                ElementObserverCore_type: typeof window.ElementObserverCore,
+                ElementObserverCore_constructor: window.ElementObserverCore ? window.ElementObserverCore.name : 'undefined'
+            });
+            
+            if (observer.core) {
+                console.log('🔍 Phase 2-3: observer.core詳細', {
+                    core_exists: !!observer.core,
+                    core_constructor: observer.core.constructor.name,
+                    core_observe_exists: 'observe' in observer.core,
+                    core_observe_type: typeof observer.core.observe
+                });
+            } else {
+                console.log('⚠️ Phase 2-4: observer.core が存在しません');
             }
             
             // Phase 1の基本observe機能を使用した自動ピン実装
             console.log('🎯 ElementObserver Phase 1 基本監視開始');
+            console.log('🔍 ElementObserver詳細確認:', {
+                observer_exists: !!observer,
+                observe_function: typeof observer.observe,
+                observer_constructor: observer.constructor.name,
+                observer_methods: Object.getOwnPropertyNames(Object.getPrototypeOf(observer)).filter(name => typeof observer[name] === 'function')
+            });
             
             // 背景要素の監視設定
             const backgroundElement = config.targetElement;
@@ -432,34 +556,54 @@ class PureBoundingBoxAutoPin {
             // 内部アンカーポイント計算システム
             const anchorCalculations = this.createAnchorCalculationSystem(config.anchor);
             
-            // Phase 1のobserve機能でバックグラウンド要素を監視
-            const unobservePin = observer.observe(backgroundElement, (rect, changeType) => {
-                try {
-                    console.log('📐 背景要素変化検出:', {
-                        changeType,
-                        size: `${rect.width}x${rect.height}`,
-                        anchor: config.anchor
-                    });
-                    
-                    // アンカーベース位置計算
-                    const anchorPosition = anchorCalculations.calculate(rect);
-                    
-                    // Spine要素位置の更新
-                    this.applyAnchorPosition(spineElement, anchorPosition, config.bounds);
-                    
-                } catch (error) {
-                    console.error('❌ ピン位置更新エラー:', error);
-                }
-            }, {
-                throttle: true,
-                precision: 0.1
+            console.log('🔍 Phase 1-8: observer.observe呼び出し開始', {
+                backgroundElement: this.getElementInfo(backgroundElement),
+                spineElement: this.getElementInfo(spineElement)
             });
+            
+            // Phase 1のobserve機能でバックグラウンド要素を監視
+            let unobservePin = null;
+            try {
+                unobservePin = observer.observe(backgroundElement, (rect, changeType) => {
+                    try {
+                        console.log('📐 背景要素変化検出:', {
+                            changeType,
+                            size: `${rect.width}x${rect.height}`,
+                            anchor: config.anchor
+                        });
+                        
+                        // アンカーベース位置計算
+                        const anchorPosition = anchorCalculations.calculate(rect);
+                        
+                        // Spine要素位置の更新
+                        this.applyAnchorPosition(spineElement, anchorPosition, config.bounds);
+                        
+                    } catch (error) {
+                        console.error('❌ ピン位置更新エラー:', error);
+                    }
+                }, {
+                    throttle: true,
+                    precision: 0.1
+                });
+                
+                console.log('✅ Phase 1-9: observer.observe呼び出し成功', {
+                    unobserveFunction: typeof unobservePin,
+                    isFunction: typeof unobservePin === 'function'
+                });
+                
+            } catch (observeError) {
+                console.error('❌ Phase 1-10: observer.observe呼び出し失敗', {
+                    error: observeError.message,
+                    stack: observeError.stack
+                });
+                throw observeError;
+            }
             
             const processingTime = performance.now() - startTime;
             
-            console.log(`⚡ Phase 1自動ピン作成完了: ${processingTime.toFixed(4)}ms`);
+            console.log(`⚡ Phase 1-11: 処理時間計算完了: ${processingTime.toFixed(4)}ms`);
             
-            return {
+            const pinConfig = {
                 id: `auto-pin-phase1-${Date.now()}`,
                 anchor: config.anchor,
                 targetElement: config.targetElement,
@@ -470,19 +614,41 @@ class PureBoundingBoxAutoPin {
                 phase: 'Phase 1'
             };
             
+            console.log('✅ Phase 1-12: pinConfig作成完了', {
+                hasId: !!pinConfig.id,
+                hasUnobserve: !!pinConfig.unobserve,
+                unobserveType: typeof pinConfig.unobserve,
+                phase: pinConfig.phase,
+                processingTime: pinConfig.processingTime,
+                allKeys: Object.keys(pinConfig)
+            });
+            
+            console.log('🔍 Phase 1-13: pinConfig返却直前', pinConfig);
+            
+            return pinConfig;
+            
         } catch (error) {
-            console.error('❌ Phase 1自動ピン作成エラー:', error);
+            console.error('❌ Phase 1-14: createAutoPin実行中エラー発生', {
+                errorMessage: error.message,
+                errorStack: error.stack,
+                errorName: error.name,
+                processingTime: performance.now() - startTime
+            });
             
             // パフォーマンス統計更新（失敗）
             this.performanceMetrics.failureCount++;
             
-            return {
+            const errorResult = {
                 success: false,
                 fallbackMode: true,
                 message: 'Phase 1 ElementObserver統合でエラーが発生しました',
                 error: error.message,
                 config: config
             };
+            
+            console.log('🔍 Phase 1-15: エラー結果返却', errorResult);
+            
+            return errorResult;
         }
     }
     
@@ -503,14 +669,44 @@ class PureBoundingBoxAutoPin {
         };
         
         const anchorCoords = anchorMap[anchor] || anchorMap['MC'];
+        let initialAnchorPosition = null;
         
         return {
             calculate: (rect) => {
-                return {
+                const currentAnchorPosition = {
                     x: rect.left + (rect.width * anchorCoords.x),
-                    y: rect.top + (rect.height * anchorCoords.y),
+                    y: rect.top + (rect.height * anchorCoords.y)
+                };
+                
+                // 初回時は基準位置として記録
+                if (!initialAnchorPosition) {
+                    initialAnchorPosition = { ...currentAnchorPosition };
+                    console.log('🎯 初期アンカー位置を記録:', initialAnchorPosition);
+                    return {
+                        x: 0, // 初回は移動なし
+                        y: 0,
+                        anchor: anchor,
+                        rect: rect,
+                        isInitial: true
+                    };
+                }
+                
+                // 相対移動量を計算
+                const deltaX = currentAnchorPosition.x - initialAnchorPosition.x;
+                const deltaY = currentAnchorPosition.y - initialAnchorPosition.y;
+                
+                console.log('🔄 相対移動計算:', {
+                    initial: initialAnchorPosition,
+                    current: currentAnchorPosition,
+                    delta: { x: deltaX, y: deltaY }
+                });
+                
+                return {
+                    x: deltaX,
+                    y: deltaY,
                     anchor: anchor,
-                    rect: rect
+                    rect: rect,
+                    isInitial: false
                 };
             }
         };
@@ -525,24 +721,66 @@ class PureBoundingBoxAutoPin {
             return;
         }
         
+        // 初回時は位置変更なし
+        if (anchorPosition.isInitial) {
+            console.log('🎯 初回AutoPin設定 - 位置変更スキップ');
+            return;
+        }
+        
         try {
-            // スケール情報の取得
-            const scaleX = bounds?.scaleX ? parseFloat(bounds.scaleX) : 1.0;
-            const scaleY = bounds?.scaleY ? parseFloat(bounds.scaleY) : 1.0;
+            // 相対移動が微小な場合はスキップ（ノイズ除去）
+            const threshold = 1.0;
+            if (Math.abs(anchorPosition.x) < threshold && Math.abs(anchorPosition.y) < threshold) {
+                return;
+            }
             
-            // CSS Transform による位置・スケール適用
-            const transformStyle = `translate(${anchorPosition.x}px, ${anchorPosition.y}px) scale(${scaleX}, ${scaleY})`;
-            spineElement.style.transform = transformStyle;
-            spineElement.style.transformOrigin = 'center center';
-            
-            console.log('🎯 Spine要素位置更新:', {
-                position: `${anchorPosition.x.toFixed(1)}, ${anchorPosition.y.toFixed(1)}`,
-                scale: `${scaleX}, ${scaleY}`,
+            console.log('🔄 相対移動適用開始:', {
+                deltaX: anchorPosition.x.toFixed(1),
+                deltaY: anchorPosition.y.toFixed(1),
                 anchor: anchorPosition.anchor
             });
             
+            // 🎯 既存の位置システムとの連携を優先
+            // CSS Transformを直接変更せず、既存システム経由で位置調整
+            
+            // CanvasResizeUI経由での位置調整を試行
+            if (typeof window.postMessage === 'function') {
+                window.postMessage({
+                    type: 'AUTOPIN_POSITION_ADJUSTMENT',
+                    deltaX: anchorPosition.x,
+                    deltaY: anchorPosition.y,
+                    elementId: spineElement.id,
+                    anchor: anchorPosition.anchor
+                }, '*');
+                
+                console.log('📡 AutoPin位置調整メッセージ送信完了');
+            }
+            
+            // フォールバック: 最小限のCSS Transform調整
+            const currentTransform = spineElement.style.transform || '';
+            if (currentTransform.includes('translate')) {
+                // 既存のtranslate値を取得して相対調整
+                const translateMatch = currentTransform.match(/translate\(([^)]+)\)/);
+                if (translateMatch) {
+                    const [currentX, currentY] = translateMatch[1].split(',').map(v => parseFloat(v) || 0);
+                    const newX = currentX + anchorPosition.x;
+                    const newY = currentY + anchorPosition.y;
+                    
+                    const newTransform = currentTransform.replace(
+                        /translate\([^)]+\)/, 
+                        `translate(${newX}px, ${newY}px)`
+                    );
+                    spineElement.style.transform = newTransform;
+                    
+                    console.log('🎯 CSS Transform相対調整適用:', {
+                        from: `${currentX}, ${currentY}`,
+                        to: `${newX}, ${newY}`
+                    });
+                }
+            }
+            
         } catch (error) {
-            console.error('❌ Spine位置適用エラー:', error);
+            console.error('❌ Spine相対位置適用エラー:', error);
         }
     }
     
