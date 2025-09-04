@@ -482,6 +482,11 @@
                 🏁 Phase 3: 完全移行テスト
             </button>
             
+            <!-- 2段階UI統合テスト -->
+            <button class="control-button primary-button" onclick="testTwoStageUI()" style="background: linear-gradient(135deg, #ff6b35, #f7931e);">
+                🎯 2段階UI統合テスト
+            </button>
+            
             <button class="control-button secondary-button" onclick="testSystemSwitching()">
                 ⚖️ システム切り替えテスト
             </button>
@@ -611,9 +616,9 @@
     <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
-    <!-- 🎯 2段階ピン設定システム -->
-    <script src="micromodules/bounding-box/ElementHighlighter.js"></script>
-    <script src="micromodules/bounding-box/ElementSelector.js"></script>
+    <!-- 🎯 2段階ピン設定システム (旧版 - 新版に統合済み) -->
+    <!-- <script src="micromodules/bounding-box/ElementHighlighter.js"></script> -->
+    <!-- <script src="micromodules/bounding-box/ElementSelector.js"></script> -->
     <script src="micromodules/bounding-box/RelativeCoordinator.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxAutoPin.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
@@ -625,6 +630,11 @@
     
     <!-- 🔄 Phase 2: 既存システム統合アダプター -->
     <script src="micromodules/bounding-box/ElementObserverAdapter.js"></script>
+    
+    <!-- 🎯 2段階UI統合システム -->
+    <script src="micromodules/element-selector/ElementHighlighter.js"></script>
+    <script src="micromodules/element-selector/ElementSelector.js"></script>
+    <script src="micromodules/element-selector/TwoStageSelector.js"></script>
 
     <script>
         // グローバル変数
@@ -2534,6 +2544,91 @@
         window.getCurrentBB = () => currentBoundingBox;
         window.getSpineRenderer = () => spineRenderer;
         window.logTest = (message, type) => log(message, type);
+        
+        /**
+         * 🎯 2段階UI統合テスト
+         */
+        window.testTwoStageUI = function() {
+            console.log('🎯 2段階UI統合テスト開始');
+            
+            // モジュール利用可能性チェック
+            const availableModules = {
+                ElementHighlighter: typeof window.ElementHighlighter !== 'undefined',
+                ElementSelector: typeof window.ElementSelector !== 'undefined',
+                TwoStageSelector: typeof window.TwoStageSelector !== 'undefined'
+            };
+            
+            console.log('📊 2段階UIモジュール利用可能性:', availableModules);
+            
+            if (!availableModules.ElementHighlighter || !availableModules.ElementSelector || !availableModules.TwoStageSelector) {
+                log('❌ 必須モジュールが不足しています', 'error');
+                console.error('不足モジュール:', availableModules);
+                return;
+            }
+            
+            log('✅ 全モジュール読み込み確認完了', 'success');
+            
+            // TwoStageSelector初期化
+            let twoStageSelector;
+            try {
+                twoStageSelector = new TwoStageSelector();
+                log('✅ TwoStageSelector初期化完了', 'success');
+            } catch (error) {
+                log(`❌ TwoStageSelector初期化失敗: ${error.message}`, 'error');
+                console.error('TwoStageSelector初期化エラー:', error);
+                return;
+            }
+            
+            // デバッグ情報表示
+            if (twoStageSelector.config.debugMode) {
+                const debugInfo = twoStageSelector.showDebugInfo();
+                console.log('🔧 デバッグ情報:', debugInfo);
+            }
+            
+            log('🎯 2段階ピン設定プロセス開始準備完了', 'info');
+            console.log('👆 F12風要素選択を開始します。任意の要素にマウスカーソルを移動してクリックしてください。');
+            
+            // 2段階プロセス開始
+            twoStageSelector.startTwoStageProcess(
+                // 完了コールバック
+                (pinRequest, selectedElement) => {
+                    log('✅ 2段階ピン設定完了!', 'success');
+                    console.log('🎯 ピン設定結果:', pinRequest);
+                    console.log('📍 対象要素:', selectedElement ? {
+                        tagName: selectedElement.tagName,
+                        id: selectedElement.id,
+                        className: selectedElement.className
+                    } : 'null (要素情報取得失敗)');
+                    
+                    // 結果をユーザーに表示
+                    const anchorPoint = pinRequest.anchorPoints[0];
+                    log(`📍 ピン配置: ${anchorPoint.id} + オフセット(${anchorPoint.offsetX}, ${anchorPoint.offsetY})`, 'success');
+                    
+                    // 効率的ピンシステムとの統合確認
+                    if (window.ElementCalculator && window.PinRenderer) {
+                        log('🚀 効率的ピンシステムv2.0で描画済み', 'success');
+                    } else {
+                        log('⚠️ 効率的ピンシステムv2.0は利用できませんが、フォールバック表示成功', 'warning');
+                    }
+                },
+                
+                // キャンセルコールバック
+                () => {
+                    log('❌ 2段階ピン設定がキャンセルされました', 'warning');
+                    console.log('🔄 プロセス中断 - 再度テストボタンを押すことで再開可能です');
+                }
+            );
+            
+            // テスト完了メッセージ（非同期処理のため即座に表示）
+            setTimeout(() => {
+                console.log('📋 2段階UI統合テスト概要:');
+                console.log('  Stage 1: F12風要素選択システム - マウス移動でハイライト、クリックで選択');
+                console.log('  Stage 2: 位置調整インターフェース - アンカーポイント選択、ドラッグ&ドロップ調整');
+                console.log('  統合: 効率的ピンシステムv2.0との完全統合');
+                console.log('  操作: ESCキーでキャンセル、Enterキーで確定');
+                console.log('🎯 要素を選択して位置調整を体験してください！');
+            }, 500);
+        };
     </script>
 </body>
 </html>

@@ -40,9 +40,9 @@
       <!-- 横スケール -->
       <label class="control-label">
         横スケール(X): 
-        <input type="range" id="character-scale-x" min="0.3" max="3.0" step="0.05" value="1.35" 
+        <input type="range" id="character-scale-x" min="0.3" max="3.0" step="0.05" value="1.0" 
                class="range-input">
-        <input type="number" id="character-scale-x-input" min="0.3" max="3.0" step="0.05" value="1.35" 
+        <input type="number" id="character-scale-x-input" min="0.3" max="3.0" step="0.05" value="1.0" 
                class="size-input" style="width: 60px; margin-left: 5px;">
       </label>
       
@@ -56,7 +56,7 @@
       </label>
       
       <div class="button-group">
-        <button class="btn" id="reset-scale">理想比率 (X:1.35, Y:1.0)</button>
+        <button class="btn" id="reset-scale">1:1比率 (X:1.0, Y:1.0)</button>
       </div>
     </div>
 
@@ -88,6 +88,15 @@
       <p class="help-text">リアルタイム移動・中間位置から調整可能</p>
     </div>
 
+    <!-- 設定管理 -->
+    <div class="control-group">
+      <h3>💾 設定管理</h3>
+      <div class="button-group">
+        <button class="btn" id="reset-all-settings">🔄 全設定リセット</button>
+        <button class="btn" id="clear-storage">🗑️ 保存データクリア</button>
+      </div>
+      <p class="help-text">設定は自動的にブラウザに保存されます</p>
+    </div>
 
   </div>
 
