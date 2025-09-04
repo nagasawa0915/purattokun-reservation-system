@@ -230,6 +230,45 @@
             margin: 20px 0;
         }
         
+        /* メインレイアウト */
+        .main-layout-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+        
+        .left-column {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .right-sidebar {
+            width: 350px;
+            flex-shrink: 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #dee2e6;
+        }
+        
+        .right-sidebar h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        /* CanvasResizeController iframe */
+        .canvas-resize-iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+        }
+        
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -287,8 +326,12 @@
             <!-- 画像はCSS backgroundで表示 -->
         </div>
         
-        <!-- コントロールパネル -->
-        <div class="control-panel">
+        <!-- メインレイアウトコンテナ -->
+        <div class="main-layout-container">
+            <!-- 左側：メインコンテンツ -->
+            <div class="left-column">
+                <!-- コントロールパネル -->
+                <div class="control-panel">
             <button class="control-button primary-button" onclick="loadSpineCharacter()">
                 🎮 Spineキャラクター読み込み
             </button>
@@ -310,15 +353,21 @@
             <button class="control-button secondary-button" onclick="testResize()">
                 📐 リサイズテスト
             </button>
+            <button class="control-button secondary-button" onclick="testModifierKeys()">
+                🎮 修飾キーテスト
+            </button>
+            <button class="control-button secondary-button" onclick="debugBBSystem()">
+                🔍 BB診断
+            </button>
             <button class="control-button secondary-button" onclick="clearLog()">
                 🗑️ ログクリア
             </button>
             <button class="control-button secondary-button" onclick="clearOriginalBounds()">
                 📏 初期bounds削除
             </button>
-        </div>
-        
-        <!-- 操作手順ガイド -->
+                </div>
+                
+                <!-- 操作手順ガイド -->
         <div class="info-panel" style="background: #e8f4fd; border: 2px solid #0066cc;">
             <h3>📋 実験手順ガイド</h3>
             <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: start;">
@@ -392,9 +441,22 @@
             </div>
         </div>
         
-        <!-- ログ表示 -->
-        <div class="log-container" id="log-display">
-            🎯 PureBoundingBoxAutoPin 統合テストログ - 初期化中...\n
+                <!-- ログ表示 -->
+                <div class="log-container" id="log-display">
+                    🎯 PureBoundingBoxAutoPin 統合テストログ - 初期化中...\n
+                </div>
+            </div>
+            
+            <!-- 右側：サイドバー -->
+            <div class="right-sidebar">
+                <h3>🎯 Canvas Resize Controller</h3>
+                <iframe 
+                    id="canvas-resize-iframe" 
+                    class="canvas-resize-iframe" 
+                    src="./micromodules/canvas-resize/ui.html?v=1725439200"
+                    title="Canvas Resize Controller">
+                </iframe>
+            </div>
         </div>
     </div>
 
@@ -404,15 +466,10 @@
     <!-- StableSpineRenderer -->
     <script src="micromodules/spine-renderer/StableSpineRenderer.js"></script>
     
-    <!-- CanvasResizeController -->
-    <script src="micromodules/canvas-resize/CanvasResizeController.js"></script>
     
     <!-- 必要なモジュール読み込み -->
-    <script src="micromodules/element-observer/ElementObserverCore.js"></script>
-    <script src="micromodules/element-observer/ElementObserverTransform.js"></script>
-    <script src="micromodules/element-observer/ElementObserverWebGL.js"></script>
-    <script src="micromodules/element-observer/ElementObserverResponsive.js"></script>
-    <script src="micromodules/element-observer/ElementObserverAdvanced.js"></script>
+    <!-- ElementObserver Phase 1 (BB特化版) -->
+    <script src="micromodules/element-observer/ElementObserver.js"></script>
     
     <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
@@ -428,7 +485,6 @@
         let logDisplay = null;
         let spineRenderer = null;
         let currentCharacterName = 'purattokun';  // デフォルトはpurattokun
-        let canvasResizeController = null;
         
         // ログ関数
         function log(message, type = 'info') {
@@ -454,6 +510,9 @@
             // モジュール確認
             await checkModules();
             
+            // CanvasResizeController通信設定
+            setupCanvasResizeMessaging();
+            
             // イベントリスナー設定
             setupEventListeners();
             
@@ -469,7 +528,6 @@
                 { name: 'PureBoundingBoxUI', obj: window.PureBoundingBoxUI },
                 { name: 'PureBoundingBoxAutoPin', obj: window.PureBoundingBoxAutoPin },
                 { name: 'PureBoundingBox', obj: window.PureBoundingBox },
-                { name: 'CanvasResizeController', obj: window.CanvasResizeController },
                 { name: 'StableSpineRenderer', obj: window.StableSpineRenderer }
             ];
             
@@ -505,13 +563,110 @@
             }
         }
         
+        // CanvasResizeController postMessage通信設定
+        function setupCanvasResizeMessaging() {
+            window.addEventListener('message', (event) => {
+                // セキュリティチェック（同じオリジンのみ）
+                if (event.origin !== window.location.origin) {
+                    return;
+                }
+                
+                const { type, data } = event.data;
+                
+                switch (type) {
+                    case 'canvasResize':
+                        log(`📐 Canvas解像度変更: ${data.size}px`, 'info');
+                        if (spineRenderer && spineRenderer.canvas) {
+                            spineRenderer.canvas.width = data.size;
+                            spineRenderer.canvas.height = data.size;
+                            spineRenderer.resize(data.size, data.size);
+                            log('✅ Canvas解像度変更完了', 'success');
+                        }
+                        break;
+                        
+                    case 'scaleChanged':
+                        log(`📏 スケール変更: X${data.scaleX}, Y${data.scaleY}`, 'info');
+                        if (spineRenderer && spineRenderer.skeleton) {
+                            spineRenderer.skeleton.scaleX = data.scaleX;
+                            spineRenderer.skeleton.scaleY = data.scaleY;
+                            log('✅ スケール変更完了', 'success');
+                        }
+                        break;
+                        
+                    case 'positionChanged':
+                        log(`📍 位置変更: X${data.x}, Y${data.y}`, 'info');
+                        if (spineRenderer && spineRenderer.skeleton) {
+                            spineRenderer.skeleton.x = data.x;
+                            spineRenderer.skeleton.y = data.y;
+                            log('✅ 位置変更完了', 'success');
+                        }
+                        break;
+                        
+                    case 'uiReady':
+                        log('🎛️ CanvasResizeController UI初期化完了', 'success');
+                        // 現在の状態をiframeに送信
+                        sendToCanvasResizeUI('updateUIState', {
+                            canvasSize: spineRenderer ? Math.max(spineRenderer.canvas.width, spineRenderer.canvas.height) : 400,
+                            scaleX: spineRenderer ? spineRenderer.skeleton.scaleX : 1.0,
+                            scaleY: spineRenderer ? spineRenderer.skeleton.scaleY : 1.0,
+                            positionX: spineRenderer ? spineRenderer.skeleton.x : 0,
+                            positionY: spineRenderer ? spineRenderer.skeleton.y : 0
+                        });
+                        break;
+                        
+                    case 'uiLog':
+                        log(`[CanvasResizeUI] ${data.message}`, 'info');
+                        break;
+                        
+                    default:
+                        // 未対応のメッセージタイプ
+                        break;
+                }
+            });
+            
+            log('📡 CanvasResizeController postMessage通信設定完了', 'success');
+        }
+        
+        // CanvasResizeController UIにメッセージ送信
+        function sendToCanvasResizeUI(type, data) {
+            const iframe = document.getElementById('canvas-resize-iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ type, data }, window.location.origin);
+            }
+        }
+
+        // キャラクタークリックイベントリスナー設定（共通関数）
+        function setupCharacterClickListener(element) {
+            if (!element) {
+                log('❌ 要素が見つかりません - イベントリスナー設定スキップ', 'error');
+                return;
+            }
+            
+            log(`🔧 クリックイベントリスナー設定: ${element.id || element.tagName}`, 'info');
+            
+            // 既存のリスナーがある場合は削除してから追加（重複防止）
+            element.removeEventListener('click', characterClickHandler);
+            element.addEventListener('click', characterClickHandler);
+        }
+        
+        // キャラクタークリックハンドラー（共通関数）
+        function characterClickHandler(e) {
+            log(`🖱️ キャラクタークリック検出: ${e.target.tagName} (${e.target.id || 'ID無し'})`, 'info');
+            e.stopPropagation();
+            testBasicBoundingBox();
+        }
+
         // イベントリスナー設定
         function setupEventListeners() {
-            // キャラクタークリックでバウンディングボックス表示
-            testCharacter.addEventListener('click', (e) => {
-                e.stopPropagation();
-                testBasicBoundingBox();
-            });
+            // 初期化時はDOM要素を取得
+            const initialTestCharacter = document.getElementById('test-character');
+            if (initialTestCharacter) {
+                testCharacter = initialTestCharacter;
+                log(`✅ 初期イベントリスナー設定: ${testCharacter.id}`, 'info');
+                setupCharacterClickListener(testCharacter);
+            } else {
+                log('⚠️ 初期testCharacter要素が見つかりません - Spine読み込み後に設定されます', 'warning');
+            }
             
             // 保存完了イベントの監視
             document.addEventListener('boundingBoxSaveCompleted', (event) => {
@@ -541,8 +696,13 @@
             // 2. heroSectionサイズ変更監視（ResizeObserver）
             const heroSection = document.getElementById('test-hero');
             if (heroSection) {
+                log('🔍 ResizeObserver 初期化開始', 'info');
                 const resizeObserver = new ResizeObserver(entries => {
+                    log(`🔍 ResizeObserver トリガー: ${entries.length} エントリー`, 'info');
                     for (const entry of entries) {
+                        const { width, height } = entry.contentRect;
+                        log(`📐 ヒーローセクションサイズ変更検出: ${width.toFixed(0)}x${height.toFixed(0)}`, 'info');
+                        
                         clearTimeout(resizeTimeout);
                         resizeTimeout = setTimeout(() => {
                             log('📐 ヒーローセクションリサイズ検出 - BB比率保持実行', 'info');
@@ -551,39 +711,84 @@
                         }, 100);
                     }
                 });
+                
                 resizeObserver.observe(heroSection);
+                log('✅ ResizeObserver監視開始', 'success');
+            } else {
+                log('❌ ヒーローセクション要素が見つかりません', 'error');
             }
         }
         
         // BB比率保持機能: ウィンドウリサイズ後に編集サイズを維持
         function maintainBBRatioAfterResize() {
+            log('🔄 BB比率保持処理開始', 'info');
+            
             const storageKey = 'bb-position-test-character';
             const savedPosition = localStorage.getItem(storageKey);
             
             if (savedPosition) {
                 try {
                     const positionData = JSON.parse(savedPosition);
+                    log(`📊 保存データ確認完了`, 'info');
                     
                     // 編集時の実サイズ情報があるか確認
                     if (positionData.actualSize && positionData.actualSize.widthPx && positionData.actualSize.heightPx) {
                         const heroSection = document.getElementById('test-hero');
-                        const parentRect = heroSection.getBoundingClientRect();
+                        if (!heroSection) {
+                            log('❌ ヒーローセクションが見つかりません', 'error');
+                            return;
+                        }
                         
-                        // 編集時の実サイズから現在の環境でのパーセンテージを再計算
-                        const widthPct = (positionData.actualSize.widthPx / parentRect.width) * 100;
-                        const heightPct = (positionData.actualSize.heightPx / parentRect.height) * 100;
+                        const parentRect = heroSection.getBoundingClientRect();
+                        log(`📐 現在の親要素サイズ: ${parentRect.width.toFixed(0)}×${parentRect.height.toFixed(0)}px`, 'info');
+                        
+                        // 🆕 強化された比率保持: 実比率データがある場合は優先使用
+                        let widthPct, heightPct;
+                        
+                        if (positionData.actualSize.actualWidthRatio && positionData.actualSize.actualHeightRatio) {
+                            // 新システム: 精密な実比率データを使用
+                            widthPct = positionData.actualSize.actualWidthRatio * 100;
+                            heightPct = positionData.actualSize.actualHeightRatio * 100;
+                            log('✨ 新システム: 精密実比率データ使用', 'info');
+                        } else {
+                            // 従来システム: ピクセルサイズから計算
+                            widthPct = (positionData.actualSize.widthPx / parentRect.width) * 100;
+                            heightPct = (positionData.actualSize.heightPx / parentRect.height) * 100;
+                            log('📊 従来システム: ピクセルサイズ計算', 'info');
+                        }
+                        
+                        const testCharacter = document.getElementById('test-character');
+                        if (!testCharacter) {
+                            log('❌ テストキャラクター要素が見つかりません', 'error');
+                            return;
+                        }
                         
                         // 位置は現在のパーセンテージを維持、サイズのみ再計算
+                        const oldWidth = testCharacter.style.width;
+                        const oldHeight = testCharacter.style.height;
+                        
                         testCharacter.style.width = widthPct.toFixed(2) + '%';
                         testCharacter.style.height = heightPct.toFixed(2) + '%';
                         
-                        log(`🔧 BB比率保持: サイズ再計算 ${widthPct.toFixed(2)}% × ${heightPct.toFixed(2)}%`, 'success');
+                        log(`🔧 BB比率保持: 編集サイズ ${positionData.actualSize.widthPx}×${positionData.actualSize.heightPx}px`, 'info');
+                        log(`📏 サイズ変更: ${oldWidth} → ${widthPct.toFixed(2)}%, ${oldHeight} → ${heightPct.toFixed(2)}%`, 'success');
+                        
+                        // localStorageの現在値も更新
+                        positionData.position.width = widthPct.toFixed(2) + '%';
+                        positionData.position.height = heightPct.toFixed(2) + '%';
+                        localStorage.setItem(storageKey, JSON.stringify(positionData));
+                        
+                        log('✅ BB比率保持完了', 'success');
                     } else {
                         log('⚠️ 実サイズ情報なし - BB比率保持スキップ', 'warning');
+                        log('💡 ヒント: BB編集を一度実行すると実サイズ情報が保存されます', 'info');
                     }
                 } catch (error) {
                     log(`❌ BB比率保持エラー: ${error.message}`, 'error');
+                    console.error('BB比率保持詳細エラー:', error);
                 }
+            } else {
+                log('📝 保存された位置情報なし - BB比率保持をスキップ', 'warning');
             }
         }
         
@@ -639,8 +844,23 @@
             try {
                 log('📦 基本バウンディングボックステスト開始', 'info');
                 
+                // デバッグ: PureBoundingBoxクラス存在確認
+                if (typeof PureBoundingBox === 'undefined') {
+                    log('❌ PureBoundingBoxクラスが読み込まれていません', 'error');
+                    return;
+                }
+                
+                // デバッグ: testCharacter存在確認
+                if (!testCharacter) {
+                    log('❌ testCharacter要素が見つかりません', 'error');
+                    return;
+                }
+                
+                log(`🎯 対象要素: ${testCharacter.id} (${testCharacter.tagName})`, 'info');
+                
                 // 既存のバウンディングボックスをクリーンアップ
                 if (currentBoundingBox) {
+                    log('🧹 既存BBをクリーンアップ中...', 'info');
                     currentBoundingBox.cleanup();
                     currentBoundingBox = null;
                 }
@@ -649,10 +869,13 @@
                 restoreSavedPosition();
                 
                 // 新しいバウンディングボックス作成
+                log('🔧 新しいBBを作成中...', 'info');
                 currentBoundingBox = new PureBoundingBox({
                     targetElement: testCharacter,
                     nodeId: 'test-character'
                 });
+                
+                log('✅ PureBoundingBox インスタンス作成完了', 'success');
                 
                 // 実行
                 const result = await currentBoundingBox.execute();
@@ -707,6 +930,101 @@
         }
         
         // リサイズテスト
+        // 🎯 修飾キーテスト機能
+        function testModifierKeys() {
+            log('🎮 修飾キーテスト開始', 'info');
+            
+            const testCharacter = document.getElementById('test-character');
+            if (!testCharacter) {
+                log('❌ テストキャラクターが見つかりません', 'error');
+                return;
+            }
+            
+            log('📋 修飾キーテスト説明:', 'info');
+            log('1. キャラクターをクリックしてBB表示', 'info');
+            log('2. 各修飾キーを試してください:', 'info');
+            log('   - Shift: 縦横比保持', 'info');
+            log('   - Alt: 中心固定リサイズ', 'info');
+            log('   - Ctrl: グリッドスナップ(10px)', 'info');
+            log('   - 併用: Shift+Alt, Shift+Ctrl, Alt+Ctrl, Shift+Alt+Ctrl', 'info');
+            log('3. ハンドルをドラッグして動作確認', 'success');
+        }
+
+        // BBシステム診断関数（強化版）
+        function debugBBSystem() {
+            log('🔍 BBシステム詳細診断開始', 'info');
+            
+            // 1. 必須クラス確認
+            const classes = ['PureBoundingBox', 'ElementObserver'];
+            classes.forEach(className => {
+                if (typeof window[className] !== 'undefined') {
+                    log(`✅ ${className}: 読み込み済み`, 'success');
+                } else {
+                    log(`❌ ${className}: 読み込まれていません`, 'error');
+                }
+            });
+            
+            // 2. グローバル変数状態確認
+            log('🔍 グローバル変数状態:', 'info');
+            log(`testCharacter: ${testCharacter ? (testCharacter.id || testCharacter.tagName) : 'null'}`, 'info');
+            log(`currentBoundingBox: ${currentBoundingBox ? '存在' : 'null'}`, 'info');
+            log(`spineRenderer: ${spineRenderer ? '存在' : 'null'}`, 'info');
+            
+            // 3. DOM要素の詳細確認
+            const testChar = document.getElementById('test-character');
+            const allCanvases = document.querySelectorAll('canvas');
+            const spineCanvas = document.querySelector('canvas[id*="spine"]');
+            
+            log('🔍 DOM要素状況:', 'info');
+            log(`全Canvas要素数: ${allCanvases.length}`, 'info');
+            allCanvases.forEach((canvas, index) => {
+                const isVisible = canvas.style.display !== 'none' && canvas.offsetWidth > 0;
+                log(`  Canvas ${index + 1}: ${canvas.id || 'ID無し'} - ${isVisible ? '表示' : '非表示'}`, 'info');
+                log(`    サイズ: ${canvas.width}×${canvas.height}px (CSS: ${canvas.style.width || 'auto'}×${canvas.style.height || 'auto'})`, 'info');
+            });
+            
+            if (testChar) {
+                const isVisible = testChar.style.display !== 'none' && testChar.offsetWidth > 0;
+                log(`test-character: ${isVisible ? '✅ 表示中' : '⚠️ 非表示'}`, isVisible ? 'success' : 'warning');
+                log(`  位置: ${testChar.style.left || 'auto'}, ${testChar.style.top || 'auto'}`, 'info');
+                log(`  サイズ: ${testChar.style.width || 'auto'} × ${testChar.style.height || 'auto'}`, 'info');
+                
+                // testCharacterとグローバル変数の一致確認
+                if (testCharacter === testChar) {
+                    log('✅ グローバルtestCharacter: DOM要素と一致', 'success');
+                } else {
+                    log('⚠️ グローバルtestCharacter: DOM要素と不一致', 'warning');
+                }
+            } else {
+                log('❌ test-character要素: 見つかりません', 'error');
+            }
+            
+            // 4. イベントリスナー詳細確認
+            log('🔍 イベントリスナー確認:', 'info');
+            if (testCharacter) {
+                // テストクリック実行
+                log('🧪 テストクリックイベント発火...', 'info');
+                try {
+                    const clickEvent = new Event('click', { bubbles: true });
+                    testCharacter.dispatchEvent(clickEvent);
+                    log('✅ テストクリック成功', 'success');
+                } catch (error) {
+                    log(`❌ テストクリックエラー: ${error.message}`, 'error');
+                }
+            } else {
+                log('⚠️ testCharacterが未設定のためテストクリック不可', 'warning');
+            }
+            
+            // 5. 手動でBB作成テスト
+            log('🧪 手動BBテスト実行...', 'info');
+            try {
+                testBasicBoundingBox();
+                log('✅ 手動BBテスト実行完了', 'success');
+            } catch (error) {
+                log(`❌ 手動BBテストエラー: ${error.message}`, 'error');
+            }
+        }
+        
         function testResize() {
             log('📐 リサイズテスト開始', 'info');
             
@@ -776,7 +1094,7 @@
                 'ElementObserverCore', 'ElementObserver',
                 'PureBoundingBoxCore', 'PureBoundingBoxUI', 
                 'PureBoundingBoxAutoPin', 'PureBoundingBox',
-                'CanvasResizeController', 'StableSpineRenderer'
+                'StableSpineRenderer'
             ];
             
             globals.forEach(name => {
@@ -870,16 +1188,6 @@
                     log('✅ Spineキャンバス作成完了', 'success');
                 }
                 
-                // CanvasResizeController初期化
-                if (typeof CanvasResizeController !== 'undefined') {
-                    canvasResizeController = new CanvasResizeController(canvas, {
-                        characterManager: null, // Spine統合時に設定
-                        debugMode: true
-                    });
-                    log('✅ CanvasResizeController初期化完了', 'success');
-                } else {
-                    log('⚠️ CanvasResizeController が読み込まれていません', 'warning');
-                }
                 
                 // Spine WebGL の読み込み確認
                 if (typeof spine === 'undefined') {
@@ -910,17 +1218,19 @@
                 log(`✅ ${currentCharacterName}キャラクター読み込み完了`, 'success');
                 log(`🎬 アニメーション再生: ${defaultAnimation}`, 'success');
                 
-                // CanvasResizeControllerにSpineRendererを統合
-                if (canvasResizeController && spineRenderer) {
-                    canvasResizeController.config.characterManager = spineRenderer;
-                    log('✅ CanvasResizeController + SpineRenderer統合完了', 'success');
-                }
                 
                 // テストキャラクター要素を非表示（Spineに切り替え）
                 testCharacter.style.display = 'none';
                 
                 // バウンディングボックス用のターゲット要素を更新
                 testCharacter = canvas;
+                
+                // 🔧 新しいcanvas要素にクリックイベントリスナーを設定
+                log(`🔧 Spine canvas (${canvas.id}) をtestCharacterとして設定`, 'info');
+                setupCharacterClickListener(testCharacter);
+                
+                // 🔍 設定確認
+                log(`✅ testCharacter更新完了: ${testCharacter.id || testCharacter.tagName}`, 'success');
                 
             } catch (error) {
                 log(`❌ Spineキャラクター読み込みエラー: ${error.message}`, 'error');
@@ -944,72 +1254,34 @@
             }
         }
         
-        // Canvasリサイズテスト
+        // iframeテスト（CanvasResizeController UI確認）
         async function testCanvasResize() {
             try {
-                log('📐 Canvasリサイズテスト開始', 'info');
+                log('📐 Canvas Resize UI テスト開始', 'info');
                 
-                if (!canvasResizeController) {
-                    log('⚠️ CanvasResizeController が初期化されていません。先にSpineキャラクターを読み込んでください。', 'warning');
+                const iframe = document.getElementById('canvas-resize-iframe');
+                if (!iframe) {
+                    log('❌ CanvasResizeController iframe が見つかりません', 'error');
                     return;
                 }
                 
-                if (!spineRenderer) {
-                    log('⚠️ SpineRenderer が初期化されていません。先にSpineキャラクターを読み込んでください。', 'warning');
-                    return;
-                }
+                // iframeの存在確認と強調表示
+                iframe.style.border = '3px solid #00ff00';
+                iframe.style.boxShadow = '0 0 20px rgba(0, 255, 0, 0.5)';
                 
-                const canvas = document.getElementById('spine-canvas');
-                const originalSize = { width: canvas.width, height: canvas.height };
-                log(`📊 現在のCanvasサイズ: ${originalSize.width} x ${originalSize.height}`, 'info');
+                log('✅ CanvasResizeController UI iframe を確認しました', 'success');
+                log('📋 iframe内のUIでCanvas制御が可能です', 'info');
                 
-                // リサイズテストサイズリスト
-                const testSizes = [200, 300, 400, 150];
-                let currentIndex = 0;
-                
-                log('🔄 段階的リサイズテスト開始', 'info');
-                
-                const resizeStep = () => {
-                    if (currentIndex >= testSizes.length) {
-                        // 元のサイズに戻す
-                        log(`🔄 元サイズに復元: ${originalSize.width} x ${originalSize.height}`, 'info');
-                        const success = canvasResizeController.canvas.resizeToSquare(Math.max(originalSize.width, originalSize.height));
-                        if (success) {
-                            log('✅ Canvasリサイズテスト完了', 'success');
-                        } else {
-                            log('❌ 元サイズ復元に失敗', 'error');
-                        }
-                        return;
-                    }
-                    
-                    const newSize = testSizes[currentIndex];
-                    log(`📐 リサイズ実行: ${newSize} x ${newSize}`, 'info');
-                    
-                    // CanvasResizeControllerでリサイズ実行
-                    const success = canvasResizeController.canvas.resizeToSquare(newSize);
-                    
-                    if (success) {
-                        log(`✅ リサイズ成功: ${newSize} x ${newSize}`, 'success');
-                        
-                        // Spineアニメーションも更新
-                        if (spineRenderer && spineRenderer.resize) {
-                            spineRenderer.resize();
-                            log('🎬 Spineアニメーション更新完了', 'success');
-                        }
-                    } else {
-                        log(`❌ リサイズ失敗: ${newSize}`, 'error');
-                    }
-                    
-                    currentIndex++;
-                    setTimeout(resizeStep, 1500); // 1.5秒後に次のリサイズ
-                };
-                
-                // テスト開始
-                resizeStep();
+                // 3秒後に強調表示を解除
+                setTimeout(() => {
+                    iframe.style.border = '1px solid #ddd';
+                    iframe.style.boxShadow = '';
+                    log('📐 iframe強調表示を解除しました', 'info');
+                }, 3000);
                 
             } catch (error) {
-                log(`❌ Canvasリサイズテストエラー: ${error.message}`, 'error');
-                console.error('Canvasリサイズテストエラー:', error);
+                log(`❌ iframeテストエラー: ${error.message}`, 'error');
+                console.error('iframeテストエラー:', error);
             }
         }
         
@@ -1021,21 +1293,19 @@
             if (spineRenderer) {
                 spineRenderer.cleanup();
             }
-            if (canvasResizeController) {
-                canvasResizeController.cleanup();
-            }
         });
         
         // デバッグ用グローバル関数
         window.testBoundingBox = testBasicBoundingBox;
         window.testRightClickMenu = testRightClickMenu;
         window.testResize = testResize;
+        window.testModifierKeys = testModifierKeys;
+        window.debugBBSystem = debugBBSystem;
         window.testCanvasResize = testCanvasResize;
         window.loadSpineCharacter = loadSpineCharacter;
         window.switchCharacter = switchCharacter;
         window.getCurrentBB = () => currentBoundingBox;
         window.getSpineRenderer = () => spineRenderer;
-        window.getCanvasResizeController = () => canvasResizeController;
         window.logTest = (message, type) => log(message, type);
     </script>
 </body>

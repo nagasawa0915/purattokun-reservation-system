@@ -9,12 +9,12 @@ class CanvasResizeUI {
     // 状態管理
     this.state = {
       canvasSize: 800,
-      scaleX: 1.0,
+      scaleX: 1.35,
       scaleY: 1.0,
       positionX: 0,    // 中央座標に修正
       positionY: 0,    // 中央座標に修正
       scaleLock: true,    // デフォルトでロック有効
-      scaleRatio: 1.0 / 1.0    // Y/X の初期比率を設定 (1:1の理想比率)
+      scaleRatio: 1.0 / 1.35    // Y/X の初期比率を設定
     };
 
     // 初期化
@@ -253,12 +253,12 @@ class CanvasResizeUI {
    * スケールリセット
    */
   resetScale() {
-    this.state.scaleX = 1.0;
+    this.state.scaleX = 1.35;
     this.state.scaleY = 1.0;
     
-    document.getElementById('character-scale-x').value = 1.0;
+    document.getElementById('character-scale-x').value = 1.35;
     document.getElementById('character-scale-y').value = 1.0;
-    document.getElementById('character-scale-x-input').value = 1.0;
+    document.getElementById('character-scale-x-input').value = 1.35;
     document.getElementById('character-scale-y-input').value = 1.0;
     
     this.updateScaleDisplay();
@@ -268,7 +268,7 @@ class CanvasResizeUI {
       scaleY: this.state.scaleY
     });
     
-    this.log('🔄 スケールを理想的な比率に戻しました（X=1.0, Y=1.0）');
+    this.log('🔄 スケールを理想的な比率に戻しました（X=1.35, Y=1.0）');
   }
 
 
@@ -366,10 +366,6 @@ class CanvasResizeUI {
         this.receiveLogFromParent(data.message);
         break;
         
-      case 'characterSelected':
-        this.handleCharacterSelection(data);
-        break;
-        
       default:
         // 不明なメッセージタイプ
         break;
@@ -459,89 +455,6 @@ class CanvasResizeUI {
    */
   receiveLogFromParent(message) {
     console.log(`[親ページより] ${message}`);
-  }
-
-  /**
-   * キャラクター選択通知の処理
-   */
-  handleCharacterSelection(data) {
-    const { characterId, canvasId, currentScale, currentPosition } = data;
-    
-    // 現在のターゲットキャラクターを更新
-    this.state.currentCharacter = characterId;
-    this.state.currentCanvasId = canvasId;
-    
-    // UIを選択されたキャラクターの状態に更新
-    this.updateUIForSelectedCharacter(data);
-    
-    this.log(`🎯 ターゲットキャラクター変更: ${characterId} (Canvas: ${canvasId})`);
-  }
-
-  /**
-   * 選択キャラクターに応じてUIを更新
-   */
-  updateUIForSelectedCharacter(data) {
-    const { currentScale, currentPosition, characterId } = data;
-    
-    // スケール値を更新
-    if (currentScale) {
-      this.state.scaleX = currentScale.x;
-      this.state.scaleY = currentScale.y;
-      
-      document.getElementById('character-scale-x').value = currentScale.x;
-      document.getElementById('character-scale-y').value = currentScale.y;
-      document.getElementById('character-scale-x-input').value = currentScale.x;
-      document.getElementById('character-scale-y-input').value = currentScale.y;
-    }
-    
-    // 位置値を更新
-    if (currentPosition) {
-      this.state.positionX = currentPosition.x;
-      this.state.positionY = currentPosition.y;
-      
-      document.getElementById('character-x').value = currentPosition.x;
-      document.getElementById('character-y').value = currentPosition.y;
-      document.getElementById('character-x-input').value = currentPosition.x;
-      document.getElementById('character-y-input').value = currentPosition.y;
-    }
-    
-    // 表示値を更新
-    this.updateDisplayValues();
-    
-    // 視覚的フィードバック（キャラクター名表示など）
-    this.showCharacterIndicator(characterId);
-    
-    this.log(`🔄 UI状態を${characterId}に同期完了`);
-  }
-
-  /**
-   * 現在のターゲットキャラクターを表示
-   */
-  showCharacterIndicator(characterId) {
-    // キャラクター表示エリアがあれば更新
-    let indicator = document.getElementById('current-character-indicator');
-    if (!indicator) {
-      // 表示エリアを作成
-      indicator = document.createElement('div');
-      indicator.id = 'current-character-indicator';
-      indicator.style.cssText = `
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        background: rgba(255, 107, 53, 0.9);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 15px;
-        font-size: 12px;
-        font-weight: bold;
-        z-index: 9999;
-      `;
-      document.body.appendChild(indicator);
-    }
-    
-    // キャラクター名を表示
-    const displayName = characterId === 'purattokun' ? '🐱 ぷらっとくん' : '🐭 ねずみちゃん';
-    indicator.textContent = `制御中: ${displayName}`;
   }
 
   /**
