@@ -1,7 +1,7 @@
 # PureBoundingBox 自動ピン適用システム仕様書
 
 **バージョン**: 1.0  
-**対象**: PureBoundingBox + ElementObserver Phase 3-B統合  
+**対象**: PureBoundingBox + ElementObserver Phase 1統合  
 **作成日**: 2025-08-29  
 
 ---
@@ -14,7 +14,7 @@ PureBoundingBox 自動ピン適用システムは、**「保存 = 自動ピン�
 - **透明性**: ユーザーはピン機能を意識しない
 - **直感性**: 既存の「保存」操作がそのまま自動追従を有効化
 - **互換性**: 従来のバウンディングボックス操作は完全保持
-- **安定性**: ElementObserver Phase 3-B の99.9%高速化技術活用
+- **安定性**: ElementObserver Phase 1 の環境揺れ吸収技術活用
 
 ---
 
@@ -34,7 +34,7 @@ PureBoundingBox 自動ピン適用システムは、**「保存 = 自動ピン�
    - 背景要素の自動検出
    - 最適なアンカーポイントの計算
    - ピン留めの自動設定
-   - ElementObserver Phase 3-B による追従開始
+   - ElementObserver Phase 1 による追従開始
 5. 設定確定・バウンディングボックス非表示
 6. 🎯 **以後、自動追従が有効**（ユーザー透明）
 
@@ -51,10 +51,10 @@ PureBoundingBox (既存)
 ├── PureBoundingBoxEvents.js
 └── PureBoundingBoxAutoPin.js ← 新規追加
 
-ElementObserver Phase 3-B (連携)
-├── ElementObserverAdvanced.js
+ElementObserver Phase 1 (連携)
+├── ElementObserver.js
 ├── ElementObserverCore.js
-└── 超高速パス・環境揺れ吸収システム
+└── 環境揺れ吸収・親要素監視システム
 ```
 
 ### 新規モジュール: PureBoundingBoxAutoPin.js
@@ -63,13 +63,13 @@ ElementObserver Phase 3-B (連携)
  * PureBoundingBoxAutoPin.js
  * 
  * 🎯 自動ピン適用マイクロモジュール
- * - 外部依存: ElementObserverAdvanced, PureBoundingBoxCore
+ * - 外部依存: ElementObserver, PureBoundingBoxCore
  * - 責務: 保存時の自動ピン設定のみ
  */
 class PureBoundingBoxAutoPin {
     constructor(core, observer) {
         this.core = core;
-        this.observer = observer; // ElementObserverAdvanced instance
+        this.observer = observer; // ElementObserver instance
         this.activePins = new Map(); // nodeId -> pinConfig
     }
     
@@ -280,14 +280,14 @@ class PureBoundingBoxUI {
     
     async initializeAutoPin() {
         try {
-            // ElementObserver Phase 3-B 初期化
-            const observer = new ElementObserverAdvanced();
-            await observer.initializePhase2Integration();
+            // ElementObserver Phase 1 初期化
+            const observer = new ElementObserver();
+            // Phase 1はシンプルなコンストラクタのみ
             
             // 自動ピンシステム初期化
             this.autoPin = new PureBoundingBoxAutoPin(this.core, observer);
             
-            console.log('🎯 自動ピンシステム統合完了');
+            console.log('🎯 自動ピンシステム統合完了 (ElementObserver Phase 1)');
         } catch (error) {
             console.warn('⚠️ 自動ピンシステム無効 - 基本機能のみ利用:', error.message);
             this.autoPin = null;
@@ -377,27 +377,23 @@ showAutoPinFeedback(pinConfig) {
 - **アクティブピン1個**: < 30KB
 - **最大同時ピン数**: 10個 (既存キャラクター分)
 
-### Phase 3-B技術活用
+### ElementObserver Phase 1技術活用
 ```javascript
-// 99.9%高速化技術の活用
+// 環境揺れ吸収技術の活用
 class PureBoundingBoxAutoPin {
     async createAutoPin(config) {
-        // 超高速パス利用
+        // ElementObserver Phase 1 機能利用
         const observer = this.observer;
         
-        // 環境安定性確保
-        const envStability = observer.checkEnvironmentStability();
-        
-        // 高速ピン作成
+        // 親要素サイズ監視開始
         const startTime = performance.now();
         
-        const unobservePin = observer.observeImagePin(
+        // 基本的な要素監視機能を利用
+        const unobserve = observer.observe(
             config.targetElement,
-            config.spineElement, 
-            { 
-                anchor: config.anchor,
-                responsive: true,
-                epsilon: 0.05 // 高精度変化検知
+            (rect, changeType) => {
+                // 背景要素の変化に応じてSpine要素を追従
+                this.updateSpinePosition(config.spineElement, rect, config.anchor);
             }
         );
         
@@ -410,9 +406,43 @@ class PureBoundingBoxAutoPin {
             anchor: config.anchor,
             targetElement: config.targetElement,
             spineElement: config.spineElement,
-            unobserve: unobservePin,
+            unobserve: unobserve,
             processingTime
         };
+    }
+    
+    /**
+     * 🎯 Spine要素の位置更新処理
+     */
+    updateSpinePosition(spineElement, backgroundRect, anchor) {
+        // アンカーポイントに基づいた位置計算
+        const anchorPos = this.calculateAnchorPosition(backgroundRect, anchor);
+        
+        // CSSスタイル適用
+        spineElement.style.left = anchorPos.x + 'px';
+        spineElement.style.top = anchorPos.y + 'px';
+    }
+    
+    /**
+     * 📍 アンカーポイントの座標計算
+     */
+    calculateAnchorPosition(backgroundRect, anchor) {
+        const { left, top, width, height } = backgroundRect;
+        
+        // アンカーポイントの座標マッピング
+        const anchorMap = {
+            'TL': { x: left, y: top },                                    // Top-Left
+            'TC': { x: left + width / 2, y: top },                       // Top-Center  
+            'TR': { x: left + width, y: top },                           // Top-Right
+            'ML': { x: left, y: top + height / 2 },                      // Middle-Left
+            'MC': { x: left + width / 2, y: top + height / 2 },          // Middle-Center
+            'MR': { x: left + width, y: top + height / 2 },              // Middle-Right
+            'BL': { x: left, y: top + height },                          // Bottom-Left
+            'BC': { x: left + width / 2, y: top + height },              // Bottom-Center
+            'BR': { x: left + width, y: top + height }                   // Bottom-Right
+        };
+        
+        return anchorMap[anchor] || anchorMap['MC']; // デフォルト: 中央
     }
 }
 ```
@@ -425,7 +455,7 @@ class PureBoundingBoxAutoPin {
 | エラータイプ | 原因 | 対処法 |
 |-------------|------|--------|
 | `BackgroundNotFound` | 適切な背景要素が見つからない | document.bodyをフォールバック使用 |
-| `ElementObserverUnavailable` | Phase 3-Bが利用不可 | 基本保存のみ実行 |
+| `ElementObserverUnavailable` | ElementObserver Phase 1が利用不可 | 基本保存のみ実行 |
 | `AnchorCalculationFailed` | アンカー計算エラー | デフォルトMC（中央）使用 |
 | `PinCreationFailed` | ピン設定処理失敗 | 基本保存のみ・警告ログ出力 |
 
@@ -580,10 +610,10 @@ describe('User Experience Flow', () => {
 - **追従精度**: ±2px以内の位置追従精度
 - **メモリ効率**: 基準値の110%以内に収める
 
-### Phase 3-B活用指標
-- **超高速パス使用率**: 95%以上
-- **平均処理時間**: 20ms以下
-- **60fps維持率**: 100% (追従動作中)
+### ElementObserver Phase 1活用指標
+- **環境揺れ吸収率**: 95%以上
+- **平均処理時間**: 30ms以下
+- **親要素サイズ0問題解決率**: 100%
 
 ---
 
@@ -610,7 +640,7 @@ describe('User Experience Flow', () => {
 - [ ] PureBoundingBoxUI.js の保存処理拡張
 - [ ] 背景要素検出アルゴリズム実装
 - [ ] アンカーポイント計算ロジック実装
-- [ ] ElementObserver Phase 3-B との統合
+- [ ] ElementObserver Phase 1 との統合
 
 ### Phase 2: エラーハンドリング
 - [ ] グレースフルデグラデーション実装

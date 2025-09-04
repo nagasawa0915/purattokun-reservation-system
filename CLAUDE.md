@@ -198,26 +198,26 @@ micromodules/spine-renderer/
    - **保存=自動ピン適用**: ユーザーはピンを意識せずに保存するだけ
    - **9アンカーポイント最適化**: TL,TC,TR,ML,MC,MR,BL,BC,BR から最適選択
    - **背景要素自動検出**: ResizeObserver による動的検出機構
-   - **ElementObserver Phase 3-B統合**: 高性能座標システムとの連携
+   - **ElementObserver Phase 1 BB特化版統合**: 高性能座標システムとの連携
 
 2. **🚀 実装フェーズ設計**:
    - **Phase 1**: PureBoundingBoxAutoPin.js基盤モジュール
    - **Phase 2**: 背景検出・最適化計算システム  
-   - **Phase 3**: ElementObserver Phase 3-B統合テスト
+   - **Phase 3**: ElementObserver Phase 1 BB特化版統合テスト
    - **配置自由度**: 9箇所制限なし・任意座標配置可能
 
 3. **🔧 技術仕様確立**:
    - **座標変換アルゴリズム**: 絶対座標→アンカー相対座標
    - **レスポンシブ対応**: 画面リサイズ時の位置関係維持
    - **グレースフルデグラデーション**: 検出失敗時の安全動作
-   - **パフォーマンス目標**: ElementObserver Phase 3-B品質継承
+   - **パフォーマンス目標**: ElementObserver Phase 1品質継承
 
 **📋 実装準備完了タスクリスト**:
 - [ ] **PureBoundingBoxAutoPin.js** - 自動ピン機能核モジュール
 - [ ] **PureBoundingBoxUI.js拡張** - 保存ボタン統合
 - [ ] **背景要素自動検出** - ResizeObserver基盤システム
 - [ ] **最適アンカー計算** - 9ポイント選択アルゴリズム
-- [ ] **Phase 3-B統合テスト** - 高性能座標連携確認
+- [ ] **Phase 1 BB特化版統合テスト** - 高性能座標連携確認
 
 **✅ Phase 2完全実装成果（2025-08-27）**:
 
@@ -225,7 +225,7 @@ micromodules/spine-renderer/
    - **ElementObserverTransform.js**: CSS Transform統合システム（565行）
    - **ElementObserverWebGL.js**: DOM⟷WebGL座標変換システム（503行）
    - **ElementObserverResponsive.js**: レスポンシブWebGL管理（713行）
-   - **ElementObserverAdvanced.js**: 統合制御システム（767行）
+   - **ElementObserver.js**: Phase 1統合制御システム（767行）
 
 2. **🚀 技術実装成果**:
    - **5座標系統合**: DOM・CSS Transform・WebGL・Spine Skeleton・Canvas座標の統一

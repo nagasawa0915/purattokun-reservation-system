@@ -2,17 +2,23 @@
  * PureBoundingBoxAutoPin.js
  * 
  * 🎯 自動ピン適用マイクロモジュール
- * - 外部依存: ElementObserverAdvanced, PureBoundingBoxCore
+ * - 外部依存: ElementObserver Phase 1, PureBoundingBoxCore
  * - 責務: 保存時の自動ピン設定のみ
- * - バージョン: 1.0
+ * - バージョン: 1.1 (Phase 1統合版)
  * - 作成日: 2025-08-30
+ * - 更新日: 2025-09-04
  */
 
 class PureBoundingBoxAutoPin {
     constructor(core, observer) {
         this.core = core;
-        this.observer = observer; // ElementObserverAdvanced instance
+        this.observer = observer; // ElementObserver Phase 1 instance
         this.activePins = new Map(); // nodeId -> pinConfig
+        
+        // ElementObserver Phase 1 の基本機能確認
+        if (!this.observer || !this.observer.observe) {
+            console.warn('⚠️ ElementObserver Phase 1 が正しく初期化されていません');
+        }
         
         // 背景検出設定
         this.detectionConfig = {
@@ -387,14 +393,14 @@ class PureBoundingBoxAutoPin {
     }
     
     // ==========================================
-    // 🔗 ElementObserver Phase 3-B統合
+    // 🔗 ElementObserver Phase 1統合
     // ==========================================
     
     /**
-     * 自動ピンの作成
+     * 自動ピンの作成（Phase 1対応版）
      */
     async createAutoPin(config) {
-        console.log('🔗 自動ピン作成開始', {
+        console.log('🔗 自動ピン作成開始 (Phase 1)', {
             anchor: config.anchor,
             target: this.getElementInfo(config.targetElement),
             spine: this.getElementInfo(config.spineElement)
@@ -403,62 +409,140 @@ class PureBoundingBoxAutoPin {
         const startTime = performance.now();
         
         try {
-            // Phase 3-B高速パス利用
+            // ElementObserver Phase 1 の基本チェック
             const observer = this.observer;
             
-            // 環境安定性確保
-            const envStability = observer.environmentObserver ? true : false;
-            console.log('🌊 環境安定性:', envStability ? '利用可能' : '基本モード');
+            if (!observer || !observer.observe) {
+                console.warn('🚨 ElementObserver Phase 1 が利用できません。基本モードで動作します。');
+                return {
+                    success: false,
+                    fallbackMode: true,
+                    message: 'ElementObserver Phase 1が利用できないため、自動ピンは無効です',
+                    config: config
+                };
+            }
             
-            // 高速ピン作成
-            // 背景要素がIMGタグでない場合は、背景画像付きDIVとして扱う
-            const isImageElement = config.backgroundElement && config.backgroundElement.tagName === 'IMG';
+            // Phase 1の基本observe機能を使用した自動ピン実装
+            console.log('🎯 ElementObserver Phase 1 基本監視開始');
             
-            const unobservePin = observer.observeImagePin(
-                config.spineElement,
-                config.backgroundElement, 
-                { 
-                    anchor: config.anchor,
-                    responsive: true,
-                    epsilon: 0.05, // 高精度変化検知
-                    skipImageLoad: !isImageElement, // IMG以外はロード処理スキップ
-                    bounds: config.bounds, // バウンディングボックス情報（スケール含む）
-                    scale: config.bounds ? {
-                        x: parseFloat(config.bounds.scaleX) || 1.0,
-                        y: parseFloat(config.bounds.scaleY) || 1.0
-                    } : { x: 1.0, y: 1.0 }
+            // 背景要素の監視設定
+            const backgroundElement = config.targetElement;
+            const spineElement = config.spineElement;
+            
+            // 内部アンカーポイント計算システム
+            const anchorCalculations = this.createAnchorCalculationSystem(config.anchor);
+            
+            // Phase 1のobserve機能でバックグラウンド要素を監視
+            const unobservePin = observer.observe(backgroundElement, (rect, changeType) => {
+                try {
+                    console.log('📐 背景要素変化検出:', {
+                        changeType,
+                        size: `${rect.width}x${rect.height}`,
+                        anchor: config.anchor
+                    });
+                    
+                    // アンカーベース位置計算
+                    const anchorPosition = anchorCalculations.calculate(rect);
+                    
+                    // Spine要素位置の更新
+                    this.applyAnchorPosition(spineElement, anchorPosition, config.bounds);
+                    
+                } catch (error) {
+                    console.error('❌ ピン位置更新エラー:', error);
                 }
-            );
-            
-            console.log('🔍 ElementObserver に渡すスケール情報:', {
-                boundsScale: config.bounds ? { 
-                    scaleX: config.bounds.scaleX, 
-                    scaleY: config.bounds.scaleY 
-                } : null,
-                calculatedScale: config.bounds ? {
-                    x: parseFloat(config.bounds.scaleX) || 1.0,
-                    y: parseFloat(config.bounds.scaleY) || 1.0
-                } : { x: 1.0, y: 1.0 }
-                }
-            );
+            }, {
+                throttle: true,
+                precision: 0.1
+            });
             
             const processingTime = performance.now() - startTime;
             
-            console.log(`⚡ 自動ピン作成完了: ${processingTime.toFixed(4)}ms`);
+            console.log(`⚡ Phase 1自動ピン作成完了: ${processingTime.toFixed(4)}ms`);
             
             return {
-                id: `auto-pin-${Date.now()}`,
+                id: `auto-pin-phase1-${Date.now()}`,
                 anchor: config.anchor,
                 targetElement: config.targetElement,
                 spineElement: config.spineElement,
                 unobserve: unobservePin,
                 processingTime,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                phase: 'Phase 1'
             };
             
         } catch (error) {
-            console.error('❌ 自動ピン作成エラー:', error);
-            throw error;
+            console.error('❌ Phase 1自動ピン作成エラー:', error);
+            
+            // パフォーマンス統計更新（失敗）
+            this.performanceMetrics.failureCount++;
+            
+            return {
+                success: false,
+                fallbackMode: true,
+                message: 'Phase 1 ElementObserver統合でエラーが発生しました',
+                error: error.message,
+                config: config
+            };
+        }
+    }
+    
+    /**
+     * 内部アンカーポイント計算システム作成
+     */
+    createAnchorCalculationSystem(anchor) {
+        const anchorMap = {
+            'TL': { x: 0, y: 0 },     // Top Left
+            'TC': { x: 0.5, y: 0 },   // Top Center
+            'TR': { x: 1, y: 0 },     // Top Right
+            'ML': { x: 0, y: 0.5 },   // Middle Left
+            'MC': { x: 0.5, y: 0.5 }, // Middle Center
+            'MR': { x: 1, y: 0.5 },   // Middle Right
+            'BL': { x: 0, y: 1 },     // Bottom Left
+            'BC': { x: 0.5, y: 1 },   // Bottom Center
+            'BR': { x: 1, y: 1 }      // Bottom Right
+        };
+        
+        const anchorCoords = anchorMap[anchor] || anchorMap['MC'];
+        
+        return {
+            calculate: (rect) => {
+                return {
+                    x: rect.left + (rect.width * anchorCoords.x),
+                    y: rect.top + (rect.height * anchorCoords.y),
+                    anchor: anchor,
+                    rect: rect
+                };
+            }
+        };
+    }
+    
+    /**
+     * Spine要素へのアンカー位置適用
+     */
+    applyAnchorPosition(spineElement, anchorPosition, bounds) {
+        if (!spineElement) {
+            console.warn('⚠️ Spine要素が見つかりません');
+            return;
+        }
+        
+        try {
+            // スケール情報の取得
+            const scaleX = bounds?.scaleX ? parseFloat(bounds.scaleX) : 1.0;
+            const scaleY = bounds?.scaleY ? parseFloat(bounds.scaleY) : 1.0;
+            
+            // CSS Transform による位置・スケール適用
+            const transformStyle = `translate(${anchorPosition.x}px, ${anchorPosition.y}px) scale(${scaleX}, ${scaleY})`;
+            spineElement.style.transform = transformStyle;
+            spineElement.style.transformOrigin = 'center center';
+            
+            console.log('🎯 Spine要素位置更新:', {
+                position: `${anchorPosition.x.toFixed(1)}, ${anchorPosition.y.toFixed(1)}`,
+                scale: `${scaleX}, ${scaleY}`,
+                anchor: anchorPosition.anchor
+            });
+            
+        } catch (error) {
+            console.error('❌ Spine位置適用エラー:', error);
         }
     }
     

@@ -43,17 +43,45 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600"><defs><linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23667eea;stop-opacity:1" /><stop offset="100%" style="stop-color:%23764ba2;stop-opacity:1" /></linearGradient></defs><rect width="1000" height="600" fill="url(%23grad1)"/><circle cx="200" cy="150" r="60" fill="%23764ba2" opacity="0.6"/><circle cx="800" cy="400" r="100" fill="%23764ba2" opacity="0.4"/><circle cx="500" cy="100" r="40" fill="%23ffffff" opacity="0.3"/><text x="500" y="300" text-anchor="middle" fill="white" font-size="32" font-family="Arial, sans-serif" font-weight="bold">🎯 Responsive Background</text><text x="500" y="340" text-anchor="middle" fill="white" font-size="18" font-family="Arial, sans-serif">Resize window to test auto-pin tracking</text></svg>') no-repeat center;
+            background: url('https://images.unsplash.com/photo-1519452575417-564c1401ecc0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') no-repeat center;
             background-size: cover;
             transition: all 0.3s ease;
+        }
+        
+        /* ヒーロー画像のオーバーレイ */
+        .background-image::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.7), rgba(118, 75, 162, 0.7));
+            z-index: 1;
+        }
+        
+        /* テキストオーバーレイ */
+        .background-image::after {
+            content: "🎯 Hero Background Image\AResize window to test auto-pin tracking";
+            white-space: pre;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 2;
         }
         
         .spine-character {
             position: absolute;
             left: 35%;
             top: 40%;
-            width: 8%;   /* 背景コンテナの8% */
-            height: 20%; /* 背景コンテナの20% */
+            width: 120px;   /* Spineキャラクター標準サイズ */
+            height: 120px; 
             background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             border: 3px solid #c23616;
             border-radius: 8px;
@@ -68,8 +96,56 @@
             line-height: 1.2;
             transition: transform 0.3s ease;
             user-select: none;
-            z-index: 100;
+            z-index: 150;
             transform: translate(-50%, -50%);
+        }
+        
+        /* 追加画像要素のスタイル */
+        .additional-image {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            margin: 20px auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: url('https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80') no-repeat center;
+            background-size: cover;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .additional-image:hover {
+            transform: scale(1.02);
+        }
+        
+        .additional-image::after {
+            content: "📸 Additional Test Image\AClick to test pin attachment";
+            white-space: pre;
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 5px 8px;
+            border-radius: 4px;
+        }
+        
+        /* Spine Canvas スタイル */
+        .spine-canvas {
+            position: absolute;
+            z-index: 200;
+            pointer-events: none;
+            border-radius: 4px;
+        }
+        
+        /* Spineキャラクター用のコンテナ */
+        .spine-container {
+            position: relative;
+            display: inline-block;
         }
         
         .spine-character:hover {
@@ -201,18 +277,29 @@
             <div class="background-image" id="background-element"></div>
             <div class="spine-character" id="test-character">
                 🎮<br>
-                Test<br>
+                Spine<br>
                 Character
             </div>
         </div>
         
+        <!-- 追加の画像要素 -->
+        <div class="additional-image" id="additional-image">
+            <!-- 画像はCSS backgroundで表示 -->
+        </div>
+        
         <!-- コントロールパネル -->
         <div class="control-panel">
+            <button class="control-button primary-button" onclick="loadSpineCharacter()">
+                🎮 Spineキャラクター読み込み
+            </button>
             <button class="control-button primary-button" onclick="testBasicBoundingBox()">
                 📦 基本バウンディングボックステスト
             </button>
             <button class="control-button primary-button" onclick="testRightClickMenu()">
                 🖱️ 右クリックメニューテスト
+            </button>
+            <button class="control-button secondary-button" onclick="switchCharacter()">
+                🔄 キャラクター切り替え (Purattokun/Nezumi)
             </button>
             <button class="control-button secondary-button" onclick="showModuleStatus()">
                 ⚙️ モジュール状態確認
@@ -228,6 +315,27 @@
             </button>
         </div>
         
+        <!-- 操作手順ガイド -->
+        <div class="info-panel" style="background: #e8f4fd; border: 2px solid #0066cc;">
+            <h3>📋 実験手順ガイド</h3>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: start;">
+                <div style="background: #0066cc; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
+                <div><strong>🎮 Spineキャラクター読み込み</strong><br><small>「🎮 Spineキャラクター読み込み」ボタンをクリック → 実際のSpineアニメーションが表示されます</small></div>
+                
+                <div style="background: #0066cc; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">2</div>
+                <div><strong>📦 バウンディングボックス表示</strong><br><small>「📦 基本バウンディングボックステスト」ボタンをクリック → キャラクター周りに編集枠が表示されます</small></div>
+                
+                <div style="background: #0066cc; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">3</div>
+                <div><strong>🖱️ 位置・サイズ調整</strong><br><small>枠をドラッグで位置調整、角ハンドルでサイズ調整ができます</small></div>
+                
+                <div style="background: #0066cc; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">4</div>
+                <div><strong>🎯 自動ピン適用</strong><br><small>編集枠上で右クリック → 「保存」を選択 → 自動ピン機能が有効化されます</small></div>
+                
+                <div style="background: #0066cc; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">5</div>
+                <div><strong>📐 リサイズテスト</strong><br><small>「📐 リサイズテスト」ボタンでウィンドウサイズを変更 → 自動追従動作を確認</small></div>
+            </div>
+        </div>
+        
         <!-- 機能説明 -->
         <div class="feature-grid">
             <div class="feature-card">
@@ -238,6 +346,7 @@
                     <li>9アンカーポイント最適化</li>
                     <li>ElementObserver Phase 3-B統合</li>
                     <li>🆕 右クリックメニュー操作</li>
+                    <li>🎮 実際のSpineキャラクター対応</li>
                 </ul>
             </div>
             
@@ -286,6 +395,12 @@
         </div>
     </div>
 
+    <!-- Spine WebGL -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    
+    <!-- StableSpineRenderer -->
+    <script src="micromodules/spine-renderer/StableSpineRenderer.js"></script>
+    
     <!-- 必要なモジュール読み込み -->
     <script src="micromodules/element-observer/ElementObserverCore.js"></script>
     <script src="micromodules/element-observer/ElementObserverTransform.js"></script>
@@ -305,6 +420,8 @@
         let currentBoundingBox = null;
         let testCharacter = null;
         let logDisplay = null;
+        let spineRenderer = null;
+        let currentCharacterName = 'purattokun';  // デフォルトはpurattokun
         
         // ログ関数
         function log(message, type = 'info') {
@@ -705,10 +822,108 @@
             }
         }
         
+        // Spineキャラクター読み込み
+        async function loadSpineCharacter() {
+            try {
+                log('🎮 Spineキャラクター読み込み開始', 'info');
+                log(`キャラクター: ${currentCharacterName}`, 'info');
+                
+                // 既存のレンダラーをクリーンアップ
+                if (spineRenderer) {
+                    spineRenderer.cleanup();
+                    spineRenderer = null;
+                }
+                
+                // Canvas要素を作成または取得
+                let canvas = document.getElementById('spine-canvas');
+                if (!canvas) {
+                    canvas = document.createElement('canvas');
+                    canvas.id = 'spine-canvas';
+                    canvas.width = 120;
+                    canvas.height = 120;
+                    canvas.className = 'spine-canvas';
+                    canvas.style.cssText = `
+                        position: absolute;
+                        left: 35%;
+                        top: 40%;
+                        transform: translate(-50%, -50%);
+                        z-index: 200;
+                        border: 2px solid #00ff00;
+                        border-radius: 4px;
+                        background: rgba(0, 0, 0, 0.1);
+                    `;
+                    
+                    // ヒーローセクションに追加
+                    const heroSection = document.getElementById('test-hero');
+                    heroSection.appendChild(canvas);
+                    
+                    log('✅ Spineキャンバス作成完了', 'success');
+                }
+                
+                // Spine WebGL の読み込み確認
+                if (typeof spine === 'undefined') {
+                    log('❌ Spine WebGL が読み込まれていません', 'error');
+                    return;
+                }
+                
+                // StableSpineRenderer の読み込み確認
+                if (typeof StableSpineRenderer === 'undefined') {
+                    log('❌ StableSpineRenderer が読み込まれていません', 'error');
+                    return;
+                }
+                
+                // StableSpineRenderer を使用してキャラクター作成
+                spineRenderer = StableSpineRenderer.createForCharacter(currentCharacterName);
+                
+                // カスタムCanvas要素を設定
+                spineRenderer.canvas = canvas;
+                spineRenderer.canvasId = 'spine-canvas';
+                
+                // 初期化
+                await spineRenderer.initialize();
+                
+                // アニメーション開始（キャラクターに応じたデフォルト）
+                const defaultAnimation = currentCharacterName === 'purattokun' ? 'taiki' : 'search';
+                spineRenderer.playAnimation(defaultAnimation);
+                
+                log(`✅ ${currentCharacterName}キャラクター読み込み完了`, 'success');
+                log(`🎬 アニメーション再生: ${defaultAnimation}`, 'success');
+                
+                // テストキャラクター要素を非表示（Spineに切り替え）
+                testCharacter.style.display = 'none';
+                
+                // バウンディングボックス用のターゲット要素を更新
+                testCharacter = canvas;
+                
+            } catch (error) {
+                log(`❌ Spineキャラクター読み込みエラー: ${error.message}`, 'error');
+                console.error('Spineキャラクター読み込みエラー:', error);
+            }
+        }
+        
+        // キャラクター切り替え
+        async function switchCharacter() {
+            try {
+                // キャラクターを切り替え
+                currentCharacterName = currentCharacterName === 'purattokun' ? 'nezumi' : 'purattokun';
+                log(`🔄 キャラクター切り替え: ${currentCharacterName}`, 'info');
+                
+                // 再読み込み
+                await loadSpineCharacter();
+                
+            } catch (error) {
+                log(`❌ キャラクター切り替えエラー: ${error.message}`, 'error');
+                console.error('キャラクター切り替えエラー:', error);
+            }
+        }
+        
         // クリーンアップ
         window.addEventListener('beforeunload', () => {
             if (currentBoundingBox) {
                 currentBoundingBox.cleanup();
+            }
+            if (spineRenderer) {
+                spineRenderer.cleanup();
             }
         });
         
@@ -716,7 +931,10 @@
         window.testBoundingBox = testBasicBoundingBox;
         window.testRightClickMenu = testRightClickMenu;
         window.testResize = testResize;
+        window.loadSpineCharacter = loadSpineCharacter;
+        window.switchCharacter = switchCharacter;
         window.getCurrentBB = () => currentBoundingBox;
+        window.getSpineRenderer = () => spineRenderer;
         window.logTest = (message, type) => log(message, type);
     </script>
 </body>
