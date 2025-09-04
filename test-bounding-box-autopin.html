@@ -356,6 +356,9 @@
             <button class="control-button secondary-button" onclick="debugBBSystem()">
                 🔍 BB診断
             </button>
+            <button class="control-button primary-button" onclick="testAutoPinSystem()">
+                🎯 AutoPin システムテスト
+            </button>
             <button class="control-button secondary-button" onclick="clearLog()">
                 🗑️ ログクリア
             </button>
@@ -1017,6 +1020,76 @@
             }
         }
         
+        // 🎯 AutoPinシステム総合テスト
+        async function testAutoPinSystem() {
+            try {
+                log('🎯 AutoPin システム総合テスト開始', 'info');
+                
+                // 1. 前提条件確認
+                if (!testCharacter) {
+                    log('❌ testCharacter未設定 - 先にSpineキャラクターを読み込んでください', 'error');
+                    return;
+                }
+                
+                if (!currentBoundingBox) {
+                    log('📦 バウンディングボックスを作成中...', 'info');
+                    await testBasicBoundingBox();
+                }
+                
+                if (!currentBoundingBox || !currentBoundingBox.autoPin) {
+                    log('❌ AutoPin機能が利用できません', 'error');
+                    return;
+                }
+                
+                // 2. AutoPinシステム状態確認
+                log('🔍 AutoPin システム状態確認:', 'info');
+                const autoPinState = currentBoundingBox.autoPin.getState();
+                log(`アクティブピン数: ${autoPinState.activePinsCount}`, 'info');
+                log(`パフォーマンス統計: 成功${autoPinState.performanceMetrics.successCount}件, 失敗${autoPinState.performanceMetrics.failureCount}件`, 'info');
+                
+                // 3. 背景要素検出テスト
+                log('🔍 背景要素検出テスト:', 'info');
+                const backgroundElement = currentBoundingBox.autoPin.detectBackgroundElement(testCharacter);
+                if (backgroundElement) {
+                    log(`✅ 背景要素検出成功: ${backgroundElement.id || backgroundElement.tagName}`, 'success');
+                    log(`背景要素サイズ: ${backgroundElement.offsetWidth}×${backgroundElement.offsetHeight}px`, 'info');
+                } else {
+                    log('❌ 背景要素検出失敗', 'error');
+                }
+                
+                // 4. 最適アンカー計算テスト
+                if (backgroundElement) {
+                    log('🎯 最適アンカーポイント計算テスト:', 'info');
+                    const bounds = currentBoundingBox.getBounds();
+                    const optimalAnchor = currentBoundingBox.autoPin.calculateOptimalAnchor(bounds, backgroundElement);
+                    log(`✅ 最適アンカー: ${optimalAnchor} (${getAnchorName(optimalAnchor)})`, 'success');
+                }
+                
+                // 5. 保存時自動ピン適用の説明
+                log('💡 次のステップ: 実際のテスト手順', 'info');
+                log('1. BBをドラッグして位置を調整', 'info');
+                log('2. 「保存」ボタンをクリック', 'info');
+                log('3. 自動ピンが適用されることを確認', 'info');
+                log('4. ページをリサイズして追従動作を確認', 'info');
+                
+                log('✅ AutoPin システムテスト完了', 'success');
+                
+            } catch (error) {
+                log(`❌ AutoPin システムテストエラー: ${error.message}`, 'error');
+                console.error('AutoPin システムテストエラー:', error);
+            }
+        }
+        
+        // アンカー名称を取得
+        function getAnchorName(anchor) {
+            const names = {
+                'TL': '左上', 'TC': '上中央', 'TR': '右上',
+                'ML': '左中央', 'MC': '中央', 'MR': '右中央',
+                'BL': '左下', 'BC': '下中央', 'BR': '右下'
+            };
+            return names[anchor] || anchor;
+        }
+        
         function testResize() {
             log('📐 リサイズテスト開始', 'info');
             
@@ -1278,6 +1351,7 @@
         window.testModifierKeys = testModifierKeys;
         window.debugBBSystem = debugBBSystem;
         window.testCanvasResize = testCanvasResize;
+        window.testAutoPinSystem = testAutoPinSystem;
         window.loadSpineCharacter = loadSpineCharacter;
         window.switchCharacter = switchCharacter;
         window.getCurrentBB = () => currentBoundingBox;
