@@ -469,6 +469,7 @@
     
     <!-- 必要なモジュール読み込み -->
     <!-- ElementObserver Phase 1 (BB特化版) -->
+    <script src="micromodules/element-observer/ElementObserverCore.js"></script>
     <script src="micromodules/element-observer/ElementObserver.js"></script>
     
     <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
@@ -752,18 +753,24 @@
                             log('📊 従来システム: ピクセルサイズ計算', 'info');
                         }
                         
-                        const testCharacter = document.getElementById('test-character');
-                        if (!testCharacter) {
+                        // testCharacter要素を取得（Canvas要素も対応）
+                        let targetCharacter = testCharacter;
+                        if (!targetCharacter) {
+                            // Canvas要素を直接検索
+                            targetCharacter = document.getElementById('spine-canvas');
+                        }
+                        
+                        if (!targetCharacter) {
                             log('❌ テストキャラクター要素が見つかりません', 'error');
                             return;
                         }
                         
                         // 位置は現在のパーセンテージを維持、サイズのみ再計算
-                        const oldWidth = testCharacter.style.width;
-                        const oldHeight = testCharacter.style.height;
+                        const oldWidth = targetCharacter.style.width;
+                        const oldHeight = targetCharacter.style.height;
                         
-                        testCharacter.style.width = widthPct.toFixed(2) + '%';
-                        testCharacter.style.height = heightPct.toFixed(2) + '%';
+                        targetCharacter.style.width = widthPct.toFixed(2) + '%';
+                        targetCharacter.style.height = heightPct.toFixed(2) + '%';
                         
                         log(`🔧 BB比率保持: 編集サイズ ${positionData.actualSize.widthPx}×${positionData.actualSize.heightPx}px`, 'info');
                         log(`📏 サイズ変更: ${oldWidth} → ${widthPct.toFixed(2)}%, ${oldHeight} → ${heightPct.toFixed(2)}%`, 'success');
