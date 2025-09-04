@@ -301,6 +301,9 @@
             <button class="control-button secondary-button" onclick="switchCharacter()">
                 🔄 キャラクター切り替え (Purattokun/Nezumi)
             </button>
+            <button class="control-button secondary-button" onclick="testCanvasResize()">
+                📐 Canvasリサイズテスト
+            </button>
             <button class="control-button secondary-button" onclick="showModuleStatus()">
                 ⚙️ モジュール状態確認
             </button>
@@ -401,6 +404,9 @@
     <!-- StableSpineRenderer -->
     <script src="micromodules/spine-renderer/StableSpineRenderer.js"></script>
     
+    <!-- CanvasResizeController -->
+    <script src="micromodules/canvas-resize/CanvasResizeController.js"></script>
+    
     <!-- 必要なモジュール読み込み -->
     <script src="micromodules/element-observer/ElementObserverCore.js"></script>
     <script src="micromodules/element-observer/ElementObserverTransform.js"></script>
@@ -422,6 +428,7 @@
         let logDisplay = null;
         let spineRenderer = null;
         let currentCharacterName = 'purattokun';  // デフォルトはpurattokun
+        let canvasResizeController = null;
         
         // ログ関数
         function log(message, type = 'info') {
@@ -457,11 +464,13 @@
         async function checkModules() {
             const modules = [
                 { name: 'ElementObserverCore', obj: window.ElementObserverCore },
-                { name: 'ElementObserverAdvanced', obj: window.ElementObserverAdvanced },
+                { name: 'ElementObserver', obj: window.ElementObserver },
                 { name: 'PureBoundingBoxCore', obj: window.PureBoundingBoxCore },
                 { name: 'PureBoundingBoxUI', obj: window.PureBoundingBoxUI },
                 { name: 'PureBoundingBoxAutoPin', obj: window.PureBoundingBoxAutoPin },
-                { name: 'PureBoundingBox', obj: window.PureBoundingBox }
+                { name: 'PureBoundingBox', obj: window.PureBoundingBox },
+                { name: 'CanvasResizeController', obj: window.CanvasResizeController },
+                { name: 'StableSpineRenderer', obj: window.StableSpineRenderer }
             ];
             
             let allLoaded = true;
@@ -764,9 +773,10 @@
             
             // グローバル変数確認
             const globals = [
-                'ElementObserverCore', 'ElementObserverAdvanced',
+                'ElementObserverCore', 'ElementObserver',
                 'PureBoundingBoxCore', 'PureBoundingBoxUI', 
-                'PureBoundingBoxAutoPin', 'PureBoundingBox'
+                'PureBoundingBoxAutoPin', 'PureBoundingBox',
+                'CanvasResizeController', 'StableSpineRenderer'
             ];
             
             globals.forEach(name => {
@@ -860,6 +870,17 @@
                     log('✅ Spineキャンバス作成完了', 'success');
                 }
                 
+                // CanvasResizeController初期化
+                if (typeof CanvasResizeController !== 'undefined') {
+                    canvasResizeController = new CanvasResizeController(canvas, {
+                        characterManager: null, // Spine統合時に設定
+                        debugMode: true
+                    });
+                    log('✅ CanvasResizeController初期化完了', 'success');
+                } else {
+                    log('⚠️ CanvasResizeController が読み込まれていません', 'warning');
+                }
+                
                 // Spine WebGL の読み込み確認
                 if (typeof spine === 'undefined') {
                     log('❌ Spine WebGL が読み込まれていません', 'error');
@@ -889,6 +910,12 @@
                 log(`✅ ${currentCharacterName}キャラクター読み込み完了`, 'success');
                 log(`🎬 アニメーション再生: ${defaultAnimation}`, 'success');
                 
+                // CanvasResizeControllerにSpineRendererを統合
+                if (canvasResizeController && spineRenderer) {
+                    canvasResizeController.config.characterManager = spineRenderer;
+                    log('✅ CanvasResizeController + SpineRenderer統合完了', 'success');
+                }
+                
                 // テストキャラクター要素を非表示（Spineに切り替え）
                 testCharacter.style.display = 'none';
                 
@@ -917,6 +944,75 @@
             }
         }
         
+        // Canvasリサイズテスト
+        async function testCanvasResize() {
+            try {
+                log('📐 Canvasリサイズテスト開始', 'info');
+                
+                if (!canvasResizeController) {
+                    log('⚠️ CanvasResizeController が初期化されていません。先にSpineキャラクターを読み込んでください。', 'warning');
+                    return;
+                }
+                
+                if (!spineRenderer) {
+                    log('⚠️ SpineRenderer が初期化されていません。先にSpineキャラクターを読み込んでください。', 'warning');
+                    return;
+                }
+                
+                const canvas = document.getElementById('spine-canvas');
+                const originalSize = { width: canvas.width, height: canvas.height };
+                log(`📊 現在のCanvasサイズ: ${originalSize.width} x ${originalSize.height}`, 'info');
+                
+                // リサイズテストサイズリスト
+                const testSizes = [200, 300, 400, 150];
+                let currentIndex = 0;
+                
+                log('🔄 段階的リサイズテスト開始', 'info');
+                
+                const resizeStep = () => {
+                    if (currentIndex >= testSizes.length) {
+                        // 元のサイズに戻す
+                        log(`🔄 元サイズに復元: ${originalSize.width} x ${originalSize.height}`, 'info');
+                        const success = canvasResizeController.canvas.resizeToSquare(Math.max(originalSize.width, originalSize.height));
+                        if (success) {
+                            log('✅ Canvasリサイズテスト完了', 'success');
+                        } else {
+                            log('❌ 元サイズ復元に失敗', 'error');
+                        }
+                        return;
+                    }
+                    
+                    const newSize = testSizes[currentIndex];
+                    log(`📐 リサイズ実行: ${newSize} x ${newSize}`, 'info');
+                    
+                    // CanvasResizeControllerでリサイズ実行
+                    const success = canvasResizeController.canvas.resizeToSquare(newSize);
+                    
+                    if (success) {
+                        log(`✅ リサイズ成功: ${newSize} x ${newSize}`, 'success');
+                        
+                        // Spineアニメーションも更新
+                        if (spineRenderer && spineRenderer.resize) {
+                            spineRenderer.resize();
+                            log('🎬 Spineアニメーション更新完了', 'success');
+                        }
+                    } else {
+                        log(`❌ リサイズ失敗: ${newSize}`, 'error');
+                    }
+                    
+                    currentIndex++;
+                    setTimeout(resizeStep, 1500); // 1.5秒後に次のリサイズ
+                };
+                
+                // テスト開始
+                resizeStep();
+                
+            } catch (error) {
+                log(`❌ Canvasリサイズテストエラー: ${error.message}`, 'error');
+                console.error('Canvasリサイズテストエラー:', error);
+            }
+        }
+        
         // クリーンアップ
         window.addEventListener('beforeunload', () => {
             if (currentBoundingBox) {
@@ -925,16 +1021,21 @@
             if (spineRenderer) {
                 spineRenderer.cleanup();
             }
+            if (canvasResizeController) {
+                canvasResizeController.cleanup();
+            }
         });
         
         // デバッグ用グローバル関数
         window.testBoundingBox = testBasicBoundingBox;
         window.testRightClickMenu = testRightClickMenu;
         window.testResize = testResize;
+        window.testCanvasResize = testCanvasResize;
         window.loadSpineCharacter = loadSpineCharacter;
         window.switchCharacter = switchCharacter;
         window.getCurrentBB = () => currentBoundingBox;
         window.getSpineRenderer = () => spineRenderer;
+        window.getCanvasResizeController = () => canvasResizeController;
         window.logTest = (message, type) => log(message, type);
     </script>
 </body>
