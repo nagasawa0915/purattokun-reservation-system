@@ -1054,6 +1054,39 @@
                 log(`アクティブピン数: ${autoPinState.activePinsCount}`, 'info');
                 log(`パフォーマンス統計: 成功${autoPinState.performanceMetrics.successCount}件, 失敗${autoPinState.performanceMetrics.failureCount}件`, 'info');
                 
+                // 🔍 ElementObserver統合状態の詳細診断
+                log('🔍 ElementObserver統合診断:', 'info');
+                const observer = currentBoundingBox.autoPin.observer;
+                if (observer) {
+                    log(`✅ ElementObserver インスタンス: 存在`, 'success');
+                    log(`📋 observe メソッド: ${typeof observer.observe}`, 'info');
+                    log(`📋 ElementObserver クラス: ${observer.constructor.name}`, 'info');
+                    
+                    // observeメソッドが関数かチェック
+                    if (typeof observer.observe === 'function') {
+                        log('✅ observe メソッド: 利用可能', 'success');
+                    } else {
+                        log('❌ observe メソッド: 利用不可', 'error');
+                    }
+                } else {
+                    log('❌ ElementObserver インスタンス: null', 'error');
+                }
+                
+                // グローバルElementObserverクラスの確認
+                log('🔍 グローバルElementObserver確認:', 'info');
+                if (typeof window.ElementObserver !== 'undefined') {
+                    log('✅ window.ElementObserver: 存在', 'success');
+                    try {
+                        const testInstance = new window.ElementObserver();
+                        log(`✅ テストインスタンス作成: 成功 (${testInstance.constructor.name})`, 'success');
+                        log(`📋 テストインスタンス observe: ${typeof testInstance.observe}`, 'info');
+                    } catch (error) {
+                        log(`❌ テストインスタンス作成: 失敗 - ${error.message}`, 'error');
+                    }
+                } else {
+                    log('❌ window.ElementObserver: 未定義', 'error');
+                }
+                
                 // 3. 背景要素検出テスト
                 log('🔍 背景要素検出テスト:', 'info');
                 const backgroundElement = currentBoundingBox.autoPin.detectBackgroundElement(testCharacter);
