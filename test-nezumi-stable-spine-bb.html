@@ -1236,6 +1236,27 @@
             }
           });
         }
+        
+        // デバウンス付き位置保存（500ms遅延）
+        debouncedSavePosition(positionX, positionY) {
+          // 前回のタイマーをクリア
+          if (this.positionSaveTimer) {
+            clearTimeout(this.positionSaveTimer);
+          }
+          
+          // 新しいタイマーを設定
+          this.positionSaveTimer = setTimeout(() => {
+            const integration = window.nezumiIntegration;
+            if (integration && integration.selectedCharacter) {
+              // CanvasResizeIframeHandlerからSpinePositioningのsavePositionSettingsを呼び出し
+              if (window.spinePositioning && window.spinePositioning.savePositionSettings) {
+                window.spinePositioning.savePositionSettings(integration.selectedCharacter, positionX, positionY);
+              } else {
+                this.log('⚠️ SpinePositioning.savePositionSettingsが見つかりません');
+              }
+            }
+          }, 500);
+        }
 
         /**
          * LogSystem高度機能への便利なアクセサーメソッド
@@ -1669,6 +1690,11 @@
 
             // 🎨 位置調整中はオレンジBBを表示（視覚フィードバック）
             this.showCharacterAdjustmentBB();
+            
+            // 💾 デバウンス処理で位置保存（パフォーマンス最適化）
+            if (window.canvasResizeHandler) {
+              window.canvasResizeHandler.debouncedSavePosition(xValue, yValue);
+            }
             
           } catch (error) {
             // リアルタイムなのでエラーログは控えめに
@@ -2207,6 +2233,7 @@
           this.iframe = null;
           this.iframeLoaded = false;
           this.messageQueue = []; // 待機中メッセージのキュー
+          this.positionSaveTimer = null; // デバウンス用タイマー
           this.setupIframeCommunication();
         }
 
@@ -2415,6 +2442,37 @@
           }
         }
 
+        // 位置設定を保存
+        savePositionSettings(characterId, positionX, positionY) {
+          try {
+            const integration = window.nezumiIntegration;
+            if (!integration || !integration.settingsPersistence) {
+              this.log('❌ SpineSettingsPersistenceが利用できません');
+              return;
+            }
+            
+            // 現在の設定を取得
+            const existingSettings = integration.settingsPersistence.restore(characterId) || {};
+            
+            // 位置設定を更新
+            const updatedSettings = {
+              ...existingSettings,
+              positionX: positionX,
+              positionY: positionY
+            };
+            
+            // 保存実行
+            const success = integration.settingsPersistence.save(characterId, updatedSettings);
+            if (success) {
+              this.log(`💾 ${characterId} 位置設定保存成功: X=${positionX}, Y=${positionY}`);
+            } else {
+              this.log(`❌ ${characterId} 位置設定保存失敗`);
+            }
+          } catch (error) {
+            this.log(`❌ 位置設定保存エラー: ${error.message}`);
+          }
+        }
+
         // 位置制御（複数キャラクター対応）
         handlePositionChange(data) {
           const integration = window.nezumiIntegration;
@@ -2430,10 +2488,10 @@
             // BBフィードバックを送信
             integration.sendBBFeedback('position');
             
-            // 💾 Spine設定保存はCanvasResizeController側で処理
+            // 💾 SpineSettingsPersistenceで位置設定保存
+            this.savePositionSettings(integration.selectedCharacter, data.x, data.y);
             
-            // 頻繁な呼び出しのため、ログは控えめに（必要に応じて有効化）
-            // this.log(`📍 ${integration.selectedCharacter} 位置変更: X=${data.x}, Y=${data.y}`);
+            this.log(`📍 ${integration.selectedCharacter} 位置変更: X=${data.x}, Y=${data.y}`);
           } else {
             this.log('⚠️ 選択されたキャラクターが読み込まれていません');
           }

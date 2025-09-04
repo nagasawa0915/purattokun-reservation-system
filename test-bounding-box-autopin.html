@@ -1114,22 +1114,80 @@
                     return;
                 }
                 
+                // BBの位置とサイズを確認
+                const bbElement = currentBoundingBox.element;
+                if (bbElement) {
+                    const rect = bbElement.getBoundingClientRect();
+                    log(`📍 BB位置: (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)})`, 'info');
+                    log(`📏 BBサイズ: ${rect.width.toFixed(1)} × ${rect.height.toFixed(1)}`, 'info');
+                }
+                
                 log('📋 右クリックメニューの使用方法:', 'info');
-                log('1. バウンディングボックス上で右クリック', 'info');
-                log('2. メニューから操作を選択', 'info');
-                log('3. ショートカットも利用可能:', 'info');
+                log('1. 青い枠のバウンディングボックス上で右クリック', 'info');
+                log('2. 表示されたメニューから「保存」を選択', 'info');
+                log('3. 自動的にAutoPin機能で最適なピン位置が設定されます', 'info');
+                log('4. ショートカットキー:', 'info');
                 log('   - Enter: 保存（自動ピン適用）', 'info');
                 log('   - Escape: キャンセル', 'info');
                 log('   - Ctrl+S: 保存', 'info');
                 
-                // UI状態確認
+                // VI座標系状態確認
+                if (currentBoundingBox.ui && currentBoundingBox.ui.autoPin) {
+                    const state = currentBoundingBox.ui.autoPin.getState();
+                    log(`📊 AutoPin状態: アクティブピン${state.activePinsCount}個`, 'info');
+                    
+                    // VI座標系の詳細情報
+                    const viSystem = currentBoundingBox.ui.autoPin;
+                    if (viSystem.currentVIRatio) {
+                        log(`🎯 VI座標系: 比率 ${viSystem.currentVIRatio.toFixed(4)}`, 'info');
+                    }
+                    
+                    // 右クリックメニューをプログラム的に表示してテスト
+                    log('💡 実際にBB上で右クリックしてメニューを確認してください', 'info');
+                    log('📌 保存時にAutoPinが以下の9ポイントから最適位置を選択:', 'info');
+                    log('   TL(左上) TC(上中) TR(右上)', 'info');
+                    log('   ML(左中) MC(中央) MR(右中)', 'info');
+                    log('   BL(左下) BC(下中) BR(右下)', 'info');
+                    
+                } else {
+                    log('❌ AutoPinシステムが利用できません', 'error');
+                }
+                
+                // UI状態の詳細確認
                 if (currentBoundingBox.ui) {
                     log('✅ 右クリックメニューシステム利用可能', 'success');
+                    log('🎮 BBをドラッグして位置を調整後、右クリック→保存でピン配置', 'info');
                     
-                    if (currentBoundingBox.ui.autoPin) {
-                        const state = currentBoundingBox.ui.autoPin.getState();
-                        log(`📊 AutoPin状態: アクティブピン${state.activePinsCount}個`, 'info');
-                    }
+                    // 右クリックシミュレーション機能の提供
+                    log('', 'info');
+                    log('💡 テスト用右クリックシミュレーション機能:', 'info');
+                    log('以下のコマンドでBBの右クリックをテストできます:', 'info');
+                    log('simulateRightClickOnBB() // BB中央で右クリックをシミュレート', 'info');
+                    
+                    // グローバル関数として登録
+                    window.simulateRightClickOnBB = () => {
+                        if (bbElement) {
+                            const rect = bbElement.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+                            
+                            // 右クリックイベントを作成
+                            const rightClickEvent = new MouseEvent('contextmenu', {
+                                bubbles: true,
+                                cancelable: true,
+                                clientX: centerX,
+                                clientY: centerY,
+                                button: 2,
+                                buttons: 2
+                            });
+                            
+                            log(`🖱️ BB中央(${centerX.toFixed(1)}, ${centerY.toFixed(1)})で右クリックシミュレート`, 'info');
+                            bbElement.dispatchEvent(rightClickEvent);
+                        } else {
+                            log('❌ BBエレメントが見つかりません', 'error');
+                        }
+                    };
+                    
                 } else {
                     log('❌ UIシステムが利用できません', 'error');
                 }
@@ -1314,14 +1372,82 @@
                     log(`✅ 最適アンカー: ${optimalAnchor} (${getAnchorName(optimalAnchor)})`, 'success');
                 }
                 
-                // 5. 保存時自動ピン適用の説明
-                log('💡 次のステップ: 実際のテスト手順', 'info');
-                log('1. BBをドラッグして位置を調整', 'info');
-                log('2. 「保存」ボタンをクリック', 'info');
-                log('3. 自動ピンが適用されることを確認', 'info');
-                log('4. ページをリサイズして追従動作を確認', 'info');
+                // 5. 実際の保存・復元動作テスト
+                log('🎯 実際のAutoPin保存・復元テスト:', 'info');
                 
-                log('✅ AutoPin システムテスト完了', 'success');
+                // 現在の位置を記録
+                const beforeBounds = currentBoundingBox.getBounds();
+                if (beforeBounds) {
+                    // getBounds()はx,y形式とleft,top形式の両方に対応
+                    const x = beforeBounds.left !== undefined ? beforeBounds.left : beforeBounds.x || 0;
+                    const y = beforeBounds.top !== undefined ? beforeBounds.top : beforeBounds.y || 0;
+                    log(`現在位置: ${x.toFixed(1)}, ${y.toFixed(1)}`, 'info');
+                } else {
+                    log(`現在位置: 取得できませんでした (bounds: ${JSON.stringify(beforeBounds)})`, 'warning');
+                }
+                
+                // AutoPinテスト用にBBを少し移動
+                const moveDistance = 50;
+                const element = currentBoundingBox.element;
+                
+                if (element && element.style) {
+                    const currentLeft = parseFloat(element.style.left || '0px');
+                    const currentTop = parseFloat(element.style.top || '0px');
+                    
+                    element.style.left = `${currentLeft + moveDistance}px`;
+                    element.style.top = `${currentTop + moveDistance}px`;
+                    
+                    const afterMoveBounds = currentBoundingBox.getBounds();
+                    if (afterMoveBounds) {
+                        const x = afterMoveBounds.left !== undefined ? afterMoveBounds.left : afterMoveBounds.x || 0;
+                        const y = afterMoveBounds.top !== undefined ? afterMoveBounds.top : afterMoveBounds.y || 0;
+                        log(`移動後位置: ${x.toFixed(1)}, ${y.toFixed(1)}`, 'info');
+                    } else {
+                        log(`移動後位置: 取得できませんでした`, 'warning');
+                    }
+                } else {
+                    log('❌ BBエレメントが利用できません - 位置移動テストをスキップ', 'warning');
+                }
+                
+                // プログラム的に保存を実行
+                log('💾 AutoPin保存を実行中...', 'info');
+                try {
+                    const saveResult = await currentBoundingBox.ui.handleSave();
+                    if (saveResult) {
+                        log('✅ AutoPin保存完了', 'success');
+                        
+                        // ピン配置結果の確認
+                        const pinState = currentBoundingBox.autoPin.getState();
+                        log(`📍 現在のピン数: ${pinState.activePinsCount}`, 'info');
+                        
+                        // VI座標系での復元テスト案内
+                        log('', 'info');
+                        log('💡 VI座標系復元テスト手順:', 'info');
+                        log('1. ブラウザウィンドウをリサイズしてください', 'info');
+                        log('2. アスペクト比の変化を確認', 'info');
+                        log('3. 再度BBを表示してピン位置が正しく復元されるか確認', 'info');
+                        
+                        // テスト用関数を提供
+                        window.testVIRestoration = () => {
+                            if (currentBoundingBox && currentBoundingBox.autoPin) {
+                                log('🎯 VI座標系復元テスト実行', 'info');
+                                const viRatio = currentBoundingBox.autoPin.currentVIRatio;
+                                if (viRatio) {
+                                    log(`現在のVI比率: ${viRatio.toFixed(4)}`, 'info');
+                                    log('ウィンドウリサイズ後にこの値の変化を確認してください', 'info');
+                                }
+                            }
+                        };
+                        log('💻 コマンド: testVIRestoration() でVI復元テスト実行', 'info');
+                        
+                    } else {
+                        log('❌ AutoPin保存失敗', 'error');
+                    }
+                } catch (saveError) {
+                    log(`❌ 保存エラー: ${saveError.message}`, 'error');
+                }
+                
+                log('✅ AutoPin システム統合テスト完了', 'success');
                 
             } catch (error) {
                 log(`❌ AutoPin システムテストエラー: ${error.message}`, 'error');
