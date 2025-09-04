@@ -1,42 +1,49 @@
-# PureBoundingBox 自動ピン適用システム仕様書
+# PureBoundingBox 2段階ピン設定システム仕様書
 
-**バージョン**: 1.0  
-**対象**: PureBoundingBox + ElementObserver Phase 1統合  
-**作成日**: 2025-08-29  
+**バージョン**: 2.0  
+**対象**: PureBoundingBox + F12風要素選択 + ElementObserver Phase 1統合  
+**作成日**: 2025-09-04  
+**更新**: 2段階ピン設定システムへの全面改訂
 
 ---
 
 ## 🎯 概要
 
-PureBoundingBox 自動ピン適用システムは、**「保存 = 自動ピン留め」**により、ユーザーがピン機能を意識することなく、キャラクターの自動追従機能を利用できるシームレスなシステムです。
+PureBoundingBox 2段階ピン設定システムは、**「要素選択 + 位置微調整」**の2段階アプローチにより、ユーザーが任意のページ要素に対してキャラクターを精密にピン留めできる高度なシステムです。
 
 ### 🚀 設計思想
-- **透明性**: ユーザーはピン機能を意識しない
-- **直感性**: 既存の「保存」操作がそのまま自動追従を有効化
-- **互換性**: 従来のバウンディングボックス操作は完全保持
-- **安定性**: ElementObserver Phase 1 の環境揺れ吸収技術活用
+- **精密性**: ユーザーが意図した要素に確実にピン設定
+- **直感性**: F12開発者ツール風の馴染みあるUI
+- **柔軟性**: テキスト・画像・ボタンなど任意要素が対象
+- **相対性**: 選択要素の拡大縮小・移動に完全追従
 
 ---
 
-## 🎮 ユーザー操作フロー
+## 🎮 新しい2段階ユーザー操作フロー
 
-### 従来のフロー（変更なし）
+### Stage 1: ピン対象要素選択
 1. キャラクターをクリック → バウンディングボックス表示
-2. ドラッグ・リサイズで位置・サイズ調整
-3. **「保存」ボタンをクリック**
-4. 設定確定・バウンディングボックス非表示
+2. **「📍 ピン設定」ボタンをクリック**
+3. **F12風要素選択モード起動**
+4. マウスホバー → リアルタイム要素ハイライト表示
+   ```
+   ヒーローイメージ → 青枠ハイライト
+   「ようこそ」テキスト → 青枠ハイライト
+   ボタン要素 → 青枠ハイライト
+   アイコン要素 → 青枠ハイライト
+   ```
+5. **対象要素をクリック** → 要素確定
+6. 確認ダイアログ: 「この要素にピン設定しますか？」
 
-### 新しいフロー（透明な拡張）
-1. キャラクターをクリック → バウンディングボックス表示
-2. ドラッグ・リサイズで位置・サイズ調整
-3. **「保存」ボタンをクリック**
-4. 🔄 **システムが自動実行**:
-   - 背景要素の自動検出
-   - 最適なアンカーポイントの計算
-   - ピン留めの自動設定
-   - ElementObserver Phase 1 による追従開始
-5. 設定確定・バウンディングボックス非表示
-6. 🎯 **以後、自動追従が有効**（ユーザー透明）
+### Stage 2: キャラクター位置微調整
+7. 選択要素が **基準として視覚的に表示** (薄い枠線)
+8. キャラクターのバウンディングボックスで **相対位置調整**
+   - ドラッグ移動 (選択要素基準の相対座標)
+   - スケール調整
+   - 9点アンカー選択 (TL,TC,TR,ML,MC,MR,BL,BC,BR)
+9. **リアルタイムプレビュー**: 選択要素との位置関係表示
+10. **「保存」ボタンクリック** → ピン設定完成
+11. **以後、自動追従が有効**: 選択要素の移動・拡大縮小にキャラクターが追従
 
 ---
 
@@ -47,9 +54,14 @@ PureBoundingBox 自動ピン適用システムは、**「保存 = 自動ピン�
 PureBoundingBox (既存)
 ├── PureBoundingBoxCore.js
 ├── PureBoundingBoxBounds.js  
-├── PureBoundingBoxUI.js      ← 保存処理拡張
+├── PureBoundingBoxUI.js      ← 📍ピン設定ボタン・Stage 2 UI追加
 ├── PureBoundingBoxEvents.js
-└── PureBoundingBoxAutoPin.js ← 新規追加
+└── PureBoundingBoxAutoPin.js ← 大幅拡張
+
+新規モジュール (F12風要素選択)
+├── ElementHighlighter.js    ← Stage 1: リアルタイム要素ハイライト
+├── ElementSelector.js       ← Stage 1: 要素選択・確定処理
+└── RelativeCoordinator.js   ← Stage 2: 相対座標計算・追従処理
 
 ElementObserver Phase 1 (連携)
 ├── ElementObserver.js
@@ -57,54 +69,166 @@ ElementObserver Phase 1 (連携)
 └── 環境揺れ吸収・親要素監視システム
 ```
 
-### 新規モジュール: PureBoundingBoxAutoPin.js
+### Stage 1モジュール: ElementHighlighter.js
 ```javascript
 /**
- * PureBoundingBoxAutoPin.js
+ * ElementHighlighter.js
  * 
- * 🎯 自動ピン適用マイクロモジュール
- * - 外部依存: ElementObserver, PureBoundingBoxCore
- * - 責務: 保存時の自動ピン設定のみ
+ * 🎯 F12風リアルタイム要素ハイライトシステム
+ * - 責務: マウスホバーでの要素検出・ハイライト表示
  */
-class PureBoundingBoxAutoPin {
-    constructor(core, observer) {
-        this.core = core;
-        this.observer = observer; // ElementObserver instance
+class ElementHighlighter {
+    constructor() {
+        this.isActive = false;
+        this.highlightOverlay = null;
+        this.currentTarget = null;
+        this.excludeSelectors = ['.pure-bounding-box', '.bb-handle'];
+    }
+    
+    /**
+     * 🎯 F12風ハイライトモード開始
+     */
+    startHighlightMode(callback) {
+        this.isActive = true;
+        this.onElementSelected = callback;
+        
+        // オーバーレイ作成
+        this.createHighlightOverlay();
+        
+        // マウス追跡開始
+        document.addEventListener('mousemove', this.handleMouseMove);
+        document.addEventListener('click', this.handleElementClick);
+        
+        // エスケープで終了
+        document.addEventListener('keydown', this.handleKeyDown);
+        
+        console.log('🎯 F12風要素選択モード開始');
+    }
+    
+    /**
+     * リアルタイム要素ハイライト更新
+     */
+    handleMouseMove = (event) => {
+        if (!this.isActive) return;
+        
+        const target = document.elementFromPoint(event.clientX, event.clientY);
+        
+        if (this.shouldExcludeElement(target)) return;
+        if (target === this.currentTarget) return;
+        
+        this.currentTarget = target;
+        this.updateHighlight(target);
+    }
+    
+    /**
+     * ハイライト表示更新
+     */
+    updateHighlight(element) {
+        if (!element || !this.highlightOverlay) return;
+        
+        const rect = element.getBoundingClientRect();
+        
+        this.highlightOverlay.style.cssText = `
+            position: fixed;
+            left: ${rect.left}px;
+            top: ${rect.top}px;
+            width: ${rect.width}px;
+            height: ${rect.height}px;
+            border: 2px solid #007bff;
+            background: rgba(0, 123, 255, 0.1);
+            pointer-events: none;
+            z-index: 10001;
+            transition: all 0.1s ease;
+        `;
+        
+        // 要素情報表示
+        this.showElementInfo(element, rect);
+    }
+}
+```
+
+### Stage 2モジュール: RelativeCoordinator.js
+```javascript
+/**
+ * RelativeCoordinator.js
+ * 
+ * 🎯 相対座標計算・追従処理システム
+ * - 責務: 選択要素基準の相対位置計算・レスポンシブ追従
+ */
+class RelativeCoordinator {
+    constructor(observer) {
+        this.observer = observer;
         this.activePins = new Map(); // nodeId -> pinConfig
     }
     
     /**
-     * 🎯 保存時自動ピン適用（メイン機能）
+     * 🎯 相対ピン設定作成
      */
-    async applyAutoPinOnSave(saveData) {
+    async createRelativePin(config) {
+        const {
+            selectedElement,  // Stage 1で選択された要素
+            characterElement, // キャラクター要素
+            anchor,          // 9点アンカー (TL,TC,TR,ML,MC,MR,BL,BC,BR)
+            relativeOffset   // 選択要素からの相対位置
+        } = config;
+        
         try {
-            console.log('🎯 保存時自動ピン適用開始');
-            
-            // 1. 背景要素の自動検出
-            const backgroundElement = this.detectBackgroundElement(saveData.targetElement);
-            
-            // 2. 最適アンカーポイントの計算
-            const optimalAnchor = this.calculateOptimalAnchor(saveData.bounds, backgroundElement);
-            
-            // 3. 既存ピンのクリーンアップ
-            this.cleanupExistingPin(this.core.config.nodeId);
-            
-            // 4. 新しいピンの設定
-            const pinConfig = await this.createAutoPin({
-                targetElement: backgroundElement,
-                spineElement: saveData.targetElement,
-                anchor: optimalAnchor,
-                bounds: saveData.bounds
+            console.log('🎯 相対ピン設定開始', {
+                selectedElement: this.getElementInfo(selectedElement),
+                anchor: anchor,
+                offset: relativeOffset
             });
             
-            // 5. ピン情報の記録
-            this.activePins.set(this.core.config.nodeId, pinConfig);
+            // 相対座標計算
+            const relativePosition = this.calculateRelativePosition(
+                selectedElement, 
+                characterElement, 
+                anchor, 
+                relativeOffset
+            );
             
-            console.log('✅ 自動ピン適用完了:', pinConfig);
+            // ElementObserver監視開始
+            const unobserve = this.observer.observe(selectedElement, (rect, changeType) => {
+                console.log('📐 選択要素変化検出:', {
+                    changeType,
+                    size: `${rect.width}x${rect.height}`,
+                    anchor: anchor
+                });
+                
+                // 相対位置を維持したキャラクター位置更新
+                this.updateCharacterPosition(characterElement, rect, relativePosition);
+            });
+            
+            // ピン設定保存
+            const pinConfig = {
+                id: this.generatePinId(),
+                selectedElement,
+                characterElement,
+                anchor,
+                relativeOffset,
+                unobserve,
+                createdAt: Date.now()
+            };
+            
+            this.activePins.set(characterElement.id, pinConfig);
+            
+            console.log('✅ 相対ピン設定完了:', pinConfig);
             
             return {
                 success: true,
                 pinConfig: pinConfig,
+                activePinCount: this.activePins.size
+            };
+            
+        } catch (error) {
+            console.error('❌ 相対ピン設定エラー:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+}
                 message: `自動追従機能が有効になりました (${optimalAnchor})`
             };
             
@@ -123,544 +247,140 @@ class PureBoundingBoxAutoPin {
 
 ---
 
-## 🎯 背景要素自動検出システム
+## 🎯 実装例: 2段階ピン設定の実際の動作
 
-### 検出アルゴリズム
+### 実用シナリオ例
+```
+📋 シナリオ: 「ようこそ」テキストの右下にキャラクター配置
+
+Stage 1: 要素選択
+1. キャラクター「ぷらっとくん」をクリック → BB表示
+2. 「📍 ピン設定」ボタンクリック
+3. F12風モード起動 → 青色ハイライト表示開始
+4. 「ようこそ」テキストにマウスホバー → ハイライト
+5. 「ようこそ」テキストをクリック → 確認ダイアログ
+6. 「はい」をクリック → 要素確定
+
+Stage 2: 位置微調整  
+7. 「ようこそ」テキストに薄い枠線表示 (基準表示)
+8. ぷらっとくんのBBで位置調整
+   - テキスト右下に移動
+   - アンカー「BR」(Bottom-Right)選択
+   - スケール 0.8 に調整
+9. 「保存」クリック → ピン設定完成
+
+結果: 追従動作
+- ウィンドウリサイズ時
+- 「ようこそ」テキストが移動 → ぷらっとくんも追従
+- 「ようこそ」テキストが拡大 → ぷらっとくんも比例拡大
+```
+
+### UI統合仕様
 ```javascript
-detectBackgroundElement(targetElement) {
-    // 検出優先度順リスト
-    const detectionStrategies = [
-        () => this.findParentWithBackground(targetElement),
-        () => this.findNearbyImageElement(targetElement),
-        () => this.findSectionContainer(targetElement),
-        () => this.findMainContainer(targetElement),
-        () => targetElement.parentElement // フォールバック
-    ];
+// PureBoundingBoxUI.js 拡張部分
+createPinSettingButton() {
+    const pinButton = document.createElement('button');
+    pinButton.innerHTML = '📍 ピン設定';
+    pinButton.className = 'bb-pin-button';
+    pinButton.onclick = () => this.startPinSetting();
     
-    for (const strategy of detectionStrategies) {
-        const result = strategy();
-        if (result && this.validateBackgroundElement(result)) {
-            return result;
-        }
-    }
+    // 既存ボタン群に追加
+    this.buttonContainer.appendChild(pinButton);
+}
+
+async startPinSetting() {
+    console.log('🎯 2段階ピン設定開始');
     
-    // 最終フォールバック
-    return document.body;
+    // Stage 1: 要素選択
+    const selectedElement = await this.selectTargetElement();
+    if (!selectedElement) return;
+    
+    // Stage 2: 位置微調整UI表示
+    this.showRelativePositioningUI(selectedElement);
 }
 ```
 
-### 検出戦略詳細
+### パフォーマンス仕様
 
-#### 1. 背景画像付き親要素の検出
-```javascript
-findParentWithBackground(element) {
-    let current = element.parentElement;
-    while (current && current !== document.body) {
-        const style = getComputedStyle(current);
-        if (style.backgroundImage !== 'none' || 
-            style.backgroundColor !== 'rgba(0, 0, 0, 0)') {
-            return current;
-        }
-        current = current.parentElement;
-    }
-    return null;
-}
-```
-
-#### 2. 近接画像要素の検出
-```javascript
-findNearbyImageElement(element) {
-    const siblings = Array.from(element.parentElement.children);
-    const images = siblings.filter(el => 
-        el.tagName === 'IMG' && 
-        el.offsetWidth > 200 && 
-        el.offsetHeight > 200
-    );
-    
-    // 最大の画像を選択
-    return images.sort((a, b) => 
-        (b.offsetWidth * b.offsetHeight) - (a.offsetWidth * a.offsetHeight)
-    )[0] || null;
-}
-```
-
-#### 3. セクションコンテナの検出
-```javascript
-findSectionContainer(element) {
-    const containers = [
-        element.closest('section'),
-        element.closest('.hero'),
-        element.closest('.container'),
-        element.closest('main')
-    ];
-    
-    return containers.find(el => 
-        el && el.offsetWidth > 300 && el.offsetHeight > 200
-    ) || null;
-}
-```
-
----
-
-## 📍 最適アンカーポイント計算システム
-
-### 計算アルゴリズム
-```javascript
-calculateOptimalAnchor(bounds, backgroundElement) {
-    // 背景要素内での相対位置を計算
-    const bgRect = backgroundElement.getBoundingClientRect();
-    const spineRect = {
-        x: bounds.left,
-        y: bounds.top,
-        width: bounds.width,
-        height: bounds.height,
-        centerX: bounds.left + bounds.width / 2,
-        centerY: bounds.top + bounds.height / 2
-    };
-    
-    // 正規化座標（0.0-1.0）
-    const normalizedX = (spineRect.centerX - bgRect.left) / bgRect.width;
-    const normalizedY = (spineRect.centerY - bgRect.top) / bgRect.height;
-    
-    // アンカーポイントマッピング
-    return this.mapToAnchorPoint(normalizedX, normalizedY);
-}
-
-mapToAnchorPoint(x, y) {
-    // 9分割グリッドでアンカー決定
-    const xZone = x < 0.33 ? 'L' : x > 0.67 ? 'R' : 'C';
-    const yZone = y < 0.33 ? 'T' : y > 0.67 ? 'B' : 'M';
-    
-    const anchorMap = {
-        'TL': 'TL', 'TC': 'TC', 'TR': 'TR',
-        'ML': 'ML', 'MC': 'MC', 'MR': 'MR', 
-        'BL': 'BL', 'BC': 'BC', 'BR': 'BR'
-    };
-    
-    return anchorMap[yZone + xZone] || 'MC'; // デフォルト: 中央
-}
-```
-
-### 特殊ケース対応
-```javascript
-// レスポンシブ考慮
-if (this.isResponsiveLayout(backgroundElement)) {
-    return this.adjustAnchorForResponsive(calculatedAnchor);
-}
-
-// 小さな要素の場合
-if (bgRect.width < 400 || bgRect.height < 300) {
-    return 'MC'; // 中央固定
-}
-
-// 縦長レイアウト
-if (bgRect.height / bgRect.width > 1.5) {
-    return normalizedY < 0.5 ? 'TC' : 'BC';
-}
-
-// 横長レイアウト  
-if (bgRect.width / bgRect.height > 2.0) {
-    return normalizedX < 0.5 ? 'ML' : 'MR';
-}
-```
-
----
-
-## 🔄 システム統合
-
-### PureBoundingBoxUI.js 拡張
-```javascript
-class PureBoundingBoxUI {
-    constructor(core) {
-        this.core = core;
-        // 🎯 自動ピンシステム統合
-        this.autoPin = null;
-        this.initializeAutoPin();
-    }
-    
-    async initializeAutoPin() {
-        try {
-            // ElementObserver Phase 1 初期化
-            const observer = new ElementObserver();
-            // Phase 1はシンプルなコンストラクタのみ
-            
-            // 自動ピンシステム初期化
-            this.autoPin = new PureBoundingBoxAutoPin(this.core, observer);
-            
-            console.log('🎯 自動ピンシステム統合完了 (ElementObserver Phase 1)');
-        } catch (error) {
-            console.warn('⚠️ 自動ピンシステム無効 - 基本機能のみ利用:', error.message);
-            this.autoPin = null;
-        }
-    }
-    
-    /**
-     * 保存処理拡張（既存メソッドの拡張）
-     */
-    async handleSave() {
-        // 既存の保存処理
-        const saveData = {
-            targetElement: this.core.config.targetElement,
-            bounds: this.core.bounds.getCurrentBounds(),
-            timestamp: Date.now()
-        };
-        
-        // localStorage保存
-        this.core.saveToLocalStorage(saveData);
-        
-        // 🎯 自動ピン適用
-        if (this.autoPin) {
-            const pinResult = await this.autoPin.applyAutoPinOnSave(saveData);
-            
-            if (pinResult.success) {
-                // 成功時の視覚フィードバック
-                this.showAutoPinFeedback(pinResult.pinConfig);
-                console.log('🎯 自動追従機能が有効になりました:', pinResult.pinConfig.anchor);
-            } else {
-                // 失敗時は通常の保存のみ
-                console.log('📝 基本保存完了 (自動追従なし):', pinResult.fallback);
-            }
-        }
-        
-        // UI非表示
-        this.hide();
-        
-        // 保存完了イベント
-        this.core.events.trigger('save-completed', {
-            saveData,
-            autoPinEnabled: !!this.autoPin
-        });
-    }
-}
-```
-
-### 視覚的フィードバック
-```javascript
-showAutoPinFeedback(pinConfig) {
-    // ピンアイコンの一時表示
-    const pinIndicator = document.createElement('div');
-    pinIndicator.innerHTML = '📍';
-    pinIndicator.style.cssText = `
-        position: fixed;
-        z-index: 10001;
-        font-size: 24px;
-        pointer-events: none;
-        animation: pin-success 2s ease-out forwards;
-    `;
-    
-    // アンカーポイント位置に表示
-    const targetRect = pinConfig.targetElement.getBoundingClientRect();
-    const anchorPos = this.calculateAnchorPosition(targetRect, pinConfig.anchor);
-    
-    pinIndicator.style.left = anchorPos.x + 'px';
-    pinIndicator.style.top = anchorPos.y + 'px';
-    
-    document.body.appendChild(pinIndicator);
-    
-    // 2秒後に自動削除
-    setTimeout(() => pinIndicator.remove(), 2000);
-}
-```
-
----
-
-## 📊 パフォーマンス仕様
-
-### 処理時間目標
-- **背景要素検出**: < 10ms
-- **アンカーポイント計算**: < 5ms  
+#### 処理時間目標
+- **F12風ハイライト**: < 16ms (60fps維持)
+- **要素選択処理**: < 10ms
+- **相対座標計算**: < 5ms  
 - **ピン設定処理**: < 20ms
-- **合計追加時間**: < 50ms (保存処理への影響最小化)
+- **合計追加時間**: < 50ms (既存BB操作への影響最小化)
 
-### メモリ使用量
-- **AutoPinモジュール**: < 100KB
-- **アクティブピン1個**: < 30KB
+#### メモリ使用量
+- **ElementHighlighter**: < 50KB
+- **RelativeCoordinator**: < 80KB  
+- **アクティブピン1個**: < 40KB (相対情報含む)
 - **最大同時ピン数**: 10個 (既存キャラクター分)
 
-### ElementObserver Phase 1技術活用
+#### レスポンシブ対応
 ```javascript
-// 環境揺れ吸収技術の活用
-class PureBoundingBoxAutoPin {
-    async createAutoPin(config) {
-        // ElementObserver Phase 1 機能利用
-        const observer = this.observer;
-        
-        // 親要素サイズ監視開始
-        const startTime = performance.now();
-        
-        // 基本的な要素監視機能を利用
-        const unobserve = observer.observe(
-            config.targetElement,
-            (rect, changeType) => {
-                // 背景要素の変化に応じてSpine要素を追従
-                this.updateSpinePosition(config.spineElement, rect, config.anchor);
-            }
-        );
-        
-        const processingTime = performance.now() - startTime;
-        
-        console.log(`⚡ 自動ピン作成: ${processingTime.toFixed(4)}ms`);
-        
-        return {
-            id: `auto-pin-${Date.now()}`,
-            anchor: config.anchor,
-            targetElement: config.targetElement,
-            spineElement: config.spineElement,
-            unobserve: unobserve,
-            processingTime
-        };
-    }
+// 選択要素の変化に応じた高速追従
+updateCharacterPosition(characterElement, selectedRect, relativeConfig) {
+    const anchorPosition = this.calculateAnchorPosition(selectedRect, relativeConfig.anchor);
+    const finalPosition = {
+        x: anchorPosition.x + relativeConfig.offset.x,
+        y: anchorPosition.y + relativeConfig.offset.y,
+        scale: selectedRect.scale * relativeConfig.scaleRatio
+    };
     
-    /**
-     * 🎯 Spine要素の位置更新処理
-     */
-    updateSpinePosition(spineElement, backgroundRect, anchor) {
-        // アンカーポイントに基づいた位置計算
-        const anchorPos = this.calculateAnchorPosition(backgroundRect, anchor);
-        
-        // CSSスタイル適用
-        spineElement.style.left = anchorPos.x + 'px';
-        spineElement.style.top = anchorPos.y + 'px';
-    }
-    
-    /**
-     * 📍 アンカーポイントの座標計算
-     */
-    calculateAnchorPosition(backgroundRect, anchor) {
-        const { left, top, width, height } = backgroundRect;
-        
-        // アンカーポイントの座標マッピング
-        const anchorMap = {
-            'TL': { x: left, y: top },                                    // Top-Left
-            'TC': { x: left + width / 2, y: top },                       // Top-Center  
-            'TR': { x: left + width, y: top },                           // Top-Right
-            'ML': { x: left, y: top + height / 2 },                      // Middle-Left
-            'MC': { x: left + width / 2, y: top + height / 2 },          // Middle-Center
-            'MR': { x: left + width, y: top + height / 2 },              // Middle-Right
-            'BL': { x: left, y: top + height },                          // Bottom-Left
-            'BC': { x: left + width / 2, y: top + height },              // Bottom-Center
-            'BR': { x: left + width, y: top + height }                   // Bottom-Right
-        };
-        
-        return anchorMap[anchor] || anchorMap['MC']; // デフォルト: 中央
-    }
+    // CSS Transformで高速更新
+    characterElement.style.transform = `translate(${finalPosition.x}px, ${finalPosition.y}px) scale(${finalPosition.scale})`;
 }
 ```
 
 ---
 
-## 🚨 エラーハンドリング・フォールバック
+## 🚀 実装フェーズ
 
-### エラー分類と対処
-| エラータイプ | 原因 | 対処法 |
-|-------------|------|--------|
-| `BackgroundNotFound` | 適切な背景要素が見つからない | document.bodyをフォールバック使用 |
-| `ElementObserverUnavailable` | ElementObserver Phase 1が利用不可 | 基本保存のみ実行 |
-| `AnchorCalculationFailed` | アンカー計算エラー | デフォルトMC（中央）使用 |
-| `PinCreationFailed` | ピン設定処理失敗 | 基本保存のみ・警告ログ出力 |
+### Phase 1: F12風要素選択システム (Stage 1)
+- [ ] ElementHighlighter.js - リアルタイム要素ハイライト
+- [ ] ElementSelector.js - 要素選択・確定処理
+- [ ] 📍ピン設定ボタンをPureBoundingBoxUIに統合
+- [ ] F12風モードの起動・終了UI
 
-### グレースフルデグラデーション
-```javascript
-async applyAutoPinOnSave(saveData) {
-    try {
-        // フル機能での自動ピン適用
-        return await this.fullAutoPinProcess(saveData);
-        
-    } catch (primaryError) {
-        console.warn('⚠️ 自動ピン適用失敗 - 簡易モードで再試行:', primaryError.message);
-        
-        try {
-            // 簡易モード（最小限の機能）
-            return await this.fallbackAutoPinProcess(saveData);
-            
-        } catch (fallbackError) {
-            console.warn('⚠️ 簡易モードも失敗 - 基本保存のみ:', fallbackError.message);
-            
-            // 完全フォールバック（ピンなし保存）
-            return {
-                success: false,
-                error: 'AutoPin disabled',
-                fallback: '基本保存完了 (自動追従機能なし)'
-            };
-        }
-    }
-}
+### Phase 2: 相対座標システム (Stage 2)  
+- [ ] RelativeCoordinator.js - 相対位置計算・追従処理
+- [ ] 選択要素基準の座標系実装
+- [ ] 9点アンカーシステム統合
+- [ ] リアルタイムプレビュー機能
+
+### Phase 3: ElementObserver統合・完全動作
+- [ ] ElementObserver Phase 1との完全統合
+- [ ] アクティブピン管理システム
+- [ ] ウィンドウリサイズ時の自動追従動作
+- [ ] localStorage永続化対応
+
+### Phase 4: UI/UX最適化・完成
+- [ ] F12風ハイライトの視覚的改良
+- [ ] Stage切り替えの自然な流れ
+- [ ] エラーハンドリング・フォールバック
+- [ ] パフォーマンス最適化・テスト
+
+---
+
+## ✅ 期待される完成状態
+
+**ユーザー体験**:
+```
+「ぷらっとくん」クリック → BB表示
+↓
+「📍ピン設定」クリック → F12風モード起動  
+↓
+「ようこそ」テキストを選択 → 要素確定
+↓ 
+テキスト基準でキャラクター位置微調整
+↓
+「保存」 → ピン完成
+↓
+レスポンシブ時に完全追従 → 🎯完成！
 ```
 
----
-
-## 🧪 テスト仕様
-
-### 単体テスト
-```javascript
-describe('PureBoundingBoxAutoPin', () => {
-    test('背景要素の自動検出', () => {
-        const autoPin = new PureBoundingBoxAutoPin(mockCore, mockObserver);
-        const background = autoPin.detectBackgroundElement(testSpineElement);
-        
-        expect(background).toBeTruthy();
-        expect(background.offsetWidth).toBeGreaterThan(0);
-    });
-    
-    test('最適アンカーポイント計算', () => {
-        const bounds = { left: 100, top: 50, width: 50, height: 50 };
-        const bgElement = mockBackgroundElement; // 300x200
-        
-        const anchor = autoPin.calculateOptimalAnchor(bounds, bgElement);
-        expect(anchor).toMatch(/^[TMB][LCR]$/); // 正規表現: 2文字のアンカー
-    });
-    
-    test('保存時自動ピン適用', async () => {
-        const saveData = { targetElement: mockSpine, bounds: mockBounds };
-        const result = await autoPin.applyAutoPinOnSave(saveData);
-        
-        expect(result.success).toBe(true);
-        expect(result.pinConfig).toBeDefined();
-        expect(result.pinConfig.anchor).toMatch(/^[TMB][LCR]$/);
-    });
-});
-```
-
-### 統合テスト
-```javascript
-describe('BoundingBox + AutoPin Integration', () => {
-    test('保存ボタンクリック → 自動ピン適用', async () => {
-        const boundingBox = new PureBoundingBox(config);
-        await boundingBox.execute();
-        
-        // 位置調整
-        const moveHandle = document.querySelector('[data-handle-type="move"]');
-        simulateMouseDrag(moveHandle, { x: 100, y: 50 });
-        
-        // 保存ボタンクリック
-        const saveButton = document.querySelector('.save-button');
-        saveButton.click();
-        
-        await waitForAsyncOperations();
-        
-        // ピン適用確認
-        const activePins = boundingBox.autoPin.activePins;
-        expect(activePins.size).toBe(1);
-        
-        // 追従動作確認
-        const backgroundElement = activePins.get(config.nodeId).targetElement;
-        simulateResize(backgroundElement, { width: 400, height: 300 });
-        
-        await waitForFrameUpdate();
-        
-        const spinePosition = getElementPosition(config.targetElement);
-        expect(spinePosition).toEqual(expectedPositionAfterResize);
-    });
-});
-```
-
-### E2Eテスト
-```javascript
-describe('User Experience Flow', () => {
-    test('完全な操作フロー', async () => {
-        // キャラクタークリック
-        await page.click('#spine-character');
-        await page.waitForSelector('.bb-container');
-        
-        // 位置調整
-        await page.drag('.bb-container [data-handle-type="move"]', { x: 150, y: 100 });
-        
-        // 保存クリック
-        await page.click('.save-button');
-        
-        // バウンディングボックス消失確認
-        await page.waitForSelector('.bb-container', { state: 'hidden' });
-        
-        // ピンフィードバック確認
-        await page.waitForSelector('div:has-text("📍")', { timeout: 3000 });
-        
-        // 自動追従テスト：ブラウザリサイズ
-        const originalPosition = await page.evaluate(() => {
-            const spine = document.getElementById('spine-character');
-            return { x: spine.offsetLeft, y: spine.offsetTop };
-        });
-        
-        await page.setViewportSize({ width: 1200, height: 800 });
-        await page.waitForTimeout(100); // 追従処理待機
-        
-        const newPosition = await page.evaluate(() => {
-            const spine = document.getElementById('spine-character');
-            return { x: spine.offsetLeft, y: spine.offsetTop };
-        });
-        
-        // 位置が追従して変化していることを確認
-        expect(newPosition).not.toEqual(originalPosition);
-    });
-});
-```
-
----
-
-## 📈 成功指標
-
-### ユーザビリティ指標
-- **操作変更なし**: 既存操作フローの100%保持
-- **自動適用率**: 95%以上のケースで自動ピン適用成功
-- **エラー発生率**: < 2% (グレースフルデグラデーション含む)
-- **処理追加時間**: < 50ms (保存処理への影響最小化)
-
-### 技術指標
-- **背景検出精度**: 90%以上の適切な要素検出
-- **アンカー最適性**: 80%以上のケースで最適なアンカー選択
-- **追従精度**: ±2px以内の位置追従精度
-- **メモリ効率**: 基準値の110%以内に収める
-
-### ElementObserver Phase 1活用指標
-- **環境揺れ吸収率**: 95%以上
-- **平均処理時間**: 30ms以下
-- **親要素サイズ0問題解決率**: 100%
-
----
-
-## 🚀 将来拡張
-
-### Phase 2 拡張機能
-- **手動ピン選択モード**: 「詳細設定」ボタンで手動アンカー選択
-- **複数背景対応**: 複数の背景候補から最適選択
-- **プレビューモード**: 保存前の追従動作プレビュー
-- **ピン管理UI**: アクティブピンの一覧・編集・無効化
-
-### Phase 3 高度機能  
-- **学習システム**: ユーザーの配置パターン学習・予測
-- **コンテキスト認識**: ページ種別に応じたアンカー最適化
-- **パフォーマンス分析**: 追従負荷の監視・自動最適化
-- **チーム共有**: ピン設定のエクスポート・インポート機能
-
----
-
-## 📋 実装チェックリスト
-
-### Phase 1: 基本実装
-- [ ] PureBoundingBoxAutoPin.js モジュール作成
-- [ ] PureBoundingBoxUI.js の保存処理拡張
-- [ ] 背景要素検出アルゴリズム実装
-- [ ] アンカーポイント計算ロジック実装
-- [ ] ElementObserver Phase 1 との統合
-
-### Phase 2: エラーハンドリング
-- [ ] グレースフルデグラデーション実装
-- [ ] エラー分類・対処ロジック実装
-- [ ] フォールバック機能実装
-- [ ] 詳細ログ・デバッグ機能追加
-
-### Phase 3: テスト・最適化
-- [ ] 単体テスト実装
-- [ ] 統合テスト実装
-- [ ] E2Eテスト実装
-- [ ] パフォーマンス最適化
-- [ ] ドキュメント・コメント完備
-
-### Phase 4: ユーザーエクスペリエンス
-- [ ] 視覚的フィードバック実装
-- [ ] エラーメッセージ・通知システム
-- [ ] レスポンシブ対応確認
-- [ ] アクセシビリティ対応
-
----
-
-**🎯 PureBoundingBox 自動ピン適用システムにより、ユーザーは従来通りの「配置→保存」操作だけで、透明かつ自動的に高性能な追従機能を利用できる革新的なシステムを実現します。**
+**技術的成果**:
+- ✅ アクティブピン数: 1 (または設定数)
+- ✅ F12風要素選択の直感的操作
+- ✅ 任意要素への精密ピン設定
+- ✅ レスポンシブ完全対応・自動追従
+- ✅ 既存BBシステムとの完全統合

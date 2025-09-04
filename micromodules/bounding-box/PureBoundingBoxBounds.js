@@ -193,6 +193,38 @@ class PureBoundingBoxBounds {
             bounds.y = centerY - bounds.height / 2;
         }
         
+        // Ctrl: 精密調整モード（グリッドスナップ）
+        if (dragState.modifierKeys.ctrl) {
+            const gridSize = 10; // 10pxグリッド
+            
+            bounds.x = Math.round(bounds.x / gridSize) * gridSize;
+            bounds.y = Math.round(bounds.y / gridSize) * gridSize;
+            bounds.width = Math.round(bounds.width / gridSize) * gridSize;
+            bounds.height = Math.round(bounds.height / gridSize) * gridSize;
+        }
+        
+        // 🎯 併用処理: Shift + Alt（等比 + 中心固定）
+        if (dragState.modifierKeys.shift && dragState.modifierKeys.alt) {
+            // 既に両方の処理が適用されているため、追加処理は不要
+            // ログで併用モードを記録
+            console.log('🔧 併用モード: 等比 + 中心固定');
+        }
+        
+        // 🎯 併用処理: Shift + Ctrl（等比 + グリッドスナップ）
+        if (dragState.modifierKeys.shift && dragState.modifierKeys.ctrl) {
+            console.log('🔧 併用モード: 等比 + グリッドスナップ');
+        }
+        
+        // 🎯 併用処理: Alt + Ctrl（中心固定 + グリッドスナップ）
+        if (dragState.modifierKeys.alt && dragState.modifierKeys.ctrl) {
+            console.log('🔧 併用モード: 中心固定 + グリッドスナップ');
+        }
+        
+        // 🎯 三重併用: Shift + Alt + Ctrl
+        if (dragState.modifierKeys.shift && dragState.modifierKeys.alt && dragState.modifierKeys.ctrl) {
+            console.log('🔧 三重併用モード: 等比 + 中心固定 + グリッドスナップ');
+        }
+        
         return bounds;
     }
     

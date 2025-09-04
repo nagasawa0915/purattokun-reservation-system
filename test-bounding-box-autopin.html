@@ -487,6 +487,11 @@
                 🎯 2段階UI統合テスト
             </button>
             
+            <!-- Spineキャラクター実戦テスト -->
+            <button class="control-button primary-button" onclick="initializeSpineCharacterTest()" style="background: linear-gradient(135deg, #ff6b6b, #ee5a24);">
+                🎮 Spineキャラクター実戦テスト
+            </button>
+            
             <button class="control-button secondary-button" onclick="testSystemSwitching()">
                 ⚖️ システム切り替えテスト
             </button>
@@ -578,6 +583,32 @@
                     <span class="status-indicator status-warning"></span>
                     <span>モジュールチェック中...</span>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Spineキャラクター実戦テスト エリア -->
+        <div class="info-panel" id="spine-character-area" style="display: none;">
+            <h3>🎮 Spineキャラクター実戦テスト</h3>
+            <div id="spine-character-container" style="position: relative; width: 100%; height: 400px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; overflow: hidden; margin: 10px 0;">
+                <!-- Spineキャラクターがここに表示されます -->
+                <canvas id="spine-test-canvas" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></canvas>
+                
+                <!-- キャラクター情報表示 -->
+                <div id="spine-character-info" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px; border-radius: 4px; font-size: 12px;">
+                    キャラクター: 未読み込み
+                </div>
+                
+                <!-- 2段階UIテスト制御 -->
+                <div id="spine-ui-controls" style="position: absolute; top: 10px; right: 10px;">
+                    <button class="control-button" onclick="startSpinePinTest()" style="padding: 6px 12px; font-size: 12px; background: #ff6b35; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        📍 キャラクターピンテスト
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin: 10px 0; font-size: 14px; color: #666;">
+                💡 <strong>操作方法</strong>: 
+                「📍 キャラクターピンテスト」ボタンで2段階UIを開始 → Spineキャラクターをクリック選択 → 位置調整でピン配置
             </div>
         </div>
         
@@ -2628,6 +2659,181 @@
                 console.log('  操作: ESCキーでキャンセル、Enterキーで確定');
                 console.log('🎯 要素を選択して位置調整を体験してください！');
             }, 500);
+        };
+        
+        /**
+         * 🎮 Spineキャラクター実戦テスト初期化
+         */
+        window.initializeSpineCharacterTest = function() {
+            console.log('🎮 Spineキャラクター実戦テスト初期化開始');
+            
+            // Spineエリア表示
+            const spineArea = document.getElementById('spine-character-area');
+            spineArea.style.display = 'block';
+            
+            // スクロールしてSpineエリアを表示
+            spineArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            log('🎮 Spineキャラクター実戦テスト モード有効化', 'info');
+            
+            // StableSpineRenderer使用してキャラクター初期化
+            if (typeof StableSpineRenderer !== 'undefined') {
+                initializeSpineCharacterDisplay();
+            } else {
+                log('⚠️ StableSpineRenderer が見つかりません - 基本テストモードで開始', 'warning');
+                // 基本的なテスト要素を作成
+                createMockSpineCharacter();
+            }
+        };
+        
+        /**
+         * 🎮 Spineキャラクター表示初期化
+         */
+        async function initializeSpineCharacterDisplay() {
+            try {
+                const canvas = document.getElementById('spine-test-canvas');
+                const characterInfo = document.getElementById('spine-character-info');
+                
+                log('🎮 StableSpineRendererでキャラクター初期化中...', 'info');
+                
+                // StableSpineRendererでpurattokun読み込み
+                window.spineTestRenderer = StableSpineRenderer.createForCharacter('purattokun', {
+                    canvasId: 'spine-test-canvas',
+                    width: 300,
+                    height: 300,
+                    quality: 'medium'
+                });
+                
+                // 初期化完了を待つ
+                setTimeout(() => {
+                    const spineCanvas = document.getElementById('spine-test-canvas');
+                    if (spineCanvas && spineCanvas.width > 0) {
+                        characterInfo.textContent = 'キャラクター: purattokun (StableSpineRenderer)';
+                        log('✅ Spineキャラクター読み込み完了', 'success');
+                        
+                        // キャラクターにクリックイベント追加
+                        spineCanvas.style.cursor = 'pointer';
+                        spineCanvas.title = '2段階UIテストでクリック選択可能';
+                    } else {
+                        throw new Error('Spine初期化検証失敗');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                log('❌ Spineキャラクター初期化失敗: ' + error.message, 'error');
+                console.error('Spine初期化エラー:', error);
+                
+                // フォールバック: モックキャラクター作成
+                createMockSpineCharacter();
+            }
+        }
+        
+        /**
+         * 🎭 モックSpineキャラクター作成
+         */
+        function createMockSpineCharacter() {
+            const canvas = document.getElementById('spine-test-canvas');
+            const characterInfo = document.getElementById('spine-character-info');
+            
+            // キャンバス設定
+            canvas.width = 300;
+            canvas.height = 300;
+            canvas.style.border = '2px solid #ff6b35';
+            canvas.style.borderRadius = '8px';
+            canvas.style.background = 'radial-gradient(circle, #fff3e0 0%, #ffcc80 100%)';
+            
+            // 簡単なキャラクター描画
+            const ctx = canvas.getContext('2d');
+            
+            // キャラクター本体（円形）
+            ctx.fillStyle = '#ff6b35';
+            ctx.beginPath();
+            ctx.arc(150, 150, 50, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 目
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(135, 135, 8, 0, Math.PI * 2);
+            ctx.arc(165, 135, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 口
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(150, 160, 15, 0, Math.PI);
+            ctx.stroke();
+            
+            // 文字
+            ctx.fillStyle = '#333';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('モック', 150, 250);
+            ctx.fillText('キャラクター', 150, 270);
+            
+            characterInfo.textContent = 'キャラクター: モック キャラクター (フォールバック)';
+            canvas.style.cursor = 'pointer';
+            canvas.title = '2段階UIテストでクリック選択可能';
+            
+            log('✅ モックキャラクター作成完了', 'success');
+        }
+        
+        /**
+         * 📍 Spineキャラクター用ピンテスト開始
+         */
+        window.startSpinePinTest = function() {
+            console.log('📍 Spineキャラクター用ピンテスト開始');
+            
+            // TwoStageSelectorが利用可能かチェック
+            if (typeof TwoStageSelector === 'undefined') {
+                log('❌ TwoStageSelectorが見つかりません', 'error');
+                return;
+            }
+            
+            // 2段階UI開始
+            let twoStageSelector;
+            try {
+                twoStageSelector = new TwoStageSelector();
+                log('📍 Spineキャラクター用 2段階ピン設定開始', 'info');
+                
+                // Spineキャラクター専用メッセージ
+                setTimeout(() => {
+                    log('🎮 Spineキャラクター実戦テスト中...', 'info');
+                    console.log('🎮 ゲームキャラクター要素の選択→位置調整を体験中');
+                    console.log('💡 Spineキャンバスをクリックして選択してください');
+                }, 500);
+                
+                twoStageSelector.startTwoStageProcess(
+                    // 完了コールバック
+                    (pinRequest, selectedElement) => {
+                        log('🎮 Spineキャラクターピン設定完了!', 'success');
+                        console.log('🎯 Spineピン設定結果:', pinRequest);
+                        console.log('🎮 対象Spine要素:', selectedElement ? {
+                            tagName: selectedElement.tagName,
+                            id: selectedElement.id,
+                            canvas: selectedElement.tagName === 'CANVAS'
+                        } : null);
+                        
+                        // Spineキャラクター専用の結果表示
+                        const anchorPoint = pinRequest.anchorPoints[0];
+                        log(`🎮 Spineピン配置: ${anchorPoint.id} + オフセット(${anchorPoint.offsetX}, ${anchorPoint.offsetY})`, 'success');
+                        
+                        // ゲーム制作用途でのメッセージ
+                        log('🎯 実際のゲーム制作では、この設定で UI要素がSpineキャラクターに追従します', 'info');
+                    },
+                    
+                    // キャンセルコールバック
+                    () => {
+                        log('❌ Spineキャラクターピン設定がキャンセルされました', 'warning');
+                        console.log('🔄 Spineテスト中断 - 再度「📍 キャラクターピンテスト」で再開可能');
+                    }
+                );
+                
+            } catch (error) {
+                log('❌ Spineピンテスト開始失敗: ' + error.message, 'error');
+                console.error('Spineピンテスト エラー:', error);
+            }
         };
     </script>
 </body>

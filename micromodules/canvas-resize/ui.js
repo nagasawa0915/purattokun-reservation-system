@@ -6,39 +6,188 @@
 
 class CanvasResizeUI {
   constructor() {
-    // 状態管理
-    this.state = {
+    // 状態管理（localStorage から復元）
+    this.state = this.loadState();
+    
+    // デフォルト状態（他のメソッドで使用）
+    this.defaultState = {
       canvasSize: 800,
-      scaleX: 1.35,
+      scaleX: 1.0,
       scaleY: 1.0,
-      positionX: 0,    // 中央座標に修正
-      positionY: 0,    // 中央座標に修正
-      scaleLock: true,    // デフォルトでロック有効
-      scaleRatio: 1.0 / 1.35    // Y/X の初期比率を設定
+      positionX: 0,
+      positionY: 0,
+      scaleLock: true,
+      scaleRatio: 1.0
     };
+
+    // SpineRenderer初期化待機フラグ
+    this.spineRendererReady = false;
+    this.pendingSpineRestore = false;
+    
+    // 現在のキャラクターID
+    this.currentCharacterId = null;
 
     // 初期化
     this.initializeUI();
     this.setupEventListeners();
     this.setupParentCommunication();
     
-    this.log('🎯 CanvasResizeController UI 初期化完了');
+    this.log('🎯 CanvasResizeController UI 初期化完了 (設定復元済み)');
+  }
+
+  /**
+   * ページIDを取得
+   */
+  getPageId() {
+    try {
+      return window.parent.location.pathname || 'default';
+    } catch (error) {
+      return 'default';
+    }
+  }
+
+  /**
+   * ページ固有のキーを生成
+   */
+  getPageSpecificKey(keyName) {
+    try {
+      const pageId = this.getPageId();
+      const key = `${keyName}-${pageId}`;
+      console.log('[CanvasResizeUI] 🔑 生成されたキー:', key, '(pageId:', pageId, ')');
+      return key;
+    } catch (error) {
+      // iframe内からのアクセスでエラーの場合はデフォルト
+      const defaultKey = `${keyName}-default`;
+      console.log('[CanvasResizeUI] 🔑 デフォルトキー使用:', defaultKey, '(エラー:', error.message, ')');
+      return defaultKey;
+    }
+  }
+
+  /**
+   * localStorage から状態を読み込み（ページ固有）
+   */
+  loadState() {
+    const defaultState = {
+      canvasSize: 800,
+      scaleX: 1.35,
+      scaleY: 1.0,
+      positionX: 0,
+      positionY: 0,
+      scaleLock: true,
+      scaleRatio: 1.0 / 1.35
+    };
+
+    try {
+      // UI設定を読み込み
+      const uiKey = this.getPageSpecificKey('canvasResizeSettings');
+      const uiSaved = localStorage.getItem(uiKey);
+      
+      // Spine設定を読み込み
+      const spineKey = this.getPageSpecificKey('spineSettings');
+      const spineSaved = localStorage.getItem(spineKey);
+      
+      let loadedState = {...defaultState};
+      
+      if (uiSaved) {
+        loadedState = {...loadedState, ...JSON.parse(uiSaved)};
+        console.log('[CanvasResizeUI] 💾 UI設定をlocalStorageから復元しました');
+      }
+      
+      if (spineSaved) {
+        const spineData = JSON.parse(spineSaved);
+        loadedState = {...loadedState, ...spineData};
+        console.log('[CanvasResizeUI] 💾 Spine設定をlocalStorageから復元しました');
+      }
+      
+      return loadedState;
+    } catch (error) {
+      console.log(`[CanvasResizeUI] ⚠️ localStorage読み込みエラー: ${error.message}`);
+    }
+    
+    console.log('[CanvasResizeUI] 🆕 デフォルト設定を使用');
+    return {...defaultState};
+  }
+
+  /**
+   * localStorage に状態を保存（ページ固有）
+   */
+  saveState() {
+    try {
+      const uiKey = this.getPageSpecificKey('canvasResizeSettings');
+      localStorage.setItem(uiKey, JSON.stringify(this.state));
+      this.log('💾 設定をlocalStorageに保存しました');
+    } catch (error) {
+      this.log(`❌ localStorage保存エラー: ${error.message}`);
+    }
+  }
+
+  /**
+   * Spine設定を保存（キャラクター固有）
+   */
+  saveSpineSettings(spineData, characterId = null) {
+    try {
+      // キャラクター固有キーを生成
+      let spineKey;
+      const finalCharacterId = characterId || this.currentCharacterId;
+      
+      if (finalCharacterId) {
+        const pageId = this.getPageId();
+        spineKey = `spineSettings-${pageId}-${finalCharacterId}`;
+        console.log('[CanvasResizeUI] 🔑 キャラクター固有キーで保存:', spineKey, 'キャラクターID:', finalCharacterId);
+      } else {
+        spineKey = this.getPageSpecificKey('spineSettings');
+        console.log('[CanvasResizeUI] ⚠️ キャラクターID未設定 - ページ固有キーで保存:', spineKey);
+      }
+      
+      console.log('[CanvasResizeUI] 🔍 保存時の状態:', {
+        characterId: characterId,
+        currentCharacterId: this.currentCharacterId,
+        finalCharacterId: finalCharacterId,
+        spineKey: spineKey
+      });
+      
+      const existing = localStorage.getItem(spineKey);
+      let savedData = {};
+      
+      if (existing) {
+        savedData = JSON.parse(existing);
+        console.log('[CanvasResizeUI] 📂 既存データ:', savedData);
+      }
+      
+      // 新しいデータをマージ
+      Object.assign(savedData, spineData);
+      console.log('[CanvasResizeUI] 💾 保存データ:', savedData);
+      
+      localStorage.setItem(spineKey, JSON.stringify(savedData));
+      this.log('💾 Spine設定をlocalStorageに保存しました');
+    } catch (error) {
+      this.log(`❌ Spine設定保存エラー: ${error.message}`);
+    }
   }
 
   /**
    * UI初期化
    */
   initializeUI() {
-    // 初期値設定
-    this.updateDisplayValues();
+    // デバッグ：復元された状態をログ出力
+    console.log('[CanvasResizeUI] 🔍 復元された状態:', this.state);
     
-    // Canvas サイズ表示を初期化
-    this.updateCanvasSizeDisplay();
+    // 復元した状態を全UI要素に反映
+    this.updateAllUIElements();
     
     // スケールロックの初期状態をログに記録
     if (this.state.scaleLock) {
-      this.log(`🔒 スケール比率ロック初期化: Y/X = ${this.state.scaleRatio.toFixed(3)} (デフォルト有効)`);
+      this.log(`🔒 スケール比率ロック復元: Y/X = ${this.state.scaleRatio.toFixed(3)}`);
     }
+    
+    // デバッグ：UI要素の値を確認
+    console.log('[CanvasResizeUI] 🔍 UI初期化後の確認:', {
+      canvasSize: document.getElementById('canvas-size')?.value,
+      scaleX: document.getElementById('character-scale-x')?.value,
+      scaleY: document.getElementById('character-scale-y')?.value,
+      positionX: document.getElementById('character-x')?.value,
+      positionY: document.getElementById('character-y')?.value
+    });
   }
 
   /**
@@ -70,6 +219,12 @@ class CanvasResizeUI {
     canvasSizeInput.oninput = () => {
       this.state.canvasSize = parseInt(canvasSizeInput.value);
       this.updateCanvasSizeDisplay();
+      this.saveState();
+      
+      // Canvas設定も保存
+      this.saveSpineSettings({
+        canvasSize: this.state.canvasSize
+      }, this.currentCharacterId);
     };
 
     // 解像度適用
@@ -85,6 +240,7 @@ class CanvasResizeUI {
       this.state.canvasSize = 800;
       canvasSizeInput.value = 800;
       this.updateCanvasSizeDisplay();
+      this.saveState();
       this.sendToParent('canvasReset', {});
       this.log('🔄 Canvas解像度をデフォルトにリセット');
     };
@@ -132,6 +288,7 @@ class CanvasResizeUI {
         this.state.scaleRatio = null;
         this.log('🔓 スケール比率ロック解除');
       }
+      this.saveState();
     };
 
     // スケールリセット
@@ -180,8 +337,21 @@ class CanvasResizeUI {
    * その他ボタンイベント
    */
   setupButtonEvents() {
-    // 不要機能削除により、このセクションは空になりました
-    // 将来的に必要なボタンがあればここに追加
+    // 全設定リセット
+    const resetAllBtn = document.getElementById('reset-all-settings');
+    if (resetAllBtn) {
+      resetAllBtn.onclick = () => {
+        this.resetAllSettings();
+      };
+    }
+
+    // 保存データクリア
+    const clearStorageBtn = document.getElementById('clear-storage');
+    if (clearStorageBtn) {
+      clearStorageBtn.onclick = () => {
+        this.clearStorageData();
+      };
+    }
   }
 
   /**
@@ -223,6 +393,15 @@ class CanvasResizeUI {
     // 表示値更新
     this.updateScaleDisplay();
 
+    // UI設定を保存
+    this.saveState();
+    
+    // Spine設定も保存
+    this.saveSpineSettings({
+      scaleX: this.state.scaleX,
+      scaleY: this.state.scaleY
+    }, this.currentCharacterId);
+
     // 親ページに通知
     this.sendToParent('scaleChanged', {
       axis: axis,
@@ -241,6 +420,15 @@ class CanvasResizeUI {
     // 表示値更新
     this.updatePositionDisplay();
 
+    // UI設定を保存
+    this.saveState();
+    
+    // Spine設定も保存
+    this.saveSpineSettings({
+      positionX: this.state.positionX,
+      positionY: this.state.positionY
+    }, this.currentCharacterId);
+
     // 親ページに通知
     this.sendToParent('positionChanged', {
       axis: axis,
@@ -253,22 +441,25 @@ class CanvasResizeUI {
    * スケールリセット
    */
   resetScale() {
-    this.state.scaleX = 1.35;
+    this.state.scaleX = 1.0;
     this.state.scaleY = 1.0;
     
-    document.getElementById('character-scale-x').value = 1.35;
+    document.getElementById('character-scale-x').value = 1.0;
     document.getElementById('character-scale-y').value = 1.0;
-    document.getElementById('character-scale-x-input').value = 1.35;
+    document.getElementById('character-scale-x-input').value = 1.0;
     document.getElementById('character-scale-y-input').value = 1.0;
     
     this.updateScaleDisplay();
+    
+    // 設定を保存
+    this.saveState();
     
     this.sendToParent('scaleReset', {
       scaleX: this.state.scaleX,
       scaleY: this.state.scaleY
     });
     
-    this.log('🔄 スケールを理想的な比率に戻しました（X=1.35, Y=1.0）');
+    this.log('🔄 スケールを1:1比率に戻しました（X=1.0, Y=1.0）');
   }
 
 
@@ -290,6 +481,9 @@ class CanvasResizeUI {
     
     this.updatePositionDisplay();
     
+    // 設定を保存
+    this.saveState();
+    
     this.sendToParent('centerCharacter', {
       x: this.state.positionX,
       y: this.state.positionY
@@ -298,7 +492,165 @@ class CanvasResizeUI {
     this.log('🎯 キャラクターを中央に配置');
   }
 
-  // resetPositionメソッドは削除（centerCharacterと重複のため）
+  /**
+   * 全設定をデフォルトにリセット
+   */
+  resetAllSettings() {
+    // デフォルト状態に戻す
+    this.state = {...this.defaultState};
+    
+    // UIを更新
+    this.updateAllUIElements();
+    
+    // 設定を保存
+    this.saveState();
+    
+    // 親ページに全ての変更を通知
+    this.sendToParent('canvasReset', {});
+    this.sendToParent('scaleReset', {
+      scaleX: this.state.scaleX,
+      scaleY: this.state.scaleY
+    });
+    this.sendToParent('centerCharacter', {
+      x: this.state.positionX,
+      y: this.state.positionY
+    });
+    
+    this.log('🔄 全ての設定をデフォルトにリセットしました');
+  }
+
+  /**
+   * localStorage の保存データをクリア（ページ固有）
+   */
+  clearStorageData() {
+    try {
+      const uiKey = this.getPageSpecificKey('canvasResizeSettings');
+      const spineKey = this.getPageSpecificKey('spineSettings');
+      
+      localStorage.removeItem(uiKey);
+      localStorage.removeItem(spineKey);
+      
+      this.log('🗑️ localStorage の保存データをクリアしました');
+      this.log('💡 次回リロード時にデフォルト設定が適用されます');
+    } catch (error) {
+      this.log(`❌ localStorage クリアエラー: ${error.message}`);
+    }
+  }
+
+  /**
+   * Spine設定が存在するかチェック
+   */
+  hasSpineSettings() {
+    try {
+      const spineKey = this.getPageSpecificKey('spineSettings');
+      const spineData = localStorage.getItem(spineKey);
+      return spineData && spineData !== 'null';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * 親ページにSpine設定復元を指示
+   */
+  restoreSpineSettings() {
+    try {
+      // キャラクター固有キーを使用
+      let spineKey;
+      if (this.currentCharacterId) {
+        const pageId = this.getPageId();
+        spineKey = `spineSettings-${pageId}-${this.currentCharacterId}`;
+        console.log('[CanvasResizeUI] 🔑 キャラクター固有キーで設定復元:', spineKey);
+      } else {
+        spineKey = this.getPageSpecificKey('spineSettings');
+        console.log('[CanvasResizeUI] ⚠️ キャラクターID未設定 - ページ固有キーで復元:', spineKey);
+      }
+      
+      const spineData = localStorage.getItem(spineKey);
+      
+      if (spineData) {
+        const settings = JSON.parse(spineData);
+        
+        // Canvas解像度の復元
+        if (settings.canvasSize !== undefined) {
+          this.sendToParent('canvasResize', {
+            size: settings.canvasSize
+          });
+        }
+        
+        // スケールの復元
+        if (settings.scaleX !== undefined && settings.scaleY !== undefined) {
+          this.sendToParent('scaleChanged', {
+            axis: 'both',
+            scaleX: settings.scaleX,
+            scaleY: settings.scaleY
+          });
+        }
+        
+        // 位置の復元
+        if (settings.positionX !== undefined && settings.positionY !== undefined) {
+          this.sendToParent('positionChanged', {
+            axis: 'both',
+            x: settings.positionX,
+            y: settings.positionY
+          });
+        }
+        
+        this.log('🔄 保存されたSpine設定を親ページに復元指示しました');
+      }
+    } catch (error) {
+      this.log(`❌ Spine設定復元エラー: ${error.message}`);
+    }
+  }
+
+  /**
+   * 全てのUI要素をstateに同期
+   */
+  updateAllUIElements() {
+    console.log('[CanvasResizeUI] 🔧 UI要素更新開始 - state:', this.state);
+    
+    // Canvas サイズ
+    const canvasSizeElem = document.getElementById('canvas-size');
+    if (canvasSizeElem) {
+      canvasSizeElem.value = this.state.canvasSize;
+      console.log('[CanvasResizeUI] ✅ Canvas Size 設定:', this.state.canvasSize);
+    }
+    
+    // スケール
+    const scaleXElem = document.getElementById('character-scale-x');
+    const scaleYElem = document.getElementById('character-scale-y');
+    const scaleXInputElem = document.getElementById('character-scale-x-input');
+    const scaleYInputElem = document.getElementById('character-scale-y-input');
+    
+    if (scaleXElem) scaleXElem.value = this.state.scaleX;
+    if (scaleYElem) scaleYElem.value = this.state.scaleY;
+    if (scaleXInputElem) scaleXInputElem.value = this.state.scaleX;
+    if (scaleYInputElem) scaleYInputElem.value = this.state.scaleY;
+    console.log('[CanvasResizeUI] ✅ Scale 設定:', this.state.scaleX, this.state.scaleY);
+    
+    // 位置
+    const posXElem = document.getElementById('character-x');
+    const posYElem = document.getElementById('character-y');
+    const posXInputElem = document.getElementById('character-x-input');
+    const posYInputElem = document.getElementById('character-y-input');
+    
+    if (posXElem) posXElem.value = this.state.positionX;
+    if (posYElem) posYElem.value = this.state.positionY;
+    if (posXInputElem) posXInputElem.value = this.state.positionX;
+    if (posYInputElem) posYInputElem.value = this.state.positionY;
+    console.log('[CanvasResizeUI] ✅ Position 設定:', this.state.positionX, this.state.positionY);
+    
+    // スケールロック
+    const scaleLockCheckbox = document.getElementById('scale-lock');
+    if (scaleLockCheckbox) {
+      scaleLockCheckbox.checked = this.state.scaleLock;
+      console.log('[CanvasResizeUI] ✅ Scale Lock 設定:', this.state.scaleLock);
+    }
+    
+    // 表示値を更新
+    this.updateDisplayValues();
+    console.log('[CanvasResizeUI] 🔧 UI要素更新完了');
+  }
 
   /**
    * 表示値更新
@@ -345,6 +697,24 @@ class CanvasResizeUI {
     this.sendToParent('uiReady', {
       state: this.state
     });
+
+    // Spine設定の復元待機状態を設定
+    console.log('[CanvasResizeUI] 🔍 Spine設定存在チェック:', this.hasSpineSettings());
+    if (this.hasSpineSettings()) {
+      this.pendingSpineRestore = true;
+      console.log('[CanvasResizeUI] 📋 Spine設定復元待機状態に設定 - SpineRenderer初期化完了を待機中');
+      
+      // バックアップ復元を一時的に無効化 - 通知ベースに集中
+      // setTimeout(() => {
+      //   if (this.pendingSpineRestore) {
+      //     console.log('[CanvasResizeUI] ⏰ バックアップ復元実行（3秒タイムアウト）');
+      //     this.restoreSpineSettings();
+      //     this.pendingSpineRestore = false;
+      //   }
+      // }, 3000);
+    } else {
+      console.log('[CanvasResizeUI] 📝 Spine設定が見つかりませんでした - 初回起動またはクリア済み');
+    }
   }
 
   /**
@@ -364,6 +734,10 @@ class CanvasResizeUI {
         
       case 'logMessage':
         this.receiveLogFromParent(data.message);
+        break;
+        
+      case 'spineRendererReady':
+        this.handleSpineRendererReady(data);
         break;
         
       default:
@@ -408,6 +782,10 @@ class CanvasResizeUI {
 
     // 表示値更新
     this.updateDisplayValues();
+    
+    // 親ページからの更新も保存
+    this.saveState();
+    
     this.log('🔄 親ページからUI状態を更新');
   }
 
@@ -455,6 +833,27 @@ class CanvasResizeUI {
    */
   receiveLogFromParent(message) {
     console.log(`[親ページより] ${message}`);
+  }
+
+  /**
+   * SpineRenderer初期化完了通知の処理
+   */
+  handleSpineRendererReady(data) {
+    console.log('[CanvasResizeUI] 🎉 SpineRenderer初期化完了通知を受信', data);
+    this.spineRendererReady = true;
+    
+    // キャラクターIDを設定
+    if (data && data.characterId) {
+      this.currentCharacterId = data.characterId;
+      console.log('[CanvasResizeUI] 🎭 現在のキャラクターID設定:', this.currentCharacterId);
+    }
+    
+    // 待機中のSpine設定復元を実行
+    if (this.pendingSpineRestore) {
+      console.log('[CanvasResizeUI] 🔄 待機中のSpine設定復元を実行します');
+      this.restoreSpineSettings();
+      this.pendingSpineRestore = false;
+    }
   }
 
   /**

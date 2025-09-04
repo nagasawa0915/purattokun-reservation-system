@@ -596,6 +596,20 @@
               this.selectCharacter(characterId);
             }
 
+            // CanvasResizeControllerにSpineRenderer初期化完了を通知
+            if (window.canvasResizeHandler) {
+              this.log(`📡 ${characterId} 初期化完了をCanvasResizeControllerに通知開始`);
+              window.canvasResizeHandler.sendToIframe('spineRendererReady', {
+                characterId: characterId
+              });
+              this.log(`📡 ${characterId} 初期化完了をCanvasResizeControllerに通知完了`);
+            } else {
+              this.log('⚠️ CanvasResizeHandlerが見つかりません - iframe通知をスキップ');
+            }
+
+            // 🎯 直接復元アプローチ：メインページ側でSpine設定を復元
+            this.restoreSpineSettingsDirectly(characterId);
+
           } catch (error) {
             this.log(`❌ ${characterId} 読み込み失敗: ${error.message}`);
           }
@@ -1041,7 +1055,11 @@
             const targetData = {
               characterId: characterId,
               canvasId: canvas.id,
-              canvasElement: canvas,
+              // canvasElement: canvas, // Canvas要素はpostMessageで送信不可のため削除
+              canvasSize: {
+                width: canvas.width,
+                height: canvas.height
+              },
               currentScale: {
                 x: renderer.skeleton?.scaleX || 1.0,
                 y: renderer.skeleton?.scaleY || 1.0
@@ -1069,6 +1087,59 @@
         sendBBFeedback(type) {
           if (window.canvasResizeHandler) {
             window.canvasResizeHandler.sendBBFeedback(type);
+          }
+        }
+
+        // 🎯 直接復元アプローチ：メインページ側でSpine設定を復元（キャラクター別）
+        restoreSpineSettingsDirectly(characterId) {
+          try {
+            // キャラクター固有のキーを生成
+            const pageId = window.location.pathname || 'default';
+            const spineKey = `spineSettings-${pageId}-${characterId}`;
+            
+            const spineData = localStorage.getItem(spineKey);
+            if (spineData) {
+              const settings = JSON.parse(spineData);
+              this.log(`🔄 ${characterId}の保存された設定を直接復元: ${JSON.stringify(settings)}`);
+              
+              const character = this.characters[characterId];
+              if (character && character.loaded && character.renderer && character.renderer.skeleton) {
+                
+                // スケールの復元
+                if (settings.scaleX !== undefined && settings.scaleY !== undefined) {
+                  character.renderer.setTransform(null, null, settings.scaleX, settings.scaleY);
+                  this.log(`📏 ${characterId} スケール直接復元: X=${settings.scaleX}, Y=${settings.scaleY}`);
+                }
+                
+                // 位置の復元
+                if (settings.positionX !== undefined && settings.positionY !== undefined) {
+                  character.renderer.setTransform(settings.positionX, settings.positionY, null, null);
+                  this.log(`📍 ${characterId} 位置直接復元: X=${settings.positionX}, Y=${settings.positionY}`);
+                }
+                
+                // Canvas解像度の復元
+                if (settings.canvasSize !== undefined) {
+                  character.canvas.width = settings.canvasSize;
+                  character.canvas.height = settings.canvasSize;
+                  
+                  // WebGLビューポート更新
+                  const gl = character.canvas.getContext('webgl');
+                  if (gl) {
+                    gl.viewport(0, 0, settings.canvasSize, settings.canvasSize);
+                  }
+                  this.log(`📐 ${characterId} Canvas解像度直接復元: ${settings.canvasSize}x${settings.canvasSize}`);
+                }
+                
+                this.log(`✅ ${characterId} 設定直接復元完了`);
+                
+              } else {
+                this.log(`⚠️ ${characterId} Renderer準備未完了 - 復元スキップ`);
+              }
+            } else {
+              this.log(`📝 ${characterId} 保存された設定が見つかりません`);
+            }
+          } catch (error) {
+            this.log(`❌ ${characterId} 直接復元エラー: ${error.message}`);
           }
         }
 
@@ -2075,6 +2146,7 @@
         constructor() {
           this.iframe = null;
           this.iframeLoaded = false;
+          this.messageQueue = []; // 待機中メッセージのキュー
           this.setupIframeCommunication();
         }
 
@@ -2086,6 +2158,7 @@
               this.iframe.onload = () => {
                 this.iframeLoaded = true;
                 this.log('🎛️ CanvasResizeController iframe 読み込み完了');
+                this.processQueuedMessages();
               };
             }
           });
@@ -2200,6 +2273,8 @@
             // BBフィードバックを送信
             integration.sendBBFeedback('scale');
             
+            // 💾 Spine設定保存はCanvasResizeController側で処理
+            
             this.log(`📏 ${integration.selectedCharacter} スケール変更: X=${data.scaleX}, Y=${data.scaleY}`);
           } else {
             this.log('⚠️ 選択されたキャラクターが読み込まれていません');
@@ -2227,6 +2302,8 @@
             
             // BBフィードバックを送信
             integration.sendBBFeedback('position');
+            
+            // 💾 Spine設定保存はCanvasResizeController側で処理
             
             // 頻繁な呼び出しのため、ログは控えめに（必要に応じて有効化）
             // this.log(`📍 ${integration.selectedCharacter} 位置変更: X=${data.x}, Y=${data.y}`);
@@ -2302,6 +2379,7 @@
 
         // iframe にメッセージ送信
         sendToIframe(type, data) {
+          this.log(`📤 iframe送信試行: ${type} - iframeLoaded: ${this.iframeLoaded}`);
           if (this.iframeLoaded && this.iframe) {
             this.iframe.contentWindow.postMessage({
               type: type,
@@ -2309,7 +2387,22 @@
               timestamp: Date.now(),
               source: 'MainPage'
             }, '*');
+            this.log(`📤 iframe送信完了: ${type}`);
+          } else {
+            // iframe未準備の場合、キューに追加
+            this.messageQueue.push({ type: type, data: data });
+            this.log(`🔄 iframe送信キュー追加: ${type} - 現在のキューサイズ: ${this.messageQueue.length}`);
           }
+        }
+
+        processQueuedMessages() {
+          this.log(`🚀 キューに入ったメッセージを処理開始 - キューサイズ: ${this.messageQueue.length}`);
+          while (this.messageQueue.length > 0) {
+            const message = this.messageQueue.shift();
+            this.log(`📤 キューからメッセージ送信: ${message.type}`);
+            this.sendToIframe(message.type, message.data);
+          }
+          this.log('✅ キューに入ったメッセージの処理完了');
         }
 
         // BBフィードバック送信

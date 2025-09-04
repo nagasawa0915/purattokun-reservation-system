@@ -478,10 +478,18 @@ class PureBoundingBoxEvents {
                     height: currentHeight,
                     transform: 'translate(-50%, -50%)'
                 },
-                // 🎯 編集時の実サイズ情報も保存（復元ズレ対策）
+                // 🎯 編集時の実サイズ情報も保存（復元ズレ対策・比率保持システム強化）
                 actualSize: {
                     widthPx: this.core.bounds ? this.core.bounds.width : null,
-                    heightPx: this.core.bounds ? this.core.bounds.height : null
+                    heightPx: this.core.bounds ? this.core.bounds.height : null,
+                    // 🆕 親要素サイズも記録（比率計算の基準値として）
+                    parentWidthPx: this.core.config.parentElement ? this.core.config.parentElement.getBoundingClientRect().width : null,
+                    parentHeightPx: this.core.config.parentElement ? this.core.config.parentElement.getBoundingClientRect().height : null,
+                    // 🆕 編集時の実比率を記録（精密な復元用）
+                    actualWidthRatio: this.core.bounds && this.core.config.parentElement ? 
+                        this.core.bounds.width / this.core.config.parentElement.getBoundingClientRect().width : null,
+                    actualHeightRatio: this.core.bounds && this.core.config.parentElement ? 
+                        this.core.bounds.height / this.core.config.parentElement.getBoundingClientRect().height : null
                 },
                 timestamp: Date.now(),
                 source: 'PureBoundingBox-Phase3'
@@ -723,6 +731,12 @@ class PureBoundingBoxEvents {
         const isClickInsideBB = this.isClickInsideBoundingBox(event.target, event.clientX, event.clientY);
         
         if (!isClickInsideBB) {
+            // 🎯 ElementHighlighterアクティブ時はBB外クリック検出を無効化
+            if (window.ElementHighlighter && window.highlighterInstance && window.highlighterInstance.isActive) {
+                console.log('🎯 ElementHighlighter アクティブのため BB外クリック検出をスキップ');
+                return;
+            }
+            
             console.log('🎯 BB外クリック検出 - 選択解除処理開始');
             this.deselectBoundingBox();
         }

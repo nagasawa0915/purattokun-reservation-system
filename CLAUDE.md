@@ -34,6 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 既存システムを理解せずに新規作成
 - 1行追加の要望に対して大きなファイル作成
 - 確認なしに既存機能を変更
+- **🚨 技術仕様書の複雑UIを本実装と誤認**（2024-09-04追加）
 - **マニュアル未確認での既存モジュール実装**（🆕 2025-09-04追加）
 
 ### 🚨 **マニュアル確認絶対必須**（実装前必須チェック）
@@ -66,15 +67,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 #### **失敗事例（具体例・繰り返し禁止）**:
 ```
-❌ CanvasResizeController失敗例（2025-09-04）:
+❌ CanvasResizeController失敗例1（2025-09-04）:
    推測：「new CanvasResizeController()で使えるだろう」
    実装：直接クラス呼び出しで統合
    結果：完全に間違った実装（iframe+postMessageが正解）
+
+❌ CanvasResizeController失敗例2（2025-09-04）:
+   間違った参照：TECHNICAL_SPEC.mdの複雑UI仕様
+   実装：複雑なステータス・テスト機能付きUI
+   結果：シンプルなUIが複雑化（README基本使用方法が正解）
+   根本原因：技術仕様書を本実装マニュアルと誤認
    
 ✅ 正しい対処：
    1. マニュアル確認 → iframe統合が正しい方法と判明
-   2. ユーザーに確認 → 正しい実装方針決定
-   3. マニュアル通りに実装 → 成功
+   2. 基本使用方法最優先 → シンプルなui.html参照
+   3. 技術仕様書はあくまで参考資料として扱う
+   4. ユーザーに確認 → 正しい実装方針決定
 ```
 
 ### 🎯 **v3.0システム開発哲学（絶対遵守）**

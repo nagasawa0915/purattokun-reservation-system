@@ -158,7 +158,24 @@ class PinRenderer {
         }
         
         try {
-            const { pins, options = {} } = request;
+            console.log('🔧 PinRenderer.render 受信データ:', request);
+            console.log('🔧 受信データのタイプ:', typeof request);
+            
+            // 引数の形式を統一（配列を直接受け取るか、{pins, options}形式を受け取るか）
+            let pins, options = {};
+            
+            if (Array.isArray(request)) {
+                // 配列を直接受け取った場合（TwoStageSelector用）
+                pins = request;
+                console.log('🔧 配列形式で受信 - ピン数:', pins.length);
+            } else if (request && request.pins && Array.isArray(request.pins)) {
+                // {pins, options}形式で受け取った場合（従来用）
+                pins = request.pins;
+                options = request.options || {};
+                console.log('🔧 オブジェクト形式で受信 - ピン数:', pins.length);
+            } else {
+                throw new Error(`無効な引数形式: ${typeof request}, 値: ${JSON.stringify(request)}`);
+            }
             
             // 設定マージ
             const renderConfig = { ...this.config, ...options };

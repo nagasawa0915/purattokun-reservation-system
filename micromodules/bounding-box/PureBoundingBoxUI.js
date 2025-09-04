@@ -302,6 +302,13 @@ class PureBoundingBoxUI {
             },
             { divider: true },
             { 
+                text: '📍 ピン設定', 
+                action: () => this.startPinSetting(), 
+                shortcut: 'P',
+                description: 'F12風要素選択でピン設定'
+            },
+            { divider: true },
+            { 
                 text: this.responsiveSystem?.config.enabled ? '📱 レスポンシブ OFF' : '📱 レスポンシブ ON', 
                 action: () => this.toggleResponsiveSystem(),
                 shortcut: 'R',
@@ -1111,6 +1118,132 @@ class PureBoundingBoxUI {
             this.contextMenu.remove();
             this.contextMenu = this.createContextMenu();
         }
+    }
+    
+    /**
+     * 🎯 2段階ピン設定開始
+     */
+    async startPinSetting() {
+        console.log('🎯 2段階ピン設定システム開始');
+        
+        try {
+            // Stage 1: F12風要素選択
+            this.showNotification('🎯 Stage 1: 要素選択モード開始\nピンを設定する要素を選択してください', 'info', 5000);
+            
+            // 右クリックメニュー非表示
+            this.hideContextMenu();
+            
+            // ElementSelector 初期化
+            if (!window.ElementSelector) {
+                throw new Error('ElementSelector が見つかりません');
+            }
+            
+            const selector = new window.ElementSelector();
+            
+            // 要素選択開始
+            const selectedElement = await selector.selectElement((element) => {
+                console.log('🎯 選択要素確定:', element);
+                // Stage 2 への移行は後で実装
+                this.handleElementSelected(element);
+            });
+            
+            console.log('✅ Stage 1 完了: 要素選択成功');
+            
+        } catch (error) {
+            console.error('❌ ピン設定エラー:', error);
+            
+            let errorMessage = 'ピン設定に失敗しました';
+            if (error.message.includes('キャンセル')) {
+                errorMessage = 'ピン設定をキャンセルしました';
+            } else if (error.message.includes('ElementSelector')) {
+                errorMessage = 'ElementSelector モジュールが見つかりません';
+            }
+            
+            this.showNotification(errorMessage, 'warning', 3000);
+        }
+    }
+    
+    /**
+     * 🎯 選択要素の処理（Stage 1 → Stage 2 橋渡し）
+     */
+    handleElementSelected(element) {
+        console.log('🎯 Stage 1 → Stage 2 移行: 選択要素処理開始', element);
+        
+        // 選択要素の情報表示
+        const info = this.getElementInfo(element);
+        this.showNotification(
+            `✅ 要素選択完了: ${info.tagName}\n🎯 Stage 2: 位置微調整モードに移行します`, 
+            'success', 
+            4000
+        );
+        
+        // TODO: Stage 2 相対座標システムとの統合
+        // RelativeCoordinator 実装後に実装予定
+        console.log('📋 TODO: RelativeCoordinator との統合（Stage 2）');
+        
+        // 暫定：選択要素の基本情報保存
+        this.selectedTargetElement = element;
+        
+        // 現在のBB位置を取得
+        const currentBounds = this.core.bounds;
+        console.log('📐 現在のBB位置:', currentBounds);
+        
+        // Stage 2 UI表示の準備
+        this.showStage2Preview(element);
+    }
+    
+    /**
+     * 🎯 Stage 2 プレビュー表示（暫定実装）
+     */
+    showStage2Preview(selectedElement) {
+        console.log('🎯 Stage 2 プレビュー表示（暫定）');
+        
+        // 選択要素に薄い枠線表示
+        const rect = selectedElement.getBoundingClientRect();
+        
+        const referenceFrame = document.createElement('div');
+        referenceFrame.id = 'pin-reference-frame';
+        referenceFrame.style.cssText = `
+            position: fixed;
+            left: ${rect.left}px;
+            top: ${rect.top}px;
+            width: ${rect.width}px;
+            height: ${rect.height}px;
+            border: 2px dashed #28a745;
+            background: rgba(40, 167, 69, 0.1);
+            pointer-events: none;
+            z-index: 9999;
+        `;
+        
+        document.body.appendChild(referenceFrame);
+        
+        // 5秒後に自動削除
+        setTimeout(() => {
+            referenceFrame.remove();
+        }, 5000);
+        
+        this.showNotification(
+            '🎯 基準要素表示中（5秒間）\n緑の枠線が選択した要素です',
+            'info',
+            3000
+        );
+    }
+    
+    /**
+     * 要素情報取得ヘルパー
+     */
+    getElementInfo(element) {
+        if (!element) return null;
+        
+        const rect = element.getBoundingClientRect();
+        
+        return {
+            tagName: element.tagName,
+            id: element.id || null,
+            className: element.className || null,
+            width: Math.round(rect.width),
+            height: Math.round(rect.height)
+        };
     }
     
     /**
