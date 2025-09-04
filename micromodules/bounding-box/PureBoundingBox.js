@@ -22,7 +22,18 @@ class PureBoundingBox {
         
         // 🎯 AutoPin統合（オプショナル）
         if (window.PureBoundingBoxAutoPin) {
-            this.autoPin = new window.PureBoundingBoxAutoPin(this.core, null);
+            // ElementObserver Phase 1 インスタンスを作成して渡す
+            let elementObserver = null;
+            if (window.ElementObserver) {
+                try {
+                    elementObserver = new window.ElementObserver();
+                    console.log('✅ ElementObserver Phase 1 インスタンス作成成功');
+                } catch (error) {
+                    console.warn('⚠️ ElementObserver Phase 1 インスタンス作成失敗:', error.message);
+                }
+            }
+            
+            this.autoPin = new window.PureBoundingBoxAutoPin(this.core, elementObserver);
             console.log('🎯 AutoPin機能統合完了');
         } else {
             console.log('⚠️ AutoPinモジュールが見つかりません（オプション機能のため問題なし）');
