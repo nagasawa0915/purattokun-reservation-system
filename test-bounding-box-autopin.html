@@ -48,6 +48,40 @@
             transition: all 0.3s ease;
         }
         
+        /* 🆕 IMG要素版テストセクション */
+        .img-test-section {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            margin-top: 20px;
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .img-test-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+        
+        .img-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background: rgba(0, 123, 255, 0.8);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+        
         /* ヒーロー画像のオーバーレイ */
         .background-image::before {
             content: "";
@@ -214,6 +248,64 @@
             margin-right: 8px;
         }
         
+        /* ピン表示用スタイル */
+        .autopin-marker {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #ff4757;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(255, 71, 87, 0.6);
+            z-index: 9999;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            animation: pin-pulse 2s infinite;
+        }
+        
+        .autopin-marker::before {
+            content: '📍';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        .autopin-marker.anchor-TL::after { content: 'TL'; }
+        .autopin-marker.anchor-TC::after { content: 'TC'; }
+        .autopin-marker.anchor-TR::after { content: 'TR'; }
+        .autopin-marker.anchor-ML::after { content: 'ML'; }
+        .autopin-marker.anchor-MC::after { content: 'MC'; }
+        .autopin-marker.anchor-MR::after { content: 'MR'; }
+        .autopin-marker.anchor-BL::after { content: 'BL'; }
+        .autopin-marker.anchor-BC::after { content: 'BC'; }
+        .autopin-marker.anchor-BR::after { content: 'BR'; }
+        
+        .autopin-marker::after {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 4px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        
+        @keyframes pin-pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .hidden-pins .autopin-marker {
+            display: none;
+        }
+        
         .status-success { background: #28a745; }
         .status-warning { background: #ffc107; }
         .status-danger { background: #dc3545; }
@@ -323,6 +415,17 @@
             <!-- 画像はCSS backgroundで表示 -->
         </div>
         
+        <!-- 🆕 IMG要素版テストセクション（自然サイズ取得のため） -->
+        <div class="img-test-section" id="img-test-section">
+            <img id="test-img" 
+                 src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
+                 alt="Test Image for Content Rect Calculation">
+            <div class="img-overlay">
+                📐 IMG要素テスト<br>
+                自然サイズ: <span id="natural-size">Loading...</span>
+            </div>
+        </div>
+        
         <!-- メインレイアウトコンテナ -->
         <div class="main-layout-container">
             <!-- 左側：メインコンテンツ -->
@@ -355,6 +458,20 @@
             </button>
             <button class="control-button secondary-button" onclick="debugBBSystem()">
                 🔍 BB診断
+            </button>
+            <button class="control-button secondary-button" onclick="testIMGElementContentRect()">
+                🖼️ IMG要素コンテンツ矩形テスト
+            </button>
+            
+            <!-- 🎯 効率的ピンシステム v2.0 テストボタン -->
+            <button class="control-button primary-button" onclick="testEfficientPinSystem()" style="background: linear-gradient(135deg, #2ed573, #17a085);">
+                🎯 効率的ピンシステム v2.0 テスト
+            </button>
+            <button class="control-button secondary-button" onclick="debugWindowResizeImpact()">
+                🔍 ウィンドウリサイズ影響診断
+            </button>
+            <button class="control-button secondary-button" onclick="togglePinVisibility()">
+                📍 ピン表示切り替え
             </button>
             <button class="control-button primary-button" onclick="testAutoPinSystem()">
                 🎯 AutoPin システムテスト
@@ -476,8 +593,17 @@
     <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
+    <!-- 🎯 2段階ピン設定システム -->
+    <script src="micromodules/bounding-box/ElementHighlighter.js"></script>
+    <script src="micromodules/bounding-box/ElementSelector.js"></script>
+    <script src="micromodules/bounding-box/RelativeCoordinator.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxAutoPin.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
+    
+    <!-- 🎯 効率的ピンシステム v2.0 - 3層アーキテクチャ -->
+    <script src="micromodules/bounding-box/ElementCalculator.js"></script>
+    <script src="micromodules/bounding-box/PinRenderer.js"></script>
+    <script src="micromodules/bounding-box/EfficientObserver.js"></script>
 
     <script>
         // グローバル変数
@@ -527,6 +653,10 @@
                 { name: 'ElementObserver', obj: window.ElementObserver },
                 { name: 'PureBoundingBoxCore', obj: window.PureBoundingBoxCore },
                 { name: 'PureBoundingBoxUI', obj: window.PureBoundingBoxUI },
+                // 🎯 2段階ピン設定システム
+                { name: 'ElementHighlighter', obj: window.ElementHighlighter },
+                { name: 'ElementSelector', obj: window.ElementSelector },
+                { name: 'RelativeCoordinator', obj: window.RelativeCoordinator },
                 { name: 'PureBoundingBoxAutoPin', obj: window.PureBoundingBoxAutoPin },
                 { name: 'PureBoundingBox', obj: window.PureBoundingBox },
                 { name: 'StableSpineRenderer', obj: window.StableSpineRenderer }
@@ -1384,6 +1514,391 @@
             }
         });
         
+        // 🆕 IMG要素テスト機能
+        function testIMGElementContentRect() {
+            log('🖼️ IMG要素コンテンツ矩形テスト開始', 'info');
+            
+            // ウィンドウサイズも記録
+            log(`📐 現在のウィンドウサイズ: ${window.innerWidth}×${window.innerHeight}`, 'info');
+            
+            const testImg = document.getElementById('test-img');
+            if (!testImg) {
+                log('❌ テストIMG要素が見つかりません', 'error');
+                return;
+            }
+            
+            // 自然サイズ表示
+            if (testImg.complete && testImg.naturalWidth > 0) {
+                const naturalSizeSpan = document.getElementById('natural-size');
+                if (naturalSizeSpan) {
+                    naturalSizeSpan.textContent = `${testImg.naturalWidth}×${testImg.naturalHeight}`;
+                }
+                
+                log(`✅ IMG自然サイズ: ${testImg.naturalWidth}×${testImg.naturalHeight}`, 'success');
+                
+                // PureBoundingBoxAutoPinのコンテンツ矩形計算テスト
+                if (window.PureBoundingBoxAutoPin) {
+                    const autoPin = new window.PureBoundingBoxAutoPin();
+                    const contentRect = autoPin.calculateContentRect(testImg);
+                    
+                    if (contentRect) {
+                        log('🎯 IMG要素のコンテンツ矩形計算結果:', 'info');
+                        console.log('📊 Content Rect Details:', contentRect);
+                        
+                        log(`  • 位置: (${contentRect.x.toFixed(1)}, ${contentRect.y.toFixed(1)})`, 'info');
+                        log(`  • サイズ: ${contentRect.width.toFixed(1)}×${contentRect.height.toFixed(1)}`, 'info');
+                        log(`  • スケール: ${contentRect.scaleX?.toFixed(3)}×${contentRect.scaleY?.toFixed(3)}`, 'info');
+                        log(`  • タイプ: ${contentRect.type}`, 'info');
+                        
+                        // 背景画像版との比較
+                        const backgroundElement = document.getElementById('background-element');
+                        if (backgroundElement) {
+                            const bgContentRect = autoPin.calculateContentRect(backgroundElement);
+                            if (bgContentRect) {
+                                log('🔍 背景画像版との比較:', 'info');
+                                log(`  • IMG版タイプ: ${contentRect.type}`, 'info');
+                                log(`  • 背景版タイプ: ${bgContentRect.type}`, 'info');
+                                log(`  • スケール精度: IMG版の方が${contentRect.type.includes('natural') ? '高精度' : '推定値'}`, 'info');
+                            }
+                        }
+                    } else {
+                        log('❌ コンテンツ矩形計算失敗', 'error');
+                    }
+                } else {
+                    log('⚠️ PureBoundingBoxAutoPinが読み込まれていません', 'warning');
+                }
+            } else {
+                log('⏳ 画像読み込み中...再試行してください', 'warning');
+            }
+        }
+        
+        /**
+         * 🎯 効率的ピンシステム v2.0 統合テスト
+         */
+        async function testEfficientPinSystem() {
+            log('🎯 効率的ピンシステム v2.0 統合テスト開始', 'info');
+            
+            try {
+                // モジュール存在確認
+                if (!window.ElementCalculator || !window.PinRenderer || !window.EfficientObserver) {
+                    log('❌ 必要なモジュールが読み込まれていません', 'error');
+                    log('  • ElementCalculator: ' + (!!window.ElementCalculator), 'error');
+                    log('  • PinRenderer: ' + (!!window.PinRenderer), 'error');
+                    log('  • EfficientObserver: ' + (!!window.EfficientObserver), 'error');
+                    return;
+                }
+                
+                log('✅ 全モジュール読み込み確認完了', 'success');
+                
+                // 1. システム初期化
+                const calculator = new ElementCalculator();
+                const renderer = new PinRenderer();
+                const observer = new EfficientObserver(calculator, renderer);
+                
+                log('🏗️ 3層アーキテクチャ初期化完了', 'success');
+                
+                // 2. テスト対象要素選択
+                const backgroundElement = document.getElementById('background-element');
+                if (!backgroundElement) {
+                    log('❌ 背景要素が見つかりません', 'error');
+                    return;
+                }
+                
+                // 3. 計算リクエスト作成（仕様書例と同じ）
+                const request = {
+                    element: backgroundElement,
+                    anchorPoints: [
+                        { id: 'TC', ratioX: 0.5, ratioY: 0.0 }  // 上中央のみ
+                    ],
+                    elementType: 'background'
+                };
+                
+                log('📋 計算リクエスト作成: TC (上中央) のみ', 'info');
+                
+                // 4. 直接計算テスト
+                log('🧮 ElementCalculator直接計算テスト...', 'info');
+                const result = await calculator.calculate(request);
+                
+                log('✅ 計算完了:', 'success');
+                log(`  • 要素ID: ${result.elementId}`, 'info');
+                log(`  • 要素タイプ: ${result.metadata.elementType}`, 'info');
+                log(`  • 計算方法: ${result.metadata.calculationMethod}`, 'info');
+                log(`  • 実行時間: ${result.metadata.executionTime}ms`, 'info');
+                log(`  • ピン数: ${result.pins.length}`, 'info');
+                
+                result.pins.forEach(pin => {
+                    log(`    TC → (${pin.x}, ${pin.y}) ${pin.isValid ? '✅' : '❌画面外'}`, 'info');
+                });
+                
+                // 5. PinRenderer描画テスト
+                log('🎨 PinRenderer描画テスト...', 'info');
+                renderer.render({
+                    pins: result.pins,
+                    options: {
+                        defaultColor: '#2ed573',
+                        showLabels: true,
+                        enableAnimation: true
+                    }
+                });
+                
+                log('✅ ピン描画完了 - 画面上に緑色ピンが表示されているはずです', 'success');
+                
+                // 6. EfficientObserver監視テスト
+                log('👀 EfficientObserver監視開始...', 'info');
+                observer.observe(backgroundElement, request);
+                
+                log('✅ 監視開始完了 - ウィンドウサイズ変更でピンが追従するはずです', 'success');
+                
+                // 7. 統計情報表示
+                const observationState = observer.getObservationState();
+                const rendererState = renderer.getState();
+                
+                log('📊 システム統計:', 'info');
+                log(`  • 監視要素数: ${observationState.observedElementCount}`, 'info');
+                log(`  • アクティブピン数: ${rendererState.activePinCount}`, 'info');
+                log(`  • 計算キャッシュサイズ: ${calculator.getStats().cacheSize}`, 'info');
+                
+                // 8. グローバル参照設定（他の機能からアクセス可能にする）
+                window.efficientPinSystem = {
+                    calculator: calculator,
+                    renderer: renderer,
+                    observer: observer
+                };
+                
+                // 9. 3秒後にクリーンアップテスト
+                setTimeout(() => {
+                    log('🧹 3秒後クリーンアップテスト...', 'info');
+                    observer.unobserve(backgroundElement);
+                    renderer.clearPins();
+                    log('✅ クリーンアップ完了 - ピンが消えているはずです', 'success');
+                }, 3000);
+                
+                log('🎯 効率的ピンシステム v2.0 統合テスト完了！', 'success');
+                
+            } catch (error) {
+                log(`❌ 統合テストエラー: ${error.message}`, 'error');
+                console.error('統合テスト詳細エラー:', error);
+            }
+        }
+        
+        // IMG要素の読み込み監視
+        document.addEventListener('DOMContentLoaded', () => {
+            const testImg = document.getElementById('test-img');
+            if (testImg) {
+                testImg.addEventListener('load', () => {
+                    log('✅ テスト用IMG要素読み込み完了', 'success');
+                    const naturalSizeSpan = document.getElementById('natural-size');
+                    if (naturalSizeSpan) {
+                        naturalSizeSpan.textContent = `${testImg.naturalWidth}×${testImg.naturalHeight}`;
+                    }
+                });
+                
+                testImg.addEventListener('error', () => {
+                    log('❌ テスト用IMG要素読み込み失敗', 'error');
+                    const naturalSizeSpan = document.getElementById('natural-size');
+                    if (naturalSizeSpan) {
+                        naturalSizeSpan.textContent = 'Error';
+                    }
+                });
+            }
+        });
+
+        // 🔍 ウィンドウリサイズ影響診断
+        function debugWindowResizeImpact() {
+            log('🔍 ウィンドウリサイズ影響診断開始', 'info');
+            
+            const windowInfo = {
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio,
+                screenWidth: window.screen.width,
+                screenHeight: window.screen.height
+            };
+            
+            log('📐 ウィンドウ・画面情報:', 'info');
+            for (const [key, value] of Object.entries(windowInfo)) {
+                log(`  • ${key}: ${value}`, 'info');
+            }
+            
+            // 要素サイズの詳細確認
+            const elementsToCheck = [
+                { id: 'background-element', name: '背景要素' },
+                { id: 'test-img', name: 'IMG要素' },
+                { id: 'test-hero', name: 'ヒーローセクション' }
+            ];
+            
+            elementsToCheck.forEach(({ id, name }) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const rect = element.getBoundingClientRect();
+                    const computedStyle = window.getComputedStyle(element);
+                    
+                    log(`🎯 ${name} (${id}) のサイズ情報:`, 'info');
+                    log(`  • BoundingRect: ${rect.width.toFixed(1)}×${rect.height.toFixed(1)} at (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)})`, 'info');
+                    log(`  • CSS width/height: ${computedStyle.width} / ${computedStyle.height}`, 'info');
+                    log(`  • CSS backgroundSize: ${computedStyle.backgroundSize}`, 'info');
+                    
+                    if (element.tagName.toLowerCase() === 'img') {
+                        log(`  • 自然サイズ: ${element.naturalWidth}×${element.naturalHeight}`, 'info');
+                    }
+                    
+                    // コンテンツ矩形計算
+                    if (window.PureBoundingBoxAutoPin) {
+                        const autoPin = new window.PureBoundingBoxAutoPin();
+                        const contentRect = autoPin.calculateContentRect(element);
+                        if (contentRect) {
+                            log(`  • コンテンツ矩形: ${contentRect.width.toFixed(1)}×${contentRect.height.toFixed(1)} at (${contentRect.x.toFixed(1)}, ${contentRect.y.toFixed(1)})`, 'info');
+                            log(`  • タイプ: ${contentRect.type}`, 'info');
+                            if (contentRect.scaleX && contentRect.scaleY) {
+                                log(`  • スケール: ${contentRect.scaleX.toFixed(3)}×${contentRect.scaleY.toFixed(3)}`, 'info');
+                            }
+                        }
+                    }
+                    
+                    log('', 'info'); // 空行
+                }
+            });
+            
+            // ウィンドウリサイズリスナーの状態確認
+            if (window.PureBoundingBoxAutoPin) {
+                log('🔍 AutoPinシステム状態確認:', 'info');
+                const autoPin = new window.PureBoundingBoxAutoPin();
+                
+                // パフォーマンス統計
+                if (autoPin.performanceMetrics) {
+                    log('📊 パフォーマンス統計:', 'info');
+                    log(`  • 成功: ${autoPin.performanceMetrics.successCount || 0}`, 'info');
+                    log(`  • 失敗: ${autoPin.performanceMetrics.failureCount || 0}`, 'info');
+                    log(`  • 最終更新: ${autoPin.performanceMetrics.lastUpdated || 'N/A'}`, 'info');
+                }
+            }
+            
+            log('✅ ウィンドウリサイズ影響診断完了', 'success');
+            log('💡 手順: ウィンドウサイズを変更してから再度このボタンを押して比較してください', 'info');
+        }
+
+        // 📍 ピン表示切り替え機能
+        let pinsVisible = false;
+        let currentPinMarkers = [];
+        
+        function togglePinVisibility() {
+            pinsVisible = !pinsVisible;
+            const button = document.querySelector('[onclick="togglePinVisibility()"]');
+            
+            if (pinsVisible) {
+                button.textContent = '🔴 ピン非表示';
+                button.style.background = '#dc3545';
+                showCurrentPins();
+                log('📍 ピン表示モード ON', 'info');
+            } else {
+                button.textContent = '📍 ピン表示切り替え';
+                button.style.background = '#6c757d';
+                hideCurrentPins();
+                log('📍 ピン表示モード OFF', 'info');
+            }
+        }
+        
+        function showCurrentPins() {
+            // 既存のピンを削除
+            hideCurrentPins();
+            
+            if (window.PureBoundingBoxAutoPin) {
+                const autoPin = new window.PureBoundingBoxAutoPin();
+                
+                // 各要素のアンカーポイントを表示
+                const elementsToCheck = [
+                    { id: 'background-element', name: '背景要素' },
+                    { id: 'test-img', name: 'IMG要素' },
+                    { id: 'test-hero', name: 'ヒーロー' }
+                ];
+                
+                elementsToCheck.forEach(({ id, name }) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        const contentRect = autoPin.calculateContentRect(element);
+                        if (contentRect) {
+                            // 9つのアンカーポイントを表示
+                            const anchors = [
+                                { id: 'TL', x: 0, y: 0, name: 'Top Left' },
+                                { id: 'TC', x: 0.5, y: 0, name: 'Top Center' },
+                                { id: 'TR', x: 1, y: 0, name: 'Top Right' },
+                                { id: 'ML', x: 0, y: 0.5, name: 'Middle Left' },
+                                { id: 'MC', x: 0.5, y: 0.5, name: 'Middle Center' },
+                                { id: 'MR', x: 1, y: 0.5, name: 'Middle Right' },
+                                { id: 'BL', x: 0, y: 1, name: 'Bottom Left' },
+                                { id: 'BC', x: 0.5, y: 1, name: 'Bottom Center' },
+                                { id: 'BR', x: 1, y: 1, name: 'Bottom Right' }
+                            ];
+                            
+                            const elementRect = element.getBoundingClientRect();
+                            
+                            anchors.forEach(anchor => {
+                                // 🔥 修正: containerRectを使用した正確な計算
+                                let pinX, pinY;
+                                
+                                if (contentRect.containerRect) {
+                                    // containerRectがある場合はそれを基準に
+                                    pinX = contentRect.containerRect.left + contentRect.x + (contentRect.width * anchor.x);
+                                    pinY = contentRect.containerRect.top + contentRect.y + (contentRect.height * anchor.y);
+                                } else {
+                                    // フォールバック: elementRectを基準に
+                                    pinX = elementRect.left + contentRect.x + (contentRect.width * anchor.x);
+                                    pinY = elementRect.top + contentRect.y + (contentRect.height * anchor.y);
+                                }
+                                
+                                console.log(`🔍 ${name} ${anchor.id} ピン計算:`, {
+                                    elementRect: `${elementRect.left.toFixed(1)}, ${elementRect.top.toFixed(1)}, ${elementRect.width.toFixed(1)}×${elementRect.height.toFixed(1)}`,
+                                    contentRect: `${contentRect.x}, ${contentRect.y}, ${contentRect.width.toFixed(1)}×${contentRect.height.toFixed(1)}`,
+                                    anchorOffset: `${anchor.x}×${anchor.y}`,
+                                    calculatedPin: `(${pinX.toFixed(1)}, ${pinY.toFixed(1)})`,
+                                    windowSize: `${window.innerWidth}×${window.innerHeight}`
+                                });
+                                
+                                const pin = document.createElement('div');
+                                pin.className = `autopin-marker anchor-${anchor.id}`;
+                                pin.style.left = pinX + 'px';
+                                pin.style.top = pinY + 'px';
+                                pin.title = `${name}: ${anchor.name} (${anchor.id})\n位置: (${pinX.toFixed(1)}, ${pinY.toFixed(1)})`;
+                                
+                                // ウィンドウ外に出る場合の警告
+                                if (pinX < 0 || pinY < 0 || pinX > window.innerWidth || pinY > window.innerHeight) {
+                                    console.warn(`⚠️ ${name} ${anchor.id} ピンがウィンドウ外: (${pinX.toFixed(1)}, ${pinY.toFixed(1)})`);
+                                    pin.style.border = '3px solid orange'; // 警告色
+                                }
+                                
+                                document.body.appendChild(pin);
+                                currentPinMarkers.push(pin);
+                            });
+                            
+                            log(`📍 ${name}: 9個のアンカーピン表示`, 'info');
+                        }
+                    }
+                });
+                
+                // ウィンドウリサイズ時にピン位置を更新
+                if (currentPinMarkers.length > 0) {
+                    const updatePins = () => {
+                        if (pinsVisible) {
+                            showCurrentPins();
+                        }
+                    };
+                    
+                    window.addEventListener('resize', updatePins);
+                    // 5秒後にリスナーを削除（メモリリーク防止）
+                    setTimeout(() => {
+                        window.removeEventListener('resize', updatePins);
+                    }, 5000);
+                }
+            } else {
+                log('⚠️ PureBoundingBoxAutoPinが読み込まれていません', 'warning');
+            }
+        }
+        
+        function hideCurrentPins() {
+            currentPinMarkers.forEach(pin => pin.remove());
+            currentPinMarkers = [];
+        }
+
         // デバッグ用グローバル関数
         window.testBoundingBox = testBasicBoundingBox;
         window.testRightClickMenu = testRightClickMenu;
@@ -1394,6 +1909,11 @@
         window.testAutoPinSystem = testAutoPinSystem;
         window.loadSpineCharacter = loadSpineCharacter;
         window.switchCharacter = switchCharacter;
+        window.testIMGElementContentRect = testIMGElementContentRect; // 🆕
+        window.debugWindowResizeImpact = debugWindowResizeImpact; // 🆕
+        window.togglePinVisibility = togglePinVisibility; // 🆕
+        window.showCurrentPins = showCurrentPins; // 🆕
+        window.hideCurrentPins = hideCurrentPins; // 🆕
         window.getCurrentBB = () => currentBoundingBox;
         window.getSpineRenderer = () => spineRenderer;
         window.logTest = (message, type) => log(message, type);
