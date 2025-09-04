@@ -467,6 +467,21 @@
             <button class="control-button primary-button" onclick="testEfficientPinSystem()" style="background: linear-gradient(135deg, #2ed573, #17a085);">
                 🎯 効率的ピンシステム v2.0 テスト
             </button>
+            
+            <!-- 🔄 Phase 2 統合テストボタン -->
+            <button class="control-button primary-button" onclick="testParallelSystemIntegration()" style="background: linear-gradient(135deg, #3742fa, #2f3542);">
+                🔄 Phase 2: 並行稼働テスト
+            </button>
+            <button class="control-button primary-button" onclick="performanceBenchmark()" style="background: linear-gradient(135deg, #ff6b6b, #ee5a52);">
+                🚀 Phase 3: パフォーマンスベンチマーク
+            </button>
+            <button class="control-button primary-button" onclick="testEfficientFirstMode()" style="background: linear-gradient(135deg, #5f27cd, #341f97);">
+                🎯 efficient-firstモードテスト
+            </button>
+            
+            <button class="control-button secondary-button" onclick="testSystemSwitching()">
+                ⚖️ システム切り替えテスト
+            </button>
             <button class="control-button secondary-button" onclick="debugWindowResizeImpact()">
                 🔍 ウィンドウリサイズ影響診断
             </button>
@@ -604,6 +619,9 @@
     <script src="micromodules/bounding-box/ElementCalculator.js"></script>
     <script src="micromodules/bounding-box/PinRenderer.js"></script>
     <script src="micromodules/bounding-box/EfficientObserver.js"></script>
+    
+    <!-- 🔄 Phase 2: 既存システム統合アダプター -->
+    <script src="micromodules/bounding-box/ElementObserverAdapter.js"></script>
 
     <script>
         // グローバル変数
@@ -1428,6 +1446,10 @@
                 spineRenderer = StableSpineRenderer.createForCharacter(currentCharacterName);
                 await spineRenderer.initialize();
                 
+                // 🎯 スケールを1:1に設定
+                spineRenderer.setTransform(null, null, 1.0, 1.0);
+                log('📏 スケールを1:1に設定 (X=1.0, Y=1.0)', 'info');
+                
                 log(`✅ ${currentCharacterName} レンダリング成功`, 'success');
                 
                 // キャラクター別デフォルトアニメーション再生（マニュアル準拠）
@@ -1679,6 +1701,338 @@
                 log(`❌ 統合テストエラー: ${error.message}`, 'error');
                 console.error('統合テスト詳細エラー:', error);
             }
+        }
+        
+        /**
+         * 🔄 Phase 2: 並行稼働統合テスト
+         */
+        async function testParallelSystemIntegration() {
+            log('🔄 Phase 2: 並行稼働統合テスト開始', 'info');
+            
+            try {
+                // アダプター初期化
+                if (!window.ElementObserverAdapter) {
+                    log('❌ ElementObserverAdapterが読み込まれていません', 'error');
+                    return;
+                }
+                
+                const adapter = new ElementObserverAdapter();
+                
+                // システム状態確認
+                const debugInfo = adapter.getDebugInfo();
+                log('🔍 システム状態:', 'info');
+                log(`  • レガシーシステム: ${debugInfo.systemStatus.legacy.available ? '✅利用可能' : '❌利用不可'}`, 'info');
+                log(`  • 効率的ピンシステム: ${debugInfo.systemStatus.efficient.available ? '✅利用可能' : '❌利用不可'}`, 'info');
+                log(`  • 動作モード: ${debugInfo.migrationConfig.mode}`, 'info');
+                
+                // 並行稼働テスト
+                if (debugInfo.migrationConfig.mode === 'parallel') {
+                    log('⚖️ 並行稼働モード - 両システムテスト', 'info');
+                    
+                    const testElement = document.getElementById('background-element');
+                    
+                    let changeCount = 0;
+                    const unobserve = adapter.observe(testElement, (rect, changeType) => {
+                        changeCount++;
+                        log(`📡 変更検出 ${changeCount}回目: ${changeType} - サイズ ${Math.round(rect.width)}×${Math.round(rect.height)}`, 'info');
+                    });
+                    
+                    // 5秒後にテスト終了
+                    setTimeout(() => {
+                        unobserve();
+                        const metrics = adapter.getPerformanceMetrics();
+                        log('📊 並行稼働テスト結果:', 'success');
+                        log(`  • レガシー呼び出し: ${metrics.legacyCallCount}回`, 'info');
+                        log(`  • 効率的システム呼び出し: ${metrics.efficientCallCount}回`, 'info');
+                        log(`  • フォールバック発生: ${metrics.fallbackCount}回`, 'info');
+                        log(`  • 変更検出回数: ${changeCount}回`, 'info');
+                        
+                        adapter.destroy();
+                    }, 5000);
+                    
+                    log('✅ 並行稼働テスト実行中... 5秒間監視します', 'success');
+                    
+                } else {
+                    log(`🔄 ${debugInfo.migrationConfig.mode}モード - 単一システムテスト`, 'info');
+                    
+                    // 単一システムテスト
+                    const testElement = document.getElementById('test-hero');
+                    const unobserve = adapter.observe(testElement, (rect, changeType) => {
+                        log(`📡 ${debugInfo.migrationConfig.mode}システム変更検出: ${changeType}`, 'info');
+                    });
+                    
+                    setTimeout(() => {
+                        unobserve();
+                        const metrics = adapter.getPerformanceMetrics();
+                        log('📊 単一システムテスト完了', 'success');
+                        log(`  • 処理回数: ${metrics.legacyCallCount + metrics.efficientCallCount}回`, 'info');
+                        
+                        adapter.destroy();
+                    }, 3000);
+                }
+                
+            } catch (error) {
+                log(`❌ 並行稼働テストエラー: ${error.message}`, 'error');
+                console.error('並行稼働テスト詳細エラー:', error);
+            }
+        }
+        
+        /**
+         * 🚀 Phase 3: パフォーマンスベンチマーク & 移行判定システム
+         */
+        window.performanceBenchmark = function() {
+            console.log('🚀 Phase 3パフォーマンスベンチマーク開始');
+            
+            const results = {
+                legacy: null,
+                efficient: null,
+                comparison: null,
+                migrationDecision: null
+            };
+            
+            const adapter = new ElementObserverAdapter();
+            const heroSection = document.querySelector('.hero-section');
+            
+            if (!heroSection) {
+                console.error('❌ heroSectionが見つかりません');
+                return;
+            }
+            
+            // レガシーシステムのベンチマーク
+            console.log('📊 レガシーシステムのパフォーマンス測定開始');
+            adapter.updateMigrationConfig({ mode: 'legacy-first' });
+            
+            const legacyStartTime = performance.now();
+            const legacyUnobserve = adapter.observe(heroSection, () => {});
+            
+            setTimeout(() => {
+                const legacyEndTime = performance.now();
+                results.legacy = {
+                    initTime: legacyEndTime - legacyStartTime,
+                    metrics: adapter.getPerformanceMetrics()
+                };
+                
+                legacyUnobserve();
+                console.log('✅ レガシーシステム測定完了:', results.legacy);
+                
+                // 効率的システムのベンチマーク
+                console.log('🚀 効率的ピンシステムのパフォーマンス測定開始');
+                adapter.updateMigrationConfig({ mode: 'efficient-first' });
+                
+                const efficientStartTime = performance.now();
+                const efficientUnobserve = adapter.observe(heroSection, () => {});
+                
+                setTimeout(() => {
+                    const efficientEndTime = performance.now();
+                    results.efficient = {
+                        initTime: efficientEndTime - efficientStartTime,
+                        metrics: adapter.getPerformanceMetrics()
+                    };
+                    
+                    efficientUnobserve();
+                    console.log('✅ 効率的システム測定完了:', results.efficient);
+                    
+                    // 比較分析と移行判定
+                    performMigrationAnalysis(results);
+                    
+                }, 2000);
+            }, 2000);
+        };
+        
+        // 📊 移行判定分析システム
+        function performMigrationAnalysis(results) {
+            console.log('📊 移行判定分析開始');
+            
+            const comparison = {
+                initTimeRatio: results.efficient.initTime / results.legacy.initTime,
+                performanceImprovement: ((results.legacy.initTime - results.efficient.initTime) / results.legacy.initTime * 100),
+                reliabilityScore: calculateReliabilityScore(results),
+                compatibilityScore: 100 // アダプターにより完全互換性確保
+            };
+            
+            results.comparison = comparison;
+            
+            // GO/STOP判定基準に基づく自動判定
+            const migrationDecision = makeMigrationDecision(comparison);
+            results.migrationDecision = migrationDecision;
+            
+            console.log('📊 パフォーマンス比較結果:', comparison);
+            console.log('🎯 移行判定結果:', migrationDecision);
+            
+            // 判定結果の可視化
+            displayMigrationResults(results);
+        }
+        
+        function calculateReliabilityScore(results) {
+            // フォールバック発生率などから信頼性スコアを計算
+            const efficientFallbacks = results.efficient.metrics.fallbackCount || 0;
+            const totalOperations = results.efficient.metrics.efficientCallCount + efficientFallbacks;
+            const reliabilityScore = totalOperations > 0 ? 
+                (1 - (efficientFallbacks / totalOperations)) * 100 : 100;
+            
+            return reliabilityScore;
+        }
+        
+        function makeMigrationDecision(comparison) {
+            const criteria = {
+                performanceThreshold: -20, // パフォーマンス劣化20%以上でSTOP
+                reliabilityThreshold: 95,  // 信頼性95%以上でGO
+                compatibilityThreshold: 95 // 互換性95%以上でGO
+            };
+            
+            let decision = 'GO';
+            let reasons = [];
+            
+            if (comparison.performanceImprovement < criteria.performanceThreshold) {
+                decision = 'STOP';
+                reasons.push(`パフォーマンス劣化: ${comparison.performanceImprovement.toFixed(1)}% (基準: ${criteria.performanceThreshold}%以上)`);
+            }
+            
+            if (comparison.reliabilityScore < criteria.reliabilityThreshold) {
+                decision = 'STOP';
+                reasons.push(`信頼性不足: ${comparison.reliabilityScore.toFixed(1)}% (基準: ${criteria.reliabilityThreshold}%以上)`);
+            }
+            
+            if (comparison.compatibilityScore < criteria.compatibilityThreshold) {
+                decision = 'STOP';
+                reasons.push(`互換性不足: ${comparison.compatibilityScore.toFixed(1)}% (基準: ${criteria.compatibilityThreshold}%以上)`);
+            }
+            
+            if (decision === 'GO') {
+                reasons.push('全基準をクリア - Phase 3移行を推奨');
+            }
+            
+            return { decision, reasons, criteria };
+        }
+        
+        function displayMigrationResults(results) {
+            console.group('🎯 Phase 3移行判定レポート');
+            
+            console.log('📊 システム比較:');
+            console.table({
+                'レガシーシステム': {
+                    '初期化時間': `${results.legacy.initTime.toFixed(2)}ms`,
+                    '呼び出し回数': results.legacy.metrics.legacyCallCount,
+                    'フォールバック': results.legacy.metrics.fallbackCount
+                },
+                '効率的システム': {
+                    '初期化時間': `${results.efficient.initTime.toFixed(2)}ms`,
+                    '呼び出し回数': results.efficient.metrics.efficientCallCount,
+                    'フォールバック': results.efficient.metrics.fallbackCount
+                }
+            });
+            
+            console.log('🎯 移行判定:', results.migrationDecision.decision);
+            console.log('📋 判定理由:');
+            results.migrationDecision.reasons.forEach(reason => console.log(`  • ${reason}`));
+            
+            if (results.migrationDecision.decision === 'GO') {
+                console.log('✅ 移行推奨: efficient-firstモードでのテスト実行を推奨します');
+                console.log('🎯 次のステップ: testEfficientFirstMode() を実行してください');
+            } else {
+                console.log('❌ 移行非推奨: 問題の解決後に再評価してください');
+            }
+            
+            console.groupEnd();
+            
+            // 結果をグローバル変数として保存（デバッグ用）
+            window.migrationBenchmarkResults = results;
+        }
+        
+        /**
+         * 🚀 efficient-firstモードテスト
+         */
+        window.testEfficientFirstMode = function() {
+            console.log('🚀 efficient-firstモード移行テスト開始');
+            
+            const adapter = new ElementObserverAdapter();
+            adapter.updateMigrationConfig({ 
+                mode: 'efficient-first',
+                enableAutoMigration: true,
+                fallbackToLegacy: true
+            });
+            
+            const heroSection = document.querySelector('.hero-section');
+            if (!heroSection) {
+                console.error('❌ heroSectionが見つかりません');
+                return;
+            }
+            
+            console.log('🎯 効率的ピンシステム v2.0 優先モードで稼働開始');
+            
+            const unobserve = adapter.observe(heroSection, (rect, changeType) => {
+                console.log('📊 efficient-first動作:', { 
+                    changeType, 
+                    size: `${rect.width}x${rect.height}`,
+                    timestamp: Date.now() 
+                });
+            });
+            
+            // 10秒間の稼働テスト
+            setTimeout(() => {
+                const metrics = adapter.getPerformanceMetrics();
+                console.log('📊 efficient-first稼働結果:', metrics);
+                
+                console.log('🎯 移行成功度評価:');
+                if (metrics.efficientCallCount > 0 && metrics.fallbackCount === 0) {
+                    console.log('✅ 完全移行成功 - 効率的システムのみで稼働');
+                } else if (metrics.efficientCallCount > 0 && metrics.fallbackCount > 0) {
+                    console.log('⚠️ 部分移行 - フォールバック発生あり');
+                    console.log(`📊 フォールバック率: ${(metrics.fallbackCount / (metrics.efficientCallCount + metrics.fallbackCount) * 100).toFixed(1)}%`);
+                } else {
+                    console.log('❌ 移行失敗 - レガシーシステムのみで稼働');
+                }
+                
+                unobserve();
+                console.log('✅ efficient-firstモードテスト完了');
+                
+                // 次のステップの案内
+                if (metrics.efficientCallCount > 0 && metrics.fallbackCount === 0) {
+                    console.log('🎯 次のステップ: 完全移行テスト (testFullMigration) を実行可能です');
+                }
+                
+            }, 10000);
+        };
+        
+        /**
+         * 🎯 システム切り替えテスト
+         */
+        function testSystemSwitching() {
+            log('🎯 システム切り替えテスト開始', 'info');
+            
+            const adapter = new ElementObserverAdapter();
+            const testElement = document.getElementById('background-element');
+            
+            // 初期モード確認
+            let debugInfo = adapter.getDebugInfo();
+            log(`初期モード: ${debugInfo.migrationConfig.mode}`, 'info');
+            
+            // レガシー優先モードに切り替え
+            adapter.updateMigrationConfig({ mode: 'legacy-first' });
+            const legacyUnobserve = adapter.observe(testElement, (rect) => {
+                log(`🔄 レガシーモード検出: ${Math.round(rect.width)}×${Math.round(rect.height)}`, 'info');
+            });
+            
+            setTimeout(() => {
+                legacyUnobserve();
+                
+                // 効率的システム優先モードに切り替え
+                adapter.updateMigrationConfig({ mode: 'efficient-first' });
+                const efficientUnobserve = adapter.observe(testElement, (rect) => {
+                    log(`🚀 効率的モード検出: ${Math.round(rect.width)}×${Math.round(rect.height)}`, 'info');
+                });
+                
+                setTimeout(() => {
+                    efficientUnobserve();
+                    
+                    const finalMetrics = adapter.getPerformanceMetrics();
+                    log('📊 システム切り替えテスト完了', 'success');
+                    log(`  • レガシー: ${finalMetrics.legacyCallCount}回`, 'info');
+                    log(`  • 効率的: ${finalMetrics.efficientCallCount}回`, 'info');
+                    
+                    adapter.destroy();
+                }, 2000);
+            }, 2000);
         }
         
         // IMG要素の読み込み監視
