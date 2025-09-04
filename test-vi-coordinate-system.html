@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 VI座標系 動作検証テスト</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            min-height: 100vh;
+            color: #ecf0f1;
+        }
+        
+        .test-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(52, 73, 94, 0.9);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .hero-section {
+            position: relative;
+            width: 90vw;
+            max-width: none;
+            min-width: 400px;
+            height: 60vh;
+            min-height: 300px;
+            background: linear-gradient(135deg, #e74c3c 0%, #f39c12 50%, #e67e22 100%);
+            border-radius: 12px;
+            margin: 20px auto;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .test-character {
+            position: absolute;
+            left: 30%;
+            top: 40%;
+            width: 15%;
+            height: 20%;
+            background: radial-gradient(circle, #9b59b6, #8e44ad);
+            border: 4px solid #fff;
+            border-radius: 50%;
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 16px rgba(155, 89, 182, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .test-character:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.6);
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            background: rgba(44, 62, 80, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .control-group h3 {
+            margin: 0 0 10px 0;
+            color: #3498db;
+            font-size: 0.9rem;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            margin: 2px;
+        }
+        
+        button:hover {
+            background: linear-gradient(45deg, #2980b9, #1f618d);
+            transform: translateY(-1px);
+        }
+        
+        button.danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        button.danger:hover {
+            background: linear-gradient(45deg, #c0392b, #a93226);
+        }
+        
+        .status-panel {
+            background: rgba(44, 62, 80, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.75rem;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .log-entry.info { color: #3498db; }
+        .log-entry.success { color: #27ae60; }
+        .log-entry.warning { color: #f39c12; }
+        .log-entry.error { color: #e74c3c; }
+        .log-entry.vi { color: #9b59b6; font-weight: bold; }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .metric {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+        
+        .metric-label {
+            color: #95a5a6;
+            font-size: 0.7rem;
+        }
+        
+        .metric-value {
+            color: #ecf0f1;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .resize-test {
+            background: rgba(52, 152, 219, 0.2);
+            border: 2px dashed #3498db;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .resize-test h3 {
+            color: #3498db;
+            margin: 0 0 10px 0;
+        }
+        
+        .highlight {
+            background: rgba(241, 196, 15, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #f1c40f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎯 VI座標系（Viewport-Independent）動作検証</h1>
+        <p><strong>目的:</strong> PureBoundingBoxAutoPin Phase 2のウィンドウリサイズ比率変動問題の解決検証</p>
+        
+        <div class="hero-section" id="test-hero">
+            <div class="test-character" id="test-character">
+                VI Test
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>📐 VI座標系テスト</h3>
+                <button onclick="testVICalculation()">VI計算テスト</button>
+                <button onclick="simulateResize()">リサイズ模擬</button>
+                <button onclick="testAspectRatioChange()">アスペクト比変更</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🔄 比率保持テスト</h3>
+                <button onclick="savePosition()">位置保存</button>
+                <button onclick="restorePosition()">位置復元</button>
+                <button onclick="testRatioMaintenance()">比率保持確認</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🎯 AutoPin統合</h3>
+                <button onclick="initAutoPin()">AutoPin初期化</button>
+                <button onclick="testAutoPinVI()">AutoPin VI連携</button>
+                <button onclick="cleanupAutoPin()">AutoPin削除</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>🧹 管理</h3>
+                <button onclick="clearLog()">ログクリア</button>
+                <button onclick="resetTest()">テストリセット</button>
+                <button class="danger" onclick="clearStorage()">ストレージクリア</button>
+            </div>
+        </div>
+        
+        <div class="resize-test">
+            <h3>📏 ウィンドウリサイズテスト</h3>
+            <p>ブラウザウィンドウをリサイズして、VI座標系の自動補正を確認してください</p>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-label">ウィンドウサイズ</div>
+                    <div class="metric-value" id="window-size">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">親要素サイズ</div>
+                    <div class="metric-value" id="parent-size">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">アスペクト比</div>
+                    <div class="metric-value" id="aspect-ratio">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">VI補正</div>
+                    <div class="metric-value" id="vi-compensation">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-panel">
+            <h3>📊 VI座標系ステータス</h3>
+            <div id="vi-status">初期化待機中...</div>
+        </div>
+        
+        <div class="log-container" id="log-container">
+            <div class="log-entry info">🎯 VI座標系検証テスト起動完了</div>
+        </div>
+    </div>
+    
+    <!-- モジュール読み込み -->
+    <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxAutoPin.js"></script>
+    
+    <script>
+        // グローバル変数
+        let testCharacter = document.getElementById('test-character');
+        let heroSection = document.getElementById('test-hero');
+        let autoPinInstance = null;
+        let baseAspectRatio = null;
+        let baseContentRect = null;
+        
+        // ログ出力システム
+        function log(message, type = 'info') {
+            const container = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        // メトリクス更新
+        function updateMetrics() {
+            const windowSize = `${window.innerWidth}×${window.innerHeight}`;
+            const parentRect = heroSection.getBoundingClientRect();
+            const parentSize = `${parentRect.width.toFixed(0)}×${parentRect.height.toFixed(0)}`;
+            const aspectRatio = (parentRect.width / parentRect.height).toFixed(3);
+            
+            document.getElementById('window-size').textContent = windowSize;
+            document.getElementById('parent-size').textContent = parentSize;
+            document.getElementById('aspect-ratio').textContent = aspectRatio;
+            
+            // VI補正計算
+            if (baseAspectRatio) {
+                const currentAspectRatio = parentRect.width / parentRect.height;
+                const aspectRatioChange = currentAspectRatio / baseAspectRatio;
+                const compensation = Math.abs(aspectRatioChange - 1.0);
+                document.getElementById('vi-compensation').textContent = 
+                    `${(compensation * 100).toFixed(2)}%`;
+                
+                if (compensation > 0.05) {
+                    document.getElementById('vi-compensation').style.color = '#e74c3c';
+                } else {
+                    document.getElementById('vi-compensation').style.color = '#27ae60';
+                }
+            }
+        }
+        
+        // VI座標系計算テスト
+        function testVICalculation() {
+            log('🎯 VI座標系計算テスト開始', 'vi');
+            
+            const parentRect = heroSection.getBoundingClientRect();
+            const currentContentRect = {
+                x: 0,
+                y: 0,
+                width: parentRect.width,
+                height: parentRect.height,
+                containerRect: parentRect
+            };
+            
+            // 基準値がない場合は現在値を基準とする
+            if (!baseContentRect) {
+                baseContentRect = {...currentContentRect};
+                baseAspectRatio = parentRect.width / parentRect.height;
+                log(`📐 基準アスペクト比設定: ${baseAspectRatio.toFixed(3)}`, 'info');
+            }
+            
+            // PureBoundingBoxAutoPinのVI計算を模擬
+            try {
+                // 模擬的なVI計算（実際のメソッドを呼び出し）
+                if (autoPinInstance) {
+                    const viRatio = autoPinInstance.calculateViewportIndependentRatio(
+                        currentContentRect, baseContentRect
+                    );
+                    
+                    log(`✅ VI計算完了:`, 'success');
+                    log(`  - aspectRatioChange: ${viRatio.aspectRatioChange.toFixed(3)}`, 'info');
+                    log(`  - isRatioStable: ${viRatio.isRatioStable}`, 'info');
+                    log(`  - viScale: ${viRatio.viScaleX.toFixed(3)}×${viRatio.viScaleY.toFixed(3)}`, 'info');
+                    
+                    // ステータス更新
+                    document.getElementById('vi-status').innerHTML = 
+                        `アスペクト比変化: <span class="highlight">${viRatio.aspectRatioChange.toFixed(3)}</span> | ` +
+                        `安定性: <span class="highlight">${viRatio.isRatioStable ? 'STABLE' : 'UNSTABLE'}</span>`;
+                } else {
+                    log('⚠️ AutoPinインスタンスが初期化されていません', 'warning');
+                }
+            } catch (error) {
+                log(`❌ VI計算エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // リサイズ模擬
+        function simulateResize() {
+            log('🔄 リサイズ模擬開始', 'info');
+            
+            const heroSection = document.getElementById('test-hero');
+            const currentWidth = heroSection.style.width || '90vw';
+            
+            if (currentWidth === '90vw') {
+                heroSection.style.width = '70vw';
+                heroSection.style.height = '70vh';
+                log('📐 サイズ変更: 90vw×60vh → 70vw×70vh', 'info');
+            } else {
+                heroSection.style.width = '90vw';
+                heroSection.style.height = '60vh';
+                log('📐 サイズ変更: 70vw×70vh → 90vw×60vh', 'info');
+            }
+            
+            setTimeout(() => {
+                updateMetrics();
+                testVICalculation();
+            }, 100);
+        }
+        
+        // アスペクト比変更テスト
+        function testAspectRatioChange() {
+            log('📐 アスペクト比変更テスト開始', 'info');
+            
+            const heroSection = document.getElementById('test-hero');
+            const currentHeight = heroSection.style.height || '60vh';
+            
+            if (currentHeight === '60vh') {
+                heroSection.style.height = '40vh';
+                log('📐 アスペクト比変更: 60vh → 40vh（横長化）', 'info');
+            } else {
+                heroSection.style.height = '60vh';
+                log('📐 アスペクト比変更: 40vh → 60vh（標準化）', 'info');
+            }
+            
+            setTimeout(() => {
+                updateMetrics();
+                testVICalculation();
+            }, 100);
+        }
+        
+        // AutoPin初期化
+        function initAutoPin() {
+            try {
+                log('🎯 AutoPin初期化開始', 'info');
+                
+                // 模擬的なElementObserver
+                const mockObserver = {
+                    observe: function(element, callback, options) {
+                        log('📡 模擬ObserverによるBB要素監視開始', 'info');
+                        
+                        // ResizeObserverによる監視
+                        const resizeObserver = new ResizeObserver(entries => {
+                            for (const entry of entries) {
+                                const rect = entry.contentRect;
+                                callback(rect, 'resize');
+                            }
+                        });
+                        
+                        resizeObserver.observe(element);
+                        
+                        return function unobserve() {
+                            resizeObserver.disconnect();
+                            log('📡 模擬Observer監視停止', 'info');
+                        };
+                    }
+                };
+                
+                // AutoPinインスタンス作成
+                const mockCore = {
+                    config: { nodeId: 'vi-test-character' }
+                };
+                
+                autoPinInstance = new PureBoundingBoxAutoPin(mockCore, mockObserver);
+                
+                log('✅ AutoPin初期化完了', 'success');
+                
+            } catch (error) {
+                log(`❌ AutoPin初期化エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // AutoPin VI連携テスト
+        function testAutoPinVI() {
+            if (!autoPinInstance) {
+                log('⚠️ 先にAutoPin初期化を実行してください', 'warning');
+                return;
+            }
+            
+            try {
+                log('🔗 AutoPin VI連携テスト開始', 'vi');
+                
+                // 模擬保存データ（詳細版）
+                const characterRect = testCharacter.getBoundingClientRect();
+                const heroRect = heroSection.getBoundingClientRect();
+                
+                const saveData = {
+                    targetElement: heroSection, // 背景要素として指定
+                    spineElement: testCharacter, // Spine要素として指定
+                    bounds: {
+                        left: characterRect.left,
+                        top: characterRect.top,
+                        width: characterRect.width,
+                        height: characterRect.height,
+                        x: characterRect.x,
+                        y: characterRect.y
+                    }
+                };
+                
+                log(`📊 AutoPin適用データ:`, 'info');
+                log(`  - 背景要素: ${heroRect.width.toFixed(0)}×${heroRect.height.toFixed(0)}px`, 'info');
+                log(`  - Spine要素: ${characterRect.width.toFixed(0)}×${characterRect.height.toFixed(0)}px`, 'info');
+                log(`  - 相対位置: ${((characterRect.left - heroRect.left) / heroRect.width * 100).toFixed(1)}%, ${((characterRect.top - heroRect.top) / heroRect.height * 100).toFixed(1)}%`, 'info');
+                
+                // AutoPin適用
+                autoPinInstance.applyAutoPinOnSave(saveData).then(result => {
+                    if (result.success) {
+                        log(`✅ AutoPin適用成功: ${result.message}`, 'success');
+                        log(`⚡ 処理時間: ${result.processingTime.toFixed(2)}ms`, 'info');
+                        
+                        if (result.pinConfig) {
+                            log(`🎯 ピン設定詳細:`, 'vi');
+                            log(`  - アンカー: ${result.pinConfig.anchor}`, 'info');
+                            log(`  - Phase: ${result.pinConfig.phase}`, 'info');
+                            log(`  - ID: ${result.pinConfig.id}`, 'info');
+                        }
+                    } else {
+                        log(`⚠️ AutoPin適用結果: ${result.error || result.fallback}`, 'warning');
+                        if (result.fallbackMode) {
+                            log(`🔄 フォールバック実行: ${result.message}`, 'info');
+                        }
+                    }
+                }).catch(error => {
+                    log(`❌ AutoPin Promise エラー: ${error.message}`, 'error');
+                });
+                
+            } catch (error) {
+                log(`❌ AutoPin VI連携エラー: ${error.message}`, 'error');
+                console.error('AutoPin VI連携詳細エラー:', error);
+            }
+        }
+        
+        // AutoPinクリーンアップ
+        function cleanupAutoPin() {
+            if (autoPinInstance) {
+                autoPinInstance.cleanup();
+                autoPinInstance = null;
+                log('🧹 AutoPinクリーンアップ完了', 'success');
+            } else {
+                log('⚠️ クリーンアップするAutoPinがありません', 'warning');
+            }
+        }
+        
+        // 位置保存・復元（VI比率対応版）
+        function savePosition() {
+            const position = {
+                left: testCharacter.style.left,
+                top: testCharacter.style.top,
+                width: testCharacter.style.width,
+                height: testCharacter.style.height
+            };
+            
+            const parentRect = heroSection.getBoundingClientRect();
+            
+            // VI比率データ（安全性チェック付き）
+            const widthPercent = parseFloat(testCharacter.style.width) || 15; // デフォルト15%
+            const heightPercent = parseFloat(testCharacter.style.height) || 20; // デフォルト20%
+            
+            const viRatio = {
+                baseWidthRatio: widthPercent / 100,
+                baseHeightRatio: heightPercent / 100,
+                baseAspectRatio: parentRect.width / parentRect.height,
+                timestamp: Date.now()
+            };
+            
+            log(`📊 VI比率データ保存:`, 'vi');
+            log(`  - baseWidthRatio: ${viRatio.baseWidthRatio.toFixed(4)}`, 'info');
+            log(`  - baseHeightRatio: ${viRatio.baseHeightRatio.toFixed(4)}`, 'info');
+            log(`  - baseAspectRatio: ${viRatio.baseAspectRatio.toFixed(4)}`, 'info');
+            
+            const saveData = {
+                position,
+                viRatio,
+                windowSize: { width: window.innerWidth, height: window.innerHeight },
+                parentSize: { width: parentRect.width, height: parentRect.height }
+            };
+            
+            localStorage.setItem('vi-test-position', JSON.stringify(saveData));
+            log('💾 位置保存完了（VI比率データ含む）', 'success');
+        }
+        
+        function restorePosition() {
+            const savedData = localStorage.getItem('vi-test-position');
+            if (!savedData) {
+                log('⚠️ 保存された位置データがありません', 'warning');
+                return;
+            }
+            
+            try {
+                const data = JSON.parse(savedData);
+                
+                if (data.viRatio) {
+                    // VI座標系での復元
+                    const parentRect = heroSection.getBoundingClientRect();
+                    const currentAspectRatio = parentRect.width / parentRect.height;
+                    const aspectRatioChange = currentAspectRatio / data.viRatio.baseAspectRatio;
+                    
+                    log(`🔄 VI比率復元: アスペクト比変化 ${aspectRatioChange.toFixed(3)}`, 'vi');
+                    
+                    // VI補正適用（デバッグ強化版）
+                    const aspectRatioThreshold = Math.abs(aspectRatioChange - 1.0);
+                    log(`🔍 アスペクト比補正判定: threshold=${aspectRatioThreshold.toFixed(4)} (>0.05: ${aspectRatioThreshold > 0.05})`, 'vi');
+                    
+                    if (aspectRatioThreshold > 0.05) {
+                        // 安全性チェック付きVI補正計算
+                        const baseWidthRatio = data.viRatio.baseWidthRatio || 0.15; // デフォルト15%
+                        const baseHeightRatio = data.viRatio.baseHeightRatio || 0.20; // デフォルト20%
+                        
+                        const compensationWidth = (aspectRatioChange - 1.0) * baseWidthRatio;
+                        const compensationHeight = (1.0 / aspectRatioChange - 1.0) * baseHeightRatio;
+                        
+                        log(`📊 VI補正計算詳細:`, 'vi');
+                        log(`  - baseWidthRatio: ${data.viRatio.baseWidthRatio ? data.viRatio.baseWidthRatio.toFixed(4) : 'null'}`, 'info');
+                        log(`  - baseHeightRatio: ${data.viRatio.baseHeightRatio ? data.viRatio.baseHeightRatio.toFixed(4) : 'null'}`, 'info');
+                        log(`  - aspectRatioChange: ${aspectRatioChange.toFixed(4)}`, 'info');
+                        log(`  - compensationWidth: ${compensationWidth ? compensationWidth.toFixed(6) : 'null'}`, 'info');
+                        log(`  - compensationHeight: ${compensationHeight ? compensationHeight.toFixed(6) : 'null'}`, 'info');
+                        
+                        const adjustedWidthPct = (baseWidthRatio + compensationWidth) * 100;
+                        const adjustedHeightPct = (baseHeightRatio + compensationHeight) * 100;
+                        
+                        testCharacter.style.width = adjustedWidthPct.toFixed(2) + '%';
+                        testCharacter.style.height = adjustedHeightPct.toFixed(2) + '%';
+                        
+                        log(`✨ VI補正適用: サイズ補正 W:${compensationWidth.toFixed(4)} H:${compensationHeight.toFixed(4)}`, 'vi');
+                    } else {
+                        testCharacter.style.width = (data.viRatio.baseWidthRatio * 100).toFixed(2) + '%';
+                        testCharacter.style.height = (data.viRatio.baseHeightRatio * 100).toFixed(2) + '%';
+                    }
+                    
+                    // 位置復元
+                    testCharacter.style.left = data.position.left;
+                    testCharacter.style.top = data.position.top;
+                    
+                    log('✅ VI座標系位置復元完了', 'success');
+                } else {
+                    // 従来の復元
+                    testCharacter.style.left = data.position.left;
+                    testCharacter.style.top = data.position.top;
+                    testCharacter.style.width = data.position.width;
+                    testCharacter.style.height = data.position.height;
+                    
+                    log('📊 従来方式で位置復元完了', 'info');
+                }
+                
+            } catch (error) {
+                log(`❌ 位置復元エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        function testRatioMaintenance() {
+            log('🧪 比率保持テスト開始', 'info');
+            
+            // 現在の位置を保存
+            savePosition();
+            
+            // ウィンドウサイズを模擬変更
+            setTimeout(() => {
+                simulateResize();
+                
+                setTimeout(() => {
+                    // 位置を復元
+                    restorePosition();
+                    log('🎯 比率保持テスト完了', 'success');
+                }, 500);
+            }, 200);
+        }
+        
+        // ユーティリティ
+        function clearLog() {
+            document.getElementById('log-container').innerHTML = 
+                '<div class="log-entry info">📋 ログクリア完了</div>';
+        }
+        
+        function resetTest() {
+            testCharacter.style.cssText = 'position: absolute; left: 30%; top: 40%; width: 15%; height: 20%;';
+            heroSection.style.cssText = '';
+            baseAspectRatio = null;
+            baseContentRect = null;
+            updateMetrics();
+            log('🔄 テスト環境リセット完了', 'info');
+        }
+        
+        function clearStorage() {
+            localStorage.removeItem('vi-test-position');
+            log('🧹 ストレージクリア完了', 'info');
+        }
+        
+        // 初期化・イベント設定
+        window.addEventListener('resize', () => {
+            updateMetrics();
+            if (baseContentRect) {
+                testVICalculation();
+            }
+        });
+        
+        // 初期メトリクス更新
+        updateMetrics();
+        
+        log('🎯 VI座標系検証システム初期化完了', 'success');
+        log('📋 使用方法: 上記コントロールボタンで各機能をテストしてください', 'info');
+        log('🔧 推奨手順: 1) AutoPin初期化 → 2) VI計算テスト → 3) リサイズテスト', 'info');
+    </script>
+</body>
+</html>

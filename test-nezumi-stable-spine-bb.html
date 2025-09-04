@@ -429,6 +429,12 @@
           this.rendererInitialized = false;
           this.integrationComplete = false;
 
+          // 🎯 SpineSettingsPersistence マイクロモジュール統合
+          this.settingsPersistence = new SpineSettingsPersistence({
+            debug: true, // デバッグログ有効
+            version: '1.0'
+          });
+
           // 🎯 LogSystem マイクロモジュール統合
           this.logSystem = new SpineLogSystem({
             logLevel: 'info',
@@ -1090,16 +1096,13 @@
           }
         }
 
-        // 🎯 直接復元アプローチ：メインページ側でSpine設定を復元（キャラクター別）
+        // 🎯 SpineSettingsPersistence統合版：メインページ側でSpine設定を復元（キャラクター別）
         restoreSpineSettingsDirectly(characterId) {
           try {
-            // キャラクター固有のキーを生成
-            const pageId = window.location.pathname || 'default';
-            const spineKey = `spineSettings-${pageId}-${characterId}`;
+            // SpineSettingsPersistenceから設定を復元
+            const settings = this.settingsPersistence.restore(characterId);
             
-            const spineData = localStorage.getItem(spineKey);
-            if (spineData) {
-              const settings = JSON.parse(spineData);
+            if (settings) {
               this.log(`🔄 ${characterId}の保存された設定を直接復元: ${JSON.stringify(settings)}`);
               
               const character = this.characters[characterId];
@@ -1118,7 +1121,7 @@
                 }
                 
                 // Canvas解像度の復元
-                if (settings.canvasSize !== undefined) {
+                if (settings.canvasSize !== undefined && settings.canvasSize !== null) {
                   character.canvas.width = settings.canvasSize;
                   character.canvas.height = settings.canvasSize;
                   
@@ -1136,10 +1139,67 @@
                 this.log(`⚠️ ${characterId} Renderer準備未完了 - 復元スキップ`);
               }
             } else {
-              this.log(`📝 ${characterId} 保存された設定が見つかりません`);
+              this.log(`📝 ${characterId} 保存された設定が見つかりません（SpineSettingsPersistenceから）`);
             }
           } catch (error) {
             this.log(`❌ ${characterId} 直接復元エラー: ${error.message}`);
+            
+            // フォールバック：既存のlocalStorage方式で試行
+            this.log(`🔄 フォールバック：既存方式で復元試行`);
+            this.restoreSpineSettingsDirectlyLegacy(characterId);
+          }
+        }
+        
+        // 🔄 フォールバック用：既存のlocalStorage方式（後方互換性）
+        restoreSpineSettingsDirectlyLegacy(characterId) {
+          try {
+            // キャラクター固有のキーを生成（既存形式）
+            const pageId = window.location.pathname || 'default';
+            const spineKey = `spineSettings-${pageId}-${characterId}`;
+            
+            const spineData = localStorage.getItem(spineKey);
+            if (spineData) {
+              const settings = JSON.parse(spineData);
+              this.log(`🔄 ${characterId}のフォールバック復元: ${JSON.stringify(settings)}`);
+              
+              const character = this.characters[characterId];
+              if (character && character.loaded && character.renderer && character.renderer.skeleton) {
+                
+                // スケールの復元
+                if (settings.scaleX !== undefined && settings.scaleY !== undefined) {
+                  character.renderer.setTransform(null, null, settings.scaleX, settings.scaleY);
+                  this.log(`📏 ${characterId} スケールフォールバック復元: X=${settings.scaleX}, Y=${settings.scaleY}`);
+                }
+                
+                // 位置の復元
+                if (settings.positionX !== undefined && settings.positionY !== undefined) {
+                  character.renderer.setTransform(settings.positionX, settings.positionY, null, null);
+                  this.log(`📍 ${characterId} 位置フォールバック復元: X=${settings.positionX}, Y=${settings.positionY}`);
+                }
+                
+                // Canvas解像度の復元
+                if (settings.canvasSize !== undefined) {
+                  character.canvas.width = settings.canvasSize;
+                  character.canvas.height = settings.canvasSize;
+                  
+                  // WebGLビューポート更新
+                  const gl = character.canvas.getContext('webgl');
+                  if (gl) {
+                    gl.viewport(0, 0, settings.canvasSize, settings.canvasSize);
+                  }
+                  this.log(`📐 ${characterId} Canvas解像度フォールバック復元: ${settings.canvasSize}x${settings.canvasSize}`);
+                }
+                
+                this.log(`✅ ${characterId} フォールバック設定復元完了`);
+                
+              } else {
+                this.log(`⚠️ ${characterId} Renderer準備未完了 - フォールバック復元スキップ`);
+              }
+            } else {
+              this.log(`📝 ${characterId} フォールバック保存設定が見つかりません`);
+            }
+          } catch (error) {
+            this.log(`❌ ${characterId} フォールバック復元エラー: ${error.message}`);
           }
         }
 
@@ -2227,7 +2287,7 @@
           }
         }
 
-        // Canvas解像度制御（複数キャラクター対応）
+        // Canvas解像度制御（複数キャラクター対応 + SpineSettingsPersistence統合）
         handleCanvasResize(data) {
           const integration = window.nezumiIntegration;
           if (!integration || !integration.selectedCharacter) {
@@ -2247,6 +2307,9 @@
               gl.viewport(0, 0, data.size, data.size);
             }
             
+            // 💾 SpineSettingsPersistenceで設定保存
+            this.saveCanvasSettings(integration.selectedCharacter, data.size);
+            
             this.log(`✅ ${integration.selectedCharacter} Canvas解像度変更完了: ${data.size}x${data.size}`);
           } else {
             this.log('⚠️ 選択されたキャラクターが読み込まれていません');
@@ -2258,7 +2321,7 @@
           this.log('🔄 Canvas解像度をデフォルトにリセット');
         }
 
-        // スケール制御（複数キャラクター対応）
+        // スケール制御（複数キャラクター対応 + SpineSettingsPersistence統合）
         handleScaleChange(data) {
           const integration = window.nezumiIntegration;
           if (!integration || !integration.selectedCharacter) {
@@ -2273,7 +2336,8 @@
             // BBフィードバックを送信
             integration.sendBBFeedback('scale');
             
-            // 💾 Spine設定保存はCanvasResizeController側で処理
+            // 💾 SpineSettingsPersistenceでスケール設定保存
+            this.saveScaleSettings(integration.selectedCharacter, data.scaleX, data.scaleY);
             
             this.log(`📏 ${integration.selectedCharacter} スケール変更: X=${data.scaleX}, Y=${data.scaleY}`);
           } else {
@@ -2287,6 +2351,69 @@
         }
 
         // handleNaturalRatio機能は削除済み
+        
+        // 🎯 SpineSettingsPersistence統合保存メソッド
+        
+        // Canvas解像度設定を保存
+        saveCanvasSettings(characterId, canvasSize) {
+          try {
+            const integration = window.nezumiIntegration;
+            if (!integration || !integration.settingsPersistence) {
+              this.log('❌ SpineSettingsPersistenceが利用できません');
+              return;
+            }
+            
+            // 現在の設定を取得
+            const existingSettings = integration.settingsPersistence.restore(characterId) || {};
+            
+            // Canvas解像度を更新
+            const updatedSettings = {
+              ...existingSettings,
+              canvasSize: canvasSize
+            };
+            
+            // 保存実行
+            const success = integration.settingsPersistence.save(characterId, updatedSettings);
+            if (success) {
+              this.log(`💾 ${characterId} Canvas設定保存成功: ${canvasSize}x${canvasSize}`);
+            } else {
+              this.log(`❌ ${characterId} Canvas設定保存失敗`);
+            }
+          } catch (error) {
+            this.log(`❌ Canvas設定保存エラー: ${error.message}`);
+          }
+        }
+        
+        // スケール設定を保存
+        saveScaleSettings(characterId, scaleX, scaleY) {
+          try {
+            const integration = window.nezumiIntegration;
+            if (!integration || !integration.settingsPersistence) {
+              this.log('❌ SpineSettingsPersistenceが利用できません');
+              return;
+            }
+            
+            // 現在の設定を取得
+            const existingSettings = integration.settingsPersistence.restore(characterId) || {};
+            
+            // スケール設定を更新
+            const updatedSettings = {
+              ...existingSettings,
+              scaleX: scaleX,
+              scaleY: scaleY
+            };
+            
+            // 保存実行
+            const success = integration.settingsPersistence.save(characterId, updatedSettings);
+            if (success) {
+              this.log(`💾 ${characterId} スケール設定保存成功: X=${scaleX}, Y=${scaleY}`);
+            } else {
+              this.log(`❌ ${characterId} スケール設定保存失敗`);
+            }
+          } catch (error) {
+            this.log(`❌ スケール設定保存エラー: ${error.message}`);
+          }
+        }
 
         // 位置制御（複数キャラクター対応）
         handlePositionChange(data) {
@@ -2493,5 +2620,9 @@
         }
       });
     </script>
+    
+    <!-- 🎯 SpineSettingsPersistence マイクロモジュール統合 -->
+    <script src="micromodules/spine-settings-persistence/SpineSettingsPersistence.js"></script>
+    
   </body>
 </html>

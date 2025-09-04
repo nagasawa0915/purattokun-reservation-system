@@ -930,19 +930,36 @@
                         const parentRect = heroSection.getBoundingClientRect();
                         log(`📐 現在の親要素サイズ: ${parentRect.width.toFixed(0)}×${parentRect.height.toFixed(0)}px`, 'info');
                         
-                        // 🆕 強化された比率保持: 実比率データがある場合は優先使用
+                        // 🎯 V2: VI座標系強化比率保持システム
                         let widthPct, heightPct;
                         
-                        if (positionData.actualSize.actualWidthRatio && positionData.actualSize.actualHeightRatio) {
-                            // 新システム: 精密な実比率データを使用
+                        if (positionData.viRatio) {
+                            // 🆕 VI座標系: Viewport-Independent比率データ使用
+                            const currentAspectRatio = parentRect.width / parentRect.height;
+                            const baseAspectRatio = positionData.viRatio.baseAspectRatio || currentAspectRatio;
+                            const aspectRatioChange = currentAspectRatio / baseAspectRatio;
+                            
+                            // VI補正適用
+                            const viCompensationWidth = aspectRatioChange !== 1.0 ? 
+                                (aspectRatioChange - 1.0) * positionData.viRatio.baseWidthRatio : 0;
+                            const viCompensationHeight = aspectRatioChange !== 1.0 ? 
+                                (1.0 / aspectRatioChange - 1.0) * positionData.viRatio.baseHeightRatio : 0;
+                                
+                            widthPct = (positionData.viRatio.baseWidthRatio + viCompensationWidth) * 100;
+                            heightPct = (positionData.viRatio.baseHeightRatio + viCompensationHeight) * 100;
+                            
+                            log('🎯 VI座標系: アスペクト比補正適用', 'info');
+                            log(`📐 アスペクト比変化: ${aspectRatioChange.toFixed(3)}, 補正: W:${viCompensationWidth.toFixed(4)} H:${viCompensationHeight.toFixed(4)}`, 'info');
+                        } else if (positionData.actualSize.actualWidthRatio && positionData.actualSize.actualHeightRatio) {
+                            // 従来システム: 精密な実比率データを使用
                             widthPct = positionData.actualSize.actualWidthRatio * 100;
                             heightPct = positionData.actualSize.actualHeightRatio * 100;
-                            log('✨ 新システム: 精密実比率データ使用', 'info');
+                            log('✨ 従来システム: 精密実比率データ使用', 'info');
                         } else {
-                            // 従来システム: ピクセルサイズから計算
+                            // フォールバック: ピクセルサイズから計算
                             widthPct = (positionData.actualSize.widthPx / parentRect.width) * 100;
                             heightPct = (positionData.actualSize.heightPx / parentRect.height) * 100;
-                            log('📊 従来システム: ピクセルサイズ計算', 'info');
+                            log('📊 フォールバック: ピクセルサイズ計算', 'info');
                         }
                         
                         // testCharacter要素を取得（Canvas要素も対応）

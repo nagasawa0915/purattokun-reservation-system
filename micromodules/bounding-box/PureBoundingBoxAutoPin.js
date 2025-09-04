@@ -520,6 +520,97 @@ class PureBoundingBoxAutoPin {
     }
     
     // ==========================================
+    // 🎯 Viewport-Independent（VI）座標系
+    // ==========================================
+    
+    /**
+     * 🆕 Viewport-Independent比率計算
+     * ウィンドウサイズに依存しない正規化比率システム
+     */
+    calculateViewportIndependentRatio(currentContentRect, baseContentRect) {
+        // 🎯 VI基準: 要素自体の内在的比率を基準とする
+        // ウィンドウサイズではなく、コンテンツ自体の比率変化を追跡
+        
+        const VI_STANDARD = {
+            // 一般的なWebデザイン基準を採用
+            aspectRatio: 16 / 9,  // 16:9比率
+            baseSize: 1000        // 仮想基準サイズ
+        };
+        
+        // コンテンツの内在的アスペクト比
+        const baseAspectRatio = baseContentRect.width / baseContentRect.height;
+        const currentAspectRatio = currentContentRect.width / currentContentRect.height;
+        
+        // VI正規化係数: アスペクト比の変化を考慮
+        const aspectRatioChange = currentAspectRatio / baseAspectRatio;
+        
+        // VI座標系での正規化サイズ
+        const viBaseWidth = VI_STANDARD.baseSize;
+        const viBaseHeight = VI_STANDARD.baseSize / baseAspectRatio;
+        
+        const viCurrentWidth = viBaseWidth * (currentContentRect.width / baseContentRect.width);
+        const viCurrentHeight = viBaseHeight * (currentContentRect.height / baseContentRect.height);
+        
+        console.log('🔍 VI座標系計算:', {
+            baseAspectRatio: baseAspectRatio.toFixed(3),
+            currentAspectRatio: currentAspectRatio.toFixed(3),
+            aspectRatioChange: aspectRatioChange.toFixed(3),
+            viSize: `${viCurrentWidth.toFixed(1)}×${viCurrentHeight.toFixed(1)}`,
+            scaleChange: {
+                width: (currentContentRect.width / baseContentRect.width).toFixed(3),
+                height: (currentContentRect.height / baseContentRect.height).toFixed(3)
+            }
+        });
+        
+        return {
+            viWidth: viCurrentWidth,
+            viHeight: viCurrentHeight,
+            viScaleX: viCurrentWidth / viBaseWidth,
+            viScaleY: viCurrentHeight / viBaseHeight,
+            aspectRatioChange: aspectRatioChange,
+            isRatioStable: Math.abs(aspectRatioChange - 1.0) < 0.05 // 5%未満の変化
+        };
+    }
+    
+    /**
+     * 🆕 VI座標系での位置差分計算
+     */
+    calculateVIPositionDelta(viRatio, baseAnchorRatioX, baseAnchorRatioY, contentRect, baseContentRect) {
+        // VI座標系では、アスペクト比の変化を考慮した位置計算
+        if (viRatio.isRatioStable) {
+            // アスペクト比が安定している場合は従来の計算を使用
+            const expectedCurrentRelativeX = contentRect.x + (contentRect.width * baseAnchorRatioX);
+            const expectedCurrentRelativeY = contentRect.y + (contentRect.height * baseAnchorRatioY);
+            
+            return {
+                deltaX: expectedCurrentRelativeX - (baseContentRect.x + (baseContentRect.width * baseAnchorRatioX)),
+                deltaY: expectedCurrentRelativeY - (baseContentRect.y + (baseContentRect.height * baseAnchorRatioY)),
+                method: 'stable-ratio'
+            };
+        } else {
+            // アスペクト比が変化している場合は、VI座標系での補正
+            const viCompensationX = (viRatio.aspectRatioChange - 1.0) * baseAnchorRatioX * contentRect.width;
+            const viCompensationY = (1.0 / viRatio.aspectRatioChange - 1.0) * baseAnchorRatioY * contentRect.height;
+            
+            const expectedCurrentRelativeX = contentRect.x + (contentRect.width * baseAnchorRatioX) - viCompensationX;
+            const expectedCurrentRelativeY = contentRect.y + (contentRect.height * baseAnchorRatioY) - viCompensationY;
+            
+            console.log('🔄 VI比率補正適用:', {
+                aspectRatioChange: viRatio.aspectRatioChange.toFixed(3),
+                compensation: `ΔX:${viCompensationX.toFixed(1)} ΔY:${viCompensationY.toFixed(1)}`,
+                baseAnchorRatio: `${(baseAnchorRatioX * 100).toFixed(1)}%, ${(baseAnchorRatioY * 100).toFixed(1)}%`
+            });
+            
+            return {
+                deltaX: expectedCurrentRelativeX - (baseContentRect.x + (baseContentRect.width * baseAnchorRatioX)),
+                deltaY: expectedCurrentRelativeY - (baseContentRect.y + (baseContentRect.height * baseAnchorRatioY)),
+                method: 'vi-compensated',
+                compensation: { x: viCompensationX, y: viCompensationY }
+            };
+        }
+    }
+    
+    // ==========================================
     // 🔍 背景要素自動検出システム
     // ==========================================
     
@@ -1104,32 +1195,37 @@ class PureBoundingBoxAutoPin {
                     };
                 }
                 
-                // 🎯 改良されたパーセンテージベース相対位置計算
+                // 🎯 V2: Viewport-Independent（VI）比率計算システム
                 const baseContentRect = initialAnchorPosition.baseContentRect;
                 const scaleChangeX = contentRect.width / baseContentRect.width;
                 const scaleChangeY = contentRect.height / baseContentRect.height;
                 const averageScaleChange = Math.sqrt(scaleChangeX * scaleChangeY); // 幾何平均
                 
+                // 🆕 VI座標系: ウィンドウサイズに依存しない正規化比率
+                const viRatio = this.calculateViewportIndependentRatio(contentRect, baseContentRect);
+                
                 // 🔥 修正: 相対位置同士で比較
                 const baseAnchorRatioX = (initialAnchorPosition.relativeX - baseContentRect.x) / baseContentRect.width;
                 const baseAnchorRatioY = (initialAnchorPosition.relativeY - baseContentRect.y) / baseContentRect.height;
                 
-                // 現在のコンテンツ矩形での相対アンカー位置を再計算
-                const expectedCurrentRelativeX = contentRect.x + (contentRect.width * baseAnchorRatioX);
-                const expectedCurrentRelativeY = contentRect.y + (contentRect.height * baseAnchorRatioY);
+                // 🎯 VI座標系での位置差分計算を使用
+                const viPositionDelta = this.calculateVIPositionDelta(viRatio, baseAnchorRatioX, baseAnchorRatioY, contentRect, baseContentRect);
                 
-                // 相対位置の変化が移動量
-                const deltaX = expectedCurrentRelativeX - initialAnchorPosition.relativeX;
-                const deltaY = expectedCurrentRelativeY - initialAnchorPosition.relativeY;
+                const deltaX = viPositionDelta.deltaX;
+                const deltaY = viPositionDelta.deltaY;
                 
-                // 📊 詳細ログ
-                console.log('🔄 改良された相対移動計算（パーセンテージベース）:', {
+                // 📊 詳細ログ（VI座標系対応）
+                console.log('🔄 VI座標系相対移動計算:', {
                     contentRectChange: `${baseContentRect.width.toFixed(1)}×${baseContentRect.height.toFixed(1)} → ${contentRect.width.toFixed(1)}×${contentRect.height.toFixed(1)}`,
                     scaleChange: `X:${scaleChangeX.toFixed(3)} Y:${scaleChangeY.toFixed(3)} Avg:${averageScaleChange.toFixed(3)}`,
+                    viRatio: {
+                        aspectRatioChange: viRatio.aspectRatioChange.toFixed(3),
+                        isStable: viRatio.isRatioStable,
+                        viScale: `${viRatio.viScaleX.toFixed(3)}×${viRatio.viScaleY.toFixed(3)}`
+                    },
                     baseAnchorRatio: `${(baseAnchorRatioX * 100).toFixed(1)}%, ${(baseAnchorRatioY * 100).toFixed(1)}%`,
-                    initialAnchor: `(${initialAnchorPosition.x.toFixed(1)}, ${initialAnchorPosition.y.toFixed(1)})`,
-                    expectedCurrentAnchor: `(${expectedCurrentAnchorX.toFixed(1)}, ${expectedCurrentAnchorY.toFixed(1)})`,
                     calculatedDelta: `ΔX:${deltaX.toFixed(1)} ΔY:${deltaY.toFixed(1)}`,
+                    method: viPositionDelta.method,
                     contentRectType: contentRect.type
                 });
                 
