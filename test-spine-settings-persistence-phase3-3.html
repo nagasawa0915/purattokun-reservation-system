@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpineSettingsPersistence Phase 3.3 統合テスト</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .test-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffd700;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #333;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #51cf66, #40c057);
+            color: white;
+        }
+
+        .result-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-pass { background-color: #51cf66; }
+        .status-fail { background-color: #ff6b6b; }
+        .status-pending { background-color: #ffd700; }
+
+        .performance-meter {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .meter-bar {
+            background: rgba(255, 255, 255, 0.2);
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .meter-fill {
+            background: linear-gradient(90deg, #51cf66, #ffd700, #ff6b6b);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .test-controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .character-selector {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .character-btn {
+            padding: 10px 20px;
+            border: 2px solid #ffd700;
+            background: rgba(255, 215, 0, 0.1);
+            color: #ffd700;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .character-btn.active {
+            background: #ffd700;
+            color: #333;
+        }
+
+        .character-btn:hover {
+            background: rgba(255, 215, 0, 0.3);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .testing {
+            animation: pulse 1.5s infinite;
+        }
+
+        .error-message {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success-message {
+            background: rgba(81, 207, 102, 0.2);
+            border: 1px solid #51cf66;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 SpineSettingsPersistence Phase 3.3 統合テスト</h1>
+        
+        <!-- 全体制御パネル -->
+        <div class="test-section">
+            <h2>🎮 テスト制御パネル</h2>
+            <div class="test-controls">
+                <button class="btn btn-success" onclick="runAllTests()">🚀 全テスト実行</button>
+                <button class="btn" onclick="resetTestEnvironment()">🔄 環境リセット</button>
+                <button class="btn btn-danger" onclick="clearAllStorage()">🗑️ localStorage全削除</button>
+                <button class="btn" onclick="generateTestReport()">📊 レポート生成</button>
+            </div>
+        </div>
+
+        <!-- キャラクター選択パネル -->
+        <div class="test-section">
+            <h2>🎭 テスト対象キャラクター</h2>
+            <div class="character-selector">
+                <div class="character-btn active" onclick="selectCharacter('nezumi')" id="char-nezumi">
+                    🐭 nezumi
+                </div>
+                <div class="character-btn" onclick="selectCharacter('purattokun')" id="char-purattokun">
+                    🐱 purattokun
+                </div>
+                <div class="character-btn" onclick="selectCharacter('test-character')" id="char-test">
+                    🧪 test-character
+                </div>
+            </div>
+            <p>現在選択中: <span id="current-character">nezumi</span></p>
+        </div>
+
+        <!-- 複数キャラクター統合テスト -->
+        <div class="test-section">
+            <h2>👥 複数キャラクター統合テスト</h2>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h3>MC001: 個別設定保存テスト</h3>
+                    <p>複数キャラクターの設定が分離して保存されるかテスト</p>
+                    <button class="btn" onclick="testMultiCharacterSeparation()">▶️ 実行</button>
+                    <div id="result-mc001" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>MC002: 異なるスケール値テスト</h3>
+                    <p>各キャラクターで異なるスケール値が正確に保存・復元されるかテスト</p>
+                    <button class="btn" onclick="testDifferentScaleValues()">▶️ 実行</button>
+                    <div id="result-mc002" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>MC003: キャラクター切り替えテスト</h3>
+                    <p>キャラクター切り替え時の設定分離確認</p>
+                    <button class="btn" onclick="testCharacterSwitching()">▶️ 実行</button>
+                    <div id="result-mc003" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>MC004: 一括復元テスト</h3>
+                    <p>全キャラクター設定の一括取得・復元テスト</p>
+                    <button class="btn" onclick="testBulkRestore()">▶️ 実行</button>
+                    <div id="result-mc004" class="result-panel" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- エラーハンドリングテスト -->
+        <div class="test-section">
+            <h2>🛡️ エラーハンドリング・フォールバックテスト</h2>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h3>EH001: localStorage容量不足テスト</h3>
+                    <p>容量不足時の安全な処理確認</p>
+                    <button class="btn" onclick="testStorageCapacityLimit()">▶️ 実行</button>
+                    <div id="result-eh001" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>EH002: データ破損テスト</h3>
+                    <p>不正データ検出・回復機能テスト</p>
+                    <button class="btn" onclick="testDataCorruption()">▶️ 実行</button>
+                    <div id="result-eh002" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>EH003: 不正入力データテスト</h3>
+                    <p>バリデーション機能の動作確認</p>
+                    <button class="btn" onclick="testInvalidInput()">▶️ 実行</button>
+                    <div id="result-eh003" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>EH004: 範囲外値テスト</h3>
+                    <p>スケール値範囲外入力の処理確認</p>
+                    <button class="btn" onclick="testOutOfRangeValues()">▶️ 実行</button>
+                    <div id="result-eh004" class="result-panel" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- パフォーマンス・品質テスト -->
+        <div class="test-section">
+            <h2>⚡ パフォーマンス・品質テスト</h2>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h3>PF001: 応答時間テスト（100ms基準）</h3>
+                    <p>save/restore操作の応答時間測定</p>
+                    <button class="btn" onclick="testResponseTime()">▶️ 実行</button>
+                    <div class="performance-meter">
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="response-time-meter" style="width: 0%;"></div>
+                        </div>
+                        <div id="response-time-text">応答時間: 未測定</div>
+                    </div>
+                    <div id="result-pf001" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>PF002: 大量データ処理テスト</h3>
+                    <p>多数のキャラクター設定でのスケーラビリティ</p>
+                    <button class="btn" onclick="testLargeDataSet()">▶️ 実行</button>
+                    <div id="result-pf002" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>PF003: 連続操作テスト</h3>
+                    <p>1000回連続保存・復元の安定性確認</p>
+                    <button class="btn" onclick="testContinuousOperations()">▶️ 実行</button>
+                    <div class="performance-meter">
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="continuous-test-meter" style="width: 0%;"></div>
+                        </div>
+                        <div id="continuous-test-text">進行状況: 0/1000</div>
+                    </div>
+                    <div id="result-pf003" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>PF004: メモリリークテスト</h3>
+                    <p>長時間動作でのメモリ使用量監視</p>
+                    <button class="btn" onclick="testMemoryLeak()">▶️ 実行</button>
+                    <div id="result-pf004" class="result-panel" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 実用ワークフローテスト -->
+        <div class="test-section">
+            <h2>🎯 実用ワークフローテスト</h2>
+            <div class="test-grid">
+                <div class="test-item">
+                    <h3>WF001: 制作者ワークフローテスト</h3>
+                    <p>実際の制作フローでの動作確認</p>
+                    <button class="btn" onclick="testProductionWorkflow()">▶️ 実行</button>
+                    <div id="result-wf001" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>WF002: ブラウザ再起動シミュレーション</h3>
+                    <p>ページリロード後の設定復元確認</p>
+                    <button class="btn" onclick="testBrowserRestart()">▶️ 実行</button>
+                    <div id="result-wf002" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>WF003: 緊急リセット機能テスト</h3>
+                    <p>設定クリア・復旧機能の確認</p>
+                    <button class="btn" onclick="testEmergencyReset()">▶️ 実行</button>
+                    <div id="result-wf003" class="result-panel" style="display:none;"></div>
+                </div>
+                
+                <div class="test-item">
+                    <h3>WF004: デバッグ支援機能テスト</h3>
+                    <p>debug()機能の動作確認</p>
+                    <button class="btn" onclick="testDebugFeatures()">▶️ 実行</button>
+                    <div id="result-wf004" class="result-panel" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 総合テスト結果表示 -->
+        <div class="test-section">
+            <h2>📊 総合テスト結果</h2>
+            <div id="overall-results" class="result-panel">
+                テスト未実行 - 上記のテストを実行して結果を確認してください
+            </div>
+            
+            <div class="test-controls">
+                <button class="btn btn-success" onclick="generateDetailedReport()">📋 詳細レポート生成</button>
+                <button class="btn" onclick="exportTestResults()">💾 結果エクスポート</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SpineSettingsPersistence読み込み -->
+    <script src="micromodules/spine-settings-persistence/SpineSettingsPersistence.js"></script>
+    
+    <script>
+        // グローバルテスト状態
+        let testResults = {};
+        let currentCharacter = 'nezumi';
+        let persistence = null;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTest();
+        });
+
+        function initializeTest() {
+            console.log('🧪 Phase 3.3統合テスト初期化開始');
+            
+            // SpineSettingsPersistence初期化（デバッグモード有効）
+            persistence = new SpineSettingsPersistence({
+                debug: true,
+                version: '1.0'
+            });
+            
+            console.log('✅ SpineSettingsPersistence初期化完了');
+            updateOverallResults();
+        }
+
+        function selectCharacter(characterId) {
+            // キャラクター選択UI更新
+            document.querySelectorAll('.character-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`char-${characterId}`).classList.add('active');
+            
+            currentCharacter = characterId;
+            document.getElementById('current-character').textContent = characterId;
+            
+            console.log(`🎭 キャラクター選択: ${characterId}`);
+        }
+
+        // ===== 複数キャラクター統合テスト =====
+
+        function testMultiCharacterSeparation() {
+            const resultDiv = document.getElementById('result-mc001');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    const results = [];
+                    const testCharacters = ['mc001-nezumi', 'mc001-purattokun', 'mc001-test-character'];
+                    
+                    // テスト開始前に既存データをクリア
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.includes('spineSettings') && key.includes('test-spine-settings-persistence-phase3-3')) {
+                            testCharacters.forEach(char => {
+                                if (key.includes(char)) {
+                                    keysToRemove.push(key);
+                                }
+                            });
+                        }
+                    }
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                    
+                    // 各キャラクターに異なる設定を保存
+                    testCharacters.forEach((char, index) => {
+                        const settings = {
+                            scaleX: 1.0 + (index * 0.2),
+                            scaleY: 1.0 + (index * 0.2),
+                            positionX: index * 100,
+                            positionY: index * 50
+                        };
+                        
+                        const saved = persistence.save(char, settings);
+                        results.push(`${char}: 保存${saved ? '成功' : '失敗'}`);
+                    });
+                    
+                    // 現在のページ専用キーのみ確認
+                    const pageSpecificKeys = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.includes('spineSettings-test-spine-settings-persistence-phase3-3')) {
+                            testCharacters.forEach(char => {
+                                if (key.includes(char)) {
+                                    pageSpecificKeys.push(key);
+                                }
+                            });
+                        }
+                    }
+                    
+                    const passed = pageSpecificKeys.length === testCharacters.length;
+                    const status = passed ? '✅ PASS' : '❌ FAIL';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${passed ? 'success-message' : 'error-message'}">
+                            ${status}: キャラクター分離保存テスト
+                        </div>
+                        <div>保存結果: ${results.join(', ')}</div>
+                        <div>期待キー数: ${testCharacters.length}, 実際のキー数: ${pageSpecificKeys.length}</div>
+                        <div>生成されたキー:</div>
+                        <ul>${pageSpecificKeys.map(key => `<li>${key}</li>`).join('')}</ul>
+                    `;
+                    
+                    testResults['MC001'] = passed;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['MC001'] = false;
+                }
+            }, 1000);
+        }
+
+        function testDifferentScaleValues() {
+            const resultDiv = document.getElementById('result-mc002');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    const testData = [
+                        { char: 'nezumi', scaleX: 1.5, scaleY: 1.2 },
+                        { char: 'purattokun', scaleX: 0.8, scaleY: 0.9 },
+                        { char: 'test-character', scaleX: 2.0, scaleY: 1.8 }
+                    ];
+                    
+                    // 保存
+                    testData.forEach(data => {
+                        persistence.save(data.char, {
+                            scaleX: data.scaleX,
+                            scaleY: data.scaleY
+                        });
+                    });
+                    
+                    // 復元・確認
+                    const results = [];
+                    let allPassed = true;
+                    
+                    testData.forEach(expected => {
+                        const restored = persistence.restore(expected.char);
+                        const scaleXMatch = Math.abs(restored.scaleX - expected.scaleX) < 0.001;
+                        const scaleYMatch = Math.abs(restored.scaleY - expected.scaleY) < 0.001;
+                        const passed = scaleXMatch && scaleYMatch;
+                        
+                        if (!passed) allPassed = false;
+                        
+                        results.push({
+                            char: expected.char,
+                            expected: expected,
+                            restored: restored,
+                            passed: passed
+                        });
+                    });
+                    
+                    const status = allPassed ? '✅ PASS' : '❌ FAIL';
+                    
+                    const resultHTML = results.map(r => `
+                        <div>
+                            <strong>${r.char}</strong>: ${r.passed ? '✅' : '❌'}
+                            <br>期待値: scaleX=${r.expected.scaleX}, scaleY=${r.expected.scaleY}
+                            <br>復元値: scaleX=${r.restored.scaleX}, scaleY=${r.restored.scaleY}
+                        </div>
+                    `).join('<hr>');
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allPassed ? 'success-message' : 'error-message'}">
+                            ${status}: 異なるスケール値テスト
+                        </div>
+                        ${resultHTML}
+                    `;
+                    
+                    testResults['MC002'] = allPassed;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['MC002'] = false;
+                }
+            }, 1000);
+        }
+
+        function testCharacterSwitching() {
+            const resultDiv = document.getElementById('result-mc003');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 キャラクター切り替えテスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    // 初期設定
+                    const initialSettings = {
+                        nezumi: { scaleX: 1.0, scaleY: 1.0 },
+                        purattokun: { scaleX: 1.5, scaleY: 1.3 }
+                    };
+                    
+                    // 初期保存
+                    persistence.save('nezumi', initialSettings.nezumi);
+                    persistence.save('purattokun', initialSettings.purattokun);
+                    
+                    // nezumiを変更
+                    const newNezumiSettings = { scaleX: 2.0, scaleY: 2.2 };
+                    persistence.save('nezumi', newNezumiSettings);
+                    
+                    // purattokun設定が影響を受けていないか確認
+                    const purattokuRestoredafter = persistence.restore('purattokun');
+                    const purattokuUnchanged = 
+                        Math.abs(purattokuRestoredafter.scaleX - initialSettings.purattokun.scaleX) < 0.001 &&
+                        Math.abs(purattokuRestoredafter.scaleY - initialSettings.purattokun.scaleY) < 0.001;
+                    
+                    // nezumiの変更が正しく保存されているか確認
+                    const nezumiRestored = persistence.restore('nezumi');
+                    const nezumiCorrect =
+                        Math.abs(nezumiRestored.scaleX - newNezumiSettings.scaleX) < 0.001 &&
+                        Math.abs(nezumiRestored.scaleY - newNezumiSettings.scaleY) < 0.001;
+                    
+                    const allPassed = purattokuUnchanged && nezumiCorrect;
+                    const status = allPassed ? '✅ PASS' : '❌ FAIL';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allPassed ? 'success-message' : 'error-message'}">
+                            ${status}: キャラクター切り替え干渉テスト
+                        </div>
+                        <div>nezumi変更後の設定: scaleX=${nezumiRestored.scaleX}, scaleY=${nezumiRestored.scaleY} ${nezumiCorrect ? '✅' : '❌'}</div>
+                        <div>purattokun設定維持: scaleX=${purattokuRestoredafter.scaleX}, scaleY=${purattokuRestoredafter.scaleY} ${purattokuUnchanged ? '✅' : '❌'}</div>
+                        <div>干渉なし: ${purattokuUnchanged && nezumiCorrect ? '確認' : '問題あり'}</div>
+                    `;
+                    
+                    testResults['MC003'] = allPassed;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['MC003'] = false;
+                }
+            }, 1000);
+        }
+
+        function testBulkRestore() {
+            const resultDiv = document.getElementById('result-mc004');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 一括復元テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    // テスト開始前に既存データをクリア
+                    const allKeys = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.includes('spineSettings-test-spine-settings-persistence-phase3-3')) {
+                            allKeys.push(key);
+                        }
+                    }
+                    allKeys.forEach(key => localStorage.removeItem(key));
+                    
+                    // テストデータ準備・保存
+                    const testCharacters = {
+                        'mc004-nezumi': { scaleX: 1.2, scaleY: 1.1 },
+                        'mc004-purattokun': { scaleX: 0.9, scaleY: 1.3 },
+                        'mc004-test-char-1': { scaleX: 1.5, scaleY: 1.4 },
+                        'mc004-test-char-2': { scaleX: 0.7, scaleY: 0.8 }
+                    };
+                    
+                    Object.entries(testCharacters).forEach(([char, settings]) => {
+                        persistence.save(char, settings);
+                    });
+                    
+                    // 一括取得
+                    const allSettings = persistence.getAllForCurrentPage();
+                    
+                    // 検証
+                    const expectedCount = Object.keys(testCharacters).length;
+                    const actualCount = Object.keys(allSettings).length;
+                    
+                    const results = [];
+                    let allMatched = true;
+                    
+                    Object.entries(testCharacters).forEach(([char, expected]) => {
+                        const actual = allSettings[char];
+                        if (!actual) {
+                            results.push(`${char}: ❌ 取得失敗`);
+                            allMatched = false;
+                        } else {
+                            const scaleXMatch = Math.abs(actual.scaleX - expected.scaleX) < 0.001;
+                            const scaleYMatch = Math.abs(actual.scaleY - expected.scaleY) < 0.001;
+                            const match = scaleXMatch && scaleYMatch;
+                            
+                            results.push(`${char}: ${match ? '✅' : '❌'} scaleX=${actual.scaleX}, scaleY=${actual.scaleY}`);
+                            
+                            if (!match) allMatched = false;
+                        }
+                    });
+                    
+                    const countMatched = actualCount === expectedCount;
+                    const allPassed = allMatched && countMatched;
+                    const status = allPassed ? '✅ PASS' : '❌ FAIL';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allPassed ? 'success-message' : 'error-message'}">
+                            ${status}: 一括復元テスト
+                        </div>
+                        <div>期待キャラクター数: ${expectedCount}, 取得数: ${actualCount} ${countMatched ? '✅' : '❌'}</div>
+                        <div>個別設定確認:</div>
+                        <ul>${results.map(r => `<li>${r}</li>`).join('')}</ul>
+                    `;
+                    
+                    testResults['MC004'] = allPassed;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['MC004'] = false;
+                }
+            }, 1500);
+        }
+
+        // ===== エラーハンドリングテスト =====
+
+        function testStorageCapacityLimit() {
+            const resultDiv = document.getElementById('result-eh001');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 容量制限テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    // 元のsetItemを保存
+                    const originalSetItem = localStorage.setItem;
+                    let simulatedError = false;
+                    
+                    // setItemをモック（容量不足エラーをシミュレート）
+                    localStorage.setItem = function(key, value) {
+                        if (key.includes('spineSettings') && !simulatedError) {
+                            simulatedError = true;
+                            throw new Error('QuotaExceededError');
+                        }
+                        return originalSetItem.call(this, key, value);
+                    };
+                    
+                    // 保存を試行
+                    const result = persistence.save('test-capacity', {
+                        scaleX: 1.0,
+                        scaleY: 1.0
+                    });
+                    
+                    // setItemを復元
+                    localStorage.setItem = originalSetItem;
+                    
+                    // 結果検証
+                    const expectedFailure = !result; // 保存失敗を期待
+                    const status = expectedFailure ? '✅ PASS' : '❌ FAIL';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${expectedFailure ? 'success-message' : 'error-message'}">
+                            ${status}: localStorage容量制限テスト
+                        </div>
+                        <div>保存結果: ${result ? '成功' : '失敗'} ${expectedFailure ? '(期待通り)' : '(予期しない結果)'}</div>
+                        <div>エラーシミュレーション: ${simulatedError ? '実行' : '実行失敗'}</div>
+                        <div>安全なフォールバック: ${!result ? '確認' : '確認できず'}</div>
+                    `;
+                    
+                    testResults['EH001'] = expectedFailure;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    // setItemを確実に復元
+                    const originalSetItem = Storage.prototype.setItem;
+                    localStorage.setItem = originalSetItem;
+                    
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['EH001'] = false;
+                }
+            }, 1000);
+        }
+
+        function testDataCorruption() {
+            const resultDiv = document.getElementById('result-eh002');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 データ破損テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    const testChar = 'corrupted-test';
+                    
+                    // 正常データを先に保存
+                    const validSettings = { scaleX: 1.0, scaleY: 1.0 };
+                    persistence.save(testChar, validSettings);
+                    
+                    // localStorage内のデータを直接破損させる
+                    const key = `spineSettings-test-spine-settings-persistence-phase3-3-${testChar}`;
+                    localStorage.setItem(key, '{invalid-json-data}');
+                    
+                    // 復元を試行
+                    const restored = persistence.restore(testChar);
+                    
+                    // 結果検証
+                    const handledGracefully = restored === null; // null返却を期待
+                    const status = handledGracefully ? '✅ PASS' : '❌ FAIL';
+                    
+                    // クリーンアップ
+                    localStorage.removeItem(key);
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${handledGracefully ? 'success-message' : 'error-message'}">
+                            ${status}: データ破損処理テスト
+                        </div>
+                        <div>破損データ復元結果: ${restored === null ? 'null (適切)' : `予期しないデータ: ${JSON.stringify(restored)}`}</div>
+                        <div>グレースフルハンドリング: ${handledGracefully ? '確認' : '問題あり'}</div>
+                    `;
+                    
+                    testResults['EH002'] = handledGracefully;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['EH002'] = false;
+                }
+            }, 1000);
+        }
+
+        function testInvalidInput() {
+            const resultDiv = document.getElementById('result-eh003');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 不正入力テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    const invalidInputs = [
+                        { desc: 'null設定', data: null },
+                        { desc: 'undefined設定', data: undefined },
+                        { desc: '空オブジェクト', data: {} },
+                        { desc: '文字列型スケール', data: { scaleX: "1.0", scaleY: "1.0" } },
+                        { desc: '必須フィールド欠損', data: { scaleX: 1.0 } },
+                        { desc: '無効なキャラクターID', characterId: null },
+                        { desc: '空文字キャラクターID', characterId: '' }
+                    ];
+                    
+                    const results = [];
+                    let allRejected = true;
+                    
+                    invalidInputs.forEach(test => {
+                        try {
+                            const characterId = test.characterId !== undefined ? test.characterId : 'test-invalid';
+                            const result = persistence.save(characterId, test.data);
+                            
+                            const rejected = result === false;
+                            if (!rejected) allRejected = false;
+                            
+                            results.push({
+                                desc: test.desc,
+                                rejected: rejected,
+                                result: result
+                            });
+                            
+                        } catch (error) {
+                            // エラー発生も適切な処理
+                            results.push({
+                                desc: test.desc,
+                                rejected: true,
+                                result: `例外: ${error.message}`
+                            });
+                        }
+                    });
+                    
+                    const status = allRejected ? '✅ PASS' : '❌ FAIL';
+                    
+                    const resultHTML = results.map(r => `
+                        <div>${r.desc}: ${r.rejected ? '✅ 拒否' : '❌ 受理'} (${r.result})</div>
+                    `).join('');
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allRejected ? 'success-message' : 'error-message'}">
+                            ${status}: 不正入力バリデーションテスト
+                        </div>
+                        <div>全ての不正入力が適切に拒否: ${allRejected ? '確認' : '問題あり'}</div>
+                        ${resultHTML}
+                    `;
+                    
+                    testResults['EH003'] = allRejected;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['EH003'] = false;
+                }
+            }, 1500);
+        }
+
+        function testOutOfRangeValues() {
+            const resultDiv = document.getElementById('result-eh004');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 範囲外値テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    const outOfRangeTests = [
+                        { desc: 'scaleX最小値未満', data: { scaleX: 0.05, scaleY: 1.0 } },
+                        { desc: 'scaleX最大値超過', data: { scaleX: 6.0, scaleY: 1.0 } },
+                        { desc: 'scaleY最小値未満', data: { scaleX: 1.0, scaleY: 0.05 } },
+                        { desc: 'scaleY最大値超過', data: { scaleX: 1.0, scaleY: 6.0 } },
+                        { desc: '負の値', data: { scaleX: -1.0, scaleY: 1.0 } },
+                        { desc: 'ゼロ値', data: { scaleX: 0, scaleY: 1.0 } }
+                    ];
+                    
+                    const results = [];
+                    let allRejected = true;
+                    
+                    outOfRangeTests.forEach((test, index) => {
+                        const result = persistence.save(`test-range-${index}`, test.data);
+                        const rejected = result === false;
+                        
+                        if (!rejected) allRejected = false;
+                        
+                        results.push({
+                            desc: test.desc,
+                            values: `scaleX=${test.data.scaleX}, scaleY=${test.data.scaleY}`,
+                            rejected: rejected
+                        });
+                    });
+                    
+                    const status = allRejected ? '✅ PASS' : '❌ FAIL';
+                    
+                    const resultHTML = results.map(r => `
+                        <div>${r.desc} (${r.values}): ${r.rejected ? '✅ 拒否' : '❌ 受理'}</div>
+                    `).join('');
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allRejected ? 'success-message' : 'error-message'}">
+                            ${status}: 範囲外値バリデーションテスト
+                        </div>
+                        <div>範囲: scaleX/Y 0.1-5.0</div>
+                        <div>全ての範囲外値が拒否: ${allRejected ? '確認' : '問題あり'}</div>
+                        ${resultHTML}
+                    `;
+                    
+                    testResults['EH004'] = allRejected;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['EH004'] = false;
+                }
+            }, 1000);
+        }
+
+        // ===== パフォーマンステスト =====
+
+        function testResponseTime() {
+            const resultDiv = document.getElementById('result-pf001');
+            const meterDiv = document.getElementById('response-time-meter');
+            const textDiv = document.getElementById('response-time-text');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 応答時間測定中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    const testData = { scaleX: 1.5, scaleY: 1.3 };
+                    const iterations = 100;
+                    const times = [];
+                    
+                    // 複数回測定
+                    for (let i = 0; i < iterations; i++) {
+                        // 保存時間測定
+                        const saveStart = performance.now();
+                        persistence.save(`perf-test-${i}`, testData);
+                        const saveEnd = performance.now();
+                        
+                        // 復元時間測定
+                        const restoreStart = performance.now();
+                        persistence.restore(`perf-test-${i}`);
+                        const restoreEnd = performance.now();
+                        
+                        times.push({
+                            save: saveEnd - saveStart,
+                            restore: restoreEnd - restoreStart
+                        });
+                    }
+                    
+                    // 統計計算
+                    const saveTimes = times.map(t => t.save);
+                    const restoreTimes = times.map(t => t.restore);
+                    
+                    const avgSave = saveTimes.reduce((a, b) => a + b, 0) / saveTimes.length;
+                    const avgRestore = restoreTimes.reduce((a, b) => a + b, 0) / restoreTimes.length;
+                    const maxSave = Math.max(...saveTimes);
+                    const maxRestore = Math.max(...restoreTimes);
+                    
+                    // 基準チェック（100ms以内）
+                    const saveWithinLimit = avgSave < 100 && maxSave < 100;
+                    const restoreWithinLimit = avgRestore < 100 && maxRestore < 100;
+                    const allWithinLimit = saveWithinLimit && restoreWithinLimit;
+                    
+                    // メーター更新
+                    const avgTime = Math.max(avgSave, avgRestore);
+                    const meterPercent = Math.min((avgTime / 100) * 100, 100);
+                    meterDiv.style.width = `${meterPercent}%`;
+                    textDiv.textContent = `応答時間: ${avgTime.toFixed(2)}ms (基準: 100ms)`;
+                    
+                    const status = allWithinLimit ? '✅ PASS' : '❌ FAIL';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allWithinLimit ? 'success-message' : 'error-message'}">
+                            ${status}: 応答時間テスト (${iterations}回測定)
+                        </div>
+                        <div>平均保存時間: ${avgSave.toFixed(2)}ms ${saveWithinLimit ? '✅' : '❌'}</div>
+                        <div>最大保存時間: ${maxSave.toFixed(2)}ms</div>
+                        <div>平均復元時間: ${avgRestore.toFixed(2)}ms ${restoreWithinLimit ? '✅' : '❌'}</div>
+                        <div>最大復元時間: ${maxRestore.toFixed(2)}ms</div>
+                        <div>要件基準(100ms): ${allWithinLimit ? 'クリア' : '未達'}</div>
+                    `;
+                    
+                    // クリーンアップ
+                    for (let i = 0; i < iterations; i++) {
+                        persistence.clear(`perf-test-${i}`);
+                    }
+                    
+                    testResults['PF001'] = allWithinLimit;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['PF001'] = false;
+                }
+            }, 1000);
+        }
+
+        function testLargeDataSet() {
+            const resultDiv = document.getElementById('result-pf002');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 大量データテスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    const characterCount = 50;
+                    const startTime = performance.now();
+                    
+                    // 大量キャラクター設定を保存
+                    for (let i = 0; i < characterCount; i++) {
+                        const settings = {
+                            scaleX: 1.0 + (i * 0.01),
+                            scaleY: 1.0 + (i * 0.02),
+                            positionX: i * 10,
+                            positionY: i * 5
+                        };
+                        
+                        persistence.save(`large-test-${i}`, settings);
+                    }
+                    
+                    const saveEndTime = performance.now();
+                    
+                    // 全データ復元
+                    const allSettings = persistence.getAllForCurrentPage();
+                    const restoreEndTime = performance.now();
+                    
+                    // 検証
+                    const largeTestKeys = Object.keys(allSettings).filter(key => key.startsWith('large-test-'));
+                    const retrievedCount = largeTestKeys.length;
+                    
+                    const saveTime = saveEndTime - startTime;
+                    const restoreTime = restoreEndTime - saveEndTime;
+                    const totalTime = restoreEndTime - startTime;
+                    
+                    // パフォーマンス基準（全体で1秒以内）
+                    const performanceOK = totalTime < 1000;
+                    const dataIntegrityOK = retrievedCount === characterCount;
+                    
+                    const allPassed = performanceOK && dataIntegrityOK;
+                    const status = allPassed ? '✅ PASS' : '❌ FAIL';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allPassed ? 'success-message' : 'error-message'}">
+                            ${status}: 大量データ処理テスト
+                        </div>
+                        <div>テスト対象: ${characterCount}キャラクター</div>
+                        <div>保存時間: ${saveTime.toFixed(2)}ms</div>
+                        <div>復元時間: ${restoreTime.toFixed(2)}ms</div>
+                        <div>合計時間: ${totalTime.toFixed(2)}ms ${performanceOK ? '✅' : '❌'} (基準: 1000ms)</div>
+                        <div>データ整合性: ${retrievedCount}/${characterCount} ${dataIntegrityOK ? '✅' : '❌'}</div>
+                    `;
+                    
+                    // クリーンアップ
+                    for (let i = 0; i < characterCount; i++) {
+                        persistence.clear(`large-test-${i}`);
+                    }
+                    
+                    testResults['PF002'] = allPassed;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['PF002'] = false;
+                }
+            }, 1500);
+        }
+
+        function testContinuousOperations() {
+            const resultDiv = document.getElementById('result-pf003');
+            const meterDiv = document.getElementById('continuous-test-meter');
+            const textDiv = document.getElementById('continuous-test-text');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 連続操作テスト実行中... (時間がかかります)</div>';
+            
+            const iterations = 1000;
+            let successCount = 0;
+            let current = 0;
+            
+            const runBatch = () => {
+                const batchSize = 10;
+                const endIndex = Math.min(current + batchSize, iterations);
+                
+                for (let i = current; i < endIndex; i++) {
+                    try {
+                        const settings = {
+                            scaleX: 1.0 + (i * 0.001),
+                            scaleY: 1.0 + (i * 0.0005)
+                        };
+                        
+                        // 保存・復元サイクル
+                        const saved = persistence.save(`continuous-${i}`, settings);
+                        const restored = persistence.restore(`continuous-${i}`);
+                        persistence.clear(`continuous-${i}`);
+                        
+                        if (saved && restored && 
+                            Math.abs(restored.scaleX - settings.scaleX) < 0.0001 &&
+                            Math.abs(restored.scaleY - settings.scaleY) < 0.0001) {
+                            successCount++;
+                        }
+                        
+                    } catch (error) {
+                        console.error(`連続テストエラー ${i}:`, error);
+                    }
+                }
+                
+                current = endIndex;
+                
+                // 進行状況更新
+                const progress = (current / iterations) * 100;
+                meterDiv.style.width = `${progress}%`;
+                textDiv.textContent = `進行状況: ${current}/${iterations} (成功: ${successCount})`;
+                
+                // 継続または完了
+                if (current < iterations) {
+                    setTimeout(runBatch, 10); // 10ms間隔で実行
+                } else {
+                    // テスト完了
+                    const successRate = (successCount / iterations) * 100;
+                    const passed = successRate >= 99; // 99%以上成功率
+                    const status = passed ? '✅ PASS' : '❌ FAIL';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${passed ? 'success-message' : 'error-message'}">
+                            ${status}: 連続操作安定性テスト
+                        </div>
+                        <div>総実行回数: ${iterations}</div>
+                        <div>成功回数: ${successCount}</div>
+                        <div>成功率: ${successRate.toFixed(2)}% ${passed ? '✅' : '❌'} (基準: 99%)</div>
+                        <div>失敗回数: ${iterations - successCount}</div>
+                    `;
+                    
+                    testResults['PF003'] = passed;
+                    updateOverallResults();
+                }
+            };
+            
+            setTimeout(runBatch, 1000);
+        }
+
+        function testMemoryLeak() {
+            const resultDiv = document.getElementById('result-pf004');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 メモリリークテスト実行中... (30秒)</div>';
+            
+            if (!performance.memory) {
+                resultDiv.innerHTML = `<div class="error-message">❌ このブラウザはperformance.memoryをサポートしていません</div>`;
+                testResults['PF004'] = false;
+                return;
+            }
+            
+            const initialMemory = performance.memory.usedJSHeapSize;
+            const memorySnapshots = [];
+            let testInterval;
+            
+            const takeMemoruSnapshot = () => {
+                // 大量のオペレーションを実行
+                for (let i = 0; i < 100; i++) {
+                    const settings = {
+                        scaleX: Math.random() * 2,
+                        scaleY: Math.random() * 2
+                    };
+                    
+                    persistence.save(`memory-test-${i}`, settings);
+                    persistence.restore(`memory-test-${i}`);
+                    persistence.clear(`memory-test-${i}`);
+                }
+                
+                // ガベージコレクション推奨（可能であれば）
+                if (window.gc) {
+                    window.gc();
+                }
+                
+                memorySnapshots.push({
+                    time: Date.now(),
+                    memory: performance.memory.usedJSHeapSize
+                });
+            };
+            
+            testInterval = setInterval(takeMemoruSnapshot, 1000);
+            
+            setTimeout(() => {
+                clearInterval(testInterval);
+                
+                const finalMemory = performance.memory.usedJSHeapSize;
+                const memoryIncrease = finalMemory - initialMemory;
+                const increasePercent = (memoryIncrease / initialMemory) * 100;
+                
+                // メモリリーク判定（10%増加以内なら正常）
+                const memoryOK = increasePercent <= 10;
+                const status = memoryOK ? '✅ PASS' : '❌ FAIL';
+                
+                const snapshots = memorySnapshots.map((snap, index) => 
+                    `${index * 1000}ms: ${(snap.memory / 1024 / 1024).toFixed(2)}MB`
+                ).join('<br>');
+                
+                resultDiv.innerHTML = `
+                    <div class="${memoryOK ? 'success-message' : 'error-message'}">
+                        ${status}: メモリリークテスト (30秒)
+                    </div>
+                    <div>初期メモリ: ${(initialMemory / 1024 / 1024).toFixed(2)}MB</div>
+                    <div>最終メモリ: ${(finalMemory / 1024 / 1024).toFixed(2)}MB</div>
+                    <div>増加量: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB (${increasePercent.toFixed(2)}%)</div>
+                    <div>基準(10%以下): ${memoryOK ? 'クリア' : '超過'}</div>
+                    <details>
+                        <summary>メモリ使用量履歴</summary>
+                        <div style="font-size: 12px;">${snapshots}</div>
+                    </details>
+                `;
+                
+                testResults['PF004'] = memoryOK;
+                updateOverallResults();
+                
+            }, 30000);
+        }
+
+        // ===== 実用ワークフローテスト =====
+
+        function testProductionWorkflow() {
+            const resultDiv = document.getElementById('result-wf001');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 制作ワークフローテスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    const workflow = [];
+                    let allStepsSucceeded = true;
+                    
+                    // ステップ1: プロジェクト開始（複数キャラクター設定）
+                    const characters = {
+                        nezumi: { scaleX: 1.2, scaleY: 1.1 },
+                        purattokun: { scaleX: 0.9, scaleY: 1.0 }
+                    };
+                    
+                    Object.entries(characters).forEach(([char, settings]) => {
+                        const saved = persistence.save(char, settings);
+                        workflow.push(`${char}初期設定: ${saved ? '成功' : '失敗'}`);
+                        if (!saved) allStepsSucceeded = false;
+                    });
+                    
+                    // ステップ2: 設定調整（制作中の微調整）
+                    const adjustedSettings = {
+                        nezumi: { scaleX: 1.3, scaleY: 1.2 },
+                        purattokun: { scaleX: 0.85, scaleY: 0.95 }
+                    };
+                    
+                    Object.entries(adjustedSettings).forEach(([char, settings]) => {
+                        const saved = persistence.save(char, settings);
+                        workflow.push(`${char}調整: ${saved ? '成功' : '失敗'}`);
+                        if (!saved) allStepsSucceeded = false;
+                    });
+                    
+                    // ステップ3: 制作確認（設定復元）
+                    Object.entries(adjustedSettings).forEach(([char, expected]) => {
+                        const restored = persistence.restore(char);
+                        if (restored) {
+                            const matches = 
+                                Math.abs(restored.scaleX - expected.scaleX) < 0.001 &&
+                                Math.abs(restored.scaleY - expected.scaleY) < 0.001;
+                            workflow.push(`${char}確認: ${matches ? '正確' : 'ズレ検出'}`);
+                            if (!matches) allStepsSucceeded = false;
+                        } else {
+                            workflow.push(`${char}確認: 復元失敗`);
+                            allStepsSucceeded = false;
+                        }
+                    });
+                    
+                    // ステップ4: 設定確認（デバッグ）
+                    const debugInfo = persistence.getAllForCurrentPage();
+                    const debugSuccess = Object.keys(debugInfo).length >= 2;
+                    workflow.push(`設定一覧確認: ${debugSuccess ? '成功' : '失敗'} (${Object.keys(debugInfo).length}項目)`);
+                    if (!debugSuccess) allStepsSucceeded = false;
+                    
+                    const status = allStepsSucceeded ? '✅ PASS' : '❌ FAIL';
+                    const workflowHTML = workflow.map(step => `<li>${step}</li>`).join('');
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allStepsSucceeded ? 'success-message' : 'error-message'}">
+                            ${status}: 制作ワークフローテスト
+                        </div>
+                        <div>ワークフロー手順:</div>
+                        <ol>${workflowHTML}</ol>
+                        <div>全工程成功: ${allStepsSucceeded ? '確認' : '問題あり'}</div>
+                    `;
+                    
+                    testResults['WF001'] = allStepsSucceeded;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['WF001'] = false;
+                }
+            }, 1500);
+        }
+
+        function testBrowserRestart() {
+            const resultDiv = document.getElementById('result-wf002');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 ブラウザ再起動シミュレーション実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    // ステップ1: 設定保存
+                    const testSettings = {
+                        nezumi: { scaleX: 1.7, scaleY: 1.6 },
+                        purattokun: { scaleX: 0.6, scaleY: 0.7 }
+                    };
+                    
+                    Object.entries(testSettings).forEach(([char, settings]) => {
+                        persistence.save(char, settings);
+                    });
+                    
+                    // ステップ2: 新しいSpineSettingsPersistenceインスタンス作成（再起動シミュレーション）
+                    const newPersistence = new SpineSettingsPersistence({
+                        debug: false, // 新規セッション
+                        version: '1.0'
+                    });
+                    
+                    // ステップ3: 設定復元確認
+                    const results = [];
+                    let allRestored = true;
+                    
+                    Object.entries(testSettings).forEach(([char, expected]) => {
+                        const restored = newPersistence.restore(char);
+                        
+                        if (restored) {
+                            const scaleXMatch = Math.abs(restored.scaleX - expected.scaleX) < 0.001;
+                            const scaleYMatch = Math.abs(restored.scaleY - expected.scaleY) < 0.001;
+                            const matches = scaleXMatch && scaleYMatch;
+                            
+                            results.push({
+                                char: char,
+                                success: matches,
+                                expected: expected,
+                                restored: restored
+                            });
+                            
+                            if (!matches) allRestored = false;
+                        } else {
+                            results.push({
+                                char: char,
+                                success: false,
+                                expected: expected,
+                                restored: null
+                            });
+                            allRestored = false;
+                        }
+                    });
+                    
+                    const status = allRestored ? '✅ PASS' : '❌ FAIL';
+                    const resultHTML = results.map(r => `
+                        <div>
+                            <strong>${r.char}</strong>: ${r.success ? '✅' : '❌'}
+                            <br>期待: scaleX=${r.expected.scaleX}, scaleY=${r.expected.scaleY}
+                            <br>復元: ${r.restored ? `scaleX=${r.restored.scaleX}, scaleY=${r.restored.scaleY}` : 'null'}
+                        </div>
+                    `).join('<hr>');
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allRestored ? 'success-message' : 'error-message'}">
+                            ${status}: ブラウザ再起動シミュレーション
+                        </div>
+                        <div>新しいインスタンス作成: 成功</div>
+                        <div>永続性確認: ${allRestored ? '確認' : '問題あり'}</div>
+                        ${resultHTML}
+                    `;
+                    
+                    testResults['WF002'] = allRestored;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['WF002'] = false;
+                }
+            }, 1000);
+        }
+
+        function testEmergencyReset() {
+            const resultDiv = document.getElementById('result-wf003');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 緊急リセット機能テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    // テストデータ準備
+                    const testChars = ['reset-test-1', 'reset-test-2', 'reset-test-3'];
+                    testChars.forEach(char => {
+                        persistence.save(char, { scaleX: 1.5, scaleY: 1.3 });
+                    });
+                    
+                    // 保存確認
+                    const beforeReset = testChars.map(char => persistence.exists(char));
+                    const allSavedBefore = beforeReset.every(exists => exists);
+                    
+                    // 個別削除テスト
+                    const cleared1 = persistence.clear('reset-test-1');
+                    const exists1After = persistence.exists('reset-test-1');
+                    const exists2Still = persistence.exists('reset-test-2');
+                    
+                    // 複数削除テスト
+                    const cleared2 = persistence.clear('reset-test-2');
+                    const cleared3 = persistence.clear('reset-test-3');
+                    
+                    // 最終状態確認
+                    const finalExists = testChars.map(char => persistence.exists(char));
+                    const allClearedAfter = finalExists.every(exists => !exists);
+                    
+                    // 存在しないキャラクターのクリア（グレースフル処理確認）
+                    const clearedNonExistent = persistence.clear('non-existent-char');
+                    
+                    const results = [];
+                    results.push(`保存前確認: ${allSavedBefore ? '全て保存済み' : '一部失敗'}`);
+                    results.push(`個別削除: ${cleared1 ? '成功' : '失敗'}`);
+                    results.push(`削除後存在確認: reset-test-1=${!exists1After ? 'なし' : 'あり'}, reset-test-2=${exists2Still ? 'あり' : 'なし'}`);
+                    results.push(`複数削除: ${cleared2 && cleared3 ? '成功' : '失敗'}`);
+                    results.push(`最終確認: ${allClearedAfter ? '全削除完了' : '削除不完全'}`);
+                    results.push(`存在しない項目削除: ${clearedNonExistent ? 'グレースフル処理' : 'エラー'}`);
+                    
+                    const allTestsPassed = 
+                        allSavedBefore && cleared1 && !exists1After && exists2Still &&
+                        cleared2 && cleared3 && allClearedAfter && clearedNonExistent;
+                    
+                    const status = allTestsPassed ? '✅ PASS' : '❌ FAIL';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allTestsPassed ? 'success-message' : 'error-message'}">
+                            ${status}: 緊急リセット機能テスト
+                        </div>
+                        <div>テスト結果:</div>
+                        <ul>${results.map(r => `<li>${r}</li>`).join('')}</ul>
+                        <div>削除機能: ${allTestsPassed ? '正常動作' : '問題あり'}</div>
+                    `;
+                    
+                    testResults['WF003'] = allTestsPassed;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['WF003'] = false;
+                }
+            }, 1000);
+        }
+
+        function testDebugFeatures() {
+            const resultDiv = document.getElementById('result-wf004');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="testing">🔄 デバッグ機能テスト実行中...</div>';
+            
+            setTimeout(() => {
+                try {
+                    // テストデータ準備
+                    const debugTestData = {
+                        'debug-char-1': { scaleX: 1.1, scaleY: 1.2 },
+                        'debug-char-2': { scaleX: 0.9, scaleY: 0.8 }
+                    };
+                    
+                    Object.entries(debugTestData).forEach(([char, settings]) => {
+                        persistence.save(char, settings);
+                    });
+                    
+                    // コンソール出力をキャプチャ
+                    const originalConsoleLog = console.log;
+                    const capturedLogs = [];
+                    
+                    console.log = (...args) => {
+                        capturedLogs.push(args.join(' '));
+                        originalConsoleLog.apply(console, args);
+                    };
+                    
+                    // debug機能実行
+                    persistence.debug();
+                    
+                    // コンソールを復元
+                    console.log = originalConsoleLog;
+                    
+                    // getAllForCurrentPage機能確認
+                    const allSettings = persistence.getAllForCurrentPage();
+                    const debugKeys = Object.keys(allSettings).filter(key => key.startsWith('debug-char-'));
+                    
+                    // ログ解析
+                    const hasVersionInfo = capturedLogs.some(log => log.includes('Version:'));
+                    const hasPageIdInfo = capturedLogs.some(log => log.includes('Page ID:'));
+                    const hasSettingsInfo = capturedLogs.some(log => log.includes('Current Page Settings:'));
+                    const hasUsageInfo = capturedLogs.some(log => log.includes('localStorage Usage:'));
+                    
+                    const debugInfoComplete = hasVersionInfo && hasPageIdInfo && hasSettingsInfo;
+                    const dataRetrievalCorrect = debugKeys.length === 2;
+                    
+                    // データ内容確認
+                    let dataIntegrityOK = true;
+                    Object.entries(debugTestData).forEach(([char, expected]) => {
+                        const actual = allSettings[char];
+                        if (!actual || 
+                            Math.abs(actual.scaleX - expected.scaleX) > 0.001 ||
+                            Math.abs(actual.scaleY - expected.scaleY) > 0.001) {
+                            dataIntegrityOK = false;
+                        }
+                    });
+                    
+                    const allPassed = debugInfoComplete && dataRetrievalCorrect && dataIntegrityOK;
+                    const status = allPassed ? '✅ PASS' : '❌ FAIL';
+                    
+                    // クリーンアップ
+                    Object.keys(debugTestData).forEach(char => {
+                        persistence.clear(char);
+                    });
+                    
+                    resultDiv.innerHTML = `
+                        <div class="${allPassed ? 'success-message' : 'error-message'}">
+                            ${status}: デバッグ支援機能テスト
+                        </div>
+                        <div>バージョン情報出力: ${hasVersionInfo ? '✅' : '❌'}</div>
+                        <div>ページID情報出力: ${hasPageIdInfo ? '✅' : '❌'}</div>
+                        <div>設定情報出力: ${hasSettingsInfo ? '✅' : '❌'}</div>
+                        <div>使用量情報出力: ${hasUsageInfo ? '✅' : '⚠️'} (ブラウザ依存)</div>
+                        <div>データ取得: ${debugKeys.length}/2キャラクター ${dataRetrievalCorrect ? '✅' : '❌'}</div>
+                        <div>データ整合性: ${dataIntegrityOK ? '✅' : '❌'}</div>
+                        <details>
+                            <summary>キャプチャされたログ (${capturedLogs.length}項目)</summary>
+                            <div style="font-size: 12px; max-height: 150px; overflow-y: auto;">
+                                ${capturedLogs.map(log => `<div>${log}</div>`).join('')}
+                            </div>
+                        </details>
+                    `;
+                    
+                    testResults['WF004'] = allPassed;
+                    updateOverallResults();
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ テストエラー: ${error.message}</div>`;
+                    testResults['WF004'] = false;
+                }
+            }, 1000);
+        }
+
+        // ===== 制御・結果機能 =====
+
+        function runAllTests() {
+            console.log('🚀 全テスト実行開始');
+            
+            // 進行管理
+            let testsCompleted = 0;
+            const totalTests = 16;
+            
+            const testFunctions = [
+                // 複数キャラクター統合テスト
+                { func: testMultiCharacterSeparation, delay: 0 },
+                { func: testDifferentScaleValues, delay: 2000 },
+                { func: testCharacterSwitching, delay: 4000 },
+                { func: testBulkRestore, delay: 6000 },
+                
+                // エラーハンドリングテスト
+                { func: testStorageCapacityLimit, delay: 8000 },
+                { func: testDataCorruption, delay: 10000 },
+                { func: testInvalidInput, delay: 12000 },
+                { func: testOutOfRangeValues, delay: 14000 },
+                
+                // パフォーマンステスト
+                { func: testResponseTime, delay: 16000 },
+                { func: testLargeDataSet, delay: 18000 },
+                { func: testContinuousOperations, delay: 20000 }, // 長時間テスト
+                { func: testMemoryLeak, delay: 60000 }, // 30秒テスト + 待機
+                
+                // 実用ワークフローテスト  
+                { func: testProductionWorkflow, delay: 95000 },
+                { func: testBrowserRestart, delay: 97000 },
+                { func: testEmergencyReset, delay: 99000 },
+                { func: testDebugFeatures, delay: 101000 }
+            ];
+            
+            document.getElementById('overall-results').innerHTML = `
+                <div class="testing">
+                    🚀 全自動テスト実行中... 
+                    <br>予想時間: 約2分
+                    <br>現在実行中: 複数キャラクター統合テスト
+                </div>
+            `;
+            
+            testFunctions.forEach(({ func, delay }, index) => {
+                setTimeout(() => {
+                    console.log(`📋 テスト ${index + 1}/${totalTests} 実行中`);
+                    func();
+                }, delay);
+            });
+            
+            // 全テスト完了チェック
+            setTimeout(() => {
+                generateDetailedReport();
+                console.log('✅ 全テスト完了');
+            }, 105000);
+        }
+
+        function resetTestEnvironment() {
+            console.log('🔄 テスト環境リセット');
+            
+            // localStorage内のテストデータをクリア
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.includes('spineSettings')) {
+                    keysToRemove.push(key);
+                }
+            }
+            
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+            });
+            
+            // テスト結果リセット
+            testResults = {};
+            
+            // UI リセット
+            document.querySelectorAll('.result-panel').forEach(panel => {
+                panel.style.display = 'none';
+                panel.innerHTML = '';
+            });
+            
+            document.querySelectorAll('.meter-fill').forEach(meter => {
+                meter.style.width = '0%';
+            });
+            
+            document.getElementById('response-time-text').textContent = '応答時間: 未測定';
+            document.getElementById('continuous-test-text').textContent = '進行状況: 0/1000';
+            
+            updateOverallResults();
+            
+            alert('テスト環境をリセットしました');
+        }
+
+        function clearAllStorage() {
+            if (confirm('localStorageの全データを削除します。よろしいですか？')) {
+                localStorage.clear();
+                console.log('🗑️ localStorage全削除完了');
+                updateOverallResults();
+                alert('localStorage全削除完了');
+            }
+        }
+
+        function updateOverallResults() {
+            const totalTests = Object.keys(testResults).length;
+            const passedTests = Object.values(testResults).filter(result => result === true).length;
+            const failedTests = Object.values(testResults).filter(result => result === false).length;
+            
+            if (totalTests === 0) {
+                document.getElementById('overall-results').innerHTML = `
+                    <div>テスト未実行 - 上記のテストを実行して結果を確認してください</div>
+                `;
+                return;
+            }
+            
+            const passRate = (passedTests / totalTests) * 100;
+            
+            // テストカテゴリ別集計
+            const categoryResults = {
+                'MC': { name: '複数キャラクター統合', tests: [], passed: 0, total: 0 },
+                'EH': { name: 'エラーハンドリング', tests: [], passed: 0, total: 0 },
+                'PF': { name: 'パフォーマンス', tests: [], passed: 0, total: 0 },
+                'WF': { name: '実用ワークフロー', tests: [], passed: 0, total: 0 }
+            };
+            
+            Object.entries(testResults).forEach(([testId, result]) => {
+                const category = testId.substring(0, 2);
+                if (categoryResults[category]) {
+                    categoryResults[category].tests.push({ id: testId, result: result });
+                    categoryResults[category].total++;
+                    if (result) categoryResults[category].passed++;
+                }
+            });
+            
+            const categoryHTML = Object.entries(categoryResults).map(([catId, cat]) => {
+                if (cat.total === 0) return '';
+                
+                const catPassRate = (cat.passed / cat.total) * 100;
+                const catStatus = catPassRate === 100 ? '✅' : catPassRate >= 80 ? '⚠️' : '❌';
+                
+                return `
+                    <div>
+                        ${catStatus} <strong>${cat.name}</strong>: ${cat.passed}/${cat.total} (${catPassRate.toFixed(1)}%)
+                        <div style="margin-left: 20px; font-size: 14px;">
+                            ${cat.tests.map(t => `${t.result ? '✅' : '❌'} ${t.id}`).join(', ')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const overallStatus = passRate === 100 ? '✅ 全テストPASS' : 
+                                  passRate >= 80 ? '⚠️ 部分的成功' : '❌ 多数失敗';
+            
+            document.getElementById('overall-results').innerHTML = `
+                <div class="${passRate === 100 ? 'success-message' : passRate >= 80 ? '' : 'error-message'}">
+                    <h3>${overallStatus}</h3>
+                    <div>総合成績: ${passedTests}/${totalTests} (${passRate.toFixed(1)}%)</div>
+                </div>
+                
+                <h4>📊 カテゴリ別結果</h4>
+                ${categoryHTML}
+                
+                <h4>🎯 必須基準チェック</h4>
+                <div>
+                    ${categoryResults.MC.total > 0 ? 
+                      `<div>${categoryResults.MC.passed === categoryResults.MC.total ? '✅' : '❌'} 複数キャラクター分離: ${categoryResults.MC.passed}/${categoryResults.MC.total}</div>` : ''}
+                    ${categoryResults.EH.total > 0 ? 
+                      `<div>${categoryResults.EH.passed === categoryResults.EH.total ? '✅' : '❌'} エラーハンドリング: ${categoryResults.EH.passed}/${categoryResults.EH.total}</div>` : ''}
+                    ${categoryResults.PF.total > 0 ? 
+                      `<div>${categoryResults.PF.passed === categoryResults.PF.total ? '✅' : '❌'} パフォーマンス: ${categoryResults.PF.passed}/${categoryResults.PF.total}</div>` : ''}
+                    ${categoryResults.WF.total > 0 ? 
+                      `<div>${categoryResults.WF.passed === categoryResults.WF.total ? '✅' : '❌'} 実用性: ${categoryResults.WF.passed}/${categoryResults.WF.total}</div>` : ''}
+                </div>
+                
+                <div style="margin-top: 15px; padding: 10px; border-top: 1px solid rgba(255,255,255,0.3);">
+                    <strong>Phase 4移行判定:</strong> ${passRate === 100 ? '✅ 条件クリア' : '❌ 改善必要'}
+                </div>
+            `;
+        }
+
+        function generateDetailedReport() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                summary: {
+                    total: Object.keys(testResults).length,
+                    passed: Object.values(testResults).filter(r => r).length,
+                    failed: Object.values(testResults).filter(r => !r).length
+                },
+                results: testResults,
+                environment: {
+                    userAgent: navigator.userAgent,
+                    localStorage: typeof Storage !== 'undefined',
+                    performanceMemory: !!performance.memory
+                }
+            };
+            
+            console.log('📊 詳細レポート', report);
+            
+            // レポートをJSON形式でダウンロード可能にする
+            const reportJson = JSON.stringify(report, null, 2);
+            const blob = new Blob([reportJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `spine-settings-persistence-phase3-3-report-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('詳細レポートをダウンロードしました');
+        }
+
+        function exportTestResults() {
+            const results = {
+                testResults: testResults,
+                timestamp: new Date().toISOString(),
+                settings: persistence.getAllForCurrentPage()
+            };
+            
+            const csv = [
+                'TestID,Result,Category,Description',
+                ...Object.entries(testResults).map(([id, result]) => {
+                    const category = id.substring(0, 2);
+                    const categoryNames = {
+                        'MC': 'Multiple Character',
+                        'EH': 'Error Handling', 
+                        'PF': 'Performance',
+                        'WF': 'Workflow'
+                    };
+                    return `${id},${result ? 'PASS' : 'FAIL'},${categoryNames[category] || 'Unknown'},Test ${id}`;
+                })
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test-results-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('テスト結果をCSVでエクスポートしました');
+        }
+
+        function generateTestReport() {
+            if (Object.keys(testResults).length === 0) {
+                alert('まずテストを実行してください');
+                return;
+            }
+            
+            generateDetailedReport();
+        }
+    </script>
+</body>
+</html>

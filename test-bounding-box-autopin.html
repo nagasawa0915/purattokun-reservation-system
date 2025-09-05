@@ -648,7 +648,6 @@
     <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
     <!-- 🎯 2段階ピン設定システム (旧版 - 新版に統合済み) -->
-    <!-- <script src="micromodules/bounding-box/ElementHighlighter.js"></script> -->
     <!-- <script src="micromodules/bounding-box/ElementSelector.js"></script> -->
     <script src="micromodules/bounding-box/RelativeCoordinator.js"></script>
     <script src="micromodules/bounding-box/PureBoundingBoxAutoPin.js"></script>
@@ -662,10 +661,11 @@
     <!-- 🔄 Phase 2: 既存システム統合アダプター -->
     <script src="micromodules/bounding-box/ElementObserverAdapter.js"></script>
     
-    <!-- 🎯 2段階UI統合システム -->
-    <script src="micromodules/element-selector/ElementHighlighter.js"></script>
-    <script src="micromodules/element-selector/ElementSelector.js"></script>
-    <script src="micromodules/element-selector/TwoStageSelector.js"></script>
+    <!-- 🎯 2段階UI統合システム - 競合回避版 -->
+    <script src="micromodules/bounding-box/ElementHighlighter.js"></script>
+    <script src="micromodules/bounding-box/ElementSelector.js"></script>
+    <!-- 一時的にTwoStageSelectorをコメントアウトしてBB表示を復旧 -->
+    <!-- <script src="micromodules/element-selector/TwoStageSelector.js"></script> -->
 
     <script>
         // グローバル変数
@@ -1054,6 +1054,25 @@
         async function testBasicBoundingBox() {
             try {
                 log('📦 基本バウンディングボックステスト開始', 'info');
+                
+                // 🔍 詳細なモジュール状態確認（デバッグ）
+                const moduleStatus = {
+                    PureBoundingBoxCore: typeof window.PureBoundingBoxCore !== 'undefined',
+                    PureBoundingBoxBounds: typeof window.PureBoundingBoxBounds !== 'undefined',
+                    PureBoundingBoxUI: typeof window.PureBoundingBoxUI !== 'undefined',
+                    PureBoundingBoxEvents: typeof window.PureBoundingBoxEvents !== 'undefined',
+                    PureBoundingBox: typeof window.PureBoundingBox !== 'undefined'
+                };
+                
+                console.log('🔍 モジュール読み込み状況:', moduleStatus);
+                log(`🔍 モジュール状況: Core=${moduleStatus.PureBoundingBoxCore}, Bounds=${moduleStatus.PureBoundingBoxBounds}, UI=${moduleStatus.PureBoundingBoxUI}, Events=${moduleStatus.PureBoundingBoxEvents}`, 'info');
+                
+                const missingModules = Object.keys(moduleStatus).filter(key => !moduleStatus[key]);
+                if (missingModules.length > 0) {
+                    log(`❌ 不足モジュール: ${missingModules.join(', ')}`, 'error');
+                    console.error('不足モジュール詳細:', missingModules);
+                    return;
+                }
                 
                 // デバッグ: PureBoundingBoxクラス存在確認
                 if (typeof PureBoundingBox === 'undefined') {

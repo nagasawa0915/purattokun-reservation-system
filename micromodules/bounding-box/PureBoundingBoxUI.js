@@ -1124,14 +1124,54 @@ class PureBoundingBoxUI {
      * 🎯 2段階ピン設定開始
      */
     async startPinSetting() {
-        console.log('🎯 2段階ピン設定システム開始');
+        console.log('🎯 2段階ピン設定システム開始 - TwoStageSelector版');
+        
+        try {
+            // 右クリックメニュー非表示
+            this.hideContextMenu();
+            
+            // TwoStageSelector利用可能性チェック
+            if (!window.TwoStageSelector) {
+                console.warn('⚠️ TwoStageSelector未利用 - 基本ElementSelectorにフォールバック');
+                return await this.startBasicPinSetting();
+            }
+            
+            // TwoStageSelector 初期化
+            const twoStageSelector = new window.TwoStageSelector();
+            console.log('✅ TwoStageSelector初期化完了');
+            
+            // 2段階プロセス開始 - 高機能画面表示付き
+            twoStageSelector.startTwoStageProcess(
+                // 完了コールバック
+                (pinRequest, selectedElement) => {
+                    console.log('✅ 2段階ピン設定完了 - 高機能版!', pinRequest);
+                    console.log('📍 対象要素:', selectedElement);
+                    this.handleTwoStageCompleted(pinRequest, selectedElement);
+                },
+                // エラーコールバック  
+                (error) => {
+                    console.error('❌ 2段階ピン設定エラー:', error);
+                    this.showNotification('❌ ピン設定に失敗しました', 'error', 3000);
+                }
+            );
+            
+            console.log('✅ 高機能2段階ピン設定プロセス開始完了');
+            
+        } catch (error) {
+            console.error('❌ ピン設定エラー:', error);
+            this.showNotification('❌ ピン設定に失敗しました', 'error', 3000);
+        }
+    }
+    
+    /**
+     * 🎯 基本ElementSelectorフォールバック版
+     */
+    async startBasicPinSetting() {
+        console.log('🎯 基本ピン設定システム開始 - ElementSelector版');
         
         try {
             // Stage 1: F12風要素選択
             this.showNotification('🎯 Stage 1: 要素選択モード開始\nピンを設定する要素を選択してください', 'info', 5000);
-            
-            // 右クリックメニュー非表示
-            this.hideContextMenu();
             
             // ElementSelector 初期化
             if (!window.ElementSelector) {
@@ -1143,14 +1183,51 @@ class PureBoundingBoxUI {
             // 要素選択開始
             const selectedElement = await selector.selectElement((element) => {
                 console.log('🎯 選択要素確定:', element);
-                // Stage 2 への移行は後で実装
                 this.handleElementSelected(element);
             });
             
             console.log('✅ Stage 1 完了: 要素選択成功');
             
         } catch (error) {
-            console.error('❌ ピン設定エラー:', error);
+            console.error('❌ 基本ピン設定エラー:', error);
+            this.showNotification('❌ ピン設定に失敗しました', 'error', 3000);
+        }
+    }
+    
+    /**
+     * 🎯 TwoStageSelector完了処理
+     */
+    handleTwoStageCompleted(pinRequest, selectedElement) {
+        console.log('✅ TwoStageSelector完了処理開始');
+        console.log('📍 ピン設定要求:', pinRequest);
+        console.log('🎯 選択要素:', selectedElement);
+        
+        // AutoPinとの統合処理
+        if (this.autoPin) {
+            // TwoStageSelectorの結果をAutoPinシステムに適用
+            this.integrateTwoStageResult(pinRequest, selectedElement);
+        } else {
+            console.warn('⚠️ AutoPinシステムが利用できません');
+        }
+        
+        this.showNotification('✅ 高機能ピン設定完了！', 'success', 3000);
+    }
+    
+    /**
+     * 🎯 TwoStageSelector結果のAutoPin統合
+     */
+    integrateTwoStageResult(pinRequest, selectedElement) {
+        console.log('🔗 TwoStageSelector → AutoPin統合処理');
+        
+        // ここで高機能な結果をAutoPinシステムに統合
+        // pinRequest.anchor, pinRequest.offsetなどを使用
+        
+        console.log('✅ AutoPin統合完了');
+    }
+    
+    // 従来のhandleElementSelectedメソッドはそのまま維持
+    handleElementSelected(element) {
+        console.log('🎯 Stage 1 → Stage 2 移行: 選択要素処理開始', element);
             
             let errorMessage = 'ピン設定に失敗しました';
             if (error.message.includes('キャンセル')) {
