@@ -80,6 +80,12 @@ class PureBoundingBoxAutoPin {
         
         this.restoreSystemData();
         
+        // ===============================
+        // 🔄 レスポンシブ追従システム初期化
+        // ===============================
+        
+        this.initializeResponsiveSystem();
+        
         console.log('🎯 PureBoundingBoxAutoPin v2.0 (モジュール版) 初期化完了');
     }
     
@@ -490,6 +496,122 @@ class PureBoundingBoxAutoPin {
      */
     updatePerformanceMetrics(processingTime, success) {
         return this.configManager.updatePerformanceMetrics(processingTime, success);
+    }
+    
+    // ==========================================
+    // 🔄 レスポンシブ追従システム
+    // ==========================================
+    
+    /**
+     * レスポンシブ追従システムの初期化
+     */
+    initializeResponsiveSystem() {
+        console.log('🔄 レスポンシブ追従システム初期化開始');
+        
+        // 1. ウィンドウリサイズ時のピン位置更新
+        this.setupWindowResizeHandler();
+        
+        // 2. 要素変更監視（MutationObserver）
+        this.setupElementObserver();
+        
+        console.log('✅ レスポンシブ追従システム初期化完了');
+    }
+    
+    /**
+     * ウィンドウリサイズハンドラーの設定
+     */
+    setupWindowResizeHandler() {
+        let resizeTimeout;
+        
+        const handleResize = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                console.log('🔄 ウィンドウリサイズ検出 → ピン位置更新開始');
+                this.updateAllPinPositions();
+            }, 150); // 150msの遅延でリサイズ完了を待つ
+        };
+        
+        window.addEventListener('resize', handleResize);
+        
+        // インスタンス破棄用の参照保持
+        this._resizeHandler = handleResize;
+        
+        console.log('✅ ウィンドウリサイズハンドラー設定完了');
+    }
+    
+    /**
+     * 要素変更監視の設定
+     */
+    setupElementObserver() {
+        if (!window.MutationObserver) {
+            console.warn('⚠️ MutationObserver がサポートされていません');
+            return;
+        }
+        
+        this.mutationObserver = new MutationObserver((mutations) => {
+            let shouldUpdate = false;
+            
+            mutations.forEach((mutation) => {
+                // 属性変更の監視（style, class の変更）
+                if (mutation.type === 'attributes' && 
+                   (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                    shouldUpdate = true;
+                }
+            });
+            
+            if (shouldUpdate) {
+                console.log('🔄 要素変更検出 → ピン位置更新');
+                this.updateAllPinPositions();
+            }
+        });
+        
+        // ドキュメント全体を監視（属性変更のみ）
+        this.mutationObserver.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['style', 'class'],
+            subtree: true
+        });
+        
+        console.log('✅ 要素変更監視設定完了');
+    }
+    
+    /**
+     * 全てのピン位置を更新
+     */
+    updateAllPinPositions() {
+        try {
+            console.log('🔄 全ピン位置更新開始');
+            
+            // PinDisplayManagerの位置更新メソッドを呼び出し
+            if (this.pinDisplayManager && typeof this.pinDisplayManager.updateAllMarkerPositions === 'function') {
+                this.pinDisplayManager.updateAllMarkerPositions();
+                console.log('✅ PinDisplayManager位置更新完了');
+            } else {
+                console.warn('⚠️ PinDisplayManager.updateAllMarkerPositions が利用できません');
+            }
+            
+        } catch (error) {
+            console.error('❌ ピン位置更新エラー:', error.message);
+        }
+    }
+    
+    /**
+     * レスポンシブシステムのクリーンアップ
+     */
+    cleanup() {
+        // ウィンドウリサイズハンドラーを削除
+        if (this._resizeHandler) {
+            window.removeEventListener('resize', this._resizeHandler);
+            this._resizeHandler = null;
+        }
+        
+        // MutationObserverを停止
+        if (this.mutationObserver) {
+            this.mutationObserver.disconnect();
+            this.mutationObserver = null;
+        }
+        
+        console.log('✅ レスポンシブシステムクリーンアップ完了');
     }
 }
 

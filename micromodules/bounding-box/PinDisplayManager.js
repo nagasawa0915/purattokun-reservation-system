@@ -174,122 +174,59 @@ class PinDisplayManager {
             // 既存のピンマーカーをクリア
             this.hideUserPin(nodeId);
             
-            // TwoStageSelectorで保存されたピン情報を取得
-            const storageKey = `user-pin-${nodeId}`;
-            let pinData = localStorage.getItem(storageKey);
+            // 🚨 修正: AutoPinシステムの保存データを優先的に取得
+            const autoPinKey = `autopin-${nodeId}`;
+            let autoPinData = localStorage.getItem(autoPinKey);
             
-            if (!pinData) {
-                // AutoPinデータからも確認
-                const autoPinKey = `autopin-${nodeId}`;
-                const autoPinData = localStorage.getItem(autoPinKey);
-                if (autoPinData) {
-                    const parsed = JSON.parse(autoPinData);
-                    if (parsed.userPinPosition) {
-                        pinData = JSON.stringify(parsed.userPinPosition);
-                    }
+            // フォールバック: TwoStageSelectorデータも確認
+            if (!autoPinData) {
+                const userPinKey = `user-pin-${nodeId}`;
+                const userPinData = localStorage.getItem(userPinKey);
+                if (userPinData) {
+                    console.log('📍 フォールバック: TwoStageSelectorデータ使用');
+                    // TwoStageSelectorの従来処理（既存コード）
+                    this.showUserPinLegacy(nodeId, userPinData);
+                    return;
                 }
             }
             
-            if (!pinData) {
+            if (!autoPinData) {
                 console.log('📍 ユーザーピン表示: 保存データなし');
                 return;
             }
             
-            const userPin = JSON.parse(pinData);
-            console.log('📍 ユーザーピンデータ:', userPin);
+            const pinConfig = JSON.parse(autoPinData);
+            console.log('📍 AutoPinデータ使用:', pinConfig);
             
-            // 対象要素を特定
-            let targetElement = null;
-            if (userPin.element && userPin.element.id) {
-                targetElement = document.getElementById(userPin.element.id);
-            } else if (userPin.element && userPin.element.selector) {
-                targetElement = document.querySelector(userPin.element.selector);
-            }
+            // 🎯 AutoPinシステムの座標データを直接使用
+            let pinX, pinY;
             
-            if (!targetElement) {
-                console.warn('⚠️ ユーザーピン表示: 対象要素が見つかりません');
+            if (pinConfig.absolutePosition) {
+                // 絶対座標が保存されている場合は直接使用
+                pinX = pinConfig.absolutePosition.x;
+                pinY = pinConfig.absolutePosition.y;
+                console.log('📍 絶対座標使用:', { pinX, pinY });
+            } else if (pinConfig.anchor && pinConfig.backgroundElement) {
+                // アンカー情報から位置を復元
+                const backgroundElement = this.findBackgroundElement(pinConfig.backgroundElement);
+                if (!backgroundElement) {
+                    console.warn('⚠️ 背景要素が見つかりません');
+                    return;
+                }
+                
+                const rect = backgroundElement.getBoundingClientRect();
+                const anchorRatios = this.getAnchorRatios(pinConfig.anchor);
+                
+                pinX = rect.left + (rect.width * anchorRatios.x);
+                pinY = rect.top + (rect.height * anchorRatios.y);
+                console.log('📍 アンカー座標復元:', { pinX, pinY, anchor: pinConfig.anchor });
+            } else {
+                console.warn('⚠️ 位置情報が不完全です:', pinConfig);
                 return;
             }
             
-            // ピン位置を計算（TwoStageSelector形式）
-            const rect = targetElement.getBoundingClientRect();
-            const anchorPoint = userPin.anchorPoints ? userPin.anchorPoints[0] : userPin;
-            
-            const pinX = rect.left + (rect.width * anchorPoint.ratioX) + (anchorPoint.offsetX || 0);
-            const pinY = rect.top + (rect.height * anchorPoint.ratioY) + (anchorPoint.offsetY || 0);
-            
-            // ユーザーピンスタイルを注入
-            this.injectUserPinStyles();
-            
-            // ピンマーカー要素を作成（青色で区別）
-            const marker = document.createElement('div');
-            marker.className = 'user-pin-marker';
-            marker.id = `user-pin-marker-${nodeId}`;
-            marker.style.cssText = `
-                position: fixed;
-                left: ${pinX}px;
-                top: ${pinY}px;
-                width: 20px;
-                height: 20px;
-                background: #007bff;
-                border: 3px solid #fff;
-                border-radius: 50%;
-                box-shadow: 0 3px 12px rgba(0, 123, 255, 0.7);
-                z-index: 10001;
-                pointer-events: none;
-                transform: translate(-50%, -50%);
-                animation: user-pin-pulse 2s infinite;
-            `;
-            
-            // ピンアイコンを追加
-            const icon = document.createElement('div');
-            icon.style.cssText = `
-                position: absolute;
-                top: -30px;
-                left: 50%;
-                transform: translateX(-50%);
-                font-size: 16px;
-                text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            `;
-            icon.textContent = '📌';
-            marker.appendChild(icon);
-            
-            // ラベルを追加
-            const label = document.createElement('div');
-            label.style.cssText = `
-                position: absolute;
-                bottom: -30px;
-                left: 50%;
-                transform: translateX(-50%);
-                font-size: 11px;
-                color: #fff;
-                background: rgba(0, 123, 255, 0.9);
-                padding: 3px 8px;
-                border-radius: 4px;
-                white-space: nowrap;
-                font-weight: bold;
-            `;
-            label.textContent = 'USER PIN';
-            marker.appendChild(label);
-            
-            // ドキュメントに追加
-            document.body.appendChild(marker);
-            
-            // マーカー情報を記録
-            this.activeMarkers.set(`user-${nodeId}`, {
-                type: 'user',
-                nodeId: nodeId,
-                element: marker,
-                position: { x: pinX, y: pinY }
-            });
-            
-            console.log('📍 ユーザーピン表示完了:', {
-                nodeId,
-                position: `${pinX.toFixed(1)}, ${pinY.toFixed(1)}`,
-                ratio: `${(anchorPoint.ratioX * 100).toFixed(1)}%, ${(anchorPoint.ratioY * 100).toFixed(1)}%`,
-                offset: `${anchorPoint.offsetX || 0}, ${anchorPoint.offsetY || 0}`,
-                element: targetElement.tagName
-            });
+            // ピンマーカーを作成・表示
+            this.createPinMarker(nodeId, pinX, pinY, '📌');
             
         } catch (error) {
             console.error('❌ ユーザーピン表示エラー:', error);
@@ -612,6 +549,145 @@ class PinDisplayManager {
             },
             timestamp: new Date().toISOString()
         };
+    }
+    
+    /**
+     * 背景要素を検索・復元
+     */
+    findBackgroundElement(backgroundElementInfo) {
+        if (!backgroundElementInfo) return null;
+        
+        // ID優先で検索
+        if (backgroundElementInfo.id) {
+            const element = document.getElementById(backgroundElementInfo.id);
+            if (element) return element;
+        }
+        
+        // セレクター文字列で検索
+        if (backgroundElementInfo.selector) {
+            const element = document.querySelector(backgroundElementInfo.selector);
+            if (element) return element;
+        }
+        
+        // フォールバック: ヒーロー画像要素を検索
+        const heroSelectors = ['.hero-section', '.hero-image', '[class*="hero"]'];
+        for (const selector of heroSelectors) {
+            const element = document.querySelector(selector);
+            if (element) return element;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 従来のTwoStageSelectorデータによるピン表示（フォールバック）
+     */
+    showUserPinLegacy(nodeId, userPinData) {
+        try {
+            const userPin = JSON.parse(userPinData);
+            console.log('📍 レガシーデータ使用:', userPin);
+            
+            // 対象要素を特定
+            let targetElement = null;
+            if (userPin.element && userPin.element.id) {
+                targetElement = document.getElementById(userPin.element.id);
+            } else if (userPin.element && userPin.element.selector) {
+                targetElement = document.querySelector(userPin.element.selector);
+            }
+            
+            if (!targetElement) {
+                console.warn('⚠️ レガシーピン表示: 対象要素が見つかりません');
+                return;
+            }
+            
+            // ピン位置を計算（TwoStageSelector形式）
+            const rect = targetElement.getBoundingClientRect();
+            const anchorPoint = userPin.anchorPoints ? userPin.anchorPoints[0] : userPin;
+            
+            const pinX = rect.left + (rect.width * anchorPoint.ratioX) + (anchorPoint.offsetX || 0);
+            const pinY = rect.top + (rect.height * anchorPoint.ratioY) + (anchorPoint.offsetY || 0);
+            
+            // ピンマーカーを表示
+            this.createPinMarker(nodeId, pinX, pinY, '📌 (Legacy)');
+            
+        } catch (error) {
+            console.error('❌ レガシーピン表示エラー:', error);
+        }
+    }
+    
+    /**
+     * ピンマーカー要素の作成（共通処理）
+     */
+    createPinMarker(nodeId, pinX, pinY, label = '📌') {
+        // ユーザーピンスタイルを注入
+        this.injectUserPinStyles();
+        
+        // ピンマーカー要素を作成（青色で区別）
+        const marker = document.createElement('div');
+        marker.className = 'user-pin-marker';
+        marker.id = `user-pin-marker-${nodeId}`;
+        marker.style.cssText = `
+            position: fixed;
+            left: ${pinX}px;
+            top: ${pinY}px;
+            width: 20px;
+            height: 20px;
+            background: #007bff;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 3px 12px rgba(0, 123, 255, 0.7);
+            z-index: 10001;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            animation: user-pin-pulse 2s infinite;
+        `;
+        
+        // ピンアイコンを追加
+        const icon = document.createElement('div');
+        icon.style.cssText = `
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        `;
+        icon.textContent = label;
+        marker.appendChild(icon);
+        
+        // ラベルを追加
+        const labelElement = document.createElement('div');
+        labelElement.style.cssText = `
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #007bff;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 6px;
+            border-radius: 4px;
+        `;
+        labelElement.textContent = nodeId;
+        marker.appendChild(labelElement);
+        
+        document.body.appendChild(marker);
+        
+        // マーカー状態を記録
+        this.activeMarkers.set(`user-${nodeId}`, {
+            type: 'user',
+            nodeId: nodeId,
+            element: marker,
+            position: { x: pinX, y: pinY }
+        });
+        
+        console.log('📍 ユーザーピンマーカー表示完了:', {
+            nodeId,
+            position: `${pinX.toFixed(1)}, ${pinY.toFixed(1)}`,
+            label: label
+        });
     }
     
     /**

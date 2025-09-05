@@ -257,6 +257,18 @@
         <button class="control-button secondary" onclick="checkScalingConfig()">
             ⚙️ スケーリング設定確認
         </button>
+        <button class="control-button secondary" onclick="testPinDataFormats()">
+            🔍 ピンデータ形式チェック
+        </button>
+        <button class="control-button secondary" onclick="forcePinDisplay()">
+            📌 強制ピン表示
+        </button>
+        <button class="control-button secondary" onclick="testResponsiveTracking()">
+            🔄 追従システムテスト
+        </button>
+        <button class="control-button secondary" onclick="testBackgroundDetection()">
+            🔍 背景検出テスト
+        </button>
     </div>
     
     <!-- ログパネル -->
@@ -1036,6 +1048,229 @@
                 }
             } catch (error) {
                 log(`❌ 設定確認エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🔍 ピンデータ形式チェック
+        function testPinDataFormats() {
+            try {
+                log('🔍 ピンデータ形式チェック開始', 'info');
+                
+                // localStorage の全キーを確認
+                const keys = Object.keys(localStorage);
+                const autoPinKeys = keys.filter(key => key.startsWith('autopin-'));
+                
+                log(`📋 localStorage内のAutoPin関連キー: ${autoPinKeys.length}個`, 'info');
+                
+                for (const key of autoPinKeys) {
+                    const data = localStorage.getItem(key);
+                    log(`  ${key}: ${data ? 'データあり' : 'データなし'}`, 'info');
+                    
+                    if (data && key === 'autopin-active-pins') {
+                        try {
+                            const parsed = JSON.parse(data);
+                            log(`    統合データ: ${Object.keys(parsed.pins || {}).length}個のピン`, 'info');
+                        } catch (e) {
+                            log(`    パースエラー: ${e.message}`, 'warning');
+                        }
+                    }
+                }
+                
+                // PersistenceManager互換性チェック（実際のAPIを使用）
+                if (window.currentAutoPin?.persistenceManager) {
+                    // 実際に保存されているノードIDでテスト
+                    const existingKeys = autoPinKeys.filter(key => key.startsWith('autopin-bb-'));
+                    if (existingKeys.length > 0) {
+                        const nodeId = existingKeys[0].replace('autopin-', '');
+                        const result = window.currentAutoPin.persistenceManager.loadPinData(nodeId);
+                        log(`📌 PersistenceManagerテスト (${nodeId}): ${result.success ? '成功' : '失敗'}`, 
+                            result.success ? 'success' : 'warning');
+                        
+                        if (result.success) {
+                            log(`    データ詳細: anchor=${result.data.anchor}, target=${result.data.targetElement}`, 'info');
+                        }
+                    } else {
+                        log('📌 テスト用の個別キーが見つかりません', 'warning');
+                    }
+                } else {
+                    log('❌ PersistenceManager が利用できません', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ データ形式チェックエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 📌 強制ピン表示
+        function forcePinDisplay() {
+            try {
+                log('📌 強制ピン表示開始', 'info');
+                
+                // 保存されたピンデータを直接使用
+                const activeData = localStorage.getItem('autopin-active-pins');
+                if (!activeData) {
+                    log('❌ 保存されたピンデータがありません', 'error');
+                    return;
+                }
+                
+                const parsed = JSON.parse(activeData);
+                const pins = parsed.pins || {};
+                
+                log(`📋 検出されたピン数: ${Object.keys(pins).length}`, 'info');
+                
+                for (const [nodeId, pinData] of Object.entries(pins)) {
+                    log(`📍 ピン ${nodeId} を表示中...`, 'info');
+                    
+                    // ピン表示ロジック
+                    if (window.currentAutoPin?.pinDisplayManager) {
+                        try {
+                            // 要素の存在確認
+                            const targetElement = document.getElementById(pinData.targetElement);
+                            const spineElement = document.getElementById(pinData.spineElement);
+                            
+                            log(`    要素確認: target=${!!targetElement}, spine=${!!spineElement}`, 'info');
+                            
+                            if (targetElement && spineElement) {
+                                // PinDisplayManagerの実際のAPIを使用
+                                window.currentAutoPin.pinDisplayManager.showAnchorPoint(nodeId);
+                                window.currentAutoPin.pinDisplayManager.showUserPin(nodeId);
+                                log(`  ✅ ピン ${nodeId} 表示成功`, 'success');
+                            } else {
+                                log(`  ⚠️ 要素が見つかりません (target: ${!!targetElement}, spine: ${!!spineElement})`, 'warning');
+                            }
+                            
+                        } catch (pinError) {
+                            log(`  ❌ ピン表示エラー: ${pinError.message}`, 'error');
+                        }
+                    } else {
+                        log(`  ❌ PinDisplayManager が利用できません`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ 強制ピン表示エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🔄 追従システムテスト
+        function testResponsiveTracking() {
+            try {
+                log('🔄 追従システムテスト開始', 'info');
+                
+                if (!window.currentAutoPin) {
+                    log('❌ AutoPinシステムが初期化されていません', 'error');
+                    return;
+                }
+                
+                // 1. レスポンシブシステムの状態確認
+                const hasResizeHandler = !!window.currentAutoPin._resizeHandler;
+                const hasMutationObserver = !!window.currentAutoPin.mutationObserver;
+                
+                log(`📊 追従システム状態:`, 'info');
+                log(`  ウィンドウリサイズハンドラー: ${hasResizeHandler ? '✅ 設定済み' : '❌ 未設定'}`, 'info');
+                log(`  要素変更監視: ${hasMutationObserver ? '✅ 動作中' : '❌ 停止中'}`, 'info');
+                
+                // 2. 手動で位置更新をテスト
+                if (typeof window.currentAutoPin.updateAllPinPositions === 'function') {
+                    log('🔄 手動ピン位置更新実行中...', 'info');
+                    window.currentAutoPin.updateAllPinPositions();
+                    log('✅ 手動ピン位置更新完了', 'success');
+                } else {
+                    log('❌ updateAllPinPositions メソッドが利用できません', 'error');
+                }
+                
+                // 3. PinDisplayManagerの状態確認
+                if (window.currentAutoPin.pinDisplayManager) {
+                    const debugInfo = window.currentAutoPin.pinDisplayManager.getDebugInfo();
+                    log(`📌 PinDisplayManager状態: ${debugInfo.activeMarkersCount}個のマーカー`, 'info');
+                    log(`  アクティブマーカー: ${JSON.stringify(debugInfo.activeMarkers)}`, 'info');
+                } else {
+                    log('❌ PinDisplayManager が利用できません', 'error');
+                }
+                
+                // 4. 追従テストのための動的スタイル変更
+                log('🧪 動的スタイル変更テスト開始...', 'info');
+                const heroSection = document.getElementById('hero-section');
+                if (heroSection) {
+                    const originalTransform = heroSection.style.transform || '';
+                    
+                    // 一時的にスタイルを変更（MutationObserverをトリガー）
+                    heroSection.style.transform = 'translateX(10px)';
+                    
+                    setTimeout(() => {
+                        heroSection.style.transform = originalTransform;
+                        log('✅ 動的スタイル変更テスト完了', 'success');
+                    }, 1000);
+                    
+                    log('⏱️ 1秒後に元のスタイルに復元します', 'info');
+                } else {
+                    log('⚠️ hero-section が見つかりません', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ 追従システムテストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🔍 背景検出テスト
+        function testBackgroundDetection() {
+            try {
+                log('🔍 背景検出テスト開始', 'info');
+                
+                if (!window.currentAutoPin?.backgroundDetector) {
+                    log('❌ BackgroundDetectorが利用できません', 'error');
+                    return;
+                }
+                
+                // 複数の要素で背景検出をテスト
+                const testElements = [
+                    document.getElementById('spine-canvas'),
+                    document.querySelector('.hero-section'),
+                    document.querySelector('img'),
+                    document.body
+                ];
+                
+                testElements.forEach((element, index) => {
+                    if (element) {
+                        log(`📍 テスト ${index + 1}: ${element.tagName}${element.id ? '#' + element.id : ''}${element.className ? '.' + element.className.split(' ')[0] : ''}`, 'info');
+                        
+                        const detectedBackground = window.currentAutoPin.backgroundDetector.detectBackgroundElement(element);
+                        
+                        if (detectedBackground) {
+                            const bgInfo = `${detectedBackground.tagName}${detectedBackground.id ? '#' + detectedBackground.id : ''}${detectedBackground.className ? '.' + detectedBackground.className.split(' ')[0] : ''}`;
+                            log(`  ✅ 検出結果: ${bgInfo}`, 'success');
+                            
+                            // 背景画像情報
+                            const style = getComputedStyle(detectedBackground);
+                            const hasBackgroundImage = style.backgroundImage !== 'none';
+                            const hasBackgroundColor = style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent';
+                            
+                            log(`  🎨 背景情報: 画像=${hasBackgroundImage ? '✅' : '❌'}, 色=${hasBackgroundColor ? '✅' : '❌'}`, 'info');
+                        } else {
+                            log(`  ❌ 背景要素が見つかりませんでした`, 'warning');
+                        }
+                    } else {
+                        log(`📍 テスト ${index + 1}: 要素が見つかりません`, 'warning');
+                    }
+                });
+                
+                // 現在のピンデータも確認
+                const activeData = localStorage.getItem('autopin-active-pins');
+                if (activeData) {
+                    const parsed = JSON.parse(activeData);
+                    const pins = parsed.pins || {};
+                    
+                    log(`🎯 保存済みピンの背景要素:`, 'info');
+                    Object.entries(pins).forEach(([nodeId, pinData]) => {
+                        const bgElement = pinData.backgroundElement;
+                        if (bgElement) {
+                            log(`  ${nodeId}: ${bgElement.tagName}#${bgElement.id} (${bgElement.selector})`, 'info');
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                log(`❌ 背景検出テストエラー: ${error.message}`, 'error');
             }
         }
         

@@ -55,46 +55,41 @@ class BackgroundDetector {
     }
     
     /**
-     * 背景画像付き親要素の検出 (ヒーロー画像優先)
+     * 背景画像付き親要素の検出 (targetElement近接優先)
      */
     findParentWithBackground(element) {
-        // 🎯 最初にヒーロー画像要素を直接検索
+        console.log('🔍 親要素検索開始:', this.getElementInfo(element));
+        
+        // 🎯 まず親要素階層を優先検索
+        let current = element.parentElement;
+        let depth = 0;
+        const detectionConfig = this.configManager.getConfig().detection;
+        
+        // 1. 親要素階層での背景要素検索
+        while (current && current !== document.body && depth < detectionConfig.maxSearchDepth) {
+            if (this.hasBackgroundImage(current)) {
+                console.log(`✅ 親要素階層で背景発見 (depth=${depth}):`, this.getElementInfo(current));
+                return current;
+            }
+            
+            current = current.parentElement;
+            depth++;
+        }
+        
+        // 2. 親要素階層で見つからない場合のみヒーロー画像検索
         const heroElements = [
             document.querySelector('.hero-section'),
             document.querySelector('.hero-image'),
             document.querySelector('[class*="hero"]')
         ];
         
+        console.log('⚠️ 親要素階層に背景なし → ヒーロー画像フォールバック検索');
+        
         for (const heroEl of heroElements) {
             if (heroEl && this.hasBackgroundImage(heroEl)) {
-                console.log('🎯 ヒーロー画像要素（背景画像付き）検出:', this.getElementInfo(heroEl));
+                console.log('🎯 フォールバック: ヒーロー画像要素検出:', this.getElementInfo(heroEl));
                 return heroEl;
             }
-        }
-        
-        // 従来の親要素検索
-        let current = element.parentElement;
-        let depth = 0;
-        const detectionConfig = this.configManager.getConfig().detection;
-        
-        while (current && current !== document.body && depth < detectionConfig.maxSearchDepth) {
-            // ヒーロー画像関連のクラスを持つ要素は最優先
-            if (current.classList.contains('hero-section') || 
-                current.classList.contains('hero-image') || 
-                current.className.includes('hero')) {
-                console.log('🎯 親階層からヒーロー画像要素検出:', this.getElementInfo(current));
-                return current;
-            }
-            
-            const style = getComputedStyle(current);
-            
-            if (style.backgroundImage !== 'none' || 
-                style.backgroundColor !== 'rgba(0, 0, 0, 0)') {
-                return current;
-            }
-            
-            current = current.parentElement;
-            depth++;
         }
         
         return null;

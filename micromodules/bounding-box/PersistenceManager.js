@@ -45,9 +45,19 @@ class PersistenceManager {
                 timestamp: Date.now()
             };
             
+            // 🔧 統合保存: AutoPin用
             localStorage.setItem('autopin-active-pins', JSON.stringify(saveData));
             
-            console.log('💾 アクティブピン状態保存完了:', Object.keys(pinsData));
+            // 🔧 個別保存: PinDisplayManager互換用
+            for (const [nodeId, pinConfig] of Object.entries(pinsData)) {
+                localStorage.setItem(`autopin-${nodeId}`, JSON.stringify({
+                    ...pinConfig,
+                    version: '1.0',
+                    timestamp: Date.now()
+                }));
+            }
+            
+            console.log('💾 アクティブピン状態保存完了 (統合+個別):', Object.keys(pinsData));
             
             return { success: true, count: Object.keys(pinsData).length };
             
