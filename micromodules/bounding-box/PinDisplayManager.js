@@ -29,9 +29,21 @@ class PinDisplayManager {
             // 既存のアンカーマーカーをクリア
             this.hideAnchorPoint(nodeId);
             
-            // 保存データからアンカー情報を取得
+            // 保存データからアンカー情報を取得（個別データ優先、統合データフォールバック）
             const storageKey = `autopin-${nodeId}`;
-            const savedData = localStorage.getItem(storageKey);
+            let savedData = localStorage.getItem(storageKey);
+            
+            if (!savedData) {
+                // 統合データからも検索
+                const activeData = localStorage.getItem('autopin-active-pins');
+                if (activeData) {
+                    const parsed = JSON.parse(activeData);
+                    if (parsed.pins && parsed.pins[nodeId]) {
+                        savedData = JSON.stringify(parsed.pins[nodeId]);
+                        console.log('📍 統合データからアンカー取得:', nodeId);
+                    }
+                }
+            }
             
             if (!savedData) {
                 console.log('📍 アンカーポイント表示: 保存データなし');
@@ -174,9 +186,21 @@ class PinDisplayManager {
             // 既存のピンマーカーをクリア
             this.hideUserPin(nodeId);
             
-            // 🚨 修正: AutoPinシステムの保存データを優先的に取得
+            // 🚨 修正: AutoPinシステムの保存データを優先的に取得（統合データ対応）
             const autoPinKey = `autopin-${nodeId}`;
             let autoPinData = localStorage.getItem(autoPinKey);
+            
+            if (!autoPinData) {
+                // 統合データからも検索
+                const activeData = localStorage.getItem('autopin-active-pins');
+                if (activeData) {
+                    const parsed = JSON.parse(activeData);
+                    if (parsed.pins && parsed.pins[nodeId]) {
+                        autoPinData = JSON.stringify(parsed.pins[nodeId]);
+                        console.log('📍 統合データからユーザーピン取得:', nodeId);
+                    }
+                }
+            }
             
             // フォールバック: TwoStageSelectorデータも確認
             if (!autoPinData) {
@@ -506,26 +530,45 @@ class PinDisplayManager {
      * 全マーカーの位置を更新（ウィンドウリサイズ対応）
      */
     updateAllMarkerPositions() {
-        this.activeMarkers.forEach((marker, key) => {
-            const [type, nodeId] = key.split('-', 2);
+        // 🚨 修正: 統合データベースからピンを更新
+        const activeData = localStorage.getItem('autopin-active-pins');
+        if (activeData) {
+            const parsed = JSON.parse(activeData);
+            const pins = parsed.pins || {};
             
-            // 各タイプに応じて再表示
-            try {
-                switch (type) {
-                    case 'anchor':
-                        this.showAnchorPoint(nodeId);
-                        break;
-                    case 'user':
-                        this.showUserPin(nodeId);
-                        break;
-                    case 'drag':
-                        this.showDragHandle(nodeId);
-                        break;
+            console.log('🔄 統合データからピン位置更新:', Object.keys(pins).length);
+            
+            for (const nodeId of Object.keys(pins)) {
+                try {
+                    this.showAnchorPoint(nodeId);
+                    this.showUserPin(nodeId);
+                } catch (error) {
+                    console.warn(`⚠️ ピン位置更新失敗 (${nodeId}):`, error.message);
                 }
-            } catch (error) {
-                console.warn(`⚠️ マーカー位置更新失敗 (${key}):`, error.message);
             }
-        });
+        } else {
+            // フォールバック: 従来のactiveMarkers方式
+            this.activeMarkers.forEach((marker, key) => {
+                const [type, nodeId] = key.split('-', 2);
+                
+                // 各タイプに応じて再表示
+                try {
+                    switch (type) {
+                        case 'anchor':
+                            this.showAnchorPoint(nodeId);
+                            break;
+                        case 'user':
+                            this.showUserPin(nodeId);
+                            break;
+                        case 'drag':
+                            this.showDragHandle(nodeId);
+                            break;
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ マーカー位置更新失敗 (${key}):`, error.message);
+                }
+            });
+        }
         
         console.log('🔄 全マーカー位置更新完了');
     }

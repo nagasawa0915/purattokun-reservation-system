@@ -1240,20 +1240,72 @@ class PureBoundingBoxUI {
             localStorage.setItem(userPinStorageKey, JSON.stringify(userPinData));
             console.log('💾 ユーザーピンデータ保存完了:', userPinStorageKey, userPinData);
             
-            // AutoPinデータにも統合
+            // AutoPinデータにも統合（新規作成対応）
             const autoPinKey = `autopin-${nodeId}`;
             let autoPinData = localStorage.getItem(autoPinKey);
+            
             if (autoPinData) {
+                // 既存データに統合
                 const parsed = JSON.parse(autoPinData);
                 parsed.userPinPosition = userPinData;
                 localStorage.setItem(autoPinKey, JSON.stringify(parsed));
-                console.log('💾 AutoPinデータに統合完了');
+                console.log('💾 AutoPinデータに統合完了（更新）');
+            } else {
+                // 新規AutoPinデータを作成
+                const newAutoPinData = {
+                    // TwoStageSelectorデータから基本情報を作成
+                    anchor: this.determineAnchorFromUserPin(userPinData),
+                    targetElement: userPinData.element.id || userPinData.element.selector,
+                    spineElement: 'spine-canvas', // 固定（Spineキャンバス）
+                    backgroundElement: {
+                        id: userPinData.element.id,
+                        tagName: userPinData.element.tagName || 'DIV',
+                        className: userPinData.element.className || '',
+                        selector: userPinData.element.selector || `#${userPinData.element.id}`
+                    },
+                    userPinPosition: userPinData,
+                    timestamp: Date.now(),
+                    version: '1.0'
+                };
+                
+                localStorage.setItem(autoPinKey, JSON.stringify(newAutoPinData));
+                console.log('💾 AutoPinデータ新規作成完了:', autoPinKey, newAutoPinData);
             }
             
             console.log('✅ AutoPin統合完了');
             
         } catch (error) {
             console.error('❌ TwoStageSelector結果統合エラー:', error);
+        }
+    }
+    
+    /**
+     * UserPinデータからアンカーポイントを決定
+     */
+    determineAnchorFromUserPin(userPinData) {
+        if (!userPinData.anchorPoints || userPinData.anchorPoints.length === 0) {
+            return 'MC'; // デフォルト：中央
+        }
+        
+        const anchor = userPinData.anchorPoints[0];
+        const { ratioX, ratioY } = anchor;
+        
+        // 比率からアンカーポイントを決定
+        if (ratioY < 0.33) {
+            // 上部
+            if (ratioX < 0.33) return 'TL';
+            if (ratioX > 0.67) return 'TR';
+            return 'TC';
+        } else if (ratioY > 0.67) {
+            // 下部
+            if (ratioX < 0.33) return 'BL';
+            if (ratioX > 0.67) return 'BR';
+            return 'BC';
+        } else {
+            // 中央
+            if (ratioX < 0.33) return 'ML';
+            if (ratioX > 0.67) return 'MR';
+            return 'MC';
         }
     }
     

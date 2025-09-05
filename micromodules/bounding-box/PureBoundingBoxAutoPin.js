@@ -304,12 +304,53 @@ class PureBoundingBoxAutoPin {
      * システムデータの保存
      */
     saveSystemData() {
-        // アクティブピンの保存（PersistenceManagerに委譲）
-        this.persistenceManager.saveActivePins(this.activePins);
+        // 🚨 修正: 個別保存されたピンデータを保護
+        // localStorage内の個別ピンデータ（user-pin-*, autopin-*）をマージしてから保存
+        this.mergeAndSaveActivePins();
         
         // パフォーマンス指標の保存
         const performanceMetrics = this.configManager.getPerformanceMetrics();
         this.persistenceManager.savePerformanceMetrics(performanceMetrics);
+    }
+    
+    /**
+     * 個別保存データをマージしてから統合保存
+     */
+    mergeAndSaveActivePins() {
+        // 現在のactivePinsと個別保存データをマージ
+        const mergedPins = new Map(this.activePins);
+        
+        // localStorage内のautopin-*個別データを確認・マージ
+        const keys = Object.keys(localStorage);
+        const autoPinKeys = keys.filter(key => key.startsWith('autopin-') && key !== 'autopin-active-pins' && key !== 'autopin-performance-metrics');
+        
+        for (const key of autoPinKeys) {
+            try {
+                const nodeId = key.replace('autopin-', '');
+                const data = localStorage.getItem(key);
+                
+                if (data) {
+                    const pinConfig = JSON.parse(data);
+                    // タイムスタンプが新しいデータを優先
+                    const existingPin = mergedPins.get(nodeId);
+                    
+                    if (!existingPin || !existingPin.timestamp || pinConfig.timestamp > existingPin.timestamp) {
+                        // デシリアライズして正しい形式に変換
+                        const deserializedPin = this.persistenceManager.deserializePinConfig(pinConfig);
+                        if (deserializedPin) {
+                            mergedPins.set(nodeId, deserializedPin);
+                            console.log(`🔄 新しいピンデータをマージ: ${nodeId}`, pinConfig);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn(`⚠️ ピンデータマージ失敗 (${key}):`, error.message);
+            }
+        }
+        
+        // マージされたデータで保存
+        console.log('💾 マージ後の統合保存開始:', mergedPins.size);
+        this.persistenceManager.saveActivePins(mergedPins);
     }
     
     /**
@@ -533,10 +574,23 @@ class PureBoundingBoxAutoPin {
         
         window.addEventListener('resize', handleResize);
         
+        // スクロールイベントハンドラー
+        let scrollTimeout;
+        const handleScroll = () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                console.log('🔄 スクロール検出 → ピン位置更新開始');
+                this.updateAllPinPositions();
+            }, 50); // スクロールは50msの遅延（レスポンシブ性重視）
+        };
+        
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        
         // インスタンス破棄用の参照保持
         this._resizeHandler = handleResize;
+        this._scrollHandler = handleScroll;
         
-        console.log('✅ ウィンドウリサイズハンドラー設定完了');
+        console.log('✅ ウィンドウリサイズ・スクロールハンドラー設定完了');
     }
     
     /**
