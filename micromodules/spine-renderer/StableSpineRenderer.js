@@ -39,11 +39,11 @@ class StableSpineRenderer {
       character: config.character,
       basePath: config.basePath || "/assets/spine/characters/",
 
-      // 位置・スケール設定（test-spine-basic-loading.html と同じ）
+      // 位置・スケール設定（自然な比率）
       position: {
         x: config.position?.x ?? 100,
         y: config.position?.y ?? -100,
-        scaleX: config.position?.scaleX ?? 1.35,
+        scaleX: config.position?.scaleX ?? 1.0,
         scaleY: config.position?.scaleY ?? 1.0,
       },
 

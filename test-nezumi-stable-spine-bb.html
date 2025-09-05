@@ -1057,29 +1057,40 @@
             const canvas = character.canvas;
             const renderer = character.renderer;
             
-            // CanvasResizeControllerに送信するデータを準備
-            const targetData = {
+            // 🎯 Canvas情報をUI側が理解できる形式で準備（simple-pin-test.htmlと統一）
+            const canvasData = {
+              // Canvas解像度情報
+              canvasWidth: canvas.width,
+              canvasHeight: canvas.height,
+              
+              // Canvas表示サイズ情報
+              displayWidth: parseInt(canvas.style.width) || canvas.width,
+              displayHeight: parseInt(canvas.style.height) || canvas.height,
+              
+              // Spineキャラクター設定情報
+              scaleX: renderer.skeleton?.scaleX || 1.0,
+              scaleY: renderer.skeleton?.scaleY || 1.0,
+              x: renderer.skeleton?.x || 0,
+              y: renderer.skeleton?.y || 0,
+              
+              // キャラクター情報
               characterId: characterId,
               canvasId: canvas.id,
-              // canvasElement: canvas, // Canvas要素はpostMessageで送信不可のため削除
-              canvasSize: {
-                width: canvas.width,
-                height: canvas.height
-              },
-              currentScale: {
-                x: renderer.skeleton?.scaleX || 1.0,
-                y: renderer.skeleton?.scaleY || 1.0
-              },
-              currentPosition: {
-                x: renderer.skeleton?.x || 0,
-                y: renderer.skeleton?.y || 0
-              }
+              
+              // 取得時刻
+              timestamp: Date.now()
             };
 
-            // CanvasResizeIframeHandlerを通じて通知
+            this.log(`📋 ${characterId}のCanvas情報:`, 'info');
+            this.log(`  解像度: ${canvasData.canvasWidth}×${canvasData.canvasHeight}px`);
+            this.log(`  表示サイズ: ${canvasData.displayWidth}×${canvasData.displayHeight}px`);
+            this.log(`  スケール: X:${canvasData.scaleX}, Y:${canvasData.scaleY}`);
+            this.log(`  位置: X:${canvasData.x}, Y:${canvasData.y}`);
+
+            // UI側が受信できる'updateCanvasData'メッセージで送信
             if (window.canvasResizeHandler) {
-              window.canvasResizeHandler.sendToIframe('characterSelected', targetData);
-              this.log(`🎛️ CanvasResizeController: ${characterId}をターゲットに設定`);
+              window.canvasResizeHandler.sendToIframe('updateCanvasData', canvasData);
+              this.log(`🎛️ ${characterId}のCanvas情報をUIに送信完了`);
             } else {
               this.log('⚠️ CanvasResizeIframeHandlerが見つかりません');
             }
@@ -2245,8 +2256,41 @@
               this.iframe.onload = () => {
                 this.iframeLoaded = true;
                 this.log('🎛️ CanvasResizeController iframe 読み込み完了');
+                this.log(`📋 待機中メッセージ処理開始 - キューサイズ: ${this.messageQueue.length}`);
                 this.processQueuedMessages();
               };
+              
+              // 🔧 即座にiframe読み込み状態を確認（既に読み込み済みの場合への対応）
+              if (this.iframe.contentDocument && this.iframe.contentDocument.readyState === 'complete') {
+                this.log('🎛️ iframe既に読み込み済み - 即座に初期化');
+                this.iframeLoaded = true;
+                this.processQueuedMessages();
+              } else {
+                // 🔧 定期的に読み込み状態をチェック（フォールバック）
+                let checkCount = 0;
+                const checkIframeReady = () => {
+                  checkCount++;
+                  try {
+                    if (this.iframe.contentDocument && this.iframe.contentDocument.readyState === 'complete') {
+                      this.log(`🎛️ iframe読み込み検出（${checkCount}回目チェック）`);
+                      this.iframeLoaded = true;
+                      this.processQueuedMessages();
+                      return;
+                    }
+                  } catch (error) {
+                    // CORS等でcontentDocumentにアクセスできない場合もある
+                  }
+                  
+                  if (checkCount < 20) { // 最大10秒間チェック（500ms間隔）
+                    setTimeout(checkIframeReady, 500);
+                  } else {
+                    this.log('⚠️ iframe読み込み確認タイムアウト - 強制処理実行');
+                    this.iframeLoaded = true;
+                    this.processQueuedMessages();
+                  }
+                };
+                setTimeout(checkIframeReady, 500);
+              }
             }
           });
 

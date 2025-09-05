@@ -98,6 +98,8 @@
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
+            width: 400px;    /* 明示的サイズ指定で縦横比歪み防止 */
+            height: 400px;   /* HTML属性と一致させる */
             z-index: 1000;
             border-radius: 4px;
         }
@@ -166,6 +168,24 @@
         .log-warning { color: #ffc107; }
         .log-error { color: #dc3545; }
         .log-info { color: #17a2b8; }
+        
+        /* Canvas制御UI */
+        .canvas-controls-container {
+            position: fixed;
+            top: 350px;
+            right: 20px;
+            width: 280px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+        
+        .canvas-controls-container iframe {
+            width: 100%;
+            border: none;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
@@ -222,11 +242,37 @@
         <button class="control-button secondary" onclick="checkAspectRatio()">
             📐 縦横比チェック
         </button>
+        <button class="control-button secondary" onclick="testSpineSettings()">
+            💾 設定保存テスト
+        </button>
+        <button class="control-button secondary" onclick="loadSpineSettings()">
+            📥 設定読み込みテスト
+        </button>
+        <button class="control-button" onclick="testScalingContain()">
+            🎯 contain モード (歪み防止)
+        </button>
+        <button class="control-button" onclick="testScalingCover()">
+            🎨 cover モード (領域満たす)
+        </button>
+        <button class="control-button secondary" onclick="checkScalingConfig()">
+            ⚙️ スケーリング設定確認
+        </button>
     </div>
     
     <!-- ログパネル -->
     <div class="log-panel" id="log-panel">
         <div class="log-entry log-info">🎯 シンプルピンテスト開始準備完了</div>
+    </div>
+    
+    <!-- Canvas制御UI（iframe統合） -->
+    <div class="canvas-controls-container">
+        <iframe 
+            src="./micromodules/canvas-resize/ui.html?v=1725439200" 
+            id="canvas-resize-iframe"
+            width="280" 
+            height="500"
+            frameborder="0">
+        </iframe>
     </div>
 
     <!-- 必要なライブラリ読み込み -->
@@ -254,12 +300,17 @@
     <script src="micromodules/element-selector/ElementHighlighter.js"></script>
     <script src="micromodules/element-selector/ElementSelector.js"></script>
     <script src="micromodules/element-selector/TwoStageSelector.js"></script>
+    
+    <!-- SpineSettingsPersistence（マニュアル通り） -->
+    <script src="micromodules/spine-settings-persistence/SpineSettingsPersistence.js"></script>
 
     <script>
         // グローバル変数
         let spineRenderer = null;
         let boundingBox = null;
         let autoPin = null;
+        let spineSettingsPersistence = null;
+        let canvasResizeHandler = null;
         
         // ログ機能
         function log(message, type = 'info') {
@@ -285,6 +336,9 @@
                 spineRenderer.playAnimation('taiki');
                 
                 log('✅ Spineキャラクター初期化完了', 'success');
+                
+                // 🎯 キャラクター初期化完了時にCanvas情報をUIに送信
+                updateCanvasUI();
                 
             } catch (error) {
                 log(`❌ Spineキャラクター初期化エラー: ${error.message}`, 'error');
@@ -363,13 +417,13 @@
             }
         }
         
-        // AutoPin初期化ヘルパー
+        // AutoPin初期化ヘルパー（boundingBoxに依存しない独立初期化）
         function initializeAutoPin() {
-            if (!window.currentAutoPin && boundingBox) {
+            if (!window.currentAutoPin) {
                 try {
                     log('🔧 AutoPin初期化開始', 'info');
                     
-                    // ElementObserverインスタンス作成
+                    // ElementObserverインスタンス作成（オプショナル）
                     let elementObserver = null;
                     if (window.ElementObserver) {
                         try {
@@ -377,18 +431,55 @@
                             log('✅ ElementObserver インスタンス作成成功', 'success');
                         } catch (error) {
                             log(`⚠️ ElementObserver 作成失敗: ${error.message}`, 'warning');
+                            elementObserver = null;
                         }
+                    } else {
+                        log('⚠️ ElementObserver クラスが見つかりません（null で続行）', 'warning');
                     }
+                    
+                    log(`🔍 ElementObserver状態: ${elementObserver ? 'インスタンス作成済み' : 'null'}`, 'info');
                     
                     // AutoPinインスタンス作成
                     const targetElement = document.getElementById('spine-canvas');
                     if (targetElement) {
-                        window.currentAutoPin = new window.PureBoundingBoxAutoPin({
-                            targetElement: targetElement,
-                            nodeId: 'spine-canvas'
-                        }, elementObserver);
+                        // AutoPin初期化（PureBoundingBoxCoreが必要）
+                        log('🔍 AutoPin初期化開始 - 必要モジュール確認中', 'info');
+                        log(`  PureBoundingBoxCore: ${typeof window.PureBoundingBoxCore}`, 'info');
+                        log(`  PureBoundingBoxAutoPin: ${typeof window.PureBoundingBoxAutoPin}`, 'info');
+                        log(`  ElementObserver: ${elementObserver ? elementObserver.constructor.name : 'null/undefined'}`, 'info');
                         
-                        log('✅ AutoPin初期化完了', 'success');
+                        if (window.PureBoundingBoxCore && window.PureBoundingBoxAutoPin) {
+                            try {
+                                // PureBoundingBoxCore の設定オブジェクトを作成
+                                const coreConfig = {
+                                    targetElement: targetElement,
+                                    nodeId: 'spine-canvas-autopin'
+                                };
+                                const boundingBoxCore = new window.PureBoundingBoxCore(coreConfig);
+                                log('✅ PureBoundingBoxCore インスタンス作成成功', 'success');
+                                
+                                window.currentAutoPin = new window.PureBoundingBoxAutoPin(boundingBoxCore, elementObserver);
+                                log('✅ PureBoundingBoxAutoPin インスタンス作成成功', 'success');
+                                
+                                // グローバルアクセス用のエイリアス追加
+                                window.pureBoundingBoxAutoPin = window.currentAutoPin;
+                                
+                                log('✅ PureBoundingBoxAutoPin 初期化完了', 'success');
+                                log('🎯 グローバルアクセス: window.pureBoundingBoxAutoPin で利用可能', 'info');
+                                
+                                // 初期設定確認
+                                const config = window.pureBoundingBoxAutoPin.getConfig();
+                                log(`📊 初期スケーリングモード: ${config.scaling.mode}`, 'info');
+                                
+                            } catch (error) {
+                                log(`❌ AutoPin インスタンス作成エラー: ${error.message}`, 'error');
+                                log(`📋 エラー詳細: ${error.stack}`, 'error');
+                            }
+                        } else {
+                            log('❌ 必要モジュールが不足しています:', 'error');
+                            log(`  PureBoundingBoxCore: ${window.PureBoundingBoxCore ? '✅' : '❌'}`, 'error');
+                            log(`  PureBoundingBoxAutoPin: ${window.PureBoundingBoxAutoPin ? '✅' : '❌'}`, 'error');
+                        }
                     } else {
                         log('❌ spine-canvas要素が見つかりません', 'error');
                     }
@@ -436,9 +527,16 @@
                 const pins = document.querySelectorAll('[id*="marker"], [class*="pin"], [class*="anchor"]');
                 pins.forEach(pin => pin.remove());
                 
-                // LocalStorageクリア（ピン関連のみ）
+                // LocalStorageクリア（ピン関連のみ、SpineSettingsPersistenceを保護）
                 const storageKeys = Object.keys(localStorage);
-                const pinKeys = storageKeys.filter(key => key.includes('pin') || key.includes('autopin'));
+                const pinKeys = storageKeys.filter(key => {
+                    // SpineSettingsPersistenceのキー（spineSettings-）は保護
+                    if (key.startsWith('spineSettings-')) {
+                        return false; // 削除対象から除外
+                    }
+                    // ピン関連のみ削除
+                    return key.includes('pin') || key.includes('autopin');
+                });
                 pinKeys.forEach(key => localStorage.removeItem(key));
                 
                 log(`✅ 全クリーンアップ完了（ピン${pins.length}個、ストレージ${pinKeys.length}個削除）`, 'success');
@@ -558,9 +656,327 @@
             }
         }
         
+        // SpineSettingsPersistence テスト機能
+        function testSpineSettings() {
+            try {
+                log('💾 SpineSettings保存テスト開始', 'info');
+                
+                // インスタンスの詳細チェック
+                log(`🔍 spineSettingsPersistence: ${!!spineSettingsPersistence}`, spineSettingsPersistence ? 'success' : 'error');
+                if (spineSettingsPersistence) {
+                    log(`🔍 インスタンスタイプ: ${spineSettingsPersistence.constructor.name}`, 'info');
+                    log(`🔍 利用可能メソッド: ${Object.getOwnPropertyNames(Object.getPrototypeOf(spineSettingsPersistence)).filter(name => typeof spineSettingsPersistence[name] === 'function').join(', ')}`, 'info');
+                }
+                
+                if (!spineSettingsPersistence) {
+                    log('❌ SpineSettingsPersistenceが初期化されていません', 'error');
+                    return;
+                }
+                
+                // 保存前の既存データチェック
+                log('🔍 保存前の既存データチェック:', 'info');
+                const existsBefore = spineSettingsPersistence.exists('purattokun');
+                log(`📋 保存前存在確認: ${existsBefore ? '✅ 既に存在' : '❌ 未存在'}`, existsBefore ? 'warning' : 'info');
+                
+                // テスト用設定データ
+                const testSettings = {
+                    scaleX: 1.2,
+                    scaleY: 1.1,
+                    x: 150,
+                    y: -50,
+                    canvasWidth: 450,
+                    canvasHeight: 450,
+                    timestamp: Date.now()
+                };
+                
+                log(`📋 保存予定データ: ${JSON.stringify(testSettings, null, 2)}`, 'info');
+                
+                // 保存テスト（マニュアル通りの使用方法）
+                log('🔄 save()メソッド呼び出し開始...', 'info');
+                const saveResult = spineSettingsPersistence.save('purattokun', testSettings);
+                log(`🔍 save()戻り値: ${saveResult} (型: ${typeof saveResult})`, 'info');
+                
+                if (saveResult) { // boolean型の戻り値
+                    log('✅ 設定保存成功', 'success');
+                    
+                    // 保存後即座に存在確認
+                    const existsAfter = spineSettingsPersistence.exists('purattokun');
+                    log(`🔍 保存後存在確認: ${existsAfter ? '✅ 存在確認' : '❌ 存在しない'}`, existsAfter ? 'success' : 'error');
+                    
+                    // localStorage直接確認
+                    const allKeys = Object.keys(localStorage);
+                    const spineKeys = allKeys.filter(key => key.includes('spine'));
+                    log(`🗂️ localStorage内のSpine関連キー: ${spineKeys.length}個`, 'info');
+                    spineKeys.forEach(key => {
+                        const value = localStorage.getItem(key);
+                        log(`  📄 ${key}: ${value ? `${value.substring(0, 100)}...` : 'null'}`, 'info');
+                    });
+                    
+                } else {
+                    log('❌ 設定保存失敗', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ SpineSettings保存テストエラー: ${error.message}`, 'error');
+                log(`❌ スタックトレース: ${error.stack}`, 'error');
+            }
+        }
+        
+        function loadSpineSettings() {
+            try {
+                log('📥 SpineSettings読み込みテスト開始', 'info');
+                
+                if (!spineSettingsPersistence) {
+                    log('❌ SpineSettingsPersistenceが初期化されていません', 'error');
+                    return;
+                }
+                
+                // 存在確認
+                const exists = spineSettingsPersistence.exists('purattokun');
+                if (!exists) {
+                    log('⚠️ 保存された設定が見つかりません。先に「💾 設定保存テスト」を実行してください', 'warning');
+                    return;
+                }
+                
+                // 読み込みテスト
+                const settings = spineSettingsPersistence.restore('purattokun');
+                if (settings) {
+                    log('✅ 設定読み込み成功', 'success');
+                    log(`📋 読み込み内容: ${JSON.stringify(settings, null, 2)}`, 'info');
+                    
+                    // 実際にSpineRendererに適用（テスト）
+                    if (spineRenderer && spineRenderer.skeleton) {
+                        if (settings.scaleX) spineRenderer.skeleton.scaleX = settings.scaleX;
+                        if (settings.scaleY) spineRenderer.skeleton.scaleY = settings.scaleY;
+                        if (settings.x) spineRenderer.skeleton.x = settings.x;
+                        if (settings.y) spineRenderer.skeleton.y = settings.y;
+                        
+                        log('🎨 設定をSpineキャラクターに適用しました', 'success');
+                    } else {
+                        log('⚠️ SpineRendererが初期化されていないため、設定適用をスキップ', 'warning');
+                    }
+                } else {
+                    log('❌ 設定読み込み失敗', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ SpineSettings読み込みテストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // SpineSettingsPersistence初期化（マニュアル通り）
+        function initializeSpineSettingsPersistence() {
+            try {
+                log('💾 SpineSettingsPersistence初期化開始', 'info');
+                
+                // マニュアル通りのインスタンス作成
+                spineSettingsPersistence = new SpineSettingsPersistence({
+                    debug: true,
+                    version: '1.0'
+                });
+                
+                log('✅ SpineSettingsPersistence初期化完了', 'success');
+                
+                // 既存設定があるかチェック
+                const exists = spineSettingsPersistence.exists('purattokun');
+                if (exists) {
+                    log('📋 既存の設定が見つかりました', 'info');
+                    const settings = spineSettingsPersistence.restore('purattokun');
+                    log(`📋 設定内容: ${JSON.stringify(settings, null, 2)}`, 'info');
+                } else {
+                    log('📋 既存設定なし - 新規作成', 'info');
+                }
+                
+            } catch (error) {
+                log(`❌ SpineSettingsPersistence初期化エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🎯 Canvas情報をUIに送信する機能
+        function updateCanvasUI() {
+            try {
+                log('🔄 Canvas情報をUIに送信開始', 'info');
+                
+                const canvas = document.getElementById('spine-canvas');
+                if (!canvas) {
+                    log('❌ Canvas要素が見つかりません', 'error');
+                    return;
+                }
+                
+                // Canvas情報とSpine設定を取得
+                const canvasData = {
+                    // Canvas解像度情報
+                    canvasWidth: canvas.width,
+                    canvasHeight: canvas.height,
+                    
+                    // Canvas表示サイズ情報
+                    displayWidth: parseInt(canvas.style.width) || canvas.width,
+                    displayHeight: parseInt(canvas.style.height) || canvas.height,
+                    
+                    // Spineキャラクター設定情報
+                    scaleX: spineRenderer?.skeleton?.scaleX || 1.0,
+                    scaleY: spineRenderer?.skeleton?.scaleY || 1.0,
+                    x: spineRenderer?.skeleton?.x || 0,
+                    y: spineRenderer?.skeleton?.y || 0,
+                    
+                    // 取得時刻
+                    timestamp: Date.now()
+                };
+                
+                log(`📋 取得したCanvas情報:`, 'info');
+                log(`  解像度: ${canvasData.canvasWidth}×${canvasData.canvasHeight}px`, 'info');
+                log(`  表示サイズ: ${canvasData.displayWidth}×${canvasData.displayHeight}px`, 'info');
+                log(`  スケール: X:${canvasData.scaleX}, Y:${canvasData.scaleY}`, 'info');
+                log(`  位置: X:${canvasData.x}, Y:${canvasData.y}`, 'info');
+                
+                // iframe UIに送信
+                const iframe = document.getElementById('canvas-resize-iframe');
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({
+                        type: 'updateCanvasData',
+                        data: canvasData
+                    }, '*');
+                    
+                    log('✅ Canvas情報をUIに送信完了', 'success');
+                } else {
+                    log('⚠️ iframe UIが準備できていません', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ Canvas情報送信エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // CanvasResizeController初期化（iframe通信処理）
+        function initializeCanvasResizeController() {
+            try {
+                log('🎛️ CanvasResizeController初期化開始', 'info');
+                
+                const iframe = document.getElementById('canvas-resize-iframe');
+                if (!iframe) {
+                    throw new Error('iframe要素が見つかりません');
+                }
+                
+                // postMessage通信ハンドラー（マニュアル通り）
+                window.addEventListener('message', (event) => {
+                    // セキュリティチェック（必要に応じて）
+                    const { type, data } = event.data;
+                    
+                    switch (type) {
+                        case 'canvasResize':
+                            handleCanvasResize(data.size);
+                            break;
+                        case 'scaleChanged':
+                            handleScaleChanged(data);
+                            break;
+                        case 'positionChanged':
+                            handlePositionChanged(data);
+                            break;
+                        case 'uiReady':
+                            log('🎛️ Canvas制御UI準備完了', 'success');
+                            // UI準備完了時に現在のCanvas情報を送信
+                            if (spineRenderer) {
+                                updateCanvasUI();
+                            }
+                            break;
+                        case 'uiLog':
+                            log(`[Canvas UI] ${data.message}`, 'info');
+                            break;
+                        case 'requestCanvasData':
+                            // UI側から現在のCanvas情報を要求された場合
+                            log('📨 UI側からCanvas情報要求を受信', 'info');
+                            updateCanvasUI();
+                            break;
+                        case 'canvasDataUpdateComplete':
+                            // UI側からCanvas情報反映完了通知を受信
+                            if (data.success) {
+                                log('✅ UI側でCanvas情報反映完了', 'success');
+                                log(`📋 反映された値: Canvas:${data.reflectedData.canvasSize}px, Scale:${data.reflectedData.scaleX}/${data.reflectedData.scaleY}, Pos:${data.reflectedData.positionX}/${data.reflectedData.positionY}`, 'info');
+                            } else {
+                                log(`❌ UI側でCanvas情報反映エラー: ${data.error}`, 'error');
+                            }
+                            break;
+                        default:
+                            log(`[Canvas UI] ${type}: ${JSON.stringify(data)}`, 'info');
+                    }
+                });
+                
+                log('✅ CanvasResizeController通信準備完了', 'success');
+                
+            } catch (error) {
+                log(`❌ CanvasResizeController初期化エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // Canvas制御処理
+        function handleCanvasResize(size) {
+            try {
+                log(`🔍 Canvasサイズ変更: ${size}px`, 'info');
+                
+                const canvas = document.getElementById('spine-canvas');
+                if (canvas && spineRenderer) {
+                    canvas.width = size;
+                    canvas.height = size;
+                    
+                    // WebGLビューポート更新
+                    if (spineRenderer.gl) {
+                        spineRenderer.gl.viewport(0, 0, size, size);
+                    }
+                    
+                    log(`✅ Canvasサイズ更新完了: ${size}x${size}px`, 'success');
+                } else {
+                    log('❌ Canvas要素またはSpineRendererが見つかりません', 'error');
+                }
+            } catch (error) {
+                log(`❌ Canvasサイズ変更エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        function handleScaleChanged(data) {
+            try {
+                log(`🔄 スケール変更: X:${data.scaleX}, Y:${data.scaleY}`, 'info');
+                
+                if (spineRenderer && spineRenderer.skeleton) {
+                    spineRenderer.skeleton.scaleX = data.scaleX;
+                    spineRenderer.skeleton.scaleY = data.scaleY;
+                    log(`✅ スケール変更適用完了`, 'success');
+                } else {
+                    log('❌ SpineRendererまたはSkeletonが見つかりません', 'error');
+                }
+            } catch (error) {
+                log(`❌ スケール変更エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        function handlePositionChanged(data) {
+            try {
+                log(`📍 位置変更: X:${data.x}, Y:${data.y}`, 'info');
+                
+                if (spineRenderer && spineRenderer.skeleton) {
+                    spineRenderer.skeleton.x = data.x;
+                    spineRenderer.skeleton.y = data.y;
+                    log(`✅ 位置変更適用完了`, 'success');
+                } else {
+                    log('❌ SpineRendererまたはSkeletonが見つかりません', 'error');
+                }
+            } catch (error) {
+                log(`❌ 位置変更エラー: ${error.message}`, 'error');
+            }
+        }
+
         // ページ読み込み完了時
         window.addEventListener('load', () => {
             log('🚀 シンプルピンテスト環境準備完了', 'success');
+            
+            // マニュアル通りのモジュール初期化
+            initializeSpineSettingsPersistence();
+            initializeCanvasResizeController();
+            
+            // AutoPin も自動初期化（遅延実行でモジュール読み込み完了を待つ）
+            setTimeout(() => {
+                log('🔧 AutoPin自動初期化開始', 'info');
+                initializeAutoPin();
+            }, 1000);
             log('💡 右上のコントロールから各機能をテストしてください', 'info');
         });
         
@@ -568,6 +984,54 @@
         window.addEventListener('error', (event) => {
             log(`❌ グローバルエラー: ${event.error?.message || event.message}`, 'error');
         });
+        
+        // ==========================================
+        // 🎯 スケーリングモードテスト関数
+        // ==========================================
+        
+        function testScalingContain() {
+            try {
+                if (window.pureBoundingBoxAutoPin) {
+                    window.pureBoundingBoxAutoPin.setScalingMode('contain');
+                    log('🎯 スケーリングモード: contain (歪み防止) に変更しました', 'success');
+                    log('💡 ウィンドウをリサイズしてキャラクターの縦横比を確認してください', 'info');
+                } else {
+                    log('❌ PureBoundingBoxAutoPin が初期化されていません', 'error');
+                }
+            } catch (error) {
+                log(`❌ contain モード設定エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        function testScalingCover() {
+            try {
+                if (window.pureBoundingBoxAutoPin) {
+                    window.pureBoundingBoxAutoPin.setScalingMode('cover');
+                    log('🎨 スケーリングモード: cover (領域満たす) に変更しました', 'success');
+                    log('💡 ウィンドウをリサイズしてキャラクターのスケーリングを確認してください', 'info');
+                } else {
+                    log('❌ PureBoundingBoxAutoPin が初期化されていません', 'error');
+                }
+            } catch (error) {
+                log(`❌ cover モード設定エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        function checkScalingConfig() {
+            try {
+                if (window.pureBoundingBoxAutoPin) {
+                    const config = window.pureBoundingBoxAutoPin.getConfig();
+                    log('⚙️ 現在のスケーリング設定:', 'info');
+                    log(`  モード: ${config.scaling.mode}`, 'info');
+                    log(`  uniform のみ: ${config.scaling.uniformOnly}`, 'info');
+                    log(`  アンカー設定: ${JSON.stringify(config.anchor)}`, 'info');
+                } else {
+                    log('❌ PureBoundingBoxAutoPin が初期化されていません', 'error');
+                }
+            } catch (error) {
+                log(`❌ 設定確認エラー: ${error.message}`, 'error');
+            }
+        }
         
     </script>
 </body>

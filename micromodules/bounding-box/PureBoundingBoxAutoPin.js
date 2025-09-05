@@ -60,6 +60,14 @@ class PureBoundingBoxAutoPin {
             defaultAnchor: 'MC'
         };
         
+        // スケーリング設定
+        this.scalingConfig = {
+            // 'contain': 縦横比保持、全体が見える（Math.min）
+            // 'cover': 縦横比保持、領域を満たす（Math.max）
+            mode: 'contain', // 歪み防止のためcontain推奨
+            uniformOnly: true // 常に uniform scaling を使用
+        };
+        
         // パフォーマンス監視
         this.performanceMetrics = {
             totalProcessingTime: 0,
@@ -73,6 +81,34 @@ class PureBoundingBoxAutoPin {
         this.restorePerformanceMetrics();
         
         console.log('🎯 PureBoundingBoxAutoPin v1.0 初期化完了');
+    }
+    
+    // ==========================================
+    // ⚙️ 設定管理メソッド
+    // ==========================================
+    
+    /**
+     * スケーリングモードを変更
+     * @param {string} mode - 'contain' または 'cover'
+     */
+    setScalingMode(mode) {
+        if (mode === 'contain' || mode === 'cover') {
+            this.scalingConfig.mode = mode;
+            console.log(`🎯 スケーリングモード変更: ${mode}`);
+        } else {
+            console.warn('⚠️ 無効なスケーリングモード:', mode);
+        }
+    }
+    
+    /**
+     * 現在の設定を取得
+     */
+    getConfig() {
+        return {
+            scaling: { ...this.scalingConfig },
+            anchor: { ...this.anchorConfig },
+            detection: { ...this.detectionConfig }
+        };
     }
     
     // ==========================================
@@ -304,7 +340,7 @@ class PureBoundingBoxAutoPin {
         
         if (backgroundImageUrl) {
             // 新しい画像オブジェクトで自然サイズを取得
-            return this.getBackgroundImageNaturalSize(backgroundImageUrl, backgroundSize, boundingRect);
+            return this.getBackgroundImageNaturalSize(backgroundImageUrl, backgroundSize, boundingRect, element);
         }
         
         // 画像サイズが取得できない場合の改良されたフォールバック
@@ -334,9 +370,19 @@ class PureBoundingBoxAutoPin {
                 boundingRect.width, boundingRect.height
             );
             
+            // 🎯 絶対座標に変換: コンテナの絶対位置 + 相対オフセット
+            const absoluteX = boundingRect.left + (contentRect.offsetX || 0);
+            const absoluteY = boundingRect.top + (contentRect.offsetY || 0);
+            
+            console.log('🎯 背景画像絶対座標変換 (cover-estimated):', {
+                container: { left: boundingRect.left, top: boundingRect.top },
+                relativeOffset: { x: contentRect.offsetX || 0, y: contentRect.offsetY || 0 },
+                absolutePosition: { x: absoluteX, y: absoluteY }
+            });
+            
             return {
-                x: contentRect.offsetX || 0, // 🔥 修正: 相対オフセットのみ
-                y: contentRect.offsetY || 0, // 🔥 修正: 相対オフセットのみ
+                x: absoluteX, // 🔥 絶対座標: コンテナ絶対位置 + 背景画像相対オフセット
+                y: absoluteY, // 🔥 絶対座標: コンテナ絶対位置 + 背景画像相対オフセット
                 width: contentRect.width,
                 height: contentRect.height,
                 scaleX: contentRect.width / (selectedRatio.ratio * 1000),
@@ -348,9 +394,10 @@ class PureBoundingBoxAutoPin {
         }
         
         // その他のbackground-sizeの場合
+        // 🎯 絶対座標変換: コンテナと同じ位置
         return {
-            x: 0, // 🔥 修正: 相対位置ベース
-            y: 0, // 🔥 修正: 相対位置ベース
+            x: boundingRect.left, // 🔥 絶対座標: コンテナ絶対位置
+            y: boundingRect.top,  // 🔥 絶対座標: コンテナ絶対位置
             width: boundingRect.width,
             height: boundingRect.height,
             scaleX: 1,
@@ -373,7 +420,7 @@ class PureBoundingBoxAutoPin {
     /**
      * 背景画像の自然サイズ取得（非同期）
      */
-    getBackgroundImageNaturalSize(imageUrl, backgroundSize, boundingRect) {
+    getBackgroundImageNaturalSize(imageUrl, backgroundSize, boundingRect, element) {
         console.log('🖼️ 背景画像サイズ取得試行:', imageUrl);
         
         // すでに読み込み済みの画像があるかチェック
@@ -386,7 +433,7 @@ class PureBoundingBoxAutoPin {
                 });
                 
                 return this.calculateBackgroundContentWithNaturalSize(
-                    img.naturalWidth, img.naturalHeight, backgroundSize, boundingRect
+                    img.naturalWidth, img.naturalHeight, backgroundSize, boundingRect, element
                 );
             }
         }
@@ -404,7 +451,7 @@ class PureBoundingBoxAutoPin {
                 });
                 
                 return this.calculateBackgroundContentWithNaturalSize(
-                    testImg.naturalWidth, testImg.naturalHeight, backgroundSize, boundingRect
+                    testImg.naturalWidth, testImg.naturalHeight, backgroundSize, boundingRect, element
                 );
             }
         } catch (error) {
@@ -419,7 +466,7 @@ class PureBoundingBoxAutoPin {
     /**
      * 自然サイズを使った背景画像コンテンツ矩形計算
      */
-    calculateBackgroundContentWithNaturalSize(naturalWidth, naturalHeight, backgroundSize, boundingRect) {
+    calculateBackgroundContentWithNaturalSize(naturalWidth, naturalHeight, backgroundSize, boundingRect, element) {
         console.log('🎯 自然サイズベース背景画像計算:', {
             natural: { width: naturalWidth, height: naturalHeight },
             container: { width: boundingRect.width, height: boundingRect.height },
@@ -432,9 +479,19 @@ class PureBoundingBoxAutoPin {
                 boundingRect.width, boundingRect.height
             );
             
+            // 🎯 絶対座標に変換: コンテナの絶対位置 + 相対オフセット
+            const absoluteX = boundingRect.left + (contentRect.offsetX || 0);
+            const absoluteY = boundingRect.top + (contentRect.offsetY || 0);
+            
+            console.log('🎯 背景画像絶対座標変換 (cover-natural):', {
+                container: { left: boundingRect.left, top: boundingRect.top },
+                relativeOffset: { x: contentRect.offsetX || 0, y: contentRect.offsetY || 0 },
+                absolutePosition: { x: absoluteX, y: absoluteY }
+            });
+            
             return {
-                x: contentRect.offsetX || 0, // 🔥 修正: 相対オフセットのみ
-                y: contentRect.offsetY || 0, // 🔥 修正: 相対オフセットのみ
+                x: absoluteX, // 🔥 絶対座標: コンテナ絶対位置 + 背景画像相対オフセット
+                y: absoluteY, // 🔥 絶対座標: コンテナ絶対位置 + 背景画像相対オフセット
                 width: contentRect.width,
                 height: contentRect.height,
                 scaleX: contentRect.width / naturalWidth,
@@ -449,9 +506,19 @@ class PureBoundingBoxAutoPin {
                 boundingRect.width, boundingRect.height
             );
             
+            // 🎯 絶対座標に変換: コンテナの絶対位置 + 相対オフセット
+            const absoluteX = boundingRect.left + (contentRect.offsetX || 0);
+            const absoluteY = boundingRect.top + (contentRect.offsetY || 0);
+            
+            console.log('🎯 背景画像絶対座標変換 (contain-natural):', {
+                container: { left: boundingRect.left, top: boundingRect.top },
+                relativeOffset: { x: contentRect.offsetX || 0, y: contentRect.offsetY || 0 },
+                absolutePosition: { x: absoluteX, y: absoluteY }
+            });
+            
             return {
-                x: contentRect.offsetX || 0, // 🔥 修正: 相対オフセットのみ
-                y: contentRect.offsetY || 0, // 🔥 修正: 相対オフセットのみ
+                x: absoluteX, // 🔥 絶対座標: コンテナ絶対位置 + 背景画像相対オフセット
+                y: absoluteY, // 🔥 絶対座標: コンテナ絶対位置 + 背景画像相対オフセット
                 width: contentRect.width,
                 height: contentRect.height,
                 scaleX: contentRect.width / naturalWidth,
@@ -463,9 +530,10 @@ class PureBoundingBoxAutoPin {
         }
         
         // その他の場合
+        // 🎯 絶対座標変換: コンテナと同じ位置
         return {
-            x: 0, // 🔥 修正: 相対位置ベース
-            y: 0, // 🔥 修正: 相対位置ベース
+            x: boundingRect.left, // 🔥 絶対座標: コンテナ絶対位置
+            y: boundingRect.top,  // 🔥 絶対座標: コンテナ絶対位置
             width: boundingRect.width,
             height: boundingRect.height,
             scaleX: boundingRect.width / naturalWidth,
@@ -657,12 +725,12 @@ class PureBoundingBoxAutoPin {
             target: this.getElementInfo(targetElement)
         });
         
-        // 検出優先度順リスト
+        // 検出優先度順リスト (ヒーロー画像要素最優先)
         const detectionStrategies = [
-            () => this.findParentWithBackground(targetElement),
-            () => this.findNearbyImageElement(targetElement),
-            () => this.findSectionContainer(targetElement),
-            () => this.findMainContainer(targetElement)
+            () => this.findParentWithBackground(targetElement),      // 🎯 ヒーロー画像要素優先検索
+            () => this.findSectionContainer(targetElement),         // 🎯 ヒーロー画像コンテナ優先検索  
+            () => this.findNearbyImageElement(targetElement),       // 近接画像要素
+            () => this.findMainContainer(targetElement)             // 一般コンテナ
         ];
         
         for (let i = 0; i < detectionStrategies.length; i++) {
@@ -685,13 +753,36 @@ class PureBoundingBoxAutoPin {
     }
     
     /**
-     * 背景画像付き親要素の検出
+     * 背景画像付き親要素の検出 (ヒーロー画像優先)
      */
     findParentWithBackground(element) {
+        // 🎯 最初にヒーロー画像要素を直接検索
+        const heroElements = [
+            document.querySelector('.hero-section'),
+            document.querySelector('.hero-image'),
+            document.querySelector('[class*="hero"]')
+        ];
+        
+        for (const heroEl of heroElements) {
+            if (heroEl && this.hasBackgroundImage(heroEl)) {
+                console.log('🎯 ヒーロー画像要素（背景画像付き）検出:', this.getElementInfo(heroEl));
+                return heroEl;
+            }
+        }
+        
+        // 従来の親要素検索
         let current = element.parentElement;
         let depth = 0;
         
         while (current && current !== document.body && depth < this.detectionConfig.maxSearchDepth) {
+            // ヒーロー画像関連のクラスを持つ要素は最優先
+            if (current.classList.contains('hero-section') || 
+                current.classList.contains('hero-image') || 
+                current.className.includes('hero')) {
+                console.log('🎯 親階層からヒーロー画像要素検出:', this.getElementInfo(current));
+                return current;
+            }
+            
             const style = getComputedStyle(current);
             
             if (style.backgroundImage !== 'none' || 
@@ -704,6 +795,15 @@ class PureBoundingBoxAutoPin {
         }
         
         return null;
+    }
+    
+    /**
+     * 要素が背景画像を持っているかチェック
+     */
+    hasBackgroundImage(element) {
+        if (!element) return false;
+        const style = getComputedStyle(element);
+        return style.backgroundImage !== 'none';
     }
     
     /**
@@ -727,17 +827,33 @@ class PureBoundingBoxAutoPin {
     }
     
     /**
-     * セクションコンテナの検出
+     * セクションコンテナの検出 (ヒーロー画像優先)
      */
     findSectionContainer(element) {
-        const containers = [
+        // 🎯 ヒーロー画像要素を最優先で検出
+        const heroImageContainers = [
+            element.closest('.hero-section'),  // ヒーロー画像セクション
+            element.closest('.hero-image'),    // ヒーロー画像専用クラス
+            document.querySelector('.hero-section'), // グローバル検索
+            document.querySelector('.hero-image'),   // グローバル検索
+        ];
+        
+        // ヒーロー画像コンテナを最優先で確認
+        for (const container of heroImageContainers) {
+            if (container && this.validateBackgroundElement(container)) {
+                console.log('🎯 ヒーロー画像コンテナ検出成功:', this.getElementInfo(container));
+                return container;
+            }
+        }
+        
+        // フォールバック: 一般的なコンテナ検索
+        const fallbackContainers = [
             element.closest('section'),
-            element.closest('.hero'),
             element.closest('.container'),
             element.closest('main')
         ];
         
-        return containers.find(el => 
+        return fallbackContainers.find(el => 
             el && 
             el.offsetWidth > this.detectionConfig.minWidth && 
             el.offsetHeight > this.detectionConfig.minHeight
@@ -1234,14 +1350,35 @@ class PureBoundingBoxAutoPin {
                 const baseContentRect = initialAnchorPosition.baseContentRect;
                 const scaleChangeX = contentRect.width / baseContentRect.width;
                 const scaleChangeY = contentRect.height / baseContentRect.height;
-                const averageScaleChange = Math.sqrt(scaleChangeX * scaleChangeY); // 幾何平均
+                
+                // 🎯 縦横比保持スケーリング（設定可能）
+                const uniformScaleChange = this.scalingConfig.mode === 'cover' ? 
+                    Math.max(scaleChangeX, scaleChangeY) : // cover: 領域を満たす
+                    Math.min(scaleChangeX, scaleChangeY);  // contain: 全体が見える（歪み防止）
+                
+                console.log('🎯 縦横比保持スケール計算:', {
+                    scaleX: scaleChangeX.toFixed(4),
+                    scaleY: scaleChangeY.toFixed(4),
+                    uniformScale: uniformScaleChange.toFixed(4),
+                    mode: this.scalingConfig.mode,
+                    method: this.scalingConfig.mode === 'cover' ? 'max (cover-style)' : 'min (contain-style)'
+                });
                 
                 // 🆕 VI座標系: ウィンドウサイズに依存しない正規化比率
                 const viRatio = this.calculateViewportIndependentRatio(contentRect, baseContentRect);
                 
-                // 🔥 修正: 相対位置同士で比較
+                // 🎯 背景画像内でのアンカーポイント正規化比率計算
+                // アンカーポイント絶対座標 - 背景画像絶対座標 = 背景画像内相対位置
+                // 背景画像内相対位置 / 背景画像サイズ = 正規化比率 (0-1)
                 const baseAnchorRatioX = (initialAnchorPosition.relativeX - baseContentRect.x) / baseContentRect.width;
                 const baseAnchorRatioY = (initialAnchorPosition.relativeY - baseContentRect.y) / baseContentRect.height;
+                
+                console.log('🎯 アンカーポイント正規化比率計算:', {
+                    anchorAbsolute: { x: initialAnchorPosition.relativeX.toFixed(1), y: initialAnchorPosition.relativeY.toFixed(1) },
+                    backgroundAbsolute: { x: baseContentRect.x.toFixed(1), y: baseContentRect.y.toFixed(1) },
+                    backgroundSize: { width: baseContentRect.width.toFixed(1), height: baseContentRect.height.toFixed(1) },
+                    normalizedRatio: { x: (baseAnchorRatioX * 100).toFixed(1) + '%', y: (baseAnchorRatioY * 100).toFixed(1) + '%' }
+                });
                 
                 // 🎯 VI座標系での位置差分計算を使用
                 const viPositionDelta = this.calculateVIPositionDelta(viRatio, baseAnchorRatioX, baseAnchorRatioY, contentRect, baseContentRect);
@@ -1252,7 +1389,7 @@ class PureBoundingBoxAutoPin {
                 // 📊 詳細ログ（VI座標系対応）
                 console.log('🔄 VI座標系相対移動計算:', {
                     contentRectChange: `${baseContentRect.width.toFixed(1)}×${baseContentRect.height.toFixed(1)} → ${contentRect.width.toFixed(1)}×${contentRect.height.toFixed(1)}`,
-                    scaleChange: `X:${scaleChangeX.toFixed(3)} Y:${scaleChangeY.toFixed(3)} Avg:${averageScaleChange.toFixed(3)}`,
+                    scaleChange: `X:${scaleChangeX.toFixed(3)} Y:${scaleChangeY.toFixed(3)} Uniform:${uniformScaleChange.toFixed(3)}`,
                     viRatio: {
                         aspectRatioChange: viRatio.aspectRatioChange.toFixed(3),
                         isStable: viRatio.isRatioStable,
@@ -1279,7 +1416,7 @@ class PureBoundingBoxAutoPin {
                 return {
                     x: adjustedDeltaX,
                     y: adjustedDeltaY,
-                    scaleChange: averageScaleChange, // 🎯 スケール変化も通知
+                    scaleChange: uniformScaleChange, // 🎯 縦横比保持スケール変化を通知
                     anchor: anchor,
                     contentRect: contentRect,
                     baseContentRect: baseContentRect,
@@ -1345,8 +1482,11 @@ class PureBoundingBoxAutoPin {
                 console.log('📡 AutoPin位置・スケール調整メッセージ送信完了');
             }
             
-            // フォールバック: 最小限のCSS Transform調整
+            // フォールバック: CSS Transform調整（位置とスケール）
             const currentTransform = spineElement.style.transform || '';
+            let newTransform = currentTransform;
+            
+            // 🎯 位置調整（translate）
             if (currentTransform.includes('translate')) {
                 // 既存のtranslate値を取得して相対調整
                 const translateMatch = currentTransform.match(/translate\(([^)]+)\)/);
@@ -1355,17 +1495,58 @@ class PureBoundingBoxAutoPin {
                     const newX = currentX + anchorPosition.x;
                     const newY = currentY + anchorPosition.y;
                     
-                    const newTransform = currentTransform.replace(
+                    newTransform = newTransform.replace(
                         /translate\([^)]+\)/, 
                         `translate(${newX}px, ${newY}px)`
                     );
-                    spineElement.style.transform = newTransform;
+                }
+            } else if (Math.abs(anchorPosition.x) > 0.1 || Math.abs(anchorPosition.y) > 0.1) {
+                // translate がない場合は新規追加
+                newTransform = `translate(${anchorPosition.x}px, ${anchorPosition.y}px) ` + newTransform;
+            }
+            
+            // 🎯 スケール調整（ヒーロー画像の縦横比変化に連動）
+            if (scaleChange && Math.abs(scaleChange - 1.0) > 0.01) {
+                // 既存のscale値を置き換えまたは追加
+                if (currentTransform.includes('scale')) {
+                    const scaleMatch = currentTransform.match(/scale\([^)]+\)/);
+                    if (scaleMatch) {
+                        const currentScaleMatch = currentTransform.match(/scale\(([^)]+)\)/);
+                        const currentScale = currentScaleMatch ? parseFloat(currentScaleMatch[1]) : 1.0;
+                        const newScale = currentScale * scaleChange;
+                        
+                        newTransform = newTransform.replace(
+                            /scale\([^)]+\)/, 
+                            `scale(${newScale.toFixed(4)})`
+                        );
+                        
+                        console.log('🎯 CSS Scale更新:', {
+                            currentScale: currentScale.toFixed(4),
+                            scaleChange: scaleChange.toFixed(4),
+                            newScale: newScale.toFixed(4)
+                        });
+                    }
+                } else {
+                    // scale が存在しない場合は追加
+                    newTransform = newTransform + ` scale(${scaleChange.toFixed(4)})`;
                     
-                    console.log('🎯 CSS Transform相対調整適用:', {
-                        from: `${currentX}, ${currentY}`,
-                        to: `${newX}, ${newY}`
+                    console.log('🎯 CSS Scale新規追加:', {
+                        scaleChange: scaleChange.toFixed(4)
                     });
                 }
+            }
+            
+            // Transform を適用
+            if (newTransform !== currentTransform) {
+                spineElement.style.transform = newTransform.trim();
+                
+                console.log('🎯 CSS Transform完全調整適用:', {
+                    from: currentTransform || '(empty)',
+                    to: newTransform.trim(),
+                    deltaX: anchorPosition.x.toFixed(1),
+                    deltaY: anchorPosition.y.toFixed(1),
+                    scaleChange: scaleChange.toFixed(4)
+                });
             }
             
         } catch (error) {
@@ -1639,10 +1820,25 @@ class PureBoundingBoxAutoPin {
                 return;
             }
             
-            // 背景要素を取得
-            const backgroundElement = pinData.backgroundElement.id ? 
-                document.getElementById(pinData.backgroundElement.id) : 
-                document.querySelector(pinData.backgroundElement.selector || '.hero-section');
+            // 背景要素を取得 (ヒーロー画像要素優先)
+            let backgroundElement;
+            
+            if (pinData.backgroundElement.id) {
+                backgroundElement = document.getElementById(pinData.backgroundElement.id);
+            } else {
+                // 🎯 ヒーロー画像要素を優先して検索
+                const selector = pinData.backgroundElement.selector;
+                if (selector) {
+                    backgroundElement = document.querySelector(selector);
+                } else {
+                    // フォールバック: ヒーロー画像要素を順番に検索
+                    const heroSelectors = ['.hero-section', '.hero-image', '[class*="hero"]'];
+                    for (const heroSelector of heroSelectors) {
+                        backgroundElement = document.querySelector(heroSelector);
+                        if (backgroundElement) break;
+                    }
+                }
+            }
                 
             if (!backgroundElement) {
                 console.warn('⚠️ アンカーポイント表示: 背景要素が見つかりません');

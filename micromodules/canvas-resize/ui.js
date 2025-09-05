@@ -82,8 +82,8 @@ class CanvasResizeUI {
       const uiKey = this.getPageSpecificKey('canvasResizeSettings');
       const uiSaved = localStorage.getItem(uiKey);
       
-      // Spine設定を読み込み
-      const spineKey = this.getPageSpecificKey('spineSettings');
+      // Spine設定を読み込み（CanvasResize専用キー）
+      const spineKey = this.getPageSpecificKey('canvasResizeSpineSettings');
       const spineSaved = localStorage.getItem(spineKey);
       
       let loadedState = {...defaultState};
@@ -132,10 +132,10 @@ class CanvasResizeUI {
       
       if (finalCharacterId) {
         const pageId = this.getPageId();
-        spineKey = `spineSettings-${pageId}-${finalCharacterId}`;
+        spineKey = `canvasResizeSpineSettings-${pageId}-${finalCharacterId}`;
         console.log('[CanvasResizeUI] 🔑 キャラクター固有キーで保存:', spineKey, 'キャラクターID:', finalCharacterId);
       } else {
-        spineKey = this.getPageSpecificKey('spineSettings');
+        spineKey = this.getPageSpecificKey('canvasResizeSpineSettings');
         console.log('[CanvasResizeUI] ⚠️ キャラクターID未設定 - ページ固有キーで保存:', spineKey);
       }
       
@@ -525,7 +525,7 @@ class CanvasResizeUI {
   clearStorageData() {
     try {
       const uiKey = this.getPageSpecificKey('canvasResizeSettings');
-      const spineKey = this.getPageSpecificKey('spineSettings');
+      const spineKey = this.getPageSpecificKey('canvasResizeSpineSettings');
       
       localStorage.removeItem(uiKey);
       localStorage.removeItem(spineKey);
@@ -542,7 +542,7 @@ class CanvasResizeUI {
    */
   hasSpineSettings() {
     try {
-      const spineKey = this.getPageSpecificKey('spineSettings');
+      const spineKey = this.getPageSpecificKey('canvasResizeSpineSettings');
       const spineData = localStorage.getItem(spineKey);
       return spineData && spineData !== 'null';
     } catch (error) {
@@ -559,10 +559,10 @@ class CanvasResizeUI {
       let spineKey;
       if (this.currentCharacterId) {
         const pageId = this.getPageId();
-        spineKey = `spineSettings-${pageId}-${this.currentCharacterId}`;
+        spineKey = `canvasResizeSpineSettings-${pageId}-${this.currentCharacterId}`;
         console.log('[CanvasResizeUI] 🔑 キャラクター固有キーで設定復元:', spineKey);
       } else {
-        spineKey = this.getPageSpecificKey('spineSettings');
+        spineKey = this.getPageSpecificKey('canvasResizeSpineSettings');
         console.log('[CanvasResizeUI] ⚠️ キャラクターID未設定 - ページ固有キーで復元:', spineKey);
       }
       
@@ -740,9 +740,150 @@ class CanvasResizeUI {
         this.handleSpineRendererReady(data);
         break;
         
+      case 'updateCanvasData':
+        // 🎯 親ページからのCanvas情報を受信してUIに反映
+        this.handleCanvasDataUpdate(data);
+        break;
+        
       default:
         // 不明なメッセージタイプ
         break;
+    }
+  }
+
+  /**
+   * 🎯 Canvas情報をUIに反映する処理
+   */
+  handleCanvasDataUpdate(canvasData) {
+    try {
+      this.log('📥 親ページからCanvas情報を受信');
+      
+      // 受信データの詳細ログ
+      console.log('[CanvasResizeUI] 🔍 受信したCanvas情報:', canvasData);
+      this.log(`🔍 受信データ: ${JSON.stringify(canvasData, null, 2)}`);
+      
+      // Canvas解像度情報
+      if (canvasData.canvasWidth && canvasData.canvasHeight) {
+        // 正方形前提でcanvasWidthを使用
+        this.state.canvasSize = canvasData.canvasWidth;
+        const canvasSizeElement = document.getElementById('canvas-size');
+        console.log('[CanvasResizeUI] Canvas要素取得:', canvasSizeElement);
+        if (canvasSizeElement) {
+          const oldValue = canvasSizeElement.value;
+          canvasSizeElement.value = this.state.canvasSize;
+          this.updateCanvasSizeDisplay();
+          console.log(`[CanvasResizeUI] Canvas解像度: ${oldValue} → ${canvasSizeElement.value}`);
+          this.log(`📐 Canvas解像度反映: ${oldValue} → ${this.state.canvasSize}px`);
+        } else {
+          this.log('❌ canvas-size要素が見つかりません');
+        }
+      } else {
+        this.log('⚠️ canvasWidth/canvasHeightデータがありません');
+      }
+      
+      // Spineキャラクタースケール情報
+      if (canvasData.scaleX !== undefined) {
+        this.state.scaleX = canvasData.scaleX;
+        const scaleXSlider = document.getElementById('character-scale-x');
+        const scaleXInput = document.getElementById('character-scale-x-input');
+        console.log('[CanvasResizeUI] スケールX要素:', {scaleXSlider, scaleXInput});
+        if (scaleXSlider) {
+          const oldValue = scaleXSlider.value;
+          scaleXSlider.value = this.state.scaleX;
+          console.log(`[CanvasResizeUI] スケールXスライダー: ${oldValue} → ${scaleXSlider.value}`);
+        }
+        if (scaleXInput) {
+          const oldValue = scaleXInput.value;
+          scaleXInput.value = this.state.scaleX;
+          console.log(`[CanvasResizeUI] スケールX入力: ${oldValue} → ${scaleXInput.value}`);
+        }
+        this.log(`📏 スケールX反映: ${this.state.scaleX}`);
+      }
+      
+      if (canvasData.scaleY !== undefined) {
+        this.state.scaleY = canvasData.scaleY;
+        const scaleYSlider = document.getElementById('character-scale-y');
+        const scaleYInput = document.getElementById('character-scale-y-input');
+        console.log('[CanvasResizeUI] スケールY要素:', {scaleYSlider, scaleYInput});
+        if (scaleYSlider) {
+          const oldValue = scaleYSlider.value;
+          scaleYSlider.value = this.state.scaleY;
+          console.log(`[CanvasResizeUI] スケールYスライダー: ${oldValue} → ${scaleYSlider.value}`);
+        }
+        if (scaleYInput) {
+          const oldValue = scaleYInput.value;
+          scaleYInput.value = this.state.scaleY;
+          console.log(`[CanvasResizeUI] スケールY入力: ${oldValue} → ${scaleYInput.value}`);
+        }
+        this.log(`📏 スケールY反映: ${this.state.scaleY}`);
+      }
+      
+      // Spineキャラクター位置情報
+      if (canvasData.x !== undefined) {
+        this.state.positionX = canvasData.x;
+        const posXSlider = document.getElementById('character-x');
+        const posXInput = document.getElementById('character-x-input');
+        console.log('[CanvasResizeUI] 位置X要素:', {posXSlider, posXInput});
+        if (posXSlider) {
+          const oldValue = posXSlider.value;
+          posXSlider.value = this.state.positionX;
+          console.log(`[CanvasResizeUI] 位置Xスライダー: ${oldValue} → ${posXSlider.value}`);
+        }
+        if (posXInput) {
+          const oldValue = posXInput.value;
+          posXInput.value = this.state.positionX;
+          console.log(`[CanvasResizeUI] 位置X入力: ${oldValue} → ${posXInput.value}`);
+        }
+        this.log(`📍 位置X反映: ${this.state.positionX}`);
+      }
+      
+      if (canvasData.y !== undefined) {
+        this.state.positionY = canvasData.y;
+        const posYSlider = document.getElementById('character-y');
+        const posYInput = document.getElementById('character-y-input');
+        console.log('[CanvasResizeUI] 位置Y要素:', {posYSlider, posYInput});
+        if (posYSlider) {
+          const oldValue = posYSlider.value;
+          posYSlider.value = this.state.positionY;
+          console.log(`[CanvasResizeUI] 位置Yスライダー: ${oldValue} → ${posYSlider.value}`);
+        }
+        if (posYInput) {
+          const oldValue = posYInput.value;
+          posYInput.value = this.state.positionY;
+          console.log(`[CanvasResizeUI] 位置Y入力: ${oldValue} → ${posYInput.value}`);
+        }
+        this.log(`📍 位置Y反映: ${this.state.positionY}`);
+      }
+      
+      // 表示値を更新
+      this.updateDisplayValues();
+      
+      // 状態を保存
+      this.saveState();
+      
+      this.log('✅ Canvas情報のUI反映完了');
+      
+      // 親ページに反映完了を通知
+      this.sendToParent('canvasDataUpdateComplete', {
+        success: true,
+        reflectedData: {
+          canvasSize: this.state.canvasSize,
+          scaleX: this.state.scaleX,
+          scaleY: this.state.scaleY,
+          positionX: this.state.positionX,
+          positionY: this.state.positionY
+        }
+      });
+      
+    } catch (error) {
+      this.log(`❌ Canvas情報反映エラー: ${error.message}`, 'error');
+      console.error('[CanvasResizeUI] Canvas情報反映エラー:', error);
+      
+      // エラーを親ページに通知
+      this.sendToParent('canvasDataUpdateComplete', {
+        success: false,
+        error: error.message
+      });
     }
   }
 
