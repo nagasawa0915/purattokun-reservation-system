@@ -252,11 +252,24 @@ export class CharacterDetector {
                 `assets/spine/characters/${characterName}/${characterName}.atlas`,
                 `assets/spine/characters/${characterName}/${characterName}.png`
             ],
-            characterImageFiles: [
-                `assets/images/${characterName}.png`,      // 標準命名
-                `assets/images/${characterName}n.png`      // purattokunnパターン対応
-            ]
+            characterImageFiles: []
         };
+        
+        // キャラクター別実ファイル名マッピング
+        if (characterName === 'purattokun') {
+            characterFiles.characterImageFiles = [
+                'assets/images/purattokunn.png'  // 実際のファイル名（nが2個）
+            ];
+        } else if (characterName === 'nezumi') {
+            characterFiles.characterImageFiles = [
+                'assets/images/nezumi.png'       // 標準命名
+            ];
+        } else {
+            // その他のキャラクターは標準命名
+            characterFiles.characterImageFiles = [
+                `assets/images/${characterName}.png`
+            ];
+        }
         
         console.log('📋 生成されたファイルパス:', characterFiles);
         return characterFiles;

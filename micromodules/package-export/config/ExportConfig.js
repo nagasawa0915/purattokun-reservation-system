@@ -48,8 +48,8 @@ export class ExportConfig {
                 
                 // Spine統合システムファイル
                 integrationFiles: [
-                    'assets/spine/spine-integration-v2.js',
-                    'assets/spine/spine-character-manager.js'
+                    // Note: spine-integration-v2.js と spine-character-manager.js は
+                    // アーカイブ済みのため削除 (2025-09-05)
                 ],
                 
                 // 境界ボックス精密クリック判定システム
@@ -64,7 +64,7 @@ export class ExportConfig {
                 spinePattern: 'assets/spine/characters/{CHARACTER_NAME}/{CHARACTER_NAME}.{EXTENSION}',
                 spineExtensions: ['json', 'atlas', 'png'],
                 imagePattern: 'assets/images/{CHARACTER_NAME}{SUFFIX}.png',
-                imageSuffixes: ['', 'n'] // purattokun.png, purattokun.png 対応
+                imageSuffixes: [''] // purattokun.png, nezumi.png 対応（'n'サフィックスは除去）
             },
             
             // ZIP出力設定

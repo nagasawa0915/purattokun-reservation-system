@@ -337,6 +337,17 @@
         <button class="btn danger" id="reset-all">全リセット</button>
       </div>
 
+      <!-- 📦 パッケージ出力機能 -->
+      <div class="control-group">
+        <h3>📦 パッケージ出力システム</h3>
+        <button class="btn primary" id="package-export-original">📦 パッケージ出力（オリジナル版）</button>
+        <button class="btn success" id="package-export-micromodule">📦 パッケージ出力（マイクロモジュール版）</button>
+        <div style="font-size: 0.8em; color: #ccc; margin-top: 10px;">
+          <p>• オリジナル版: 従来システムによるパッケージ出力</p>
+          <p>• マイクロモジュール版: 最新マイクロモジュールシステム</p>
+        </div>
+      </div>
+
       <!-- 🔧 デバッグ機能（iframeから移動） -->
       <div class="control-group">
         <h3>🔧 デバッグ機能</h3>
@@ -393,6 +404,12 @@
     
     <!-- 🎯 Phase 1: LogSystem マイクロモジュール -->
     <script src="micromodules/spine-integration/LogSystem.js"></script>
+
+    <!-- 📦 パッケージ出力システム（オリジナル版） -->
+    <script src="spine-package-export.js"></script>
+
+    <!-- 📦 パッケージ出力システム（マイクロモジュール版） -->
+    <!-- マイクロモジュール版は動的に読み込み -->
 
     <script>
       /**
@@ -2717,6 +2734,55 @@
             }
             if (window.canvasResizeHandler) {
               window.canvasResizeHandler.log('🖥️ コンソールログ出力完了');
+            }
+          };
+        }
+
+        // 📦 パッケージ出力機能のイベントハンドラー設定
+        const packageExportOriginalBtn = document.getElementById('package-export-original');
+        const packageExportMicromoduleBtn = document.getElementById('package-export-micromodule');
+
+        if (packageExportOriginalBtn) {
+          packageExportOriginalBtn.onclick = async () => {
+            try {
+              console.log('📦 オリジナル版パッケージ出力開始...');
+              if (typeof exportPackage === 'function') {
+                await exportPackage();
+                console.log('✅ オリジナル版パッケージ出力完了');
+              } else {
+                console.error('❌ exportPackage関数が見つかりません');
+                alert('エラー: オリジナル版パッケージ出力システムが読み込まれていません');
+              }
+            } catch (error) {
+              console.error('❌ オリジナル版パッケージ出力エラー:', error);
+              alert('エラー: ' + error.message);
+            }
+          };
+        }
+
+        if (packageExportMicromoduleBtn) {
+          packageExportMicromoduleBtn.onclick = async () => {
+            try {
+              console.log('📦 マイクロモジュール版パッケージ出力開始...');
+              
+              // マイクロモジュール版を動的に読み込み
+              if (!window.PackageExportSystemNew) {
+                console.log('🔄 マイクロモジュール版を読み込み中...');
+                const PackageExportSystem = await import('./micromodules/package-export/index.js');
+                window.PackageExportSystemNew = PackageExportSystem.default;
+                console.log('✅ マイクロモジュール版読み込み完了');
+              }
+
+              if (window.PackageExportSystemNew) {
+                await window.PackageExportSystemNew.exportPackage();
+                console.log('✅ マイクロモジュール版パッケージ出力完了');
+              } else {
+                console.error('❌ マイクロモジュール版パッケージ出力システムが読み込まれていません');
+                alert('エラー: マイクロモジュール版パッケージ出力システムが読み込まれていません');
+              }
+            } catch (error) {
+              console.error('❌ マイクロモジュール版パッケージ出力エラー:', error);
+              alert('エラー: ' + error.message);
             }
           };
         }

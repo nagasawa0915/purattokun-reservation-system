@@ -8,7 +8,7 @@ console.log('🔧 HTMLProcessor モジュール読み込み開始');
  * 🔧 HTML固定化処理クラス
  * 
  * 【責務】
- * - index.htmlの取得・変換処理
+ * - 現在のHTMLページの取得・変換処理
  * - 編集システム関連コードの精密除去
  * - CDN依存のローカル化
  * - 境界ボックス精密クリック判定システムの統合
@@ -30,7 +30,7 @@ export class HTMLProcessor {
         console.log('🔧 HTML固定化処理開始');
         
         try {
-            // 1. 現在のindex.htmlを取得
+            // 1. 現在のHTMLページを取得
             await this.loadOriginalHTML();
             
             // 2. 編集システム関連のコードを除去
@@ -54,21 +54,29 @@ export class HTMLProcessor {
         }
     }
     
-    // index.html取得
+    // 現在のHTML取得
     async loadOriginalHTML() {
-        const response = await fetch('index.html');
+        // 現在のページのHTMLファイル名を取得
+        const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+        const htmlFileName = currentPath.endsWith('.html') ? currentPath : 'index.html';
+        
+        console.log(`📋 現在のHTMLファイル取得: ${htmlFileName}`);
+        
+        const response = await fetch(htmlFileName);
         if (!response.ok) {
             throw new Error(`HTMLファイル取得失敗: ${response.status}`);
         }
         
         this.originalHTML = await response.text();
         this.processedHTML = this.originalHTML;
-        console.log('📋 index.html取得完了');
+        console.log(`✅ ${htmlFileName}取得完了`);
     }
     
     // 編集システム関連コードの除去（精密削除）
     removeEditingSystem() {
-        console.log('🚮 編集システムコード除去（精密削除）');
+        console.log('🚮 編集システム・開発用マイクロモジュール除去（精密削除）');
+        
+        // === index.html専用パターン ===
         
         // 1. URLパラメータ処理（editMode変数定義とデバッグ出力）を完全除去
         const urlParamsPattern = /\/\/ 🎯 URLパラメータで編集モード起動[\s\S]*?const editMode = urlParams\.get\('edit'\) === 'true';[\s\S]*?editMode: editMode[\s\S]*?\}\);/;
@@ -88,17 +96,72 @@ export class HTMLProcessor {
         this.processedHTML = this.processedHTML.replace(editCSSPattern, '<!-- 編集用CSS除去済み -->');
         this.processedHTML = this.processedHTML.replace(editJSPattern, '<!-- 編集用JS除去済み -->');
         
-        // ✅ 保持すべき重要なコードのログ出力
-        console.log('✅ 以下のコードは保持されます：');
-        console.log('  - Spine WebGL読み込み: <script src="...spine-webgl.js">');
-        console.log('  - Spine統合処理: spine-integration-v2.js読み込み');
-        console.log('  - キャラクター初期化: loadCharacter(), setupSpineCharacter()');
-        console.log('  - アニメーション開始: playAnimation()');
-        console.log('  - 基本HTML構造とSpine表示システム');
-        console.log('  - 境界ボックス精密クリック判定システム: spine-skeleton-bounds.js, spine-bounds-integration.js');
-        console.log('  - 境界ボックス初期化: initializeBounds(), integrateBoundsForCharacter()');
+        // === test-nezumi-stable-spine-bb.html専用パターン ===
         
-        console.log('✅ 編集システムコード精密除去完了');
+        // 5. 開発用マイクロモジュール全除去
+        this.removeDevelopmentMicromodules();
+        
+        // 6. テスト用UI・制御パネル全除去
+        this.removeTestUI();
+        
+        // 7. パッケージ出力機能の除去
+        this.removePackageExportUI();
+        
+        // ✅ 保持すべき重要なコードのログ出力
+        console.log('✅ 商用納品用として以下のコードのみ保持：');
+        console.log('  - Spine WebGL読み込み: <script src="...spine-webgl.js">');
+        console.log('  - 基本Spineキャラクター表示システム');
+        console.log('  - 背景画像・レイアウト');
+        console.log('  - キャラクターアニメーション');
+        
+        console.log('✅ 編集システム・開発用モジュール精密除去完了');
+    }
+    
+    // 開発用マイクロモジュール全除去
+    removeDevelopmentMicromodules() {
+        console.log('🗑️ 開発用マイクロモジュール除去');
+        
+        // micromodules関連のscriptタグを全て除去
+        const micromoduleScriptPattern = /<script src="micromodules\/[^"]*"><\/script>/g;
+        this.processedHTML = this.processedHTML.replace(micromoduleScriptPattern, '<!-- 開発用マイクロモジュール除去済み -->');
+        
+        // spine-package-export.js除去
+        const packageExportScriptPattern = /<script src="spine-package-export\.js"><\/script>/g;
+        this.processedHTML = this.processedHTML.replace(packageExportScriptPattern, '<!-- パッケージ出力システム除去済み -->');
+    }
+    
+    // テスト用UI・制御パネル全除去
+    removeTestUI() {
+        console.log('🎛️ テスト用UI・制御パネル除去');
+        
+        // control-group全体を除去
+        const controlGroupPattern = /<div class="control-group">[\s\S]*?<\/div>(?=\s*<div|$)/g;
+        this.processedHTML = this.processedHTML.replace(controlGroupPattern, '<!-- テスト用制御パネル除去済み -->');
+        
+        // ログパネルを除去
+        const logPanelPattern = /<div class="log"[^>]*>[\s\S]*?<\/div>/g;
+        this.processedHTML = this.processedHTML.replace(logPanelPattern, '<!-- ログパネル除去済み -->');
+        
+        // ローディング画面を除去
+        const loadingScreenPattern = /<div class="loading"[^>]*>[\s\S]*?<\/div>/g;
+        this.processedHTML = this.processedHTML.replace(loadingScreenPattern, '<!-- ローディング画面除去済み -->');
+        
+        // iframe除去
+        const iframePattern = /<iframe[\s\S]*?<\/iframe>/g;
+        this.processedHTML = this.processedHTML.replace(iframePattern, '<!-- iframe除去済み -->');
+    }
+    
+    // パッケージ出力機能の除去
+    removePackageExportUI() {
+        console.log('📦 パッケージ出力機能除去');
+        
+        // パッケージ出力ボタンのイベントハンドラー除去
+        const packageExportHandlerPattern = /\/\/ 📦 パッケージ出力機能のイベントハンドラー設定[\s\S]*?}\s*}\s*}\s*;/;
+        this.processedHTML = this.processedHTML.replace(packageExportHandlerPattern, '// パッケージ出力機能除去済み');
+        
+        // MultiCharacterStableSpineBBIntegration クラス除去（テスト用）
+        const testIntegrationClassPattern = /class MultiCharacterStableSpineBBIntegration \{[\s\S]*?console\.log\('✅ CharacterDetector モジュール読み込み完了'\);/;
+        this.processedHTML = this.processedHTML.replace(testIntegrationClassPattern, '// テスト用統合クラス除去済み');
     }
     
     // CDN依存をローカル参照に変更

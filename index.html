@@ -241,6 +241,79 @@
                         console.log('🚀 v2.0中央制御システム統合版 準備完了');
                         console.log('🔗 統合完了後は window.spineEditUnified でアクセス可能');
                         
+                        // 🆕 マイクロモジュール版パッケージ出力システム統合
+                        console.log('📦 マイクロモジュール版パッケージ出力システム読み込み開始');
+                        const packageExportScript = document.createElement('script');
+                        packageExportScript.type = 'module';
+                        packageExportScript.innerHTML = `
+                            import PackageExportSystem from './micromodules/package-export/index.js';
+                            window.PackageExportSystemNew = PackageExportSystem;
+                            
+                            // 初期化
+                            PackageExportSystem.initialize().then(success => {
+                                if (success) {
+                                    console.log('✅ マイクロモジュール版パッケージ出力システム初期化完了');
+                                    
+                                    // 編集UIにボタン追加
+                                    setTimeout(() => {
+                                        const editControls = document.querySelector('.control-panel') || 
+                                                           document.querySelector('.edit-controls') || 
+                                                           document.body;
+                                        
+                                        if (editControls && !document.getElementById('micromodule-export-btn')) {
+                                            const microExportBtn = document.createElement('button');
+                                            microExportBtn.id = 'micromodule-export-btn';
+                                            microExportBtn.innerHTML = '📦 マイクロモジュール版出力';
+                                            microExportBtn.style.cssText = \`
+                                                background: #17a2b8;
+                                                color: white;
+                                                border: none;
+                                                padding: 8px 16px;
+                                                border-radius: 4px;
+                                                margin: 5px;
+                                                cursor: pointer;
+                                                font-size: 14px;
+                                            \`;
+                                            
+                                            microExportBtn.onclick = async function() {
+                                                this.disabled = true;
+                                                this.innerHTML = '📦 処理中（新版）...';
+                                                
+                                                try {
+                                                    const success = await PackageExportSystem.exportPackage();
+                                                    if (success) {
+                                                        this.innerHTML = '✅ 新版出力完了';
+                                                        setTimeout(() => {
+                                                            this.innerHTML = '📦 マイクロモジュール版出力';
+                                                            this.disabled = false;
+                                                        }, 3000);
+                                                    } else {
+                                                        throw new Error('マイクロモジュール版出力失敗');
+                                                    }
+                                                } catch (error) {
+                                                    this.innerHTML = '❌ 新版出力失敗';
+                                                    console.error('マイクロモジュール版エラー:', error);
+                                                    setTimeout(() => {
+                                                        this.innerHTML = '📦 マイクロモジュール版出力';
+                                                        this.disabled = false;
+                                                    }, 3000);
+                                                }
+                                            };
+                                            
+                                            editControls.appendChild(microExportBtn);
+                                            console.log('✅ マイクロモジュール版出力ボタン追加完了');
+                                        }
+                                    }, 2000);
+                                    
+                                } else {
+                                    console.error('❌ マイクロモジュール版パッケージ出力システム初期化失敗');
+                                }
+                            }).catch(error => {
+                                console.error('❌ マイクロモジュール版初期化エラー:', error);
+                            });
+                        `;
+                        document.head.appendChild(packageExportScript);
+                        
                         // PureBoundingBox v5.0読み込み確認（詳細ログ付き）
                         setTimeout(() => {
                             console.log('🎯 PureBoundingBox v5.0モジュール読み込み状況確認開始:');

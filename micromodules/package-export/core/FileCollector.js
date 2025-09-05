@@ -34,8 +34,8 @@ export class FileCollector {
                     'assets/images/クラウドパートナーTOP.png'  // 背景画像（共通）
                 ],
                 integrationFiles: [
-                    'assets/spine/spine-integration-v2.js',
-                    'assets/spine/spine-character-manager.js'
+                    // Note: spine-integration-v2.js と spine-character-manager.js は
+                    // アーカイブ済みのため削除 (2025-09-05)
                 ],
                 boundingBoxFiles: [
                     'assets/spine/spine-skeleton-bounds.js',
