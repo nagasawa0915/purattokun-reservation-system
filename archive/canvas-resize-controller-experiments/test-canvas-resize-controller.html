@@ -365,6 +365,14 @@
             <button class="btn" id="clear-log">ログクリア</button>
             <button class="btn success" id="full-test">全機能テスト</button>
           </div>
+
+          <!-- 🎯 永続化機能テスト -->
+          <div class="control-group">
+            <h4>💾 SpineSettingsPersistence テスト</h4>
+            <button class="btn" id="check-settings">保存設定確認</button>
+            <button class="btn" id="clear-settings">保存設定クリア</button>
+            <button class="btn" id="restore-settings">設定復元テスト</button>
+          </div>
         </div>
       </div>
 
@@ -377,6 +385,9 @@
 
     <!-- CanvasResizeController モジュール -->
     <script src="micromodules/canvas-resize/CanvasResizeController.js"></script>
+    
+    <!-- SpineSettingsPersistence モジュール統合 -->
+    <script src="micromodules/spine-settings-persistence/SpineSettingsPersistence.js"></script>
 
     <script>
       /**
@@ -403,13 +414,25 @@
             enableLogging: true,
           });
 
+          // 🎯 SpineSettingsPersistence マイクロモジュール統合
+          this.settingsPersistence = new SpineSettingsPersistence({
+            debug: true, // デバッグログ有効
+            version: '1.0'
+          });
+          this.testCharacterId = 'canvas-resize-test-character'; // テスト用キャラクターID
+
           // キャラクター制御テスト用のモックSpineRenderer作成
           this.createMockSpineRenderer();
           
           this.setupEventListeners();
           this.updateCanvasInfo();
+          
+          // 🎯 初期設定復元
+          this.restoreInitialSettings();
+          
           this.addLog("🚀 CanvasResizeController テスト環境 起動完了");
-          this.updateStatus("module-status", "正常読み込み");
+          this.addLog("🎯 SpineSettingsPersistence 統合完了");
+          this.updateStatus("module-status", "正常読み込み + 永続化対応");
         }
 
         setupEventListeners() {
@@ -522,6 +545,19 @@
           document.getElementById("test-aspect-ratios").addEventListener("click", () => {
             this.testAspectRatioPresets();
           });
+
+          // 🎯 SpineSettingsPersistence テスト機能
+          document.getElementById("check-settings").addEventListener("click", () => {
+            this.checkSavedSettings();
+          });
+
+          document.getElementById("clear-settings").addEventListener("click", () => {
+            this.clearAllSettings();
+          });
+
+          document.getElementById("restore-settings").addEventListener("click", () => {
+            this.restoreInitialSettings();
+          });
         }
 
         // 🔧 手動リサイズテスト
@@ -535,6 +571,10 @@
           if (result) {
             this.updateStatus("last-operation", `手動リサイズ ${size}x${size}`);
             this.addLog(`✅ 手動リサイズ成功（正方形: ${size}x${size}）`);
+            
+            // 🎯 Canvas設定自動保存
+            this.saveCanvasSettings(size);
+            
             // リサイズ後にキャラクターを再描画
             this.drawMockCharacter();
           } else {
@@ -581,6 +621,10 @@
             this.updateStatus("last-operation", `表示サイズ変更 ${size}x${size}`);
             this.addLog(`✅ 表示サイズ変更成功（正方形: ${size}x${size}）`);
             this.addLog(`📏 結果: Canvas解像度${size}x${size}, 表示サイズ${size}x${size}px`);
+            
+            // 🎯 Canvas設定自動保存
+            this.saveCanvasSettings(size);
+            
             // サイズ変更後にキャラクターを再描画
             this.drawMockCharacter();
           } else {
@@ -654,6 +698,9 @@
             this.mockSkeleton.scaleY = scaleY;
             this.addLog(`✅ 独立スケール設定成功: X軸${scaleX}, Y軸${scaleY}`);
             
+            // 🎯 スケール設定自動保存
+            this.saveScaleSettings(scaleX, scaleY);
+            
             // 縦横比の計算と表示
             const aspectRatio = (scaleX / scaleY).toFixed(2);
             this.addLog(`📐 現在の縦横比: ${aspectRatio} (X:Y = ${scaleX}:${scaleY})`);
@@ -664,6 +711,9 @@
             this.mockSkeleton.x = x;
             this.mockSkeleton.y = y;
             this.addLog(`✅ 位置設定成功: (${x}, ${y})`);
+            
+            // 🎯 位置設定自動保存
+            this.savePositionSettings(x, y);
           }
           
           if (success) {
@@ -736,6 +786,9 @@
           
           this.mockSkeleton.scaleX = scaleX;
           this.mockSkeleton.scaleY = scaleY;
+          
+          // 🎯 リアルタイムスケール設定自動保存
+          this.saveScaleSettings(scaleX, scaleY);
           
           // リアルタイム描画更新
           this.drawMockCharacter();
@@ -1014,6 +1067,152 @@ Canvas CSS サイズ: ${canvas.style.width || 'auto'} x ${canvas.style.height ||
         // 📊 ステータス更新
         updateStatus(elementId, value) {
           document.getElementById(elementId).textContent = value;
+        }
+
+        // 🎯 SpineSettingsPersistence統合メソッド
+
+        // 初期設定復元
+        restoreInitialSettings() {
+          try {
+            const settings = this.settingsPersistence.restore(this.testCharacterId);
+            
+            if (settings) {
+              this.addLog('🔄 保存された設定を復元中...');
+              
+              // Canvasサイズ復元
+              if (settings.canvasSize) {
+                const result = this.resizer.resizeCanvas(settings.canvasSize);
+                if (result) {
+                  this.addLog(`✅ Canvasサイズ復元: ${settings.canvasSize}x${settings.canvasSize}`);
+                }
+              }
+              
+              // スケール設定復元
+              if (settings.scaleX !== undefined && settings.scaleY !== undefined) {
+                this.mockSkeleton.scaleX = settings.scaleX;
+                this.mockSkeleton.scaleY = settings.scaleY;
+                
+                // UI要素を更新
+                document.getElementById("character-scale-x").value = settings.scaleX;
+                document.getElementById("scale-x-display").textContent = settings.scaleX.toFixed(1);
+                document.getElementById("character-scale-y").value = settings.scaleY;
+                document.getElementById("scale-y-display").textContent = settings.scaleY.toFixed(1);
+                document.getElementById("character-scale-unified").value = settings.scaleX;
+                document.getElementById("scale-unified-display").textContent = settings.scaleX.toFixed(1);
+                
+                this.addLog(`✅ スケール設定復元: X=${settings.scaleX}, Y=${settings.scaleY}`);
+              }
+              
+              // 位置設定復元
+              if (settings.x !== undefined && settings.y !== undefined) {
+                this.mockSkeleton.x = settings.x;
+                this.mockSkeleton.y = settings.y;
+                
+                // UI要素を更新
+                document.getElementById("character-x").value = settings.x;
+                document.getElementById("character-y").value = settings.y;
+                
+                this.addLog(`✅ 位置設定復元: X=${settings.x}, Y=${settings.y}`);
+              }
+              
+              // キャラクター再描画
+              this.drawMockCharacter();
+              this.updateCanvasInfo();
+              
+            } else {
+              this.addLog('📝 保存された設定が見つかりません（初回起動）');
+            }
+          } catch (error) {
+            this.addLog(`❌ 設定復元エラー: ${error.message}`);
+          }
+        }
+
+        // Canvas設定保存
+        saveCanvasSettings(canvasSize) {
+          try {
+            this.settingsPersistence.save(this.testCharacterId, {
+              canvasSize: canvasSize,
+              timestamp: Date.now()
+            });
+            this.addLog(`💾 Canvas設定保存: サイズ${canvasSize}x${canvasSize}`);
+          } catch (error) {
+            this.addLog(`❌ Canvas設定保存エラー: ${error.message}`);
+          }
+        }
+
+        // スケール設定保存
+        saveScaleSettings(scaleX, scaleY) {
+          try {
+            this.settingsPersistence.save(this.testCharacterId, {
+              scaleX: scaleX,
+              scaleY: scaleY,
+              timestamp: Date.now()
+            });
+            this.addLog(`💾 スケール設定保存: X=${scaleX}, Y=${scaleY}`);
+          } catch (error) {
+            this.addLog(`❌ スケール設定保存エラー: ${error.message}`);
+          }
+        }
+
+        // 位置設定保存
+        savePositionSettings(x, y) {
+          try {
+            this.settingsPersistence.save(this.testCharacterId, {
+              x: x,
+              y: y,
+              timestamp: Date.now()
+            });
+            this.addLog(`💾 位置設定保存: X=${x}, Y=${y}`);
+          } catch (error) {
+            this.addLog(`❌ 位置設定保存エラー: ${error.message}`);
+          }
+        }
+
+        // 全設定クリア
+        clearAllSettings() {
+          try {
+            this.settingsPersistence.clear(this.testCharacterId);
+            this.addLog('🗑️ 保存された設定をクリアしました');
+          } catch (error) {
+            this.addLog(`❌ 設定クリアエラー: ${error.message}`);
+          }
+        }
+
+        // 保存設定確認
+        checkSavedSettings() {
+          try {
+            const settings = this.settingsPersistence.restore(this.testCharacterId);
+            
+            if (settings) {
+              this.addLog('\n📋 保存されている設定:');
+              this.addLog(`   キャラクターID: ${this.testCharacterId}`);
+              
+              if (settings.canvasSize) {
+                this.addLog(`   Canvasサイズ: ${settings.canvasSize}x${settings.canvasSize}px`);
+              }
+              
+              if (settings.scaleX !== undefined && settings.scaleY !== undefined) {
+                const aspectRatio = (settings.scaleX / settings.scaleY).toFixed(2);
+                this.addLog(`   スケール設定: X=${settings.scaleX}, Y=${settings.scaleY} (比率:${aspectRatio})`);
+              }
+              
+              if (settings.x !== undefined && settings.y !== undefined) {
+                this.addLog(`   位置設定: X=${settings.x}, Y=${settings.y}`);
+              }
+              
+              if (settings.timestamp) {
+                const date = new Date(settings.timestamp);
+                this.addLog(`   最終保存: ${date.toLocaleString()}`);
+              }
+              
+              this.addLog(`📊 設定項目数: ${Object.keys(settings).length}`);
+              
+            } else {
+              this.addLog('📝 保存された設定がありません');
+            }
+          } catch (error) {
+            this.addLog(`❌ 設定確認エラー: ${error.message}`);
+          }
         }
       }
 

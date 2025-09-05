@@ -1218,26 +1218,52 @@ class PureBoundingBoxUI {
      */
     integrateTwoStageResult(pinRequest, selectedElement) {
         console.log('🔗 TwoStageSelector → AutoPin統合処理');
+        console.log('📍 ピンリクエストデータ:', pinRequest);
         
-        // ここで高機能な結果をAutoPinシステムに統合
-        // pinRequest.anchor, pinRequest.offsetなどを使用
-        
-        console.log('✅ AutoPin統合完了');
-    }
-    
-    // 従来のhandleElementSelectedメソッドはそのまま維持
-    handleElementSelected(element) {
-        console.log('🎯 Stage 1 → Stage 2 移行: 選択要素処理開始', element);
+        try {
+            // ユーザーピン位置データを保存
+            const nodeId = this.core.config.nodeId || 'spine-canvas';
+            const userPinStorageKey = `user-pin-${nodeId}`;
             
-            let errorMessage = 'ピン設定に失敗しました';
-            if (error.message.includes('キャンセル')) {
-                errorMessage = 'ピン設定をキャンセルしました';
-            } else if (error.message.includes('ElementSelector')) {
-                errorMessage = 'ElementSelector モジュールが見つかりません';
+            // TwoStageSelectorのpinRequest形式で保存
+            const userPinData = {
+                element: {
+                    id: selectedElement.id,
+                    tagName: selectedElement.tagName,
+                    selector: this.generateElementSelector(selectedElement)
+                },
+                anchorPoints: pinRequest.anchorPoints || [pinRequest],
+                timestamp: Date.now(),
+                nodeId: nodeId
+            };
+            
+            localStorage.setItem(userPinStorageKey, JSON.stringify(userPinData));
+            console.log('💾 ユーザーピンデータ保存完了:', userPinStorageKey, userPinData);
+            
+            // AutoPinデータにも統合
+            const autoPinKey = `autopin-${nodeId}`;
+            let autoPinData = localStorage.getItem(autoPinKey);
+            if (autoPinData) {
+                const parsed = JSON.parse(autoPinData);
+                parsed.userPinPosition = userPinData;
+                localStorage.setItem(autoPinKey, JSON.stringify(parsed));
+                console.log('💾 AutoPinデータに統合完了');
             }
             
-            this.showNotification(errorMessage, 'warning', 3000);
+            console.log('✅ AutoPin統合完了');
+            
+        } catch (error) {
+            console.error('❌ TwoStageSelector結果統合エラー:', error);
         }
+    }
+    
+    /**
+     * 🎯 要素セレクター生成
+     */
+    generateElementSelector(element) {
+        if (element.id) return `#${element.id}`;
+        if (element.className) return `.${element.className.split(' ')[0]}`;
+        return element.tagName.toLowerCase();
     }
     
     /**

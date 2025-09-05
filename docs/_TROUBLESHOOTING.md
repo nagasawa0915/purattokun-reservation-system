@@ -120,6 +120,12 @@
 
 ### 🔧 機能・UI関連の問題
 
+#### CanvasResizeController設定保存問題
+- **ファイル**: [CanvasResizeController設定保存問題.md](./troubleshooting/CanvasResizeController設定保存問題.md)
+- **症状**: Canvas解像度・スケール設定が保存されない、復元されない、部分保存が失敗する
+- **タグ**: `#CanvasResizeController` `#SpineSettingsPersistence` `#設定保存` `#部分保存` `#localStorage` `#完全解決`
+- **別名**: Canvas設定保存失敗、canvasSize保存されない、スケール設定復元されない、部分保存問題
+
 #### ドラッグハンドル診断システム
 - **ファイル**: [ドラッグハンドル診断システム.md](./troubleshooting/ドラッグハンドル診断システム.md)
 - **症状**: ハンドルをクリックしてもドラッグが開始されない、ハンドルが表示されない、イベントが効かない

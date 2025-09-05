@@ -145,6 +145,9 @@
         // 🎯 URLパラメータで編集モード起動（1行追加機能）
         const urlParams = new URLSearchParams(window.location.search);
         const editMode = urlParams.get('edit') === 'true';
+        
+        // 🎯 編集モードをグローバルに設定（SpineSettingsPersistence統合用）
+        window.editMode = editMode;
 
         // 編集モード時の動的ファイル読み込み
         if (editMode) {
@@ -158,6 +161,8 @@
             
             // 🎯 分割された編集システム用JS動的読み込み
             const moduleFiles = [
+                // 🎯 SpineSettingsPersistence マイクロモジュール統合（Phase 4.1a）
+                'micromodules/spine-settings-persistence/SpineSettingsPersistence.js',
                 'spine-package-export.js',  // ← PackageExportSystemを最初に読み込み
                 'spine-ui-manager.js',
                 'spine-multi-character-manager.js',
@@ -201,8 +206,36 @@
                             // 既存システム
                             initializeSpineEditSystem: typeof initializeSpineEditSystem,
                             createEditStartUI: typeof createEditStartUI,
-                            SpineEditingSystem: typeof SpineEditingSystem
+                            SpineEditingSystem: typeof SpineEditingSystem,
+                            // 🎯 SpineSettingsPersistence統合確認
+                            SpineSettingsPersistence: typeof SpineSettingsPersistence
                         });
+                        
+                        // 🎯 SpineSettingsPersistence 初期化（Phase 4.1a統合）
+                        if (typeof SpineSettingsPersistence !== 'undefined') {
+                            console.log('🎯 SpineSettingsPersistence初期化開始...');
+                            
+                            try {
+                                // グローバル永続化システムインスタンス作成
+                                window.spinePersistence = new SpineSettingsPersistence({
+                                    debug: true,  // 編集モードではデバッグログ有効
+                                    version: '1.0'
+                                });
+                                
+                                console.log('✅ SpineSettingsPersistence初期化完了');
+                                console.log('🔗 アクセス方法: window.spinePersistence');
+                                
+                                // 保存されている設定の復元準備（キャラクター初期化後に実行）
+                                window.spineSettingsRestorePending = true;
+                                
+                            } catch (error) {
+                                console.error('❌ SpineSettingsPersistence初期化エラー:', error);
+                                console.warn('⚠️ 永続化機能なしで編集システムを継続します');
+                            }
+                        } else {
+                            console.warn('⚠️ SpineSettingsPersistenceが見つかりません');
+                            console.warn('⚠️ 永続化機能は利用できません');
+                        }
                         
                         // 統合システムの初期化待機（自動初期化される）
                         console.log('🚀 v2.0中央制御システム統合版 準備完了');
@@ -356,6 +389,73 @@
             console.log('✅ 全キャラクター初期化完了');
             console.log('🎯 利用可能なキャラクター:', Object.keys(spineCharacters));
             console.log('🎯 キャラクター数:', Object.keys(spineCharacters).length);
+            
+            // 🎯 SpineSettingsPersistence 設定復元（編集モード時のみ）
+            if (editMode && window.spineSettingsRestorePending && window.spinePersistence) {
+                console.log('🎯 SpineSettingsPersistence設定復元開始...');
+                
+                try {
+                    // 全キャラクターの保存設定を復元
+                    for (const characterId of Object.keys(spineCharacters)) {
+                        const character = spineCharacters[characterId];
+                        
+                        console.log(`🔄 ${characterId}設定復元中...`);
+                        
+                        // 設定存在確認
+                        if (window.spinePersistence.exists(characterId)) {
+                            console.log(`📂 ${characterId}: 保存済み設定発見`);
+                            
+                            // 設定復元
+                            const restoredSettings = window.spinePersistence.restore(characterId);
+                            
+                            if (restoredSettings) {
+                                console.log(`📋 ${characterId}復元設定:`, restoredSettings);
+                                
+                                // キャラクター設定の適用
+                                if (character.skeleton && restoredSettings.spine) {
+                                    // スケール復元
+                                    if (restoredSettings.spine.scaleX !== undefined && restoredSettings.spine.scaleY !== undefined) {
+                                        character.skeleton.scaleX = restoredSettings.spine.scaleX;
+                                        character.skeleton.scaleY = restoredSettings.spine.scaleY;
+                                        console.log(`🔧 ${characterId}スケール復元: ${restoredSettings.spine.scaleX}, ${restoredSettings.spine.scaleY}`);
+                                    }
+                                    
+                                    // 位置復元
+                                    if (restoredSettings.spine.x !== undefined && restoredSettings.spine.y !== undefined) {
+                                        character.skeleton.x = restoredSettings.spine.x;
+                                        character.skeleton.y = restoredSettings.spine.y;
+                                        console.log(`🔧 ${characterId}位置復元: (${restoredSettings.spine.x}, ${restoredSettings.spine.y})`);
+                                    }
+                                }
+                                
+                                // Canvas設定の適用
+                                if (character.canvas && restoredSettings.canvas) {
+                                    // Canvasサイズ復元
+                                    if (restoredSettings.canvas.width && restoredSettings.canvas.height) {
+                                        character.canvas.width = restoredSettings.canvas.width;
+                                        character.canvas.height = restoredSettings.canvas.height;
+                                        console.log(`🔧 ${characterId}Canvasサイズ復元: ${restoredSettings.canvas.width}x${restoredSettings.canvas.height}`);
+                                    }
+                                }
+                                
+                                console.log(`✅ ${characterId}設定復元完了`);
+                            } else {
+                                console.warn(`⚠️ ${characterId}: 設定復元失敗`);
+                            }
+                        } else {
+                            console.log(`📝 ${characterId}: 保存済み設定なし（初回起動）`);
+                        }
+                    }
+                    
+                    console.log('✅ SpineSettingsPersistence設定復元完了');
+                    window.spineSettingsRestorePending = false;
+                    
+                } catch (error) {
+                    console.error('❌ SpineSettingsPersistence設定復元エラー:', error);
+                    console.warn('⚠️ 設定復元をスキップして編集システムを継続します');
+                    window.spineSettingsRestorePending = false;
+                }
+            }
             
             // SkeletonBoundsとキャラクターを統合
             if (boundsInitialized) {
@@ -697,6 +797,122 @@
 
 
 
+
+        // 🎯 SpineSettingsPersistence 保存機能（編集モード統合用）
+        window.spineSettingsSaver = {
+            /**
+             * キャラクターの現在設定を保存
+             * @param {string} characterId キャラクターID
+             * @param {Object} additionalData 追加データ（オプション）
+             */
+            saveCharacterSettings: (characterId, additionalData = {}) => {
+                if (!window.spinePersistence || !window.editMode) {
+                    console.warn('⚠️ SpineSettingsPersistence利用不可または通常モード');
+                    return false;
+                }
+                
+                const character = spineCharacters[characterId];
+                if (!character) {
+                    console.warn(`⚠️ キャラクター '${characterId}' が見つかりません`);
+                    return false;
+                }
+                
+                try {
+                    // 現在の設定データを収集
+                    const settingsData = {
+                        timestamp: Date.now(),
+                        version: '1.0',
+                        spine: {
+                            x: character.skeleton ? character.skeleton.x : 0,
+                            y: character.skeleton ? character.skeleton.y : 0,
+                            scaleX: character.skeleton ? character.skeleton.scaleX : 1.0,
+                            scaleY: character.skeleton ? character.skeleton.scaleY : 1.0
+                        },
+                        canvas: {
+                            width: character.canvas ? character.canvas.width : 300,
+                            height: character.canvas ? character.canvas.height : 200
+                        },
+                        ...additionalData  // 追加データをマージ
+                    };
+                    
+                    // SpineSettingsPersistenceで保存
+                    const saved = window.spinePersistence.save(characterId, settingsData);
+                    
+                    if (saved) {
+                        console.log(`💾 ${characterId}設定保存完了:`, settingsData);
+                        return true;
+                    } else {
+                        console.warn(`⚠️ ${characterId}設定保存失敗`);
+                        return false;
+                    }
+                    
+                } catch (error) {
+                    console.error(`❌ ${characterId}設定保存エラー:`, error);
+                    return false;
+                }
+            },
+            
+            /**
+             * 全キャラクターの現在設定を一括保存
+             */
+            saveAllCharacterSettings: () => {
+                if (!window.spinePersistence || !window.editMode) {
+                    console.warn('⚠️ SpineSettingsPersistence利用不可または通常モード');
+                    return false;
+                }
+                
+                let successCount = 0;
+                const characterIds = Object.keys(spineCharacters);
+                
+                console.log('💾 全キャラクター設定一括保存開始...');
+                
+                for (const characterId of characterIds) {
+                    if (window.spineSettingsSaver.saveCharacterSettings(characterId)) {
+                        successCount++;
+                    }
+                }
+                
+                console.log(`💾 一括保存結果: ${successCount}/${characterIds.length}`);
+                return successCount === characterIds.length;
+            },
+            
+            /**
+             * 設定クリア
+             * @param {string} characterId キャラクターID（省略時は全キャラクター）
+             */
+            clearSettings: (characterId = null) => {
+                if (!window.spinePersistence) {
+                    console.warn('⚠️ SpineSettingsPersistence利用不可');
+                    return false;
+                }
+                
+                if (characterId) {
+                    // 特定キャラクターのみクリア
+                    const cleared = window.spinePersistence.clear(characterId);
+                    if (cleared) {
+                        console.log(`🗑️ ${characterId}設定クリア完了`);
+                    } else {
+                        console.warn(`⚠️ ${characterId}設定クリア失敗`);
+                    }
+                    return cleared;
+                } else {
+                    // 全キャラクタークリア
+                    let successCount = 0;
+                    const characterIds = Object.keys(spineCharacters);
+                    
+                    console.log('🗑️ 全キャラクター設定一括クリア開始...');
+                    
+                    for (const cId of characterIds) {
+                        if (window.spinePersistence.clear(cId)) {
+                            successCount++;
+                        }
+                    }
+                    
+                    console.log(`🗑️ 一括クリア結果: ${successCount}/${characterIds.length}`);
+                    return successCount === characterIds.length;
+                }
+            }
+        };
 
         // コンソール用デバッグ関数（シンプル版）
         window.spineDebug = {

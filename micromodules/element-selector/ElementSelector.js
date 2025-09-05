@@ -185,7 +185,7 @@ class ElementSelector {
             }
             
             .drag-handle {
-                position: absolute;
+                position: fixed;
                 width: 20px;
                 height: 20px;
                 background: #ff6b35;

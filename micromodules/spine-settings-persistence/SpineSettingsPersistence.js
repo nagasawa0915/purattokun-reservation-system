@@ -101,33 +101,62 @@ class SpineSettingsPersistence {
             return false;
         }
         
-        // 必須フィールドのチェック
-        const requiredFields = ['scaleX', 'scaleY'];
-        for (const field of requiredFields) {
-            if (!(field in settings)) {
-                this.log(`❌ 必須フィールドが不足: ${field}`, 'error');
-                return false;
-            }
-            
-            if (typeof settings[field] !== 'number') {
-                this.log(`❌ フィールド型が無効: ${field} (${typeof settings[field]})`, 'error');
-                return false;
-            }
-        }
-        
-        // 数値範囲の検証
+        // 存在するフィールドのみ検証（部分保存対応）
         const scaleRange = { min: 0.1, max: 5.0 };
-        if (settings.scaleX < scaleRange.min || settings.scaleX > scaleRange.max) {
-            this.log(`❌ scaleX範囲外: ${settings.scaleX} (${scaleRange.min}-${scaleRange.max})`, 'error');
-            return false;
+        
+        // scaleX検証（存在する場合のみ）
+        if ("scaleX" in settings) {
+            if (typeof settings.scaleX !== "number") {
+                this.log(`❌ scaleX型が無効: ${typeof settings.scaleX}`, "error");
+                return false;
+            }
+            if (settings.scaleX < scaleRange.min || settings.scaleX > scaleRange.max) {
+                this.log(`❌ scaleX範囲外: ${settings.scaleX} (${scaleRange.min}-${scaleRange.max})`, "error");
+                return false;
+            }
         }
         
-        if (settings.scaleY < scaleRange.min || settings.scaleY > scaleRange.max) {
-            this.log(`❌ scaleY範囲外: ${settings.scaleY} (${scaleRange.min}-${scaleRange.max})`, 'error');
-            return false;
+        // scaleY検証（存在する場合のみ）
+        if ("scaleY" in settings) {
+            if (typeof settings.scaleY !== "number") {
+                this.log(`❌ scaleY型が無効: ${typeof settings.scaleY}`, "error");
+                return false;
+            }
+            if (settings.scaleY < scaleRange.min || settings.scaleY > scaleRange.max) {
+                this.log(`❌ scaleY範囲外: ${settings.scaleY} (${scaleRange.min}-${scaleRange.max})`, "error");
+                return false;
+            }
         }
         
-        this.log('✅ 設定データ検証完了');
+        // canvasSize検証（存在する場合のみ）
+        if ("canvasSize" in settings && settings.canvasSize !== null && settings.canvasSize !== undefined) {
+            if (typeof settings.canvasSize !== "number") {
+                this.log(`❌ canvasSize型が無効: ${typeof settings.canvasSize}`, "error");
+                return false;
+            }
+            if (settings.canvasSize <= 0 || settings.canvasSize > 4096) {
+                this.log(`❌ canvasSize範囲外: ${settings.canvasSize} (1-4096)`, "error");
+                return false;
+            }
+        }
+        
+        // positionX検証（存在する場合のみ）
+        if ("positionX" in settings && settings.positionX !== null && settings.positionX !== undefined) {
+            if (typeof settings.positionX !== "number") {
+                this.log(`❌ positionX型が無効: ${typeof settings.positionX}`, "error");
+                return false;
+            }
+        }
+        
+        // positionY検証（存在する場合のみ）
+        if ("positionY" in settings && settings.positionY !== null && settings.positionY !== undefined) {
+            if (typeof settings.positionY !== "number") {
+                this.log(`❌ positionY型が無効: ${typeof settings.positionY}`, "error");
+                return false;
+            }
+        }
+        
+        this.log("✅ 設定データ検証完了（部分保存対応）");
         return true;
     }
     
@@ -183,18 +212,31 @@ class SpineSettingsPersistence {
         try {
             const key = this.generateKey(characterId);
             
-            // 保存データ構造
+            // 既存データを取得して統合保存（部分保存対応）
+            let existingData = null;
+            try {
+                const existingJson = localStorage.getItem(key);
+                if (existingJson) {
+                    existingData = JSON.parse(existingJson);
+                }
+            } catch (error) {
+                this.log(`⚠️ 既存データ取得エラー（新規作成）: ${error.message}`, "warn");
+            }
+            
+            // 統合保存データ構造
+            const mergedSettings = {
+                scaleX: settings.scaleX !== undefined ? settings.scaleX : (existingData?.settings?.scaleX || 1.0),
+                scaleY: settings.scaleY !== undefined ? settings.scaleY : (existingData?.settings?.scaleY || 1.0),
+                positionX: settings.positionX !== undefined ? settings.positionX : (existingData?.settings?.positionX || 0),
+                positionY: settings.positionY !== undefined ? settings.positionY : (existingData?.settings?.positionY || 0),
+                canvasSize: settings.canvasSize !== undefined ? settings.canvasSize : (existingData?.settings?.canvasSize || null)
+            };
+            
             const saveData = {
                 version: this.options.version,
                 timestamp: new Date().toISOString(),
                 characterId: characterId,
-                settings: {
-                    scaleX: settings.scaleX,
-                    scaleY: settings.scaleY,
-                    positionX: settings.positionX || 0,
-                    positionY: settings.positionY || 0,
-                    canvasSize: settings.canvasSize || null
-                }
+                settings: mergedSettings
             };
             
             const jsonData = JSON.stringify(saveData);

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpineSettingsPersistence修正テスト</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 SpineSettingsPersistence修正テスト</h1>
+        <p>CanvasResizeController設定保存問題の修正効果を確認します。</p>
+        
+        <div class="test-section">
+            <h2>📊 テスト結果</h2>
+            <div id="test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 テスト実行</h2>
+            <button onclick="testPartialSave()">部分保存テスト</button>
+            <button onclick="testCanvasSizeOnly()">canvasSize単独保存テスト</button>
+            <button onclick="testScaleOnly()">スケール単独保存テスト</button>
+            <button onclick="testMergedSave()">統合保存テスト</button>
+            <button onclick="clearTestData()">テストデータクリア</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>📋 ローカルストレージ状況</h2>
+            <button onclick="showLocalStorage()">ローカルストレージ表示</button>
+            <div id="localStorage-content"></div>
+        </div>
+    </div>
+
+    <!-- SpineSettingsPersistence読み込み -->
+    <script src="micromodules/spine-settings-persistence/SpineSettingsPersistence.js"></script>
+    
+    <script>
+        let testPersistence = null;
+        let testResults = [];
+
+        // 初期化
+        function init() {
+            try {
+                testPersistence = new SpineSettingsPersistence({ debug: true });
+                addResult('✅ SpineSettingsPersistence初期化成功', 'success');
+            } catch (error) {
+                addResult(`❌ 初期化失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 結果表示
+        function addResult(message, type = 'info') {
+            testResults.push({ message, type, timestamp: new Date().toLocaleTimeString() });
+            updateResultsDisplay();
+        }
+
+        function updateResultsDisplay() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = testResults.map(result => 
+                `<div class="${result.type}">[${result.timestamp}] ${result.message}</div>`
+            ).join('');
+        }
+
+        // 部分保存テスト
+        async function testPartialSave() {
+            addResult('🧪 部分保存テスト開始', 'info');
+            
+            const testId = 'partial-test-character';
+            
+            try {
+                // 1. 完全な初期データを保存
+                const fullData = { scaleX: 1.0, scaleY: 1.0, canvasSize: 400 };
+                const result1 = testPersistence.save(testId, fullData);
+                addResult(`1. 初期データ保存: ${result1 ? '成功' : '失敗'}`, result1 ? 'success' : 'error');
+
+                // 2. canvasSize のみ更新
+                const canvasOnlyData = { canvasSize: 512 };
+                const result2 = testPersistence.save(testId, canvasOnlyData);
+                addResult(`2. canvasSize更新: ${result2 ? '成功' : '失敗'}`, result2 ? 'success' : 'error');
+
+                // 3. データ復元して確認
+                const restored = testPersistence.restore(testId);
+                if (restored) {
+                    addResult(`3. 復元データ: scaleX=${restored.scaleX}, scaleY=${restored.scaleY}, canvasSize=${restored.canvasSize}`, 'info');
+                    
+                    // 期待値確認
+                    const expectations = [
+                        { key: 'scaleX', expected: 1.0, actual: restored.scaleX },
+                        { key: 'scaleY', expected: 1.0, actual: restored.scaleY },
+                        { key: 'canvasSize', expected: 512, actual: restored.canvasSize }
+                    ];
+                    
+                    let allMatch = true;
+                    expectations.forEach(({ key, expected, actual }) => {
+                        const match = Math.abs(actual - expected) < 0.001;
+                        addResult(`  ${key}: 期待値=${expected}, 実際値=${actual} ${match ? '✅' : '❌'}`, match ? 'success' : 'error');
+                        if (!match) allMatch = false;
+                    });
+                    
+                    addResult(`🎯 部分保存テスト結果: ${allMatch ? '成功' : '失敗'}`, allMatch ? 'success' : 'error');
+                } else {
+                    addResult('❌ データ復元失敗', 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ 部分保存テストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        // canvasSize単独保存テスト
+        async function testCanvasSizeOnly() {
+            addResult('🧪 canvasSize単独保存テスト開始', 'info');
+            
+            const testId = 'canvas-only-test';
+            
+            try {
+                // canvasSize のみを保存（scaleX, scaleYなし）
+                const result = testPersistence.save(testId, { canvasSize: 1024 });
+                addResult(`canvasSize単独保存: ${result ? '成功' : '失敗'}`, result ? 'success' : 'error');
+                
+                // 復元確認
+                const restored = testPersistence.restore(testId);
+                if (restored) {
+                    addResult(`復元: canvasSize=${restored.canvasSize}, scaleX=${restored.scaleX}, scaleY=${restored.scaleY}`, 'info');
+                    
+                    // 期待値: canvasSize=1024, scaleX/Y=デフォルト値(1.0)
+                    const canvasSizeMatch = restored.canvasSize === 1024;
+                    const scaleXMatch = restored.scaleX === 1.0;
+                    const scaleYMatch = restored.scaleY === 1.0;
+                    
+                    addResult(`検証: canvasSize=${canvasSizeMatch ? '✅' : '❌'}, scaleX=${scaleXMatch ? '✅' : '❌'}, scaleY=${scaleYMatch ? '✅' : '❌'}`, 
+                             (canvasSizeMatch && scaleXMatch && scaleYMatch) ? 'success' : 'error');
+                } else {
+                    addResult('❌ データ復元失敗', 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ canvasSize単独保存テストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        // スケール単独保存テスト
+        async function testScaleOnly() {
+            addResult('🧪 スケール単独保存テスト開始', 'info');
+            
+            const testId = 'scale-only-test';
+            
+            try {
+                // scaleX, scaleY のみを保存（canvasSizeなし）
+                const result = testPersistence.save(testId, { scaleX: 1.5, scaleY: 0.8 });
+                addResult(`スケール単独保存: ${result ? '成功' : '失敗'}`, result ? 'success' : 'error');
+                
+                // 復元確認
+                const restored = testPersistence.restore(testId);
+                if (restored) {
+                    addResult(`復元: scaleX=${restored.scaleX}, scaleY=${restored.scaleY}, canvasSize=${restored.canvasSize}`, 'info');
+                    
+                    // 期待値: scaleX=1.5, scaleY=0.8, canvasSize=null(デフォルト)
+                    const scaleXMatch = Math.abs(restored.scaleX - 1.5) < 0.001;
+                    const scaleYMatch = Math.abs(restored.scaleY - 0.8) < 0.001;
+                    const canvasSizeMatch = restored.canvasSize === null;
+                    
+                    addResult(`検証: scaleX=${scaleXMatch ? '✅' : '❌'}, scaleY=${scaleYMatch ? '✅' : '❌'}, canvasSize=${canvasSizeMatch ? '✅' : '❌'}`, 
+                             (scaleXMatch && scaleYMatch && canvasSizeMatch) ? 'success' : 'error');
+                } else {
+                    addResult('❌ データ復元失敗', 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ スケール単独保存テストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        // 統合保存テスト
+        async function testMergedSave() {
+            addResult('🧪 統合保存テスト開始', 'info');
+            
+            const testId = 'merged-test';
+            
+            try {
+                // 1. 初期データ保存
+                let result = testPersistence.save(testId, { scaleX: 2.0, canvasSize: 256 });
+                addResult(`1. 初期データ保存: ${result ? '成功' : '失敗'}`, result ? 'success' : 'error');
+
+                // 2. scaleYのみ追加
+                result = testPersistence.save(testId, { scaleY: 0.5 });
+                addResult(`2. scaleY追加: ${result ? '成功' : '失敗'}`, result ? 'success' : 'error');
+
+                // 3. canvasSizeのみ更新
+                result = testPersistence.save(testId, { canvasSize: 2048 });
+                addResult(`3. canvasSize更新: ${result ? '成功' : '失敗'}`, result ? 'success' : 'error');
+
+                // 4. 最終データ確認
+                const final = testPersistence.restore(testId);
+                if (final) {
+                    addResult(`最終データ: scaleX=${final.scaleX}, scaleY=${final.scaleY}, canvasSize=${final.canvasSize}`, 'info');
+                    
+                    // 期待値: scaleX=2.0(保持), scaleY=0.5(追加), canvasSize=2048(更新)
+                    const expectations = [
+                        { key: 'scaleX', expected: 2.0, actual: final.scaleX },
+                        { key: 'scaleY', expected: 0.5, actual: final.scaleY },
+                        { key: 'canvasSize', expected: 2048, actual: final.canvasSize }
+                    ];
+                    
+                    let allMatch = true;
+                    expectations.forEach(({ key, expected, actual }) => {
+                        const match = Math.abs(actual - expected) < 0.001;
+                        addResult(`  ${key}: 期待値=${expected}, 実際値=${actual} ${match ? '✅' : '❌'}`, match ? 'success' : 'error');
+                        if (!match) allMatch = false;
+                    });
+                    
+                    addResult(`🎯 統合保存テスト結果: ${allMatch ? '成功' : '失敗'}`, allMatch ? 'success' : 'error');
+                } else {
+                    addResult('❌ 最終データ復元失敗', 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ 統合保存テストエラー: ${error.message}`, 'error');
+            }
+        }
+
+        // テストデータクリア
+        function clearTestData() {
+            const testIds = ['partial-test-character', 'canvas-only-test', 'scale-only-test', 'merged-test'];
+            let cleared = 0;
+            
+            testIds.forEach(id => {
+                if (testPersistence.clear(id)) {
+                    cleared++;
+                }
+            });
+            
+            addResult(`🗑️ テストデータクリア: ${cleared}個削除`, 'info');
+        }
+
+        // ローカルストレージ表示
+        function showLocalStorage() {
+            const container = document.getElementById('localStorage-content');
+            const spineKeys = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('spineSettings-')) {
+                    spineKeys.push(key);
+                }
+            }
+            
+            if (spineKeys.length === 0) {
+                container.innerHTML = '<div class="info">SpineSettings関連のデータはありません</div>';
+                return;
+            }
+            
+            let content = `<div class="info">SpineSettings関連データ (${spineKeys.length}個):</div><pre>`;
+            
+            spineKeys.forEach(key => {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    content += `\n🔑 ${key}:\n`;
+                    content += `  - canvasSize: ${data.settings?.canvasSize}\n`;
+                    content += `  - scaleX: ${data.settings?.scaleX}\n`;
+                    content += `  - scaleY: ${data.settings?.scaleY}\n`;
+                    content += `  - timestamp: ${data.timestamp}\n`;
+                } catch (error) {
+                    content += `\n❌ ${key}: 解析エラー - ${error.message}\n`;
+                }
+            });
+            
+            content += '</pre>';
+            container.innerHTML = content;
+        }
+
+        // 初期化実行
+        init();
+    </script>
+</body>
+</html>
