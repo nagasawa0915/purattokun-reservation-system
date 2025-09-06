@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Editor WebApp - 司令塔統制版</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="../micromodules/ui-timeline/timeline-styles.css">
+    <link rel="stylesheet" href="../micromodules/ui-layout-manager/layout-manager-styles.css">
+    <style>
+        /* 司令塔版専用スタイル */
+        .coordinator-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10000;
+            opacity: 0.7;
+        }
+        
+        .coordinator-status.ready {
+            border-left: 4px solid #00ff88;
+        }
+        
+        .coordinator-status.initializing {
+            border-left: 4px solid #ffdd00;
+        }
+        
+        .coordinator-status.error {
+            border-left: 4px solid #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <!-- 司令塔ステータス表示 -->
+    <div id="coordinator-status" class="coordinator-status initializing">
+        🎯 司令塔システム初期化中...
+    </div>
+
+    <!-- トップバー -->
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <button class="btn btn-folder">ホームページフォルダ選択</button>
+            <button class="btn btn-folder">Spineフォルダ選択</button>
+            <button class="btn btn-save">
+                <span class="icon">💾</span>
+                Save
+            </button>
+            <button class="btn btn-undo">
+                <span class="icon">↶</span>
+            </button>
+            <button class="btn btn-redo">
+                <span class="icon">↷</span>
+            </button>
+        </div>
+        <div class="top-bar-right">
+            <button class="btn btn-package">パッケージ出力</button>
+            <button class="btn btn-debug" onclick="debugCoordinator()">
+                <span class="icon">🔍</span>
+                診断
+            </button>
+            <button class="btn btn-repair" onclick="repairSystem()">
+                <span class="icon">🔧</span>
+                修復
+            </button>
+        </div>
+    </header>
+
+    <!-- メインコンテナ -->
+    <div class="main-container">
+        <!-- 左パネル: アウトライナー -->
+        <div class="panel panel-outliner" data-panel-type="outliner">
+            <div class="panel-header">
+                <span class="panel-title">アウトライナー</span>
+                <div class="panel-controls">
+                    <button class="panel-btn" title="最小化">−</button>
+                    <button class="panel-btn" title="閉じる">×</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <!-- ファイル階層 -->
+                <div class="file-tree">
+                    <div class="tree-item tree-folder expanded">
+                        <span class="tree-icon">📁</span>
+                        <span class="tree-label">HP</span>
+                        <div class="tree-children">
+                            <div class="tree-item tree-file">
+                                <span class="tree-icon">📄</span>
+                                <span class="tree-label">index.html</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tree-item tree-folder expanded">
+                        <span class="tree-icon">📁</span>
+                        <span class="tree-label">characters</span>
+                        <div class="tree-children">
+                            <div class="tree-item tree-character expanded">
+                                <span class="tree-icon">🐭</span>
+                                <span class="tree-label">nezumi</span>
+                                <div class="tree-children">
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">kettei</span>
+                                    </div>
+                                    <div class="tree-item tree-animation">
+                                        <span class="icon">🎭</span>
+                                        <span class="tree-label">search</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tree-item tree-character expanded">
+                                <span class="tree-icon">🐱</span>
+                                <span class="tree-label">purattokun</span>
+                                <div class="tree-children">
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">syutugen</span>
+                                    </div>
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">taiki</span>
+                                    </div>
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">yarare</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中央パネル: プレビュー -->
+        <div class="panel panel-preview" data-panel-type="preview">
+            <div class="panel-header">
+                <span class="panel-title">プレビュー</span>
+                <div class="panel-controls">
+                    <button class="panel-btn" title="最小化">−</button>
+                    <button class="panel-btn" title="閉じる">×</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="preview-area">
+                    <div class="preview-canvas">
+                        <!-- ここにSpineキャラクターが表示される -->
+                        <div class="preview-placeholder">
+                            <div class="placeholder-content">
+                                <h3>🎬 Preview Area</h3>
+                                <p>Spineキャラクターがここに表示されます</p>
+                                <p><small>司令塔統制版</small></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右パネル: プロパティ -->
+        <div class="panel panel-properties" data-panel-type="properties">
+            <div class="panel-header">
+                <span class="panel-title">nezumi</span>
+                <div class="panel-controls">
+                    <button class="panel-btn" title="最小化">−</button>
+                    <button class="panel-btn" title="閉じる">×</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <!-- 位置セクション -->
+                <div class="property-section">
+                    <h4 class="section-title">位置</h4>
+                    <div class="property-row">
+                        <label>X</label>
+                        <input type="number" class="property-input" value="0">
+                        <label>Y</label>
+                        <input type="number" class="property-input" value="0">
+                    </div>
+                </div>
+
+                <!-- 回転セクション -->
+                <div class="property-section">
+                    <h4 class="section-title">回転</h4>
+                    <div class="property-row">
+                        <input type="number" class="property-input wide" value="0">
+                        <span class="unit">°</span>
+                    </div>
+                </div>
+
+                <!-- スケールセクション -->
+                <div class="property-section">
+                    <h4 class="section-title">スケール</h4>
+                    <div class="property-row">
+                        <label>X</label>
+                        <input type="number" class="property-input" value="1" step="0.1">
+                        <label>Y</label>
+                        <input type="number" class="property-input" value="1" step="0.1">
+                    </div>
+                </div>
+
+                <!-- 不透明度セクション -->
+                <div class="property-section">
+                    <h4 class="section-title">不透明度</h4>
+                    <div class="property-row">
+                        <input type="range" class="property-slider" min="0" max="1" step="0.1" value="1">
+                        <input type="number" class="property-input" value="1" step="0.1" min="0" max="1">
+                    </div>
+                </div>
+
+                <!-- レイヤーセクション -->
+                <div class="property-section">
+                    <h4 class="section-title">レイヤー</h4>
+                    <div class="layer-list">
+                        <div class="layer-item">purattokun 1</div>
+                        <div class="layer-item">purattokun 2</div>
+                        <div class="layer-item">purattokun 3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- タイムラインパネル -->
+    <div class="panel panel-timeline" data-panel-type="timeline">
+        <div class="panel-header">
+            <span class="panel-title">タイムライン</span>
+            <div class="panel-controls">
+                <button class="panel-btn" title="最小化">−</button>
+                <button class="panel-btn" title="閉じる">×</button>
+            </div>
+        </div>
+        <div class="panel-content timeline-panel">
+            <!-- タイムラインコンテンツはJavaScriptで生成 -->
+        </div>
+    </div>
+
+    <!-- リサイズハンドル -->
+    <div class="resize-handle resize-handle-left" data-direction="left"></div>
+    <div class="resize-handle resize-handle-right" data-direction="right"></div>
+    <div class="resize-handle resize-handle-timeline" data-direction="timeline"></div>
+    
+
+    <script type="module" src="script-coordinated.js"></script>
+    
+    <script>
+        // 司令塔ステータス表示の更新
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('coordinator-status');
+            
+            // EventBusでステータス監視
+            if (window.globalEventBus) {
+                window.globalEventBus.on('coordinator:ready', () => {
+                    statusDiv.textContent = '🎯 司令塔システム準備完了';
+                    statusDiv.className = 'coordinator-status ready';
+                    
+                    // 3秒後に非表示
+                    setTimeout(() => {
+                        statusDiv.style.opacity = '0.3';
+                    }, 3000);
+                });
+                
+                window.globalEventBus.on('coordinator:error', (data) => {
+                    statusDiv.textContent = '🎯 司令塔システムエラー';
+                    statusDiv.className = 'coordinator-status error';
+                });
+                
+                window.globalEventBus.on('coordinator:phase-completed', (data) => {
+                    statusDiv.textContent = `🎯 Phase ${data.phase} 完了`;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

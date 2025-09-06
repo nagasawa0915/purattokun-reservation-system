@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Editor WebApp</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="../micromodules/ui-timeline/timeline-styles.css">
+    <link rel="stylesheet" href="../micromodules/ui-layout-manager/layout-manager-styles.css">
+</head>
+<body>
+    <!-- トップバー -->
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <button class="btn btn-folder">ホームページフォルダ選択</button>
+            <button class="btn btn-folder">Spineフォルダ選択</button>
+            <button class="btn btn-save">
+                <span class="icon">💾</span>
+                Save
+            </button>
+            <button class="btn btn-undo">
+                <span class="icon">↶</span>
+            </button>
+            <button class="btn btn-redo">
+                <span class="icon">↷</span>
+            </button>
+        </div>
+        <div class="top-bar-right">
+            <button class="btn btn-package">パッケージ出力</button>
+        </div>
+    </header>
+
+    <!-- メインコンテナ -->
+    <div class="main-container">
+        <!-- 左パネル: アウトライナー -->
+        <div class="panel panel-outliner" data-panel-type="outliner">
+            <div class="panel-header">
+                <span class="panel-title">アウトライナー</span>
+                <div class="panel-controls">
+                    <button class="panel-btn" title="最小化">−</button>
+                    <button class="panel-btn" title="閉じる">×</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <!-- ファイル階層 -->
+                <div class="file-tree">
+                    <div class="tree-item tree-folder expanded">
+                        <span class="tree-icon">📁</span>
+                        <span class="tree-label">HP</span>
+                        <div class="tree-children">
+                            <div class="tree-item tree-file">
+                                <span class="tree-icon">📄</span>
+                                <span class="tree-label">index.html</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tree-item tree-folder expanded">
+                        <span class="tree-icon">📁</span>
+                        <span class="tree-label">characters</span>
+                        <div class="tree-children">
+                            <div class="tree-item tree-character expanded">
+                                <span class="tree-icon">🐭</span>
+                                <span class="tree-label">nezumi</span>
+                                <div class="tree-children">
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">kettei</span>
+                                    </div>
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">search</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tree-item tree-character expanded">
+                                <span class="tree-icon">🐱</span>
+                                <span class="tree-label">purattokun</span>
+                                <div class="tree-children">
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">syutugen</span>
+                                    </div>
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">taiki</span>
+                                    </div>
+                                    <div class="tree-item tree-animation">
+                                        <span class="tree-icon">🎭</span>
+                                        <span class="tree-label">yarare</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中央パネル: プレビュー -->
+        <div class="panel panel-preview" data-panel-type="preview">
+            <div class="panel-header">
+                <span class="panel-title">プレビュー</span>
+                <div class="panel-controls">
+                    <button class="panel-btn" title="最小化">−</button>
+                    <button class="panel-btn" title="閉じる">×</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="preview-area">
+                    <div class="preview-canvas">
+                        <!-- ここにSpineキャラクターが表示される -->
+                        <div class="preview-placeholder">
+                            <div class="placeholder-content">
+                                <h3>🎬 Preview Area</h3>
+                                <p>Spineキャラクターがここに表示されます</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右パネル: プロパティ -->
+        <div class="panel panel-properties" data-panel-type="properties">
+            <div class="panel-header">
+                <span class="panel-title">nezumi</span>
+                <div class="panel-controls">
+                    <button class="panel-btn" title="最小化">−</button>
+                    <button class="panel-btn" title="閉じる">×</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <!-- 位置セクション -->
+                <div class="property-section">
+                    <h4 class="section-title">位置</h4>
+                    <div class="property-row">
+                        <label>X</label>
+                        <input type="number" class="property-input" value="0">
+                        <label>Y</label>
+                        <input type="number" class="property-input" value="0">
+                    </div>
+                </div>
+
+                <!-- 回転セクション -->
+                <div class="property-section">
+                    <h4 class="section-title">回転</h4>
+                    <div class="property-row">
+                        <input type="number" class="property-input wide" value="0">
+                        <span class="unit">°</span>
+                    </div>
+                </div>
+
+                <!-- スケールセクション -->
+                <div class="property-section">
+                    <h4 class="section-title">スケール</h4>
+                    <div class="property-row">
+                        <label>X</label>
+                        <input type="number" class="property-input" value="0.75" step="0.01">
+                        <label>Y</label>
+                        <input type="number" class="property-input" value="0.75" step="0.01">
+                    </div>
+                </div>
+
+                <!-- Canvasセクション -->
+                <div class="property-section">
+                    <h4 class="section-title">Canvas 🔒</h4>
+                    <div class="property-subsection">
+                        <h5 class="subsection-title">位置</h5>
+                        <div class="property-row">
+                            <label>X</label>
+                            <input type="number" class="property-input" value="">
+                            <label>Y</label>
+                            <input type="number" class="property-input" value="">
+                        </div>
+                    </div>
+                    <div class="property-subsection">
+                        <h5 class="subsection-title">サイズ</h5>
+                        <div class="property-row">
+                            <label>W</label>
+                            <input type="number" class="property-input" value="">
+                            <label>H</label>
+                            <input type="number" class="property-input" value="">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- アニメーションセクション -->
+                <div class="property-section">
+                    <h4 class="section-title">Animation</h4>
+                    <div class="property-row">
+                        <select class="property-select">
+                            <option>search</option>
+                            <option>kettei</option>
+                            <option>taiki</option>
+                        </select>
+                    </div>
+                    <div class="property-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="property-checkbox" checked>
+                            <span class="checkmark">✓</span>
+                            Loop
+                        </label>
+                    </div>
+                    <div class="property-row">
+                        <label>click event</label>
+                        <select class="property-select">
+                            <option>kettei</option>
+                            <option>search</option>
+                            <option>taiki</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- レイヤーセクション -->
+                <div class="property-section">
+                    <h4 class="section-title">Layers</h4>
+                    <div class="layers-list">
+                        <div class="layer-item selected">nezumi</div>
+                        <div class="layer-item">purattokun 1</div>
+                        <div class="layer-item">purattokun 2</div>
+                        <div class="layer-item">purattokun 3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- タイムラインパネル -->
+    <div class="panel panel-timeline" data-panel-type="timeline">
+        <div class="panel-header">
+            <span class="panel-title">タイムライン</span>
+            <div class="panel-controls">
+                <button class="panel-btn" title="最小化">−</button>
+                <button class="panel-btn" title="閉じる">×</button>
+            </div>
+        </div>
+        <div class="panel-content timeline-panel">
+            <!-- タイムラインコンテンツはJavaScriptで生成 -->
+        </div>
+    </div>
+
+    <!-- リサイズハンドル -->
+    <div class="resize-handle resize-handle-left" data-direction="left"></div>
+    <div class="resize-handle resize-handle-right" data-direction="right"></div>
+    <div class="resize-handle resize-handle-timeline" data-direction="timeline"></div>
+    
+
+    <script type="module" src="script-micromodules.js"></script>
+</body>
+</html>

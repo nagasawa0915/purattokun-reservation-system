@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Editor WebApp - SystemCoordinator統合版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1e1e1e;
+            color: white;
+            height: 100vh;
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "outliner preview properties"
+                "timeline timeline timeline";
+            grid-template-columns: var(--outliner-width, 300px) 1fr var(--properties-width, 300px);
+            grid-template-rows: 60px 1fr var(--timeline-height, 200px);
+            gap: 1px;
+        }
+        
+        /* ヘッダー */
+        .top-bar {
+            grid-area: header;
+            background: #2d2d2d;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        
+        .coordinator-status {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .coordinator-status.ready { 
+            background: #00ff88; 
+            color: black; 
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+        .coordinator-status.initializing { 
+            background: #ffdd00; 
+            color: black; 
+            animation: pulse 2s infinite;
+        }
+        .coordinator-status.error { 
+            background: #ff6b6b; 
+            color: white; 
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+        
+        .system-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        /* パネル共通 */
+        .panel {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .panel:hover {
+            border-color: #555555;
+        }
+        
+        .panel-header {
+            height: 32px;
+            background: #3a3a3a;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            cursor: move;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        
+        .panel-header:hover {
+            background: #4a4a4a;
+        }
+        
+        .panel-header.dragging {
+            background: #007acc;
+            transform: scale(1.05);
+            z-index: 1000;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 122, 204, 0.4);
+        }
+        
+        /* ドロップゾーン表示 */
+        .drop-zone {
+            position: absolute;
+            background: rgba(0, 122, 204, 0.3);
+            border: 2px dashed #007acc;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 500;
+        }
+        
+        .drop-zone.active {
+            opacity: 1;
+            animation: dropZonePulse 1s infinite;
+        }
+        
+        @keyframes dropZonePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .panel-title {
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .panel-content {
+            flex: 1;
+            padding: 15px;
+            overflow: auto;
+        }
+        
+        /* 各パネル配置 */
+        .panel-outliner { grid-area: outliner; }
+        .panel-preview { grid-area: preview; }
+        .panel-properties { grid-area: properties; }
+        .panel-timeline { grid-area: timeline; }
+        
+        /* リサイズハンドル */
+        .resize-handle {
+            position: absolute;
+            z-index: 1000;
+            background: transparent;
+            transition: background-color 0.2s ease;
+        }
+        
+        .resize-handle:hover {
+            background: #007acc;
+        }
+        
+        .resize-handle:active {
+            background: #005a9e;
+        }
+        
+        .resize-handle-left {
+            left: var(--outliner-width, 300px);
+            top: 60px;
+            bottom: var(--timeline-height, 200px);
+            width: 4px;
+            cursor: ew-resize;
+            margin-left: -2px;
+        }
+        
+        .resize-handle-right {
+            right: var(--properties-width, 300px);
+            top: 60px;
+            bottom: var(--timeline-height, 200px);
+            width: 4px;
+            cursor: ew-resize;
+            margin-right: -2px;
+        }
+        
+        .resize-handle-timeline {
+            left: 0;
+            right: 0;
+            bottom: var(--timeline-height, 200px);
+            height: 4px;
+            cursor: ns-resize;
+            margin-bottom: -2px;
+        }
+        
+        /* プレビューエリア強化 */
+        .preview-area {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .preview-content {
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .preview-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(0, 122, 204, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(0, 255, 136, 0.1) 0%, transparent 50%);
+            z-index: 1;
+        }
+        
+        /* デバッグパネル強化 */
+        .debug-panel {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            max-width: 320px;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            border: 1px solid #333;
+        }
+        
+        .debug-panel:hover {
+            opacity: 1;
+            transform: scale(1.02);
+        }
+        
+        .debug-panel h4 {
+            color: #00ff88;
+            margin-bottom: 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .debug-info {
+            margin: 3px 0;
+            color: #cccccc;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .debug-info .label {
+            color: #999;
+        }
+        
+        .debug-info .value {
+            color: #00ff88;
+            font-weight: 500;
+        }
+        
+        /* プロパティパネル改良 */
+        .property-group {
+            margin-bottom: 20px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+        
+        .property-group h4 {
+            color: #00ff88;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .property-input {
+            width: 100%;
+            background: #3a3a3a;
+            border: 1px solid #555;
+            color: white;
+            padding: 6px;
+            border-radius: 3px;
+            margin-top: 4px;
+            transition: border-color 0.2s ease;
+        }
+        
+        .property-input:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+        
+        /* タイムラインエリア改良 */
+        .timeline-area {
+            background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 100%);
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        
+        /* キーボードショートカットヘルプ */
+        .shortcut-help {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #ccc;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .shortcut-help.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <div class="top-bar">
+        <div class="system-info">
+            <h1 style="font-size: 16px;">🎯 Spine Editor - SystemCoordinator統合版</h1>
+            <div style="font-size: 11px; color: #999;">
+                ES6 Modules | Microservices Architecture
+            </div>
+        </div>
+        <div class="coordinator-status initializing" id="coordinator-status">
+            初期化中...
+        </div>
+    </div>
+
+    <!-- アウトライナーパネル -->
+    <div class="panel panel-outliner" data-panel="outliner">
+        <div class="panel-header">
+            <span class="panel-title">📁 アウトライナー</span>
+            <div style="font-size: 10px; color: #666;">Ctrl+1</div>
+        </div>
+        <div class="panel-content">
+            <div style="color: #999; font-size: 13px;">
+                <p style="margin-bottom: 15px;">📂 プロジェクト階層</p>
+                <ul style="list-style: none; padding-left: 10px;">
+                    <li style="margin: 8px 0;">
+                        <span style="color: #00ff88;">📁</span> spine-editor-webapp
+                        <ul style="margin-left: 20px; margin-top: 8px;">
+                            <li style="margin: 5px 0;">
+                                <span style="color: #007acc;">📁</span> micromodules
+                                <ul style="margin-left: 20px; margin-top: 5px;">
+                                    <li style="color: #ffdd00;">🟡 core/SystemCoordinator.js</li>
+                                    <li style="color: #ffdd00;">🟡 core/PanelManager.js</li>
+                                    <li style="color: #ffdd00;">🟡 ui/ResizeController.js</li>
+                                    <li style="color: #ffdd00;">🟡 ui/DragDropController.js</li>
+                                    <li style="color: #ffdd00;">🟡 debug/DebugManager.js</li>
+                                </ul>
+                            </li>
+                            <li style="margin: 5px 0;">
+                                <span style="color: #ff6b6b;">🐭</span> nezumi.spine
+                            </li>
+                            <li style="margin: 5px 0;">
+                                <span style="color: #ff6b6b;">🐱</span> purattokun.spine
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- プレビューパネル -->
+    <div class="panel panel-preview" data-panel="preview">
+        <div class="panel-header">
+            <span class="panel-title">🎬 プレビュー</span>
+            <div style="font-size: 10px; color: #666;">Ctrl+2</div>
+        </div>
+        <div class="panel-content">
+            <div class="preview-area">
+                <div class="preview-content">
+                    <div style="font-size: 48px; margin-bottom: 15px;">🎭</div>
+                    <p style="margin-bottom: 8px;">Spineキャラクター表示エリア</p>
+                    <p style="font-size: 10px; color: #555;">SystemCoordinator統合版</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- プロパティパネル -->
+    <div class="panel panel-properties" data-panel="properties">
+        <div class="panel-header">
+            <span class="panel-title">⚙️ プロパティ</span>
+            <div style="font-size: 10px; color: #666;">Ctrl+3</div>
+        </div>
+        <div class="panel-content">
+            <div class="property-group">
+                <h4>📍 位置</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <label style="font-size: 11px; color: #ccc;">X:</label>
+                        <input type="number" value="0" class="property-input">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #ccc;">Y:</label>
+                        <input type="number" value="0" class="property-input">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="property-group">
+                <h4>🔍 スケール</h4>
+                <input type="range" min="0.1" max="2" step="0.1" value="1" 
+                       style="width: 100%; margin: 5px 0;">
+                <div style="font-size: 11px; color: #999; text-align: center;">1.0x</div>
+            </div>
+            
+            <div class="property-group">
+                <h4>🎨 表示</h4>
+                <label style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
+                    <input type="checkbox" checked>
+                    <span style="font-size: 12px;">表示</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" min="0" max="100" value="100" style="flex: 1;">
+                    <span style="font-size: 11px; width: 35px;">100%</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- タイムラインパネル -->
+    <div class="panel panel-timeline" data-panel="timeline">
+        <div class="panel-header">
+            <span class="panel-title">⏰ タイムライン</span>
+            <div style="font-size: 10px; color: #666;">Ctrl+4</div>
+        </div>
+        <div class="panel-content">
+            <div class="timeline-area">
+                <div style="text-align: center;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">⏯️</div>
+                    <p style="margin-bottom: 5px;">アニメーション制御</p>
+                    <p style="font-size: 10px; color: #555;">SystemCoordinator統合版</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- リサイズハンドル -->
+    <div class="resize-handle resize-handle-left" data-direction="left" title="アウトライナー幅調整"></div>
+    <div class="resize-handle resize-handle-right" data-direction="right" title="プロパティ幅調整"></div>
+    <div class="resize-handle resize-handle-timeline" data-direction="timeline" title="タイムライン高さ調整"></div>
+    
+    <!-- ドロップゾーン（D&D用） -->
+    <div class="drop-zone" id="drop-zone"></div>
+
+    <!-- デバッグパネル -->
+    <div class="debug-panel" id="debug-panel">
+        <h4>🔍 システム状態監視</h4>
+        <div class="debug-info">
+            <span class="label">SystemCoordinator:</span>
+            <span class="value" id="coordinator-state">初期化中</span>
+        </div>
+        <div class="debug-info">
+            <span class="label">パネル数:</span>
+            <span class="value" id="panel-count">4</span>
+        </div>
+        <div class="debug-info">
+            <span class="label">状態:</span>
+            <span class="value" id="drag-state">待機中</span>
+        </div>
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #333; font-size: 10px; color: #777;">
+            <div>💡 Ctrl+D: デバッグパネル切替</div>
+            <div>💡 Ctrl+R: レイアウトリセット</div>
+            <div>💡 Ctrl+Shift+D: システム状態出力</div>
+        </div>
+    </div>
+
+    <!-- キーボードショートカットヘルプ -->
+    <div class="shortcut-help" id="shortcut-help">
+        <div>⌨️ キーボードショートカット</div>
+        <div>Ctrl+D: デバッグパネル切替</div>
+        <div>Ctrl+R: レイアウトリセット</div>
+        <div>Ctrl+Shift+D: システム状態確認</div>
+        <div>Ctrl+1-4: パネルフォーカス</div>
+    </div>
+
+    <!-- SystemCoordinator統合モジュール読み込み -->
+    <script type="module">
+        import { SystemCoordinator } from './micromodules/core/SystemCoordinator.js';
+        
+        // SystemCoordinator統合版初期化
+        console.log('🚀 SystemCoordinator統合版開始');
+        
+        // ショートカットヘルプ表示制御
+        let helpTimeout;
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey) {
+                document.getElementById('shortcut-help').classList.add('show');
+                clearTimeout(helpTimeout);
+                helpTimeout = setTimeout(() => {
+                    document.getElementById('shortcut-help').classList.remove('show');
+                }, 3000);
+            }
+        });
+        
+        // 統合システム開始ログ
+        console.log('✅ SystemCoordinator統合版読み込み完了');
+    </script>
+</body>
+</html>
