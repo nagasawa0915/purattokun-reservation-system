@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observer Phase 0 - Unit Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #007acc;
+        }
+        
+        .test-result {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .test-result.pass {
+            border-left: 4px solid #28a745;
+        }
+        
+        .test-result.fail {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+        
+        .test-container {
+            position: relative;
+            width: 400px;
+            height: 300px;
+            background: #e9ecef;
+            border: 2px solid #6c757d;
+            margin: 10px 0;
+        }
+        
+        .test-element {
+            width: 200px;
+            height: 150px;
+            background: #007acc;
+            opacity: 0.7;
+        }
+        
+        .nested-positioned {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            background: #17a2b8;
+            margin: 20px;
+            padding: 15px;
+        }
+        
+        .deeply-nested {
+            position: absolute;
+            top: 50px;
+            left: 30px;
+            width: 100px;
+            height: 80px;
+            background: #ffc107;
+        }
+        
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Observer Phase 0 - Unit Tests</h1>
+    <p>基盤スパイク: resolveFittedContent / findContainer の単体テスト</p>
+    
+    <div class="controls">
+        <button onclick="runAllTests()">🚀 全テスト実行</button>
+        <button onclick="clearResults()">🗑️ 結果クリア</button>
+        <button onclick="testResolveFittedContent()">📦 resolveFittedContent テスト</button>
+        <button onclick="testFindContainer()">🎯 findContainer テスト</button>
+    </div>
+    
+    <div id="test-results"></div>
+    
+    <!-- テスト用DOM構造 -->
+    <div class="test-section">
+        <h3>📦 resolveFittedContent テスト用要素</h3>
+        <div class="test-container" id="test-container-1">
+            <div class="test-element" id="test-element-1">contain テスト</div>
+        </div>
+        
+        <div class="test-container" id="test-container-2" style="width: 300px; height: 600px;">
+            <div class="test-element" id="test-element-2" style="width: 150px; height: 200px;">cover テスト</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🎯 findContainer テスト用要素</h3>
+        <div class="nested-positioned" id="positioned-parent">
+            <div style="margin: 10px;">
+                <div class="deeply-nested" id="nested-target">nested テスト</div>
+            </div>
+        </div>
+        
+        <div style="margin: 20px;">
+            <div style="padding: 10px;">
+                <div id="no-positioned-target" style="background: #fd7e14; padding: 10px;">
+                    positioned親なし テスト
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { resolveFittedContent, debugFittedContent, parseObjectPosition } from './micromodules/observer/utils/resolveFittedContent.js';
+        import { findContainer, debugCoordinateSystem, testNestedContainerSearch, diagnoseCoordinateSystem } from './micromodules/observer/utils/findContainer.js';
+        
+        // グローバルに公開（デバッグ用）
+        window.resolveFittedContent = resolveFittedContent;
+        window.findContainer = findContainer;
+        window.debugFittedContent = debugFittedContent;
+        window.debugCoordinateSystem = debugCoordinateSystem;
+        
+        let testResults = [];
+        
+        function addTestResult(name, passed, details) {
+            const result = { name, passed, details, timestamp: new Date() };
+            testResults.push(result);
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✅' : '❌'} ${name}</strong><br>
+                ${details}
+            `;
+            
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+        
+        function clearResults() {
+            testResults = [];
+            document.getElementById('test-results').innerHTML = '';
+        }
+        
+        // resolveFittedContent テスト群
+        function testResolveFittedContent() {
+            console.group('🧪 resolveFittedContent Tests');
+            
+            // テスト 1: contain モード
+            testContainMode();
+            
+            // テスト 2: cover モード  
+            testCoverMode();
+            
+            // テスト 3: fill モード
+            testFillMode();
+            
+            // テスト 4: none モード
+            testNoneMode();
+            
+            // テスト 5: object-position テスト
+            testObjectPositions();
+            
+            console.groupEnd();
+        }
+        
+        function testContainMode() {
+            const rect = { width: 400, height: 300 };
+            const logical = { w: 600, h: 400 };
+            const result = resolveFittedContent(rect, logical, 'contain', '50% 50%');
+            
+            // contain: min(400/600, 300/400) = min(0.667, 0.75) = 0.667
+            // contentW = 600 * 0.667 = 400, contentH = 400 * 0.667 = 266.67
+            // padX = (400 - 400) / 2 = 0, padY = (300 - 266.67) / 2 = 16.67
+            
+            const expectedScale = Math.min(400/600, 300/400);
+            const expectedW = 600 * expectedScale;
+            const expectedH = 400 * expectedScale;
+            const expectedPadY = (300 - expectedH) / 2;
+            
+            const tolerance = 0.1;
+            const passed = 
+                Math.abs(result.contentW - expectedW) < tolerance &&
+                Math.abs(result.contentH - expectedH) < tolerance &&
+                Math.abs(result.padX - 0) < tolerance &&
+                Math.abs(result.padY - expectedPadY) < tolerance;
+            
+            addTestResult(
+                'contain モード計算',
+                passed,
+                `期待値: ${expectedW.toFixed(2)}×${expectedH.toFixed(2)}, pad(0, ${expectedPadY.toFixed(2)})<br>` +
+                `実際値: ${result.contentW.toFixed(2)}×${result.contentH.toFixed(2)}, pad(${result.padX.toFixed(2)}, ${result.padY.toFixed(2)})`
+            );
+        }
+        
+        function testCoverMode() {
+            const rect = { width: 400, height: 300 };
+            const logical = { w: 600, h: 400 };
+            const result = resolveFittedContent(rect, logical, 'cover', '50% 50%');
+            
+            // cover: max(400/600, 300/400) = max(0.667, 0.75) = 0.75
+            const expectedScale = Math.max(400/600, 300/400);
+            const expectedW = 600 * expectedScale;
+            const expectedH = 400 * expectedScale;
+            const expectedPadX = (400 - expectedW) / 2;
+            
+            const tolerance = 0.1;
+            const passed = 
+                Math.abs(result.contentW - expectedW) < tolerance &&
+                Math.abs(result.contentH - expectedH) < tolerance &&
+                Math.abs(result.padX - expectedPadX) < tolerance &&
+                Math.abs(result.padY - 0) < tolerance;
+            
+            addTestResult(
+                'cover モード計算',
+                passed,
+                `期待値: ${expectedW.toFixed(2)}×${expectedH.toFixed(2)}, pad(${expectedPadX.toFixed(2)}, 0)<br>` +
+                `実際値: ${result.contentW.toFixed(2)}×${result.contentH.toFixed(2)}, pad(${result.padX.toFixed(2)}, ${result.padY.toFixed(2)})`
+            );
+        }
+        
+        function testFillMode() {
+            const rect = { width: 400, height: 300 };
+            const logical = { w: 600, h: 400 };
+            const result = resolveFittedContent(rect, logical, 'fill', '50% 50%');
+            
+            // fill: 要素サイズそのまま、パディングなし
+            const passed = 
+                result.contentW === 400 &&
+                result.contentH === 300 &&
+                result.padX === 0 &&
+                result.padY === 0;
+            
+            addTestResult(
+                'fill モード計算',
+                passed,
+                `期待値: 400×300, pad(0, 0)<br>` +
+                `実際値: ${result.contentW}×${result.contentH}, pad(${result.padX}, ${result.padY})`
+            );
+        }
+        
+        function testNoneMode() {
+            const rect = { width: 400, height: 300 };
+            const logical = { w: 600, h: 400 };
+            const result = resolveFittedContent(rect, logical, 'none', '50% 50%');
+            
+            // none: 論理サイズそのまま、中央配置
+            const expectedPadX = (400 - 600) / 2; // -100
+            const expectedPadY = (300 - 400) / 2; // -50
+            
+            const passed = 
+                result.contentW === 600 &&
+                result.contentH === 400 &&
+                result.padX === expectedPadX &&
+                result.padY === expectedPadY;
+            
+            addTestResult(
+                'none モード計算',
+                passed,
+                `期待値: 600×400, pad(${expectedPadX}, ${expectedPadY})<br>` +
+                `実際値: ${result.contentW}×${result.contentH}, pad(${result.padX}, ${result.padY})`
+            );
+        }
+        
+        function testObjectPositions() {
+            const rect = { width: 400, height: 300 };
+            const logical = { w: 200, h: 200 }; // 正方形で簡単に
+            
+            // contain で 200×200 → scale = min(400/200, 300/200) = min(2, 1.5) = 1.5
+            // content = 200×200, available = (400-300)=100×(300-300)=0
+            
+            const testCases = [
+                { pos: '0% 0%', expectedX: 0, expectedY: 0, name: 'left top' },
+                { pos: '100% 100%', expectedX: 100, expectedY: 0, name: 'right bottom' },
+                { pos: '50% 50%', expectedX: 50, expectedY: 0, name: 'center center' }
+            ];
+            
+            testCases.forEach(testCase => {
+                const result = resolveFittedContent(rect, logical, 'contain', testCase.pos);
+                
+                const tolerance = 0.1;
+                const passed = 
+                    Math.abs(result.padX - testCase.expectedX) < tolerance &&
+                    Math.abs(result.padY - testCase.expectedY) < tolerance;
+                
+                addTestResult(
+                    `object-position: ${testCase.pos} (${testCase.name})`,
+                    passed,
+                    `期待pad: (${testCase.expectedX}, ${testCase.expectedY})<br>` +
+                    `実際pad: (${result.padX.toFixed(2)}, ${result.padY.toFixed(2)})`
+                );
+            });
+        }
+        
+        // findContainer テスト群
+        function testFindContainer() {
+            console.group('🧪 findContainer Tests');
+            
+            // テスト 1: positioned親がある場合
+            testPositionedParent();
+            
+            // テスト 2: positioned親がない場合
+            testNoPositionedParent();
+            
+            // テスト 3: 複雑なネスト構造
+            testNestedStructure();
+            
+            console.groupEnd();
+        }
+        
+        function testPositionedParent() {
+            const target = document.getElementById('nested-target');
+            const container = findContainer(target);
+            const expectedContainer = document.getElementById('positioned-parent');
+            
+            const passed = container === expectedContainer;
+            
+            addTestResult(
+                'positioned親の検出',
+                passed,
+                `期待: ${expectedContainer.id}<br>` +
+                `実際: ${container.id || container.tagName}`
+            );
+        }
+        
+        function testNoPositionedParent() {
+            const target = document.getElementById('no-positioned-target');
+            const container = findContainer(target);
+            
+            const passed = container === document.body;
+            
+            addTestResult(
+                'positioned親なし→body',
+                passed,
+                `期待: BODY<br>` +
+                `実際: ${container.tagName}`
+            );
+        }
+        
+        function testNestedStructure() {
+            const target = document.getElementById('nested-target');
+            const testResult = testNestedContainerSearch(target);
+            
+            // 階層チェーン検証
+            const hasPositioned = testResult.hierarchyChain.some(item => item.isPositioned && item.element !== document.body);
+            const correctContainer = testResult.selectedContainer.id === 'positioned-parent';
+            
+            const passed = hasPositioned && correctContainer;
+            
+            addTestResult(
+                '複雑ネスト構造解析',
+                passed,
+                `階層数: ${testResult.totalLevels}<br>` +
+                `positioned検出: ${hasPositioned}<br>` +
+                `選択コンテナ: ${testResult.selectedContainer.id || testResult.selectedContainer.tagName}`
+            );
+        }
+        
+        // 統合テスト実行
+        function runAllTests() {
+            clearResults();
+            console.clear();
+            
+            console.log('🚀 Observer Phase 0 - Full Unit Test Suite');
+            
+            testResolveFittedContent();
+            testFindContainer();
+            
+            // 結果サマリー
+            const totalTests = testResults.length;
+            const passedTests = testResults.filter(r => r.passed).length;
+            const failedTests = totalTests - passedTests;
+            
+            addTestResult(
+                '📊 テストサマリー',
+                failedTests === 0,
+                `合計: ${totalTests}, 成功: ${passedTests}, 失敗: ${failedTests}<br>` +
+                `成功率: ${((passedTests / totalTests) * 100).toFixed(1)}%`
+            );
+        }
+        
+        // グローバル関数として公開
+        window.runAllTests = runAllTests;
+        window.clearResults = clearResults;
+        window.testResolveFittedContent = testResolveFittedContent;
+        window.testFindContainer = testFindContainer;
+        
+        // ページロード時に基本情報表示
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ Observer Phase 0 Unit Tests loaded');
+            console.log('🎯 Run: runAllTests() for full test suite');
+            console.log('🔍 Debug: debugFittedContent(rect, logical, fit, pos, result)');
+            console.log('🔍 Debug: debugCoordinateSystem(element)');
+        });
+    </script>
+</body>
+</html>
