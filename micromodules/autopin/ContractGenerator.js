@@ -273,6 +273,3 @@ export class ContractGenerator {
         console.groupEnd();
     }
 }
-
-// ES6 module export
-export { ContractGenerator };

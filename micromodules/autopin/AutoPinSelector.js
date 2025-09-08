@@ -393,6 +393,3 @@ export class AutoPinSelector {
         console.log('🗑️ AutoPinSelector destroyed');
     }
 }
-
-// ES6 module export
-export { AutoPinSelector };
