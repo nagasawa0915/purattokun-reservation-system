@@ -203,5 +203,4 @@ export function testNestedContainerSearch(element) {
     };
 }
 
-// メイン関数のエクスポート
-export { findContainer, isValidContainer, getElementPath, diagnoseCoordinateSystem, debugCoordinateSystem, testNestedContainerSearch };
+// 全関数は宣言時にexport function で既にexport済み

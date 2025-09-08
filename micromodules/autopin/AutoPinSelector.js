@@ -4,6 +4,13 @@
  * 既存710行のPureBoundingBoxAutoPinから選択機能のみを抽出・軽量化
  * 責務: 要素選択・9アンカー選択・PinContract生成のみ
  * 目標: 200行以内（既存から70%削減）
+ * 
+ * 仕様書準拠の選択対象:
+ * ✅ 見出し要素（h1-h6）: 「見出しH2の右肩」
+ * ✅ 段落要素（p）: 「段落末尾追従」  
+ * ✅ テキスト要素（span等）: 「基準要素（span等）」
+ * ✅ 画像・div要素: 「基準要素（img/div等）」
+ * ❌ 極小装飾要素（1-5px）のみ除外
  */
 
 // import { AlignAnchor, AnchorKind, PinContract } from '../observer/types.ts';
@@ -29,7 +36,7 @@ export class AutoPinSelector {
         this.config = {
             highlightColor: '#007acc',
             zIndex: 10000,
-            minElementSize: 10
+            minElementSize: 10  // 見出し、段落、テキスト要素も選択可能に（極小装飾要素のみ除外）
         };
         
         this._initializeUI();
@@ -123,13 +130,24 @@ export class AutoPinSelector {
      * @private
      */
     _handleElementClick(e, options, resolve, reject) {
+        const element = e.target;
+        
+        // ダイアログが表示中の場合はハンドリングしない（ダイアログのボタンクリックを妨げない）
+        if (this.selectionDialog) {
+            return;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         
-        const element = e.target;
-        
         if (!this._isValidElement(element)) {
-            console.warn('⚠️ Selected element is too small or invalid');
+            const rect = element.getBoundingClientRect();
+            console.warn('⚠️ Selected element is too small or invalid:', {
+                element: element,
+                size: `${rect.width}x${rect.height}`,
+                minSize: this.config.minElementSize,
+                isUIElement: this._isUIElement(element)
+            });
             return;
         }
         
@@ -151,8 +169,42 @@ export class AutoPinSelector {
             return false;
         }
         
+        // ダイアログ・UI要素を除外
+        if (this._isUIElement(element)) {
+            return false;
+        }
+        
         const rect = element.getBoundingClientRect();
+        // 見出し（h1-h6）、段落（p）、テキスト（span）、画像（img）、div等も選択可能に
+        // 極小装飾要素（1-5px）のみ除外
         return rect.width >= this.config.minElementSize && rect.height >= this.config.minElementSize;
+    }
+    
+    /**
+     * UI要素（ダイアログ等）かどうか判定
+     * @param {HTMLElement} element - チェック対象要素
+     * @returns {boolean} UI要素か
+     * @private
+     */
+    _isUIElement(element) {
+        // ハイライトオーバーレイ
+        if (element === this.highlightOverlay) {
+            return true;
+        }
+        
+        // 選択ダイアログまたはその子要素（選択中のみ除外）
+        if (this.selectionDialog && this.isSelecting && (element === this.selectionDialog || this.selectionDialog.contains(element))) {
+            return true;
+        }
+        
+        // 高いz-indexを持つ要素（UI要素の可能性が高い）
+        const computedStyle = getComputedStyle(element);
+        const zIndex = parseInt(computedStyle.zIndex);
+        if (zIndex >= this.config.zIndex && zIndex !== this.config.zIndex + 1) {  // ダイアログ自体は除外しない
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -305,18 +357,38 @@ export class AutoPinSelector {
         this.selectionDialog = dialog;
         
         // イベントハンドラー設定
-        dialog.querySelector('#confirm-btn').onclick = () => {
-            const selectedAlign = dialog.querySelector('input[name="anchor"]:checked')?.value || 'CC';
-            const selectedAnchorKind = dialog.querySelector('input[name="anchorKind"]:checked')?.value || 'block';
-            
-            document.body.removeChild(dialog);
-            onConfirm(selectedAlign, selectedAnchorKind);
-        };
+        const confirmBtn = dialog.querySelector('#confirm-btn');
+        const cancelBtn = dialog.querySelector('#cancel-btn');
         
-        dialog.querySelector('#cancel-btn').onclick = () => {
-            document.body.removeChild(dialog);
-            this._cancelSelection(onCancel);
-        };
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const selectedAlign = dialog.querySelector('input[name="anchor"]:checked')?.value || 'CC';
+                const selectedAnchorKind = dialog.querySelector('input[name="anchorKind"]:checked')?.value || 'block';
+                
+                console.log('✅ Confirm clicked:', { selectedAlign, selectedAnchorKind });
+                
+                this._removeDialog();
+                onConfirm(selectedAlign, selectedAnchorKind);
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('❌ Cancel clicked');
+                
+                this._removeDialog();
+                this._cancelSelection(onCancel);
+            });
+        }
+        
+        // デバッグ情報
+        console.log('🎯 Dialog created with buttons:', { confirmBtn, cancelBtn });
     }
     
     /**
@@ -373,6 +445,17 @@ export class AutoPinSelector {
     }
     
     /**
+     * ダイアログ削除処理
+     * @private
+     */
+    _removeDialog() {
+        if (this.selectionDialog && this.selectionDialog.parentNode) {
+            this.selectionDialog.parentNode.removeChild(this.selectionDialog);
+            this.selectionDialog = null;
+        }
+    }
+    
+    /**
      * リソース解放
      */
     destroy() {
@@ -380,15 +463,12 @@ export class AutoPinSelector {
             this.cleanupSelection();
         }
         
-        if (this.highlightOverlay) {
-            document.body.removeChild(this.highlightOverlay);
+        if (this.highlightOverlay && this.highlightOverlay.parentNode) {
+            this.highlightOverlay.parentNode.removeChild(this.highlightOverlay);
             this.highlightOverlay = null;
         }
         
-        if (this.selectionDialog) {
-            document.body.removeChild(this.selectionDialog);
-            this.selectionDialog = null;
-        }
+        this._removeDialog();
         
         console.log('🗑️ AutoPinSelector destroyed');
     }
