@@ -194,5 +194,8 @@ export function debugFittedContent(rect, logicalSize, fit, objectPosition, resul
     console.groupEnd();
 }
 
+// メイン関数のエクスポート
+export { resolveFittedContent, debugFittedContent };
+
 // 単体テスト用のエクスポート
 export { parseObjectPosition, convertPositionValue, keywordToPercent };

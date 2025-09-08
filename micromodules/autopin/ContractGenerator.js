@@ -5,7 +5,8 @@
  * JSON設定からのContract生成もサポート
  */
 
-import { PinContract, PinContractConfig } from '../observer/types.ts';
+// import { PinContract, PinContractConfig } from '../observer/types.ts';
+// TypeScript型定義はJSDocコメントで代替
 
 /**
  * Contract変換・生成ユーティリティ
@@ -272,3 +273,6 @@ export class ContractGenerator {
         console.groupEnd();
     }
 }
+
+// ES6 module export
+export { ContractGenerator };

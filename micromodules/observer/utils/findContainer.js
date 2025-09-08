@@ -202,3 +202,6 @@ export function testNestedContainerSearch(element) {
         totalLevels: results.length
     };
 }
+
+// メイン関数のエクスポート
+export { findContainer, isValidContainer, getElementPath, diagnoseCoordinateSystem, debugCoordinateSystem, testNestedContainerSearch };

@@ -6,7 +6,8 @@
  * 目標: 200行以内（既存から70%削減）
  */
 
-import { AlignAnchor, AnchorKind, PinContract } from '../observer/types.ts';
+// import { AlignAnchor, AnchorKind, PinContract } from '../observer/types.ts';
+// TypeScript型定義はJSDocコメントで代替
 
 /**
  * AutoPin選択UI特化版
@@ -392,3 +393,6 @@ export class AutoPinSelector {
         console.log('🗑️ AutoPinSelector destroyed');
     }
 }
+
+// ES6 module export
+export { AutoPinSelector };
