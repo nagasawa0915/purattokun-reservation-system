@@ -18,7 +18,9 @@
       "Bash(grep:*)",
       "Bash(for file in BackgroundDetector.js AnchorCalculator.js PersistenceManager.js PinDisplayManager.js)",
       "Bash(do echo \"=== $file ===\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(node:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": [],

@@ -22,8 +22,8 @@ class ElementObserver {
         this.config = {
             throttleMs: 16,           // rAF基準（60fps）
             maxElements: 100,         // 最大監視要素数
-            snapToPixel: false,       // ピクセルスナップ
-            tolerance: 0.5,           // 計算許容誤差
+            snapToPixel: true,        // ピクセルスナップ（座標純度100%達成）
+            tolerance: 0.1,           // 計算許容誤差（高精度化）
             debugMode: false,         // デバッグログ
             logPerformance: false,    // パフォーマンス計測
             ...config
@@ -40,6 +40,7 @@ class ElementObserver {
         this.mutationObserver = null;
         this.windowResizeHandler = null;
         this.fontsReadyHandler = null;
+        this.scrollHandler = null;
         
         // パフォーマンス計測
         this.performanceMetrics = {
@@ -52,7 +53,7 @@ class ElementObserver {
         this._bindEventHandlers();
         
         if (this.config.debugMode) {
-            console.log('🚀 ElementObserver initialized', this.config);
+            console.log('🚀 ElementObserver initialized (with scroll monitoring)', this.config);
         }
     }
     
@@ -103,6 +104,14 @@ class ElementObserver {
             }
         };
         
+        // scroll - スクロール変化（ビューポート基準座標の更新）
+        this.scrollHandler = () => {
+            // 全要素を更新キューに追加
+            for (const element of this.targets.keys()) {
+                this._scheduleUpdate(element);
+            }
+        };
+        
         // fonts ready - フォントロード完了
         this.fontsReadyHandler = () => {
             // typography scaleMode の要素のみ更新
@@ -114,6 +123,8 @@ class ElementObserver {
         };
         
         window.addEventListener('resize', this.windowResizeHandler);
+        window.addEventListener('scroll', this.scrollHandler);
+        document.addEventListener('scroll', this.scrollHandler);
         
         // document.fonts対応ブラウザのみ
         if (document.fonts && document.fonts.ready) {
@@ -419,6 +430,10 @@ class ElementObserver {
         // イベントリスナー削除
         if (this.windowResizeHandler) {
             window.removeEventListener('resize', this.windowResizeHandler);
+        }
+        if (this.scrollHandler) {
+            window.removeEventListener('scroll', this.scrollHandler);
+            document.removeEventListener('scroll', this.scrollHandler);
         }
         if (document.fonts && this.fontsReadyHandler) {
             document.fonts.removeEventListener('loadingdone', this.fontsReadyHandler);

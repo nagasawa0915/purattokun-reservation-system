@@ -450,7 +450,7 @@
             
             const position = payload.resolve(anchorPosition);
             
-            // スクロールオフセット補正を追加
+            // スクロールオフセット取得（デバッグ情報用のみ、座標計算では使用しない）
             const scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
             const scrollLeft = document.documentElement.scrollLeft || document.body.scrollLeft || 0;
             
@@ -458,9 +458,9 @@
             const spineWidth = parseInt(spineElement.style.width) || 100;
             const spineHeight = parseInt(spineElement.style.height) || 100;
             
-            // position: absolute + スクロールオフセット補正
-            const finalX = position.x + scrollLeft - (spineWidth / 2);
-            const finalY = position.y + scrollTop - (spineHeight / 2);
+            // position: absolute 配置（ビューポート基準座標をそのまま使用）
+            const finalX = position.x - (spineWidth / 2);  // 修正: スクロールオフセット補正を削除（ビューポート基準座標のため）
+            const finalY = position.y - (spineHeight / 2);  // 修正: スクロールオフセット補正を削除（ビューポート基準座標のため）
             
             spineElement.style.left = finalX + 'px';
             spineElement.style.top = finalY + 'px';

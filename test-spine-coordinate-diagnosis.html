@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Observer+AutoPin Integration Test</title>
+    <title>🔍 Spine座標診断システム - 右飛び問題解決</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -174,8 +174,8 @@
     </style>
 </head>
 <body>
-    <h1>🧪 Observer+AutoPin統合テスト</h1>
-    <p>責務分離システムの完全動作確認・95%座標混入問題解決テスト</p>
+    <h1>🔍 Spine座標診断システム - 右飛び問題解決</h1>
+    <p>Observer出力座標の実際の値確認・基準要素との関係検証・DOM要素での座標検証・座標系の根本確認</p>
     
     <div class="controls">
         <h3>🎯 テスト制御</h3>
@@ -185,6 +185,12 @@
         <button onclick="toggleDebug()">🔍 デバッグ表示切替</button>
         <button onclick="simulateResize()">📱 リサイズシミュレート</button>
         <button onclick="changeViewportSize()">🖥️ ビューポート変更</button>
+        <button onclick="performDetailedDiagnosis()">🔬 詳細座標診断</button>
+        <button onclick="createRedDivAtObserverPosition()">🔴 赤Div配置テスト</button>
+        <button onclick="showCoordinateSystemInfo()">📐 座標系情報表示</button>
+        <button onclick="diagnosticSpineElementDuplication()">🔍 Spine要素重複確認</button>
+        <button onclick="diagnosticCoordinateConflict()">⚡ 座標競合診断</button>
+        <button onclick="diagnosticCSSPositionMismatch()">🎯 CSS座標矛盾診断</button>
     </div>
     
     <div id="status-area"></div>
@@ -263,7 +269,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             autoSelector = new AutoPinSelector();
             
-            // Observer高精度設定確認（snapToPixel: true, tolerance: 0.1）
+            // Observer高精度設定確認 (snapToPixel: true, tolerance: 0.1)
             const diagnostics = getDiagnostics();
             if (diagnostics && diagnostics.config) {
                 console.log('⚙️ Observer設定確認:', {
@@ -278,7 +284,7 @@
                 }
             }
             
-            // スクロール監視を追加（Spine要素の位置追従）
+            // スクロール監視を追加 (Spine要素の位置追従)
             let scrollUpdateThrottle = null;
             window.addEventListener('scroll', () => {
                 if (scrollUpdateThrottle) {
@@ -300,14 +306,10 @@
                         }
                     }
                     
-                    console.log('📜 スクロール対応: アクティブSpine再配置完了', {
-                        activeSpines: activeSpines.size,
-                        scrollPosition: `${window.scrollX}, ${window.scrollY}`
-                    });
                 }, 16); // 60fps対応
             }, { passive: true });
             
-            updateStatus('✅ システム初期化完了（スクロール監視付き）');
+            updateStatus('✅ システム初期化完了 (スクロール監視付き)');
             console.log('🚀 Integration test initialized with scroll monitoring');
         });
         
@@ -403,7 +405,7 @@
                 spineHeight = Math.max(30, Math.min(targetRect.height * 0.6, 100));
             }
             
-            // サイズ制限適用（最小30px、最大200px）
+            // サイズ制限適用 (最小30px、最大200px)
             spineWidth = Math.max(30, Math.min(spineWidth, 200));
             spineHeight = Math.max(30, Math.min(spineHeight, 200));
             
@@ -421,18 +423,12 @@
             
             document.body.appendChild(spine);
             
-            console.log('📐 Spine要素作成:', {
-                targetElement: targetElement.tagName,
-                targetSize: `${targetRect.width}x${targetRect.height}`,
-                spineSize: `${spineWidth}x${spineHeight}`,
-                fontSize: targetElement.tagName.toLowerCase().match(/h[1-6]|p|span/) ? computedStyle.fontSize : 'N/A'
-            });
             
             return spine;
         }
         
         /**
-         * Spine位置更新（Observer コールバック）
+         * Spine位置更新 (Observer コールバック)
          */
         function updateSpinePosition(targetElement, payload) {
             const spineInfo = activeSpines.get(targetElement);
@@ -440,7 +436,7 @@
             
             const { spineElement, contract } = spineInfo;
             
-            // 座標解決（9アンカー or カスタム座標）
+            // 座標解決 (9アンカー or カスタム座標)
             let anchorPosition;
             if (contract.align) {
                 anchorPosition = ContractGenerator.alignToAnchor(contract.align, contract.logicalSize);
@@ -450,7 +446,7 @@
             
             const position = payload.resolve(anchorPosition);
             
-            // スクロールオフセット補正を追加
+            // スクロールオフセット取得 (デバッグ情報用のみ、座標計算では使用しない)
             const scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
             const scrollLeft = document.documentElement.scrollLeft || document.body.scrollLeft || 0;
             
@@ -458,12 +454,22 @@
             const spineWidth = parseInt(spineElement.style.width) || 100;
             const spineHeight = parseInt(spineElement.style.height) || 100;
             
-            // position: absolute + スクロールオフセット補正
-            const finalX = position.x + scrollLeft - (spineWidth / 2);
-            const finalY = position.y + scrollTop - (spineHeight / 2);
+            // position: absolute 配置 (ビューポート基準座標をそのまま使用)
+            const finalX = position.x - (spineWidth / 2);  // 修正: スクロールオフセット補正を削除 (ビューポート基準座標のため)
+            const finalY = position.y - (spineHeight / 2);  // 修正: スクロールオフセット補正を削除 (ビューポート基準座標のため)
             
             spineElement.style.left = finalX + 'px';
             spineElement.style.top = finalY + 'px';
+            
+            // デバッグ: 実際に設定された値を確認
+            console.log('🎯 実際のSpine style設定値:', {
+                '設定値finalX': finalX,
+                '設定値finalY': finalY,
+                '実際のstyle.left': spineElement.style.left,
+                '実際のstyle.top': spineElement.style.top,
+                '実際のcomputedLeft': getComputedStyle(spineElement).left,
+                '実際のcomputedTop': getComputedStyle(spineElement).top
+            });
             spineElement.style.transform = `scale(${payload.finalScale || Math.min(payload.scaleX, payload.scaleY)})`;
             spineElement.classList.add('active');
             
@@ -488,10 +494,12 @@
                 finalPosition: `${finalX}, ${finalY}`,
                 spineSize: `${spineWidth}x${spineHeight}`
             });
+            
+            // 🔬 詳細座標診断機能 (Spine右飛び問題解決用)
+            performDetailedCoordinateDiagnosis(targetElement, payload, position, anchorPosition, spineElement);
         }
-        
         /**
-         * 座標純度チェック（95%問題診断）
+         * 座標純度チェック (95%問題診断)
          */
         function checkCoordinatePurity(payload) {
             const purity = calculateCoordinatePurity(payload);
@@ -505,22 +513,15 @@
         }
         
         /**
-         * 座標純度計算（100%精度版）
+         * 座標純度計算 (100%精度版)
          */
         function calculateCoordinatePurity(payload) {
-            console.log('🔍 座標純度分析開始:', {
-                offsetX: payload.offsetX,
-                offsetY: payload.offsetY,
-                scaleX: payload.scaleX,
-                scaleY: payload.scaleY
-            });
-            
             // snapToPixel有効化により整数座標期待
             const offsetXDecimal = Math.abs(payload.offsetX - Math.round(payload.offsetX));
             const offsetYDecimal = Math.abs(payload.offsetY - Math.round(payload.offsetY));
             const scaleDiff = Math.abs(payload.scaleX - payload.scaleY);
             
-            // 100%精度判定（tolerance: 0.1 による高精度化）
+            // 100%精度判定 (tolerance: 0.1 による高精度化)
             let offsetXPurity = 100;
             let offsetYPurity = 100;
             let scalePurity = 100;
@@ -548,24 +549,11 @@
             
             const totalPurity = Math.min(offsetXPurity, offsetYPurity, scalePurity);
             
-            // 詳細ログ出力（100%達成確認）
-            console.log('📊 座標純度詳細分析 (100%精度版):', {
-                'X座標誤差': offsetXDecimal.toFixed(6) + ' (期待: ≤ 0.001)',
-                'X座標純度': offsetXPurity + '%',
-                'Y座標誤差': offsetYDecimal.toFixed(6) + ' (期待: ≤ 0.001)', 
-                'Y座標純度': offsetYPurity + '%',
-                'スケール差': scaleDiff.toFixed(6) + ' (期待: ≤ 0.0001)',
-                'スケール純度': scalePurity + '%',
-                '総合純度': totalPurity + '%',
-                '判定': totalPurity === 100 ? '✅ 完璧！100%達成' : totalPurity >= 99 ? '🟡 良好（99%）' : '🔴 要改善',
-                '設定効果': 'snapToPixel: true, tolerance: 0.1'
-            });
-            
             return totalPurity;
         }
         
         /**
-         * Observer更新をトリガー（スクロール時のSpine再配置用）
+         * Observer更新をトリガー (スクロール時のSpine再配置用)
          */
         function triggerObserverUpdate(targetElement) {
             const spineInfo = activeSpines.get(targetElement);
@@ -582,7 +570,7 @@
                     return;
                 }
                 
-                // 簡易的なpayloadオブジェクトを作成（Observerと同等の構造）
+                // 簡易的なpayloadオブジェクトを作成 (Observerと同等の構造)
                 const simulatedPayload = {
                     rect: targetRect,
                     parentRect: parentRect,
@@ -638,7 +626,7 @@
             // 自動スクロール
             statusDiv.scrollIntoView({ behavior: 'smooth' });
             
-            // 古いメッセージの削除（20個まで保持）
+            // 古いメッセージの削除 (20個まで保持)
             while (statusArea.children.length > 20) {
                 statusArea.removeChild(statusArea.firstChild);
             }
@@ -773,7 +761,7 @@
         window.runComparisonTest = function() {
             updateStatus('⚖️ 既存システムとの比較テストを実行中...');
             
-            // 簡易比較（実装例）
+            // 簡易比較 (実装例)
             const comparison = {
                 newSystem: {
                     targetCount: activeSpines.size,
@@ -790,13 +778,458 @@
             };
             
             console.table(comparison);
-            updateStatus('⚖️ 比較テスト完了 - 結果はコンソールを確認してください');
         };
         
-        // グローバル関数エクスポート
-        window.autoSelector = autoSelector;
-        window.activeSpines = activeSpines;
-        window.ContractGenerator = ContractGenerator;
+        /**
+         * 🔬 詳細座標診断機能 (Spine右飛び問題解決用)
+         */
+        function performDetailedCoordinateDiagnosis(targetElement, payload, position, anchorPosition, spineElement) {
+            if (!targetElement || !payload || !position) return;
+            
+            console.log("🔬 詳細座標診断 - Spine右飛び問題解決");
+            
+            // 座標ずれの具体的測定
+            const targetRect = targetElement.getBoundingClientRect();
+            const expectedX = targetRect.left + (anchorPosition.x / 100) * targetRect.width;
+            const expectedY = targetRect.top + (anchorPosition.y / 100) * targetRect.height;
+            const actualX = position.x;
+            const actualY = position.y;
+            const deltaX = actualX - expectedX;
+            const deltaY = actualY - expectedY;
+            
+            console.log("📏 座標ずれの具体的測定:", {
+                "期待座標（手動計算）": `(${expectedX.toFixed(2)}, ${expectedY.toFixed(2)})`,
+                "実際座標（Observer出力）": `(${actualX.toFixed(2)}, ${actualY.toFixed(2)})`,
+                "座標差（差分）": `(${deltaX.toFixed(2)}, ${deltaY.toFixed(2)})`,
+                "右飛び判定": deltaX > 0 ? `右に${deltaX.toFixed(2)}px飛んでいる` : deltaX < 0 ? `左に${Math.abs(deltaX).toFixed(2)}px飛んでいる` : "X座標は正確",
+                "上下飛び判定": deltaY > 0 ? `下に${deltaY.toFixed(2)}px飛んでいる` : deltaY < 0 ? `上に${Math.abs(deltaY).toFixed(2)}px飛んでいる` : "Y座標は正確"
+            });
+        }
+        
+        /**
+         * 🔬 詳細座標診断 (手動実行用)
+         */
+        window.performDetailedDiagnosis = function() {
+            if (activeSpines.size === 0) {
+                updateStatus("⚠️ アクティブなSpineがありません。まず要素を選択してください。", true);
+                return;
+            }
+            
+            updateStatus("🔬 詳細座標診断を開始します...");
+            
+            for (const [targetElement, spineInfo] of activeSpines) {
+                const { spineElement, contract } = spineInfo;
+                
+                // 現在の座標状態を再計算
+                let anchorPosition;
+                if (contract.align) {
+                    anchorPosition = ContractGenerator.alignToAnchor(contract.align, contract.logicalSize);
+                } else {
+                    anchorPosition = contract.at || { x: contract.logicalSize.w/2, y: contract.logicalSize.h/2 };
+                }
+                
+                const targetRect = targetElement.getBoundingClientRect();
+                const position = {
+                    x: targetRect.left + (anchorPosition.x / 100) * targetRect.width,
+                    y: targetRect.top + (anchorPosition.y / 100) * targetRect.height
+                };
+                
+                const mockPayload = {
+                    offsetX: 0,
+                    offsetY: 0,
+                    scaleX: 1,
+                    scaleY: 1,
+                    resolve: (anchor) => position
+                };
+                
+                performDetailedCoordinateDiagnosis(targetElement, mockPayload, position, anchorPosition, spineElement);
+            }
+            
+            updateStatus("🔬 詳細座標診断完了。コンソールを確認してください。");
+        };
+        
+        /**
+         * 🔴 赤Div配置テスト (Observer出力座標に小さな赤divを配置)
+         */
+        window.createRedDivAtObserverPosition = function() {
+            if (activeSpines.size === 0) {
+                updateStatus("⚠️ アクティブなSpineがありません。まず要素を選択してください。", true);
+                return;
+            }
+            
+            // 既存の赤divをクリア
+            document.querySelectorAll(".red-marker").forEach(el => el.remove());
+            
+            updateStatus("🔴 Observer出力座標に赤Divを配置中...");
+            
+            for (const [targetElement, spineInfo] of activeSpines) {
+                const { contract } = spineInfo;
+                
+                // 座標計算 (Observer出力と同じ方法)
+                let anchorPosition;
+                if (contract.align) {
+                    anchorPosition = ContractGenerator.alignToAnchor(contract.align, contract.logicalSize);
+                } else {
+                    anchorPosition = contract.at || { x: contract.logicalSize.w/2, y: contract.logicalSize.h/2 };
+                }
+                
+                const targetRect = targetElement.getBoundingClientRect();
+                const position = {
+                    x: targetRect.left + (anchorPosition.x / 100) * targetRect.width,
+                    y: targetRect.top + (anchorPosition.y / 100) * targetRect.height
+                };
+                
+                // 赤いdiv作成
+                const redDiv = document.createElement("div");
+                redDiv.className = "red-marker";
+                redDiv.style.cssText = `
+                    position: absolute;
+                    left: ${position.x - 10}px;
+                    top: ${position.y - 10}px;
+                    width: 20px;
+                    height: 20px;
+                    background: red;
+                    border: 2px solid darkred;
+                    border-radius: 50%;
+                    z-index: 2000;
+                    pointer-events: none;
+                    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+                `;
+                
+                document.body.appendChild(redDiv);
+                
+            }
+            
+            updateStatus("🔴 赤Div配置完了。基準要素と赤Divの位置関係を確認してください。");
+        };
+        
+        /**
+         * 📐 座標系情報表示
+         */
+        window.showCoordinateSystemInfo = function() {
+            console.group("📐 座標系情報");
+            
+            console.log("🌐 ビューポート情報:", {
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                scrollX: window.scrollX,
+                scrollY: window.scrollY,
+                devicePixelRatio: window.devicePixelRatio
+            });
+            
+            console.log("📄 ドキュメント情報:", {
+                documentElement: {
+                    scrollTop: document.documentElement.scrollTop,
+                    scrollLeft: document.documentElement.scrollLeft,
+                    clientWidth: document.documentElement.clientWidth,
+                    clientHeight: document.documentElement.clientHeight
+                },
+                body: {
+                    scrollTop: document.body.scrollTop,
+                    scrollLeft: document.body.scrollLeft,
+                    offsetWidth: document.body.offsetWidth,
+                    offsetHeight: document.body.offsetHeight
+                }
+            });
+            
+            console.log("🎯 座標系基準:", {
+                "getBoundingClientRect()": "ビューポート左上角 (0,0) 基準",
+                "position: absolute": "最寄りのpositioned親要素基準 (通常はbody)",
+                "スクロール影響": "getBoundingClientRectはスクロール含む、position設定時は要調整",
+                "Observer出力": "payload.resolve()がgetBoundingClientRect()ベース座標を出力"
+            });
+            
+            if (activeSpines.size > 0) {
+                console.log("🎨 アクティブSpine情報:");
+                for (const [targetElement, spineInfo] of activeSpines) {
+                    const { spineElement } = spineInfo;
+                    const targetRect = targetElement.getBoundingClientRect();
+                    const spineRect = spineElement.getBoundingClientRect();
+                    
+                    console.log(`- ${targetElement.tagName}:`, {
+                        基準要素位置: `(${targetRect.left}, ${targetRect.top})`,
+                        Spine位置: `(${spineRect.left}, ${spineRect.top})`,
+                        位置差: `(${(spineRect.left - targetRect.left).toFixed(2)}, ${(spineRect.top - targetRect.top).toFixed(2)})`,
+                        offsetParent: spineElement.offsetParent?.tagName || "null"
+                    });
+                }
+            }
+            
+            console.groupEnd();
+        };
+
+        /**
+         * ⚡ 座標競合診断
+         */
+        window.diagnosticCoordinateConflict = function() {
+            console.group("⚡ 座標競合診断");
+            updateStatus("⚡ 座標競合診断を開始中...");
+            
+            // 現在のSpine要素の座標状況を詳細分析
+            if (activeSpines.size === 0) {
+                console.warn("⚠️ アクティブなSpineがありません");
+                updateStatus("⚠️ 診断対象のSpineがありません", true);
+                console.groupEnd();
+                return;
+            }
+            
+            for (const [targetElement, spineInfo] of activeSpines) {
+                const { spineElement, contract } = spineInfo;
+                
+                console.log(`\n🎯 ${targetElement.tagName}${targetElement.id ? `#${targetElement.id}` : ""} の座標競合分析`);
+                
+                // 基準要素の座標情報
+                const targetRect = targetElement.getBoundingClientRect();
+                console.log("📍 基準要素情報:", {
+                    位置: `(${targetRect.left.toFixed(2)}, ${targetRect.top.toFixed(2)})`,
+                    サイズ: `${targetRect.width.toFixed(2)} x ${targetRect.height.toFixed(2)}`,
+                    CSS位置: {
+                        position: getComputedStyle(targetElement).position,
+                        left: getComputedStyle(targetElement).left,
+                        top: getComputedStyle(targetElement).top
+                    }
+                });
+                
+                // Spine要素の座標情報
+                const spineRect = spineElement.getBoundingClientRect();
+                console.log("🎨 Spine要素情報:", {
+                    位置: `(${spineRect.left.toFixed(2)}, ${spineRect.top.toFixed(2)})`,
+                    サイズ: `${spineRect.width.toFixed(2)} x ${spineRect.height.toFixed(2)}`,
+                    CSS位置: {
+                        position: getComputedStyle(spineElement).position,
+                        left: getComputedStyle(spineElement).left || spineElement.style.left,
+                        top: getComputedStyle(spineElement).top || spineElement.style.top
+                    },
+                    style属性: {
+                        left: spineElement.style.left,
+                        top: spineElement.style.top
+                    }
+                });
+                
+                // AutoPin/BB編集による座標設定の競合チェック
+                const hasAutoPinData = localStorage.getItem("spine-positioning-state");
+                if (hasAutoPinData) {
+                    try {
+                        const autoPinData = JSON.parse(hasAutoPinData);
+                        console.log("🔄 AutoPin/BB編集データ:", autoPinData);
+                        
+                        // 座標競合の検出
+                        const conflicts = [];
+                        if (autoPinData.purattokun) {
+                            const autoPinPos = autoPinData.purattokun;
+                            const currentLeft = parseInt(spineElement.style.left) || 0;
+                            const currentTop = parseInt(spineElement.style.top) || 0;
+                            
+                            if (Math.abs(currentLeft - (autoPinPos.x || 0)) > 5) {
+                                conflicts.push(`X座標競合: 現在${currentLeft}px vs AutoPin${autoPinPos.x || 0}px`);
+                            }
+                            if (Math.abs(currentTop - (autoPinPos.y || 0)) > 5) {
+                                conflicts.push(`Y座標競合: 現在${currentTop}px vs AutoPin${autoPinPos.y || 0}px`);
+                            }
+                        }
+                        
+                        if (conflicts.length > 0) {
+                            console.warn("⚠️ 座標競合を検出:", conflicts);
+                            updateStatus(`⚠️ ${conflicts.length}個の座標競合を検出`, true);
+                        } else {
+                            console.log("✅ 座標競合なし");
+                        }
+                        
+                    } catch (e) {
+                        console.warn("⚠️ AutoPinデータ解析エラー:", e);
+                    }
+                } else {
+                    console.log("ℹ️ AutoPin/BB編集データなし");
+                }
+            }
+            
+            console.groupEnd();
+            updateStatus("⚡ 座標競合診断完了。コンソールを確認してください。");
+        };
+
+        /**
+         * 🎯 CSS座標矛盾診断 (545px vs originalPosition "151, 51")
+         */
+        window.diagnosticCSSPositionMismatch = function() {
+            console.group("🎯 CSS座標矛盾診断 - 545px vs originalPosition \"151, 51\" 問題");
+            updateStatus("🎯 CSS座標矛盾診断を開始中...");
+            
+            // CSS設定値とObserver出力値の矛盾を調査
+            if (activeSpines.size === 0) {
+                console.warn("⚠️ アクティブなSpineがありません");
+                updateStatus("⚠️ 診断対象のSpineがありません", true);
+                console.groupEnd();
+                return;
+            }
+            
+            for (const [targetElement, spineInfo] of activeSpines) {
+                const { spineElement, contract } = spineInfo;
+                
+                console.log(`\n🎯 ${targetElement.tagName}${targetElement.id ? `#${targetElement.id}` : ""} のCSS座標矛盾調査`);
+                
+                // CSS設定値の詳細確認
+                const computedStyle = getComputedStyle(spineElement);
+                const inlineStyle = {
+                    left: spineElement.style.left,
+                    top: spineElement.style.top
+                };
+                
+                console.log("💾 CSS設定値詳細:", {
+                    computedStyle: {
+                        position: computedStyle.position,
+                        left: computedStyle.left,
+                        top: computedStyle.top,
+                        transform: computedStyle.transform
+                    },
+                    inlineStyle: inlineStyle,
+                    getAttribute: {
+                        style: spineElement.getAttribute("style")
+                    }
+                });
+                
+                // 実際のDOM矩形情報
+                const spineRect = spineElement.getBoundingClientRect();
+                console.log("📐 実際のDOM矩形:", {
+                    位置: `(${spineRect.left.toFixed(2)}, ${spineRect.top.toFixed(2)})`,
+                    サイズ: `${spineRect.width.toFixed(2)} x ${spineRect.height.toFixed(2)}`,
+                    right: spineRect.right.toFixed(2),
+                    bottom: spineRect.bottom.toFixed(2)
+                });
+                
+                // Observer出力との比較
+                const targetRect = targetElement.getBoundingClientRect();
+                let anchorPosition;
+                if (contract.align) {
+                    anchorPosition = ContractGenerator.alignToAnchor(contract.align, contract.logicalSize);
+                } else {
+                    anchorPosition = contract.at || { x: contract.logicalSize.w/2, y: contract.logicalSize.h/2 };
+                }
+                
+                const expectedObserverPosition = {
+                    x: targetRect.left + (anchorPosition.x / 100) * targetRect.width,
+                    y: targetRect.top + (anchorPosition.y / 100) * targetRect.height
+                };
+                
+                console.log("🔬 Observer出力期待値:", {
+                    基準要素: `(${targetRect.left.toFixed(2)}, ${targetRect.top.toFixed(2)})`,
+                    アンカー: anchorPosition,
+                    期待座標: `(${expectedObserverPosition.x.toFixed(2)}, ${expectedObserverPosition.y.toFixed(2)})`
+                });
+                
+                // 矛盾の検出
+                const leftMismatch = Math.abs(parseFloat(inlineStyle.left) - expectedObserverPosition.x) > 5;
+                const topMismatch = Math.abs(parseFloat(inlineStyle.top) - expectedObserverPosition.y) > 5;
+                
+                if (leftMismatch || topMismatch) {
+                    console.error("🚨 CSS座標矛盾を検出!", {
+                        CSS設定左: inlineStyle.left,
+                        Observer期待左: expectedObserverPosition.x.toFixed(2) + "px",
+                        差分左: Math.abs(parseFloat(inlineStyle.left) - expectedObserverPosition.x).toFixed(2) + "px",
+                        CSS設定上: inlineStyle.top,
+                        Observer期待上: expectedObserverPosition.y.toFixed(2) + "px",
+                        差分上: Math.abs(parseFloat(inlineStyle.top) - expectedObserverPosition.y).toFixed(2) + "px"
+                    });
+                    
+                    updateStatus(`🚨 CSS座標矛盾検出: ${leftMismatch ? "X軸" : ""}${leftMismatch && topMismatch ? "・" : ""}${topMismatch ? "Y軸" : ""}`, true);
+                    
+                    // 問題の545px vs 151,51 パターンかチェック
+                    if (inlineStyle.left.includes("545") || inlineStyle.left.includes("151")) {
+                        console.error("🎯 これは報告された545px vs originalPosition \"151, 51\" 問題です!", {
+                            "報告されたパターン": "CSS設定では545pxなのに、Observer出力では151, 51として読み取られる",
+                            "現在の状況": `CSS: ${inlineStyle.left}, ${inlineStyle.top} | Observer期待: ${expectedObserverPosition.x.toFixed(2)}, ${expectedObserverPosition.y.toFixed(2)}`
+                        });
+                    }
+                } else {
+                    console.log("✅ CSS座標矛盾なし - 正常");
+                }
+            }
+            
+            console.groupEnd();
+            updateStatus("🎯 CSS座標矛盾診断完了。コンソールを確認してください。");
+        };
+
+        /**
+         * 🔍 Spine要素重複診断
+         */
+        window.diagnosticSpineElementDuplication = function() {
+            console.group("🔍 Spine要素重複診断");
+            updateStatus("🔍 Spine要素重複診断を開始中...");
+            
+            // DOM内のSpine関連要素を全検索
+            const spineElements = document.querySelectorAll('.spine-display-area');
+            const canvasElements = document.querySelectorAll('canvas');
+            const spineContainers = document.querySelectorAll('[id*="spine"], [class*="spine"]');
+            
+            console.log("🔍 DOM内Spine関連要素:", {
+                spineDisplayArea: spineElements.length,
+                canvasElements: canvasElements.length,
+                spineContainers: spineContainers.length,
+                activeSpines: activeSpines.size
+            });
+            
+            // 重複チェック
+            const duplicateCheck = [];
+            spineElements.forEach((el, index) => {
+                const rect = el.getBoundingClientRect();
+                duplicateCheck.push({
+                    element: el,
+                    index: index,
+                    position: `(${rect.left.toFixed(2)}, ${rect.top.toFixed(2)})`,
+                    size: `${rect.width.toFixed(2)}x${rect.height.toFixed(2)}`,
+                    visible: rect.width > 0 && rect.height > 0
+                });
+            });
+            
+            console.log("📊 Spine要素詳細:", duplicateCheck);
+            
+            // 位置重複の検出
+            const positionDuplicates = [];
+            for (let i = 0; i < duplicateCheck.length; i++) {
+                for (let j = i + 1; j < duplicateCheck.length; j++) {
+                    const el1 = duplicateCheck[i];
+                    const el2 = duplicateCheck[j];
+                    const rect1 = el1.element.getBoundingClientRect();
+                    const rect2 = el2.element.getBoundingClientRect();
+                    
+                    if (Math.abs(rect1.left - rect2.left) < 10 && Math.abs(rect1.top - rect2.top) < 10) {
+                        positionDuplicates.push({
+                            element1: `spine-${i}`,
+                            element2: `spine-${j}`,
+                            position1: el1.position,
+                            position2: el2.position
+                        });
+                    }
+                }
+            }
+            
+            if (positionDuplicates.length > 0) {
+                console.warn("⚠️ 位置重複を検出:", positionDuplicates);
+                updateStatus(`⚠️ ${positionDuplicates.length}組の位置重複を検出`, true);
+            } else {
+                console.log("✅ 位置重複なし");
+            }
+            
+            // メモリリーク検出
+            const memoryLeaks = [];
+            activeSpines.forEach((spineInfo, targetElement) => {
+                if (!document.body.contains(targetElement)) {
+                    memoryLeaks.push(`対象要素が削除済み: ${targetElement.tagName}`);
+                }
+                if (!document.body.contains(spineInfo.spineElement)) {
+                    memoryLeaks.push(`Spine要素が削除済み: ${spineInfo.spineElement.className}`);
+                }
+            });
+            
+            if (memoryLeaks.length > 0) {
+                console.warn("⚠️ メモリリーク検出:", memoryLeaks);
+                updateStatus(`⚠️ ${memoryLeaks.length}個のメモリリーク検出`, true);
+            } else {
+                console.log("✅ メモリリークなし");
+            }
+            
+            console.groupEnd();
+            updateStatus("🔍 Spine要素重複診断完了。コンソールを確認してください。");
+        };
     </script>
 </body>
 </html>

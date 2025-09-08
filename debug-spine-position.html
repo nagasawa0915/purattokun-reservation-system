@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine右飛び問題デバッグ</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            height: 200vh; /* スクロール可能にする */
+            background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .target-element {
+            margin: 20px 0;
+            padding: 20px;
+            background: #e8f4f8;
+            border: 2px solid #4a90e2;
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .spine-element {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 107, 107, 0.9);
+            border: 2px solid #ff6b6b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .spine-element.error {
+            background: rgba(255, 0, 0, 0.8);
+            border-color: red;
+        }
+        
+        .debug-crosshair {
+            position: absolute;
+            z-index: 999;
+        }
+        
+        .debug-crosshair::before,
+        .debug-crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 255, 0, 0.7);
+        }
+        
+        .debug-crosshair::before {
+            width: 20px;
+            height: 2px;
+            left: -10px;
+            top: -1px;
+        }
+        
+        .debug-crosshair::after {
+            width: 2px;
+            height: 20px;
+            left: -1px;
+            top: -10px;
+        }
+        
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 2000;
+            min-width: 200px;
+        }
+        
+        button {
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px 12px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #357abd;
+        }
+        
+        button.danger {
+            background: #e74c3c;
+        }
+        
+        button.danger:hover {
+            background: #c0392b;
+        }
+        
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: pre-line;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .info { color: #17a2b8; }
+        .success { color: #28a745; }
+        .warning { color: #ffc107; }
+        .error { color: #dc3545; }
+        
+        .coordinate-test {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+        }
+        
+        .coordinate-test h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h4>🔍 Spine位置デバッグ</h4>
+        <button onclick="testObserverCoordinates()">Observer座標テスト</button>
+        <button onclick="testCurrentImplementation()">現在実装テスト</button>
+        <button onclick="testFixedImplementation()">修正版テスト</button>
+        <button onclick="addDebugCrosshair()">デバッグクロスヘア追加</button>
+        <button onclick="clearAllElements()">全要素クリア</button>
+        <button class="danger" onclick="scrollToTest()">スクロール問題テスト</button>
+    </div>
+
+    <div class="container">
+        <h1>🚀 Spine右飛び問題デバッグシステム</h1>
+        
+        <div class="coordinate-test">
+            <h3>📍 座標系テスト手順</h3>
+            <p>1. 「Observer座標テスト」で Observer出力座標の妥当性確認</p>
+            <p>2. 「現在実装テスト」で右飛び問題を再現</p>
+            <p>3. 「修正版テスト」で問題修正を確認</p>
+            <p>4. 「デバッグクロスヘア追加」で視覚的差異確認</p>
+        </div>
+
+        <div class="target-element" id="target-1" data-test="center">
+            📦 テスト要素1 (中央配置テスト)
+        </div>
+
+        <div class="target-element" id="target-2" data-test="top-left" style="margin-left: 100px;">
+            📦 テスト要素2 (オフセット配置テスト)
+        </div>
+
+        <div class="target-element" id="target-3" data-test="bottom-right" style="margin-top: 200px;">
+            📦 テスト要素3 (下部配置テスト)
+        </div>
+
+        <h2>🔍 デバッグ情報</h2>
+        <div class="debug-info" id="debug-output">
+デバッグ情報がここに表示されます...
+        </div>
+    </div>
+
+    <script>
+        let debugElements = [];
+        let testCounter = 0;
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('debug-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function clearLog() {
+            document.getElementById('debug-output').innerHTML = '';
+        }
+        
+        // Observer座標をシミュレートする関数
+        function simulateObserverOutput(targetElement) {
+            const rect = targetElement.getBoundingClientRect();
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            
+            // Observer出力をシミュレート（ビューポート基準座標）
+            const position = {
+                x: rect.left + rect.width / 2,  // 中央X座標（ビューポート基準）
+                y: rect.top + rect.height / 2   // 中央Y座標（ビューポート基準）
+            };
+            
+            log(`📊 Observer出力シミュレート:`, 'info');
+            log(`  要素: ${targetElement.id}`, 'info');
+            log(`  rect: ${rect.left.toFixed(1)}, ${rect.top.toFixed(1)}, ${rect.width}x${rect.height}`, 'info');
+            log(`  scroll: ${scrollLeft}, ${scrollTop}`, 'info');
+            log(`  position: ${position.x.toFixed(1)}, ${position.y.toFixed(1)} (ビューポート基準)`, 'success');
+            
+            return position;
+        }
+        
+        // Observer座標の妥当性確認テスト
+        function testObserverCoordinates() {
+            clearLog();
+            log('🔍 Observer座標の妥当性確認開始', 'success');
+            
+            const targetElement = document.getElementById('target-1');
+            const position = simulateObserverOutput(targetElement);
+            
+            // DOM要素を配置して確認
+            const testElement = document.createElement('div');
+            testElement.className = 'debug-crosshair';
+            testElement.style.position = 'absolute';
+            testElement.style.left = position.x + 'px';
+            testElement.style.top = position.y + 'px';
+            testElement.title = 'Observer出力座標';
+            
+            document.body.appendChild(testElement);
+            debugElements.push(testElement);
+            
+            log(`✅ Observer座標確認用クロスヘア配置: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, 'success');
+            log('💡 緑のクロスヘアが要素中央にあれば Observer出力座標は正常', 'info');
+        }
+        
+        // 現在実装（問題のある）での Spine配置テスト
+        function testCurrentImplementation() {
+            log('🔴 現在実装での Spine配置テスト', 'warning');
+            
+            const targetElement = document.getElementById('target-2');
+            const position = simulateObserverOutput(targetElement);
+            
+            // 現在の問題のある実装を再現
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            const spineWidth = 60;
+            const spineHeight = 60;
+            
+            // 問題のあるコード（右飛び原因）
+            const finalX = position.x + scrollLeft - (spineWidth / 2);  // ❌ スクロール二重補正
+            const finalY = position.y + scrollTop - (spineHeight / 2);   // ❌ スクロール二重補正
+            
+            log(`📊 現在実装の計算:`, 'warning');
+            log(`  position: ${position.x.toFixed(1)}, ${position.y.toFixed(1)} (ビューポート基準)`, 'info');
+            log(`  scroll: ${scrollLeft}, ${scrollTop}`, 'info');
+            log(`  spine size: ${spineWidth}x${spineHeight}`, 'info');
+            log(`  final: ${finalX.toFixed(1)}, ${finalY.toFixed(1)} (❌ 右飛び座標)`, 'error');
+            
+            const spineElement = createSpineElement('現在実装', finalX, finalY, 'error');
+            log('🔴 赤いSpine要素を配置 - 右に飛んでいることを確認', 'error');
+        }
+        
+        // 修正版での Spine配置テスト
+        function testFixedImplementation() {
+            log('✅ 修正版での Spine配置テスト', 'success');
+            
+            const targetElement = document.getElementById('target-3');
+            const position = simulateObserverOutput(targetElement);
+            
+            const spineWidth = 60;
+            const spineHeight = 60;
+            
+            // 修正版：スクロールオフセット補正を削除
+            const finalX = position.x - (spineWidth / 2);  // ✅ ビューポート基準のまま
+            const finalY = position.y - (spineHeight / 2); // ✅ ビューポート基準のまま
+            
+            log(`📊 修正版の計算:`, 'success');
+            log(`  position: ${position.x.toFixed(1)}, ${position.y.toFixed(1)} (ビューポート基準)`, 'info');
+            log(`  spine size: ${spineWidth}x${spineHeight}`, 'info');
+            log(`  final: ${finalX.toFixed(1)}, ${finalY.toFixed(1)} (✅ 正しい座標)`, 'success');
+            
+            const spineElement = createSpineElement('修正版', finalX, finalY);
+            log('✅ 正常なSpine要素を配置 - 中央に正しく配置されることを確認', 'success');
+        }
+        
+        function createSpineElement(label, x, y, errorClass = '') {
+            const spine = document.createElement('div');
+            spine.className = `spine-element ${errorClass}`;
+            spine.textContent = label;
+            spine.style.left = x + 'px';
+            spine.style.top = y + 'px';
+            spine.title = `${label}: (${x.toFixed(1)}, ${y.toFixed(1)})`;
+            
+            document.body.appendChild(spine);
+            debugElements.push(spine);
+            
+            return spine;
+        }
+        
+        function addDebugCrosshair() {
+            const targets = document.querySelectorAll('.target-element');
+            targets.forEach((target, index) => {
+                const position = simulateObserverOutput(target);
+                
+                const crosshair = document.createElement('div');
+                crosshair.className = 'debug-crosshair';
+                crosshair.style.position = 'absolute';
+                crosshair.style.left = position.x + 'px';
+                crosshair.style.top = position.y + 'px';
+                crosshair.title = `${target.id} 中央座標`;
+                
+                document.body.appendChild(crosshair);
+                debugElements.push(crosshair);
+            });
+            
+            log('🎯 全要素にデバッグクロスヘアを追加', 'info');
+        }
+        
+        function clearAllElements() {
+            debugElements.forEach(element => {
+                if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+            });
+            debugElements = [];
+            clearLog();
+            log('🧹 全デバッグ要素をクリア', 'info');
+        }
+        
+        function scrollToTest() {
+            window.scrollTo(0, 300);
+            setTimeout(() => {
+                log('📜 スクロール位置変更 - 座標系への影響を確認', 'warning');
+                testObserverCoordinates();
+                testCurrentImplementation();
+                testFixedImplementation();
+            }, 500);
+        }
+        
+        // 初期化
+        window.addEventListener('load', () => {
+            log('🌐 Spine右飛び問題デバッグシステム初期化完了', 'success');
+            log('💡 手順: 1.Observer座標 → 2.現在実装 → 3.修正版 → 4.クロスヘア', 'info');
+        });
+        
+        // スクロール時の座標変化確認
+        let scrollThrottle = null;
+        window.addEventListener('scroll', () => {
+            if (scrollThrottle) clearTimeout(scrollThrottle);
+            scrollThrottle = setTimeout(() => {
+                if (debugElements.length > 0) {
+                    log(`📜 スクロール位置: ${window.pageXOffset}, ${window.pageYOffset}`, 'info');
+                }
+            }, 200);
+        });
+    </script>
+</body>
+</html>

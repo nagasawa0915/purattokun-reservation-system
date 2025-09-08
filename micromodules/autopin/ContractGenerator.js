@@ -23,20 +23,20 @@ export class ContractGenerator {
         const { w, h } = logicalSize;
         
         const anchorMap = {
-            // Top row
-            'LT': { x: 0, y: 0 },           // Left-Top
-            'TC': { x: w/2, y: 0 },         // Top-Center  
-            'RT': { x: w, y: 0 },           // Right-Top
+            // Top row (パーセント値で返す - 呼び出し側が (value/100) * width を期待)
+            'LT': { x: 0, y: 0 },           // Left-Top: 0%, 0%
+            'TC': { x: 50, y: 0 },          // Top-Center: 50%, 0%  
+            'RT': { x: 100, y: 0 },         // Right-Top: 100%, 0%
             
             // Middle row
-            'LC': { x: 0, y: h/2 },         // Left-Center
-            'CC': { x: w/2, y: h/2 },       // Center-Center
-            'RC': { x: w, y: h/2 },         // Right-Center
+            'LC': { x: 0, y: 50 },          // Left-Center: 0%, 50%
+            'CC': { x: 50, y: 50 },         // Center-Center: 50%, 50%
+            'RC': { x: 100, y: 50 },        // Right-Center: 100%, 50%
             
             // Bottom row  
-            'LB': { x: 0, y: h },           // Left-Bottom
-            'BC': { x: w/2, y: h },         // Bottom-Center
-            'RB': { x: w, y: h }            // Right-Bottom
+            'LB': { x: 0, y: 100 },         // Left-Bottom: 0%, 100%
+            'BC': { x: 50, y: 100 },        // Bottom-Center: 50%, 100%
+            'RB': { x: 100, y: 100 }        // Right-Bottom: 100%, 100%
         };
         
         return anchorMap[align] || anchorMap['CC']; // デフォルト中央
