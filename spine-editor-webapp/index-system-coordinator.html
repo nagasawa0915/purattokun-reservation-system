@@ -30,7 +30,83 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 0 15px;
+            gap: 20px;
+        }
+        
+        .toolbar-left, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toolbar-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #3a3a3a;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        .toolbar-btn:hover {
+            background: #4a4a4a;
+            border-color: #666;
+            color: white;
+        }
+        
+        .toolbar-btn:active {
+            background: #2a2a2a;
+            transform: translateY(1px);
+        }
+        
+        .toolbar-btn.folder-btn:hover {
+            background: #007acc;
+            border-color: #0099ff;
+        }
+        
+        .toolbar-btn.save-btn:hover {
+            background: #00aa44;
+            border-color: #00cc55;
+        }
+        
+        .toolbar-btn.export-btn {
+            background: #ff6b35;
+            border-color: #ff8555;
+            color: white;
+        }
+        
+        .toolbar-btn.export-btn:hover {
+            background: #ff8555;
+            border-color: #ffaa77;
+        }
+        
+        .btn-icon {
+            font-size: 14px;
+        }
+        
+        .btn-text {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background: #555;
+            margin: 0 4px;
         }
         
         .coordinator-status {
@@ -339,14 +415,49 @@
 <body>
     <!-- ヘッダー -->
     <div class="top-bar">
-        <div class="system-info">
-            <h1 style="font-size: 16px;">🎯 Spine Editor - SystemCoordinator統合版</h1>
-            <div style="font-size: 11px; color: #999;">
-                ES6 Modules | Microservices Architecture
+        <!-- 左側: メインツールボタン -->
+        <div class="toolbar-left">
+            <button class="toolbar-btn folder-btn" onclick="selectHomeFolder()">
+                <span class="btn-icon">📁</span>
+                <span class="btn-text">ホームページフォルダ選択</span>
+            </button>
+            <button class="toolbar-btn folder-btn" onclick="selectSpineFolder()">
+                <span class="btn-icon">🎯</span>
+                <span class="btn-text">Spineフォルダ選択</span>
+            </button>
+            <div class="toolbar-separator"></div>
+            <button class="toolbar-btn save-btn" onclick="saveProject()">
+                <span class="btn-icon">💾</span>
+                <span class="btn-text">Save</span>
+            </button>
+            <button class="toolbar-btn" onclick="undoAction()">
+                <span class="btn-icon">↶</span>
+            </button>
+            <button class="toolbar-btn" onclick="redoAction()">
+                <span class="btn-icon">↷</span>
+            </button>
+        </div>
+
+        <!-- 中央: システム状態 -->
+        <div class="toolbar-center">
+            <div class="coordinator-status initializing" id="coordinator-status">
+                初期化中...
             </div>
         </div>
-        <div class="coordinator-status initializing" id="coordinator-status">
-            初期化中...
+
+        <!-- 右側: アクション・出力ボタン -->
+        <div class="toolbar-right">
+            <button class="toolbar-btn" onclick="resetLayout()" title="レイアウトリセット">
+                <span class="btn-icon">🔄</span>
+            </button>
+            <button class="toolbar-btn" onclick="window.systemCoordinator?.performSystemHealthCheck()" title="ヘルスチェック">
+                <span class="btn-icon">🏥</span>
+            </button>
+            <div class="toolbar-separator"></div>
+            <button class="toolbar-btn export-btn" onclick="exportPackage()">
+                <span class="btn-icon">📦</span>
+                <span class="btn-text">パッケージ出力</span>
+            </button>
         </div>
     </div>
 
@@ -522,6 +633,64 @@
         
         // 統合システム開始ログ
         console.log('✅ SystemCoordinator統合版読み込み完了');
+        
+        // ツールバー機能実装
+        window.selectHomeFolder = function() {
+            console.log('📁 ホームページフォルダ選択');
+            // ダミー実装: 実際のフォルダ選択ダイアログ
+            alert('ホームページフォルダ選択機能\n(実装予定: File System API)');
+        };
+        
+        window.selectSpineFolder = function() {
+            console.log('🎯 Spineフォルダ選択');
+            // ダミー実装: 実際のSpineフォルダ選択
+            alert('Spineフォルダ選択機能\n(実装予定: Directory Picker)');
+        };
+        
+        window.saveProject = function() {
+            console.log('💾 プロジェクト保存');
+            // ダミー実装: 実際のプロジェクト保存
+            const timestamp = new Date().toLocaleString('ja-JP');
+            localStorage.setItem('spine-project-save', timestamp);
+            alert(`プロジェクト保存完了\n保存時刻: ${timestamp}`);
+        };
+        
+        window.undoAction = function() {
+            console.log('↶ Undo');
+            // ダミー実装: 実際のUundo機能
+            alert('Undo機能\n(実装予定: Action History System)');
+        };
+        
+        window.redoAction = function() {
+            console.log('↷ Redo');
+            // ダミー実装: 実際のRedo機能
+            alert('Redo機能\n(実装予定: Action History System)');
+        };
+        
+        window.exportPackage = function() {
+            console.log('📦 パッケージ出力');
+            // ダミー実装: 実際のパッケージ出力機能
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                project: 'spine-editor-webapp',
+                modules: ['SystemCoordinator', 'PanelManager', 'ResizeController', 'DragDropController'],
+                status: 'ready'
+            };
+            
+            // 簡易ダウンロード機能
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], 
+                { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `spine-project-export-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('📦 パッケージ出力完了:', exportData);
+        };
     </script>
 </body>
 </html>

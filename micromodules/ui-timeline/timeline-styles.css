@@ -1,0 +1,392 @@
+/* ===== Timeline Module Styles ===== */
+
+.timeline-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+}
+
+/* ===== Timeline Header ===== */
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.timeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.timeline-btn {
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+    font-size: var(--font-size-xs);
+}
+
+.timeline-btn:hover {
+    background: var(--bg-selected);
+    border-color: var(--border-light);
+}
+
+.timeline-btn .icon {
+    font-size: 12px;
+}
+
+.timeline-time {
+    font-family: monospace;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-left: 12px;
+}
+
+.timeline-options {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.timeline-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+}
+
+.timeline-checkbox input[type="checkbox"] {
+    margin: 0;
+    width: 14px;
+    height: 14px;
+}
+
+/* ===== Timeline Content ===== */
+.timeline-content {
+    flex: 1;
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--bg-primary);
+}
+
+/* ===== Time Ruler ===== */
+.timeline-ruler {
+    height: 30px;
+    position: relative;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.ruler-mark {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-left: 1px solid var(--border-color);
+}
+
+.ruler-mark.major {
+    border-left-color: var(--text-muted);
+}
+
+.ruler-mark.major::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -1px;
+    width: 2px;
+    height: 8px;
+    background: var(--text-muted);
+}
+
+.ruler-mark.minor::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -1px;
+    width: 1px;
+    height: 4px;
+    background: var(--border-light);
+}
+
+.ruler-label {
+    position: absolute;
+    top: 10px;
+    left: 4px;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+/* ===== Timeline Tracks ===== */
+.timeline-tracks {
+    position: relative;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.timeline-track {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    transition: background-color 0.15s ease;
+}
+
+.timeline-track:hover {
+    background: var(--bg-hover);
+}
+
+.timeline-track:last-child {
+    border-bottom: none;
+}
+
+/* ===== Track Header ===== */
+.track-header {
+    width: 120px;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-right: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.track-name {
+    font-size: var(--font-size-xs);
+    color: var(--text-primary);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.track-controls {
+    display: flex;
+    gap: 2px;
+    margin-left: 4px;
+}
+
+.track-btn {
+    width: 18px;
+    height: 18px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+}
+
+.track-btn:hover {
+    background: var(--bg-selected);
+    color: var(--text-primary);
+}
+
+.track-btn.active {
+    background: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+    color: #000;
+}
+
+/* ===== Track Content ===== */
+.track-content {
+    position: relative;
+    height: 40px;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ===== Animation Bars ===== */
+.animation-bar {
+    position: absolute;
+    top: 4px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.animation-bar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.animation-bar.playing {
+    border: 2px solid var(--accent-cyan);
+    box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+.animation-bar.selected {
+    border: 2px solid var(--accent-blue);
+    box-shadow: 0 0 6px rgba(0, 122, 204, 0.5);
+}
+
+.animation-label {
+    font-size: var(--font-size-xs);
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== Playhead ===== */
+.timeline-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent-cyan);
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: 0 0 4px rgba(0, 212, 255, 0.7);
+}
+
+.timeline-playhead::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -6px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 8px solid var(--accent-cyan);
+}
+
+/* ===== スクロールバー カスタマイズ ===== */
+.timeline-content::-webkit-scrollbar {
+    height: 12px;
+}
+
+.timeline-content::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+.timeline-content::-webkit-scrollbar-thumb {
+    background: var(--bg-hover);
+    border-radius: 6px;
+}
+
+.timeline-content::-webkit-scrollbar-thumb:hover {
+    background: var(--border-light);
+}
+
+.timeline-tracks::-webkit-scrollbar {
+    width: 8px;
+}
+
+.timeline-tracks::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+.timeline-tracks::-webkit-scrollbar-thumb {
+    background: var(--bg-hover);
+    border-radius: 4px;
+}
+
+/* ===== レスポンシブ対応 ===== */
+@media (max-width: 768px) {
+    .track-header {
+        width: 100px;
+        min-width: 100px;
+        padding: 6px 8px;
+    }
+    
+    .track-name {
+        font-size: var(--font-size-xs);
+    }
+    
+    .track-btn {
+        width: 16px;
+        height: 16px;
+        font-size: 8px;
+    }
+    
+    .timeline-controls {
+        gap: 6px;
+    }
+    
+    .timeline-btn {
+        padding: 3px 6px;
+    }
+    
+    .animation-bar {
+        height: 28px;
+        top: 6px;
+        padding: 0 6px;
+    }
+    
+    .track-content {
+        height: 36px;
+    }
+}
+
+/* ===== アニメーション ===== */
+@keyframes timelinePulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+.animation-bar.playing .animation-label {
+    animation: timelinePulse 1s ease-in-out infinite;
+}
+
+/* ===== ダークテーマ特化スタイル ===== */
+.timeline-container {
+    /* 影と深度を追加 */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-header {
+    /* グラデーション効果 */
+    background: linear-gradient(to bottom, var(--bg-tertiary), var(--bg-secondary));
+}
+
+.animation-bar {
+    /* よりリッチな影効果 */
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-playhead {
+    /* グロー効果を強化 */
+    box-shadow: 
+        0 0 4px rgba(0, 212, 255, 0.7),
+        0 0 8px rgba(0, 212, 255, 0.3),
+        0 0 12px rgba(0, 212, 255, 0.1);
+}

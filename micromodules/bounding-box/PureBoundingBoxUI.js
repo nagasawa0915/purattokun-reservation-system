@@ -516,6 +516,9 @@ class PureBoundingBoxUI {
         console.log('💾 保存処理開始（自動ピン統合版）');
         
         try {
+            // 🚨 Phase 1緊急修正: Spineキャンバス設定の事前保護
+            const spineProtectionData = this.backupSpineCanvasSettings();
+            
             // 保存データ準備
             const saveData = {
                 targetElement: this.core.config.targetElement,
@@ -528,10 +531,14 @@ class PureBoundingBoxUI {
             // 基本保存（localStorage）
             this.saveToLocalStorage(saveData);
             
-            // 🎯 自動ピン適用
+            // 🎯 自動ピン適用（保護モード）
             let autoPinResult = null;
             if (this.autoPin) {
-                console.log('🎯 自動ピン適用開始');
+                console.log('🎯 自動ピン適用開始（Spine保護モード）');
+                
+                // 🚨 一時的にSpine追従システムを無効化
+                this.autoPin.disablePinSync();
+                
                 autoPinResult = await this.autoPin.applyAutoPinOnSave(saveData);
                 
                 if (autoPinResult.success) {
@@ -542,6 +549,11 @@ class PureBoundingBoxUI {
                     // 失敗時は通常の保存のみ
                     console.log('📝 基本保存完了 (自動追従なし):', autoPinResult.fallback);
                 }
+                
+                // 🚨 Spine設定を復元してから追従機能を再有効化
+                this.restoreSpineCanvasSettings(spineProtectionData);
+                this.autoPin.enablePinSync();
+                
             } else {
                 console.log('📝 基本保存のみ (自動ピンシステム無効)');
             }
@@ -556,7 +568,7 @@ class PureBoundingBoxUI {
                 autoPinEnabled: !!this.autoPin
             });
             
-            console.log('✅ 保存処理完了');
+            console.log('✅ 保存処理完了（Spine設定保護済み）');
             
         } catch (error) {
             console.error('❌ 保存処理エラー:', error);
@@ -1591,6 +1603,85 @@ class PureBoundingBoxUI {
         
         document.body.appendChild(overlay);
         document.body.appendChild(settingsPanel);
+    }
+    
+    /**
+     * 🚨 Phase 1緊急修正: Spineキャンバス設定のバックアップ
+     */
+    backupSpineCanvasSettings() {
+        const spineCanvas = document.getElementById('spine-canvas');
+        if (!spineCanvas) {
+            console.log('🚨 Spineキャンバス未発見 - バックアップスキップ');
+            return null;
+        }
+        
+        const backupData = {
+            // CSS設定の保護
+            cssSettings: {
+                width: spineCanvas.style.width,
+                height: spineCanvas.style.height,
+                transform: spineCanvas.style.transform,
+                position: spineCanvas.style.position,
+                left: spineCanvas.style.left,
+                top: spineCanvas.style.top,
+                zIndex: spineCanvas.style.zIndex
+            },
+            // StableSpineRenderer設定の保護
+            rendererSettings: null
+        };
+        
+        // グローバルのspineRendererがある場合、スケール設定も保護
+        if (window.spineRenderer && window.spineRenderer.skeleton) {
+            backupData.rendererSettings = {
+                scaleX: window.spineRenderer.skeleton.scaleX,
+                scaleY: window.spineRenderer.skeleton.scaleY,
+                x: window.spineRenderer.skeleton.x,
+                y: window.spineRenderer.skeleton.y
+            };
+        }
+        
+        console.log('🛡️ Spineキャンバス設定バックアップ完了:', backupData);
+        return backupData;
+    }
+    
+    /**
+     * 🚨 Phase 1緊急修正: Spineキャンバス設定の復元
+     */
+    restoreSpineCanvasSettings(backupData) {
+        if (!backupData) {
+            console.log('🚨 バックアップデータなし - 復元スキップ');
+            return;
+        }
+        
+        const spineCanvas = document.getElementById('spine-canvas');
+        if (!spineCanvas) {
+            console.log('🚨 Spineキャンバス未発見 - 復元スキップ');
+            return;
+        }
+        
+        // CSS設定の復元
+        const css = backupData.cssSettings;
+        if (css) {
+            // 重要な設定のみ復元（空文字列も含めて正確に復元）
+            if (css.width !== undefined) spineCanvas.style.width = css.width;
+            if (css.height !== undefined) spineCanvas.style.height = css.height;
+            if (css.transform !== undefined) spineCanvas.style.transform = css.transform;
+            if (css.position !== undefined) spineCanvas.style.position = css.position;
+            if (css.left !== undefined) spineCanvas.style.left = css.left;
+            if (css.top !== undefined) spineCanvas.style.top = css.top;
+            if (css.zIndex !== undefined) spineCanvas.style.zIndex = css.zIndex;
+        }
+        
+        // StableSpineRenderer設定の復元
+        if (backupData.rendererSettings && window.spineRenderer && window.spineRenderer.skeleton) {
+            const renderer = backupData.rendererSettings;
+            window.spineRenderer.skeleton.scaleX = renderer.scaleX;
+            window.spineRenderer.skeleton.scaleY = renderer.scaleY;
+            window.spineRenderer.skeleton.x = renderer.x;
+            window.spineRenderer.skeleton.y = renderer.y;
+        }
+        
+        console.log('🔄 Spineキャンバス設定復元完了');
     }
     
     /**

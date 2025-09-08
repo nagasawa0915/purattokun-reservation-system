@@ -1,0 +1,3008 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 シンプルピンテスト</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        /* ヒーローイメージ */
+        .hero-section {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2)), 
+                        url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') no-repeat center;
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .hero-section::after {
+            content: "🎯 ヒーローイメージエリア\A(背景画像: background-size: cover)";
+            white-space: pre;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.3);
+            padding: 16px;
+            border-radius: 8px;
+        }
+        
+        /* 画像セクション */
+        .image-section {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            margin: 30px auto;
+            background: url('https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80') no-repeat center;
+            background-size: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+        
+        .image-section::after {
+            content: "📸 テスト画像\A(300px × 200px)";
+            white-space: pre;
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            font-size: 14px;
+        }
+        
+        /* テキストセクション */
+        .text-section {
+            padding: 40px;
+        }
+        
+        .text-section h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 16px;
+            border-bottom: 3px solid #ff6b35;
+            padding-bottom: 8px;
+        }
+        
+        .text-section p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        
+        /* Spineキャラクター */
+        #spine-canvas {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;    /* 明示的サイズ指定で縦横比歪み防止 */
+            height: 400px;   /* HTML属性と一致させる */
+            z-index: 1000;
+            border-radius: 4px;
+        }
+        
+        /* テスト用コントロール */
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            z-index: 2000;
+        }
+        
+        .control-button {
+            display: block;
+            width: 100%;
+            margin: 4px 0;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #ff6b35;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .control-button:hover {
+            background: #e55a2d;
+            transform: translateY(-1px);
+        }
+        
+        .control-button.secondary {
+            background: #6c757d;
+        }
+        
+        .control-button.secondary:hover {
+            background: #5a6268;
+        }
+        
+        /* ログパネル */
+        .log-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 400px;
+            max-height: 200px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            z-index: 2000;
+        }
+        
+        /* 🎯 AutoPin分離診断パネル */
+        .separation-diagnosis-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 2px solid #ff6b35;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 3000;
+            min-width: 500px;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .separation-diagnosis-panel h3 {
+            margin: 0 0 16px 0;
+            color: #ff6b35;
+            border-bottom: 2px solid #ff6b35;
+            padding-bottom: 8px;
+        }
+        
+        .separation-diagnosis-panel .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .diagnosis-section {
+            margin-bottom: 16px;
+            padding: 12px;
+            border-left: 4px solid #ddd;
+            background: #f8f9fa;
+        }
+        
+        .diagnosis-section.success {
+            border-left-color: #28a745;
+            background: #f0f9ff;
+        }
+        
+        .diagnosis-section.warning {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        
+        .diagnosis-section.error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .diagnosis-item {
+            margin: 4px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .score-display {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        
+        .score-display.excellent { background: #d4edda; color: #155724; }
+        .score-display.good { background: #fff3cd; color: #856404; }
+        .score-display.poor { background: #f8d7da; color: #721c24; }
+        
+        .log-entry {
+            margin: 2px 0;
+        }
+        
+        .log-success { color: #28a745; }
+        .log-warning { color: #ffc107; }
+        .log-error { color: #dc3545; }
+        .log-info { color: #17a2b8; }
+        
+        /* Canvas制御UI */
+        .canvas-controls-container {
+            position: fixed;
+            top: 350px;
+            right: 20px;
+            width: 280px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+        
+        .canvas-controls-container iframe {
+            width: 100%;
+            border: none;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヒーローイメージ -->
+        <div class="hero-section" id="hero-section">
+            <!-- Spineキャラクターはここに配置 -->
+            <canvas id="spine-canvas" width="400" height="400"></canvas>
+        </div>
+        
+        <!-- 画像セクション -->
+        <div class="image-section" id="image-section">
+            <!-- 背景画像はCSSで表示 -->
+        </div>
+        
+        <!-- テキストセクション -->
+        <div class="text-section">
+            <h1 id="main-heading">🎯 シンプルピンテスト</h1>
+            <p id="article-text">
+                このページは、PureBoundingBoxAutoPinシステムをテストするためのシンプルな環境です。
+                ヒーローイメージ、画像、テキスト要素があり、それぞれにピンを設定してテストできます。
+            </p>
+            <p>
+                右上のコントロールパネルから各機能をテストしてください。
+                問題が発生した場合は、左下のログパネルでエラー詳細を確認できます。
+            </p>
+        </div>
+    </div>
+    
+    <!-- コントロールパネル -->
+    <div class="controls">
+        <h4 style="margin: 0 0 12px 0; font-size: 14px;">🎮 テストコントロール</h4>
+        <button class="control-button" onclick="initializeSpineCharacter()">
+            🎨 Spineキャラクター初期化
+        </button>
+        <button class="control-button" onclick="startBoundingBoxEdit()">
+            📦 BB編集開始
+        </button>
+        <button class="control-button" onclick="startPinSetting()">
+            📍 ピン設定開始
+        </button>
+        <button class="control-button secondary" onclick="showAllPins()">
+            👁️ 全ピン表示
+        </button>
+        <button class="control-button secondary" onclick="hideAllPins()">
+            🚫 全ピン非表示
+        </button>
+        <button class="control-button secondary" onclick="cleanupAll()">
+            🧹 全クリーンアップ
+        </button>
+        <button class="control-button secondary" onclick="diagnoseSystem()">
+            🔍 システム診断
+        </button>
+        <button class="control-button secondary" onclick="checkAspectRatio()">
+            📐 縦横比チェック
+        </button>
+        <button class="control-button secondary" onclick="testSpineSettings()">
+            💾 設定保存テスト
+        </button>
+        <button class="control-button secondary" onclick="loadSpineSettings()">
+            📥 設定読み込みテスト
+        </button>
+        <button class="control-button" onclick="testScalingContain()">
+            🎯 contain モード (歪み防止)
+        </button>
+        <button class="control-button" onclick="testScalingCover()">
+            🎨 cover モード (領域満たす)
+        </button>
+        <button class="control-button secondary" onclick="checkScalingConfig()">
+            ⚙️ スケーリング設定確認
+        </button>
+        <button class="control-button secondary" onclick="testPinDataFormats()">
+            🔍 ピンデータ形式チェック
+        </button>
+        <button class="control-button secondary" onclick="forcePinDisplay()">
+            📌 強制ピン表示
+        </button>
+        <button class="control-button secondary" onclick="testResponsiveTracking()">
+            🔄 追従システムテスト
+        </button>
+        <button class="control-button secondary" onclick="testBackgroundDetection()">
+            🔍 背景検出テスト
+        </button>
+        
+        <!-- 🎯 AutoPin完全分離検証システム -->
+        <hr style="margin: 8px 0; border: 1px solid #ddd;">
+        <h5 style="margin: 4px 0; font-size: 11px; color: #666;">🎯 AutoPin完全分離検証</h5>
+        <button class="control-button secondary" onclick="diagnoseAutoPinSeparationState()">
+            🔍 完全分離診断
+        </button>
+        <button class="control-button secondary" onclick="generateAutoPinSeparationReport()">
+            📊 AutoPin状態レポート
+        </button>
+        <button class="control-button secondary" onclick="runFullSeparationTest()">
+            🧪 完全分離テスト
+        </button>
+        
+        <!-- 🆕 座標純度チェック機能 -->
+        <button class="control-button" onclick="checkCoordinatePurity()">
+            🧪 座標純度チェック
+        </button>
+        <button class="control-button secondary" onclick="analyzeCoordinateOrigin()">
+            🔍 座標由来分析
+        </button>
+        <button class="control-button secondary" onclick="generateCoordinatePurityReport()">
+            📊 座標純度レポート
+        </button>
+        <button class="control-button secondary" onclick="startCoordinateContaminationMonitor()">
+            🚨 座標混入監視開始
+        </button>
+        <button class="control-button secondary" onclick="startRealtimeMonitoring()">
+            📈 リアルタイム監視
+        </button>
+        <button class="control-button secondary" onclick="stopRealtimeMonitoring()">
+            ⏹️ 監視停止
+        </button>
+        
+        <!-- 🆕 DOM状態詳細確認機能 -->
+        <button class="control-button secondary" onclick="captureBeforeState()">
+            📋 DOM状態キャプチャ
+        </button>
+        <button class="control-button secondary" onclick="debugSpineCanvasState()">
+            🔍 DOM状態確認
+        </button>
+        <button class="control-button secondary" onclick="compareAfterState()">
+            🔄 編集前後比較
+        </button>
+        <button class="control-button secondary" onclick="startAdvancedContaminationWatch()">
+            🕵️ 高度監視開始
+        </button>
+        <button class="control-button secondary" onclick="stopAdvancedContaminationWatch()">
+            🛑 高度監視停止
+        </button>
+    </div>
+    
+    <!-- ログパネル -->
+    <div class="log-panel" id="log-panel">
+        <div class="log-entry log-info">🎯 シンプルピンテスト開始準備完了</div>
+    </div>
+    
+    <!-- 🎯 AutoPin分離診断パネル -->
+    <div class="separation-diagnosis-panel" id="separation-diagnosis-panel">
+        <button class="close-btn" onclick="closeDiagnosisPanel()" title="閉じる">×</button>
+        <h3>🎯 AutoPin完全分離診断結果</h3>
+        <div id="diagnosis-content">
+            <!-- 診断結果がここに動的に挿入される -->
+        </div>
+    </div>
+    
+    <!-- Canvas制御UI（iframe統合） -->
+    <div class="canvas-controls-container">
+        <iframe 
+            src="./micromodules/canvas-resize/ui.html?v=1725439200" 
+            id="canvas-resize-iframe"
+            width="280" 
+            height="500"
+            frameborder="0">
+        </iframe>
+    </div>
+
+    <!-- 必要なライブラリ読み込み -->
+    <!-- Spine WebGL -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    
+    <!-- StableSpineRenderer -->
+    <script src="micromodules/spine-renderer/StableSpineRenderer.js"></script>
+    
+    <!-- 🔧 ElementObserver Phase 1（AutoPin必須依存） -->
+    <script src="micromodules/element-observer/ElementObserverCore.js"></script>
+    <script src="micromodules/element-observer/ElementObserver.js"></script>
+    
+    <!-- PureBoundingBox（マニュアル通りに全ファイル読み込み） -->
+    <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
+    
+    <!-- AutoPin機能（ElementObserver依存） -->
+    <!-- AutoPin分割モジュール（依存順に読み込み） -->
+    <script src="micromodules/bounding-box/AutoPinConfigManager.js"></script>
+    <script src="micromodules/bounding-box/BackgroundDetector.js"></script>
+    <script src="micromodules/bounding-box/AnchorCalculator.js"></script>
+    <script src="micromodules/bounding-box/PersistenceManager.js"></script>
+    <script src="micromodules/bounding-box/PinDisplayManager.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxAutoPin.js"></script>
+    
+    <!-- TwoStageSelector -->
+    <script src="micromodules/element-selector/ElementHighlighter.js"></script>
+    <script src="micromodules/element-selector/ElementSelector.js"></script>
+    <script src="micromodules/element-selector/TwoStageSelector.js"></script>
+    
+    <!-- SpineSettingsPersistence（マニュアル通り） -->
+    <script src="micromodules/spine-settings-persistence/SpineSettingsPersistence.js"></script>
+
+    <script>
+        // グローバル変数
+        let spineRenderer = null;
+        let boundingBox = null;
+        let autoPin = null;
+        let spineSettingsPersistence = null;
+        let canvasResizeHandler = null;
+        
+        // ログ機能
+        function log(message, type = 'info') {
+            const logPanel = document.getElementById('log-panel');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        // 1. Spineキャラクター初期化（StableSpineRendererマニュアル通り）
+        window.initializeSpineCharacter = async function initializeSpineCharacter() {
+            try {
+                log('🎨 Spineキャラクター初期化開始', 'info');
+                
+                // StableSpineRendererを使用（マニュアル通り）
+                spineRenderer = StableSpineRenderer.createForCharacter('purattokun');
+                await spineRenderer.initialize();
+                
+                // アニメーション再生
+                spineRenderer.playAnimation('taiki');
+                
+                log('✅ Spineキャラクター初期化完了', 'success');
+                
+                // 🎯 キャラクター初期化完了時にCanvas情報をUIに送信
+                updateCanvasUI();
+                
+            } catch (error) {
+                log(`❌ Spineキャラクター初期化エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 2. バウンディングボックス編集開始（PureBoundingBoxマニュアル通り）
+        window.startBoundingBoxEdit = async function startBoundingBoxEdit() {
+            try {
+                log('📦 バウンディングボックス編集開始', 'info');
+                
+                const targetElement = document.getElementById('spine-canvas');
+                if (!targetElement) {
+                    throw new Error('spine-canvas要素が見つかりません');
+                }
+                
+                // 🎯 BB編集前のAutoPin状態確認
+                if (window.pureBoundingBoxAutoPin) {
+                    const preBBState = window.pureBoundingBoxAutoPin.getState();
+                    log(`🔍 BB編集前AutoPin状態: ${preBBState.coordinateSystem.mode}`, 'info');
+                }
+                
+
+                // 🎯 【重要修正】BB編集開始時: AutoPin座標レイヤーを強制削除
+                if (window.pureBoundingBoxAutoPin) {
+                    log("🛑 BB編集開始 → AutoPin座標レイヤー強制削除実行", "warning");
+                    
+                    try {
+                        // 直接的にAutoPin座標レイヤーを削除
+                        window.pureBoundingBoxAutoPin.forceStopAndClearCoordinateLayers();
+                        log("✅ AutoPin座標レイヤー強制削除完了", "success");
+                        
+                        // spine-canvasのCSS状態も確認・クリア
+                        const spineCanvas = document.getElementById("spine-canvas");
+                        if (spineCanvas) {
+                            // AutoPinによる位置制御を無効化
+                            spineCanvas.style.position = "";
+                            spineCanvas.style.left = "";
+                            spineCanvas.style.top = "";
+                            // transformは元のCSSに委ねる
+                            
+                            log("🔄 spine-canvas AutoPin設定をクリア", "info");
+                            
+                            const cleanStyle = {
+                                position: spineCanvas.style.position || getComputedStyle(spineCanvas).position,
+                                left: spineCanvas.style.left || getComputedStyle(spineCanvas).left,
+                                top: spineCanvas.style.top || getComputedStyle(spineCanvas).top,
+                                transform: spineCanvas.style.transform || getComputedStyle(spineCanvas).transform
+                            };
+                            log(`📊 spine-canvas設定後状態: ${JSON.stringify(cleanStyle)}`, "info");
+                        }
+                        
+                    } catch (clearError) {
+                        log(`❌ AutoPin座標レイヤー削除エラー: ${clearError.message}`, "error");
+                    }
+                } else {
+                    log("⚠️ window.pureBoundingBoxAutoPin が見つかりません", "warning");
+                }
+
+                // PureBoundingBox作成（マニュアル通り）
+                boundingBox = new PureBoundingBox({
+                    targetElement: targetElement
+                });
+                
+                // 編集開始
+                const result = await boundingBox.execute();
+                
+                if (result.success) {
+                    log('✅ バウンディングボックス編集モード開始成功', 'success');
+                    log('💡 BB編集中はAutoPin座標レイヤーが完全分離されています', 'info');
+                } else {
+                    throw new Error(result.error);
+                }
+                
+            } catch (error) {
+                log(`❌ バウンディングボックス編集エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 3. ピン設定開始（TwoStageSelector使用）
+        window.startPinSetting = async function startPinSetting() {
+            try {
+                log('📍 ピン設定開始', 'info');
+                
+                if (!boundingBox) {
+                    log('⚠️ 先にバウンディングボックス編集を開始してください', 'warning');
+                    return;
+                }
+                
+                // 右クリックメニューからピン設定を開始
+                // PureBoundingBoxUIの右クリックメニュー機能を使用
+                log('💡 Spineキャラクターを右クリックして「ピン設定」を選択してください', 'info');
+                
+            } catch (error) {
+                log(`❌ ピン設定エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 4. 全ピン表示
+        window.showAllPins = function showAllPins() {
+            try {
+                log('👁️ 全ピン表示開始', 'info');
+                
+                // AutoPinインスタンスを初期化（必要に応じて）
+                initializeAutoPin();
+                
+                // 利用可能なピン表示機能を実行
+                const nodeId = 'spine-canvas';
+                
+                if (window.currentAutoPin) {
+                    window.currentAutoPin.showAnchorPoint(nodeId);
+                    window.currentAutoPin.showUserPin(nodeId);
+                    log('✅ アンカーポイントとユーザーピンを表示しました', 'success');
+                } else {
+                    log('⚠️ AutoPinインスタンスがありません', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ ピン表示エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // AutoPin初期化ヘルパー（boundingBoxに依存しない独立初期化）
+        window.initializeAutoPin = function initializeAutoPin() {
+            if (!window.currentAutoPin) {
+                try {
+                    log('🔧 AutoPin初期化開始', 'info');
+                    
+                    // ElementObserverインスタンス作成（オプショナル）
+                    let elementObserver = null;
+                    if (window.ElementObserver) {
+                        try {
+                            elementObserver = new window.ElementObserver();
+                            log('✅ ElementObserver インスタンス作成成功', 'success');
+                        } catch (error) {
+                            log(`⚠️ ElementObserver 作成失敗: ${error.message}`, 'warning');
+                            elementObserver = null;
+                        }
+                    } else {
+                        log('⚠️ ElementObserver クラスが見つかりません（null で続行）', 'warning');
+                    }
+                    
+                    log(`🔍 ElementObserver状態: ${elementObserver ? 'インスタンス作成済み' : 'null'}`, 'info');
+                    
+                    // AutoPinインスタンス作成
+                    const targetElement = document.getElementById('spine-canvas');
+                    if (targetElement) {
+                        // AutoPin初期化（PureBoundingBoxCoreが必要）
+                        log('🔍 AutoPin初期化開始 - 必要モジュール確認中', 'info');
+                        log(`  PureBoundingBoxCore: ${typeof window.PureBoundingBoxCore}`, 'info');
+                        log(`  PureBoundingBoxAutoPin: ${typeof window.PureBoundingBoxAutoPin}`, 'info');
+                        log(`  ElementObserver: ${elementObserver ? elementObserver.constructor.name : 'null/undefined'}`, 'info');
+                        
+                        if (window.PureBoundingBoxCore && window.PureBoundingBoxAutoPin) {
+                            try {
+                                // PureBoundingBoxCore の設定オブジェクトを作成
+                                const coreConfig = {
+                                    targetElement: targetElement,
+                                    nodeId: 'spine-canvas-autopin'
+                                };
+                                const boundingBoxCore = new window.PureBoundingBoxCore(coreConfig);
+                                log('✅ PureBoundingBoxCore インスタンス作成成功', 'success');
+                                
+                                window.currentAutoPin = new window.PureBoundingBoxAutoPin(boundingBoxCore, elementObserver);
+                                log('✅ PureBoundingBoxAutoPin インスタンス作成成功', 'success');
+                                
+                                // グローバルアクセス用のエイリアス追加
+                                window.pureBoundingBoxAutoPin = window.currentAutoPin;
+                                
+                                log('✅ PureBoundingBoxAutoPin 初期化完了', 'success');
+                                log('🎯 グローバルアクセス: window.pureBoundingBoxAutoPin で利用可能', 'info');
+                                
+                                // 初期設定確認
+                                const config = window.pureBoundingBoxAutoPin.getConfig();
+                                log(`📊 初期スケーリングモード: ${config.scaling.mode}`, 'info');
+                                
+                            } catch (error) {
+                                log(`❌ AutoPin インスタンス作成エラー: ${error.message}`, 'error');
+                                log(`📋 エラー詳細: ${error.stack}`, 'error');
+                            }
+                        } else {
+                            log('❌ 必要モジュールが不足しています:', 'error');
+                            log(`  PureBoundingBoxCore: ${window.PureBoundingBoxCore ? '✅' : '❌'}`, 'error');
+                            log(`  PureBoundingBoxAutoPin: ${window.PureBoundingBoxAutoPin ? '✅' : '❌'}`, 'error');
+                        }
+                    } else {
+                        log('❌ spine-canvas要素が見つかりません', 'error');
+                    }
+                    
+                } catch (error) {
+                    log(`❌ AutoPin初期化エラー: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // 5. 全ピン非表示
+        window.hideAllPins = function hideAllPins() {
+            try {
+                log('🚫 全ピン非表示開始', 'info');
+                
+                // 全ての視覚的ピンマーカーを削除
+                const pins = document.querySelectorAll('[id*="marker"], [class*="pin"], [class*="anchor"]');
+                pins.forEach(pin => pin.remove());
+                
+                log(`✅ ${pins.length}個のピンマーカーを非表示にしました`, 'success');
+                
+            } catch (error) {
+                log(`❌ ピン非表示エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 6. 全クリーンアップ
+        window.cleanupAll = function cleanupAll() {
+            try {
+                log('🧹 全クリーンアップ開始', 'warning');
+                
+                // バウンディングボックスクリーンアップ
+                if (boundingBox) {
+                    boundingBox.cleanup();
+                    boundingBox = null;
+                }
+                
+                // Spineレンダラークリーンアップ
+                if (spineRenderer) {
+                    spineRenderer.cleanup();
+                    spineRenderer = null;
+                }
+                
+                // ピンマーカー削除
+                const pins = document.querySelectorAll('[id*="marker"], [class*="pin"], [class*="anchor"]');
+                pins.forEach(pin => pin.remove());
+                
+                // LocalStorageクリア（ピン関連のみ、SpineSettingsPersistenceを保護）
+                const storageKeys = Object.keys(localStorage);
+                const pinKeys = storageKeys.filter(key => {
+                    // SpineSettingsPersistenceのキー（spineSettings-）は保護
+                    if (key.startsWith('spineSettings-')) {
+                        return false; // 削除対象から除外
+                    }
+                    // ピン関連のみ削除
+                    return key.includes('pin') || key.includes('autopin');
+                });
+                pinKeys.forEach(key => localStorage.removeItem(key));
+                
+                log(`✅ 全クリーンアップ完了（ピン${pins.length}個、ストレージ${pinKeys.length}個削除）`, 'success');
+                
+            } catch (error) {
+                log(`❌ クリーンアップエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // システム診断
+        window.diagnoseSystem = function diagnoseSystem() {
+            try {
+                log('🔍 システム診断開始', 'info');
+                
+                // 基本モジュール確認
+                const modules = {
+                    'Spine WebGL': typeof spine !== 'undefined',
+                    'StableSpineRenderer': typeof window.StableSpineRenderer !== 'undefined',
+                    'ElementObserver': typeof window.ElementObserver !== 'undefined',
+                    'ElementObserverCore': typeof window.ElementObserverCore !== 'undefined',
+                    'PureBoundingBox': typeof window.PureBoundingBox !== 'undefined',
+                    'PureBoundingBoxAutoPin': typeof window.PureBoundingBoxAutoPin !== 'undefined',
+                    'TwoStageSelector': typeof window.TwoStageSelector !== 'undefined'
+                };
+                
+                log('📋 モジュール状況:', 'info');
+                Object.entries(modules).forEach(([name, available]) => {
+                    log(`  ${available ? '✅' : '❌'} ${name}: ${available ? 'Available' : 'Missing'}`, available ? 'success' : 'error');
+                });
+                
+                // インスタンス確認
+                log('🎯 インスタンス状況:', 'info');
+                log(`  SpineRenderer: ${spineRenderer ? '✅ 初期化済み' : '❌ 未初期化'}`, spineRenderer ? 'success' : 'warning');
+                log(`  BoundingBox: ${boundingBox ? '✅ 初期化済み' : '❌ 未初期化'}`, boundingBox ? 'success' : 'warning');
+                log(`  AutoPin: ${window.currentAutoPin ? '✅ 初期化済み' : '❌ 未初期化'}`, window.currentAutoPin ? 'success' : 'warning');
+                
+                // 🎯 BB編集中AutoPin完全分離システム状態確認
+                if (window.pureBoundingBoxAutoPin) {
+                    const autoPinState = window.pureBoundingBoxAutoPin.getState();
+                    log('🎯 AutoPin座標レイヤー管理状態:', 'info');
+                    log(`  座標システム: ${autoPinState.coordinateSystem.mode}`, 'info');
+                    log(`  ピン同期: ${autoPinState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                    log(`  バックアップ数: ${autoPinState.coordinateSystem.originalSpineSettingsCount}個`, 'info');
+                    log(`  アクティブCanvas: [${autoPinState.coordinateSystem.activeCanvases.join(', ')}]`, 'info');
+                } else {
+                    log('⚠️ AutoPin座標レイヤー管理システムが利用できません', 'warning');
+                }
+                
+                // 要素確認
+                const elements = {
+                    'spine-canvas': document.getElementById('spine-canvas'),
+                    'hero-section': document.getElementById('hero-section'),
+                    'image-section': document.getElementById('image-section'),
+                    'main-heading': document.getElementById('main-heading')
+                };
+                
+                log('🎭 要素状況:', 'info');
+                Object.entries(elements).forEach(([name, element]) => {
+                    if (element) {
+                        const rect = element.getBoundingClientRect();
+                        log(`  ✅ ${name}: ${rect.width.toFixed(0)}×${rect.height.toFixed(0)}px`, 'success');
+                    } else {
+                        log(`  ❌ ${name}: 要素が見つかりません`, 'error');
+                    }
+                });
+                
+                log('✅ システム診断完了', 'success');
+                
+            } catch (error) {
+                log(`❌ システム診断エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 縦横比チェック機能
+        window.checkAspectRatio = function checkAspectRatio() {
+            try {
+                log('📐 縦横比チェック開始', 'info');
+                
+                const heroSection = document.getElementById('hero-section');
+                const spineCanvas = document.getElementById('spine-canvas');
+                
+                if (!heroSection || !spineCanvas) {
+                    log('❌ 要素が見つかりません', 'error');
+                    return;
+                }
+                
+                // 初期計測
+                const heroRect = heroSection.getBoundingClientRect();
+                const canvasRect = spineCanvas.getBoundingClientRect();
+                
+                const heroAspectRatio = heroRect.width / heroRect.height;
+                const canvasAspectRatio = canvasRect.width / canvasRect.height;
+                
+                log('📊 現在のサイズ:', 'info');
+                log(`  🎯 ヒーローセクション: ${heroRect.width.toFixed(1)}×${heroRect.height.toFixed(1)}px (比率: ${heroAspectRatio.toFixed(3)})`, 'info');
+                log(`  🎨 Spineキャンバス: ${canvasRect.width.toFixed(1)}×${canvasRect.height.toFixed(1)}px (比率: ${canvasAspectRatio.toFixed(3)})`, 'info');
+                
+                // ResizeObserverで動的監視
+                if (window.aspectRatioObserver) {
+                    window.aspectRatioObserver.disconnect();
+                }
+                
+                window.aspectRatioObserver = new ResizeObserver((entries) => {
+                    for (let entry of entries) {
+                        const { width, height } = entry.contentRect;
+                        const newAspectRatio = width / height;
+                        const element = entry.target;
+                        
+                        if (element.id === 'hero-section') {
+                            log(`📐 ヒーロー縦横比変化: ${width.toFixed(1)}×${height.toFixed(1)}px → 比率: ${newAspectRatio.toFixed(3)}`, 'warning');
+                        } else if (element.id === 'spine-canvas') {
+                            log(`🎨 キャンバス縦横比変化: ${width.toFixed(1)}×${height.toFixed(1)}px → 比率: ${newAspectRatio.toFixed(3)}`, 'warning');
+                        }
+                    }
+                });
+                
+                // 両方の要素を監視
+                window.aspectRatioObserver.observe(heroSection);
+                window.aspectRatioObserver.observe(spineCanvas);
+                
+                log('✅ 縦横比監視開始 - ウィンドウをリサイズして確認してください', 'success');
+                log('💡 ウィンドウサイズを変更すると、リアルタイムで縦横比の変化をログに表示します', 'info');
+                
+                // ウィンドウサイズ情報も表示
+                log(`🖥️ ウィンドウサイズ: ${window.innerWidth}×${window.innerHeight}px`, 'info');
+                
+            } catch (error) {
+                log(`❌ 縦横比チェックエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // SpineSettingsPersistence テスト機能
+        window.testSpineSettings = function testSpineSettings() {
+            try {
+                log('💾 SpineSettings保存テスト開始', 'info');
+                
+                // インスタンスの詳細チェック
+                log(`🔍 spineSettingsPersistence: ${!!spineSettingsPersistence}`, spineSettingsPersistence ? 'success' : 'error');
+                if (spineSettingsPersistence) {
+                    log(`🔍 インスタンスタイプ: ${spineSettingsPersistence.constructor.name}`, 'info');
+                    log(`🔍 利用可能メソッド: ${Object.getOwnPropertyNames(Object.getPrototypeOf(spineSettingsPersistence)).filter(name => typeof spineSettingsPersistence[name] === 'function').join(', ')}`, 'info');
+                }
+                
+                if (!spineSettingsPersistence) {
+                    log('❌ SpineSettingsPersistenceが初期化されていません', 'error');
+                    return;
+                }
+                
+                // 保存前の既存データチェック
+                log('🔍 保存前の既存データチェック:', 'info');
+                const existsBefore = spineSettingsPersistence.exists('purattokun');
+                log(`📋 保存前存在確認: ${existsBefore ? '✅ 既に存在' : '❌ 未存在'}`, existsBefore ? 'warning' : 'info');
+                
+                // テスト用設定データ
+                const testSettings = {
+                    scaleX: 1.2,
+                    scaleY: 1.1,
+                    x: 150,
+                    y: -50,
+                    canvasWidth: 450,
+                    canvasHeight: 450,
+                    timestamp: Date.now()
+                };
+                
+                log(`📋 保存予定データ: ${JSON.stringify(testSettings, null, 2)}`, 'info');
+                
+                // 保存テスト（マニュアル通りの使用方法）
+                log('🔄 save()メソッド呼び出し開始...', 'info');
+                const saveResult = spineSettingsPersistence.save('purattokun', testSettings);
+                log(`🔍 save()戻り値: ${saveResult} (型: ${typeof saveResult})`, 'info');
+                
+                if (saveResult) { // boolean型の戻り値
+                    log('✅ 設定保存成功', 'success');
+                    
+                    // 保存後即座に存在確認
+                    const existsAfter = spineSettingsPersistence.exists('purattokun');
+                    log(`🔍 保存後存在確認: ${existsAfter ? '✅ 存在確認' : '❌ 存在しない'}`, existsAfter ? 'success' : 'error');
+                    
+                    // localStorage直接確認
+                    const allKeys = Object.keys(localStorage);
+                    const spineKeys = allKeys.filter(key => key.includes('spine'));
+                    log(`🗂️ localStorage内のSpine関連キー: ${spineKeys.length}個`, 'info');
+                    spineKeys.forEach(key => {
+                        const value = localStorage.getItem(key);
+                        log(`  📄 ${key}: ${value ? `${value.substring(0, 100)}...` : 'null'}`, 'info');
+                    });
+                    
+                } else {
+                    log('❌ 設定保存失敗', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ SpineSettings保存テストエラー: ${error.message}`, 'error');
+                log(`❌ スタックトレース: ${error.stack}`, 'error');
+            }
+        }
+        
+        window.loadSpineSettings = function loadSpineSettings() {
+            try {
+                log('📥 SpineSettings読み込みテスト開始', 'info');
+                
+                if (!spineSettingsPersistence) {
+                    log('❌ SpineSettingsPersistenceが初期化されていません', 'error');
+                    return;
+                }
+                
+                // 存在確認
+                const exists = spineSettingsPersistence.exists('purattokun');
+                if (!exists) {
+                    log('⚠️ 保存された設定が見つかりません。先に「💾 設定保存テスト」を実行してください', 'warning');
+                    return;
+                }
+                
+                // 読み込みテスト
+                const settings = spineSettingsPersistence.restore('purattokun');
+                if (settings) {
+                    log('✅ 設定読み込み成功', 'success');
+                    log(`📋 読み込み内容: ${JSON.stringify(settings, null, 2)}`, 'info');
+                    
+                    // 実際にSpineRendererに適用（テスト）
+                    if (spineRenderer && spineRenderer.skeleton) {
+                        if (settings.scaleX) spineRenderer.skeleton.scaleX = settings.scaleX;
+                        if (settings.scaleY) spineRenderer.skeleton.scaleY = settings.scaleY;
+                        if (settings.x) spineRenderer.skeleton.x = settings.x;
+                        if (settings.y) spineRenderer.skeleton.y = settings.y;
+                        
+                        log('🎨 設定をSpineキャラクターに適用しました', 'success');
+                    } else {
+                        log('⚠️ SpineRendererが初期化されていないため、設定適用をスキップ', 'warning');
+                    }
+                } else {
+                    log('❌ 設定読み込み失敗', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ SpineSettings読み込みテストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // SpineSettingsPersistence初期化（マニュアル通り）
+        window.initializeSpineSettingsPersistence = function initializeSpineSettingsPersistence() {
+            try {
+                log('💾 SpineSettingsPersistence初期化開始', 'info');
+                
+                // マニュアル通りのインスタンス作成
+                spineSettingsPersistence = new SpineSettingsPersistence({
+                    debug: true,
+                    version: '1.0'
+                });
+                
+                log('✅ SpineSettingsPersistence初期化完了', 'success');
+                
+                // 既存設定があるかチェック
+                const exists = spineSettingsPersistence.exists('purattokun');
+                if (exists) {
+                    log('📋 既存の設定が見つかりました', 'info');
+                    const settings = spineSettingsPersistence.restore('purattokun');
+                    log(`📋 設定内容: ${JSON.stringify(settings, null, 2)}`, 'info');
+                } else {
+                    log('📋 既存設定なし - 新規作成', 'info');
+                }
+                
+            } catch (error) {
+                log(`❌ SpineSettingsPersistence初期化エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🎯 Canvas情報をUIに送信する機能
+        window.updateCanvasUI = function updateCanvasUI() {
+            try {
+                log('🔄 Canvas情報をUIに送信開始', 'info');
+                
+                const canvas = document.getElementById('spine-canvas');
+                if (!canvas) {
+                    log('❌ Canvas要素が見つかりません', 'error');
+                    return;
+                }
+                
+                // Canvas情報とSpine設定を取得
+                const canvasData = {
+                    // Canvas解像度情報
+                    canvasWidth: canvas.width,
+                    canvasHeight: canvas.height,
+                    
+                    // Canvas表示サイズ情報
+                    displayWidth: parseInt(canvas.style.width) || canvas.width,
+                    displayHeight: parseInt(canvas.style.height) || canvas.height,
+                    
+                    // Spineキャラクター設定情報
+                    scaleX: spineRenderer?.skeleton?.scaleX || 1.0,
+                    scaleY: spineRenderer?.skeleton?.scaleY || 1.0,
+                    x: spineRenderer?.skeleton?.x || 0,
+                    y: spineRenderer?.skeleton?.y || 0,
+                    
+                    // 取得時刻
+                    timestamp: Date.now()
+                };
+                
+                log(`📋 取得したCanvas情報:`, 'info');
+                log(`  解像度: ${canvasData.canvasWidth}×${canvasData.canvasHeight}px`, 'info');
+                log(`  表示サイズ: ${canvasData.displayWidth}×${canvasData.displayHeight}px`, 'info');
+                log(`  スケール: X:${canvasData.scaleX}, Y:${canvasData.scaleY}`, 'info');
+                log(`  位置: X:${canvasData.x}, Y:${canvasData.y}`, 'info');
+                
+                // iframe UIに送信
+                const iframe = document.getElementById('canvas-resize-iframe');
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({
+                        type: 'updateCanvasData',
+                        data: canvasData
+                    }, '*');
+                    
+                    log('✅ Canvas情報をUIに送信完了', 'success');
+                } else {
+                    log('⚠️ iframe UIが準備できていません', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ Canvas情報送信エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // CanvasResizeController初期化（iframe通信処理）
+        window.initializeCanvasResizeController = function initializeCanvasResizeController() {
+            try {
+                log('🎛️ CanvasResizeController初期化開始', 'info');
+                
+                const iframe = document.getElementById('canvas-resize-iframe');
+                if (!iframe) {
+                    throw new Error('iframe要素が見つかりません');
+                }
+                
+                // postMessage通信ハンドラー（マニュアル通り）
+                window.addEventListener('message', (event) => {
+                    // セキュリティチェック（必要に応じて）
+                    const { type, data } = event.data;
+                    
+                    switch (type) {
+                        case 'canvasResize':
+                            handleCanvasResize(data.size);
+                            break;
+                        case 'scaleChanged':
+                            handleScaleChanged(data);
+                            break;
+                        case 'positionChanged':
+                            handlePositionChanged(data);
+                            break;
+                        case 'uiReady':
+                            log('🎛️ Canvas制御UI準備完了', 'success');
+                            // UI準備完了時に現在のCanvas情報を送信
+                            if (spineRenderer) {
+                                updateCanvasUI();
+                            }
+                            break;
+                        case 'uiLog':
+                            log(`[Canvas UI] ${data.message}`, 'info');
+                            break;
+                        case 'requestCanvasData':
+                            // UI側から現在のCanvas情報を要求された場合
+                            log('📨 UI側からCanvas情報要求を受信', 'info');
+                            updateCanvasUI();
+                            break;
+                        case 'canvasDataUpdateComplete':
+                            // UI側からCanvas情報反映完了通知を受信
+                            if (data.success) {
+                                log('✅ UI側でCanvas情報反映完了', 'success');
+                                log(`📋 反映された値: Canvas:${data.reflectedData.canvasSize}px, Scale:${data.reflectedData.scaleX}/${data.reflectedData.scaleY}, Pos:${data.reflectedData.positionX}/${data.reflectedData.positionY}`, 'info');
+                            } else {
+                                log(`❌ UI側でCanvas情報反映エラー: ${data.error}`, 'error');
+                            }
+                            break;
+                        default:
+                            log(`[Canvas UI] ${type}: ${JSON.stringify(data)}`, 'info');
+                    }
+                });
+                
+                log('✅ CanvasResizeController通信準備完了', 'success');
+                
+            } catch (error) {
+                log(`❌ CanvasResizeController初期化エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // Canvas制御処理
+        window.handleCanvasResize = function handleCanvasResize(size) {
+            try {
+                log(`🔍 Canvasサイズ変更: ${size}px`, 'info');
+                
+                const canvas = document.getElementById('spine-canvas');
+                if (canvas && spineRenderer) {
+                    canvas.width = size;
+                    canvas.height = size;
+                    
+                    // WebGLビューポート更新
+                    if (spineRenderer.gl) {
+                        spineRenderer.gl.viewport(0, 0, size, size);
+                    }
+                    
+                    log(`✅ Canvasサイズ更新完了: ${size}x${size}px`, 'success');
+                } else {
+                    log('❌ Canvas要素またはSpineRendererが見つかりません', 'error');
+                }
+            } catch (error) {
+                log(`❌ Canvasサイズ変更エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        window.handleScaleChanged = function handleScaleChanged(data) {
+            try {
+                log(`🔄 スケール変更: X:${data.scaleX}, Y:${data.scaleY}`, 'info');
+                
+                if (spineRenderer && spineRenderer.skeleton) {
+                    spineRenderer.skeleton.scaleX = data.scaleX;
+                    spineRenderer.skeleton.scaleY = data.scaleY;
+                    log(`✅ スケール変更適用完了`, 'success');
+                } else {
+                    log('❌ SpineRendererまたはSkeletonが見つかりません', 'error');
+                }
+            } catch (error) {
+                log(`❌ スケール変更エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        window.handlePositionChanged = function handlePositionChanged(data) {
+            try {
+                log(`📍 位置変更: X:${data.x}, Y:${data.y}`, 'info');
+                
+                if (spineRenderer && spineRenderer.skeleton) {
+                    spineRenderer.skeleton.x = data.x;
+                    spineRenderer.skeleton.y = data.y;
+                    log(`✅ 位置変更適用完了`, 'success');
+                } else {
+                    log('❌ SpineRendererまたはSkeletonが見つかりません', 'error');
+                }
+            } catch (error) {
+                log(`❌ 位置変更エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // ページ読み込み完了時
+        window.addEventListener('load', () => {
+            log('🚀 シンプルピンテスト環境準備完了', 'success');
+            
+            // マニュアル通りのモジュール初期化
+            initializeSpineSettingsPersistence();
+            initializeCanvasResizeController();
+            
+            // AutoPin も自動初期化（遅延実行でモジュール読み込み完了を待つ）
+            setTimeout(() => {
+                log('🔧 AutoPin自動初期化開始', 'info');
+                initializeAutoPin();
+            }, 1000);
+            log('💡 右上のコントロールから各機能をテストしてください', 'info');
+        });
+        
+        // エラーハンドリング
+        window.addEventListener('error', (event) => {
+            log(`❌ グローバルエラー: ${event.error?.message || event.message}`, 'error');
+        });
+        
+        // ==========================================
+        // 🎯 BB編集中AutoPin完全分離システム（イベントリスナー）
+        // ==========================================
+        
+        /**
+         * 🎯 BB編集開始時: AutoPin座標レイヤー完全分離
+         */
+        document.addEventListener('boundingBoxSelected', (event) => {
+            try {
+                log('🎯 BB選択検出 → AutoPin座標レイヤー完全分離開始', 'warning');
+                log(`📋 BB選択詳細: ${JSON.stringify(event.detail)}`, 'info');
+                
+                // AutoPin座標レイヤーを完全停止・削除
+                if (window.pureBoundingBoxAutoPin) {
+                    window.pureBoundingBoxAutoPin.forceStopAndClearCoordinateLayers();
+                    log('✅ AutoPin座標レイヤー完全分離完了', 'success');
+                } else {
+                    log('⚠️ AutoPinインスタンスが見つかりません', 'warning');
+                }
+                
+                // spine-canvasを元のCSS状態に完全復元
+                const spineCanvas = document.getElementById('spine-canvas');
+                if (spineCanvas) {
+                    log('🔄 spine-canvas CSS状態を確認中...', 'info');
+                    
+                    // 現在のCSS設定をログ出力（デバッグ用）
+                    const currentStyle = {
+                        position: spineCanvas.style.position || getComputedStyle(spineCanvas).position,
+                        left: spineCanvas.style.left || getComputedStyle(spineCanvas).left,
+                        top: spineCanvas.style.top || getComputedStyle(spineCanvas).top,
+                        transform: spineCanvas.style.transform || getComputedStyle(spineCanvas).transform
+                    };
+                    
+                    log(`📊 spine-canvas現在設定: ${JSON.stringify(currentStyle)}`, 'info');
+                    log('✅ BB編集用のクリーンな状態に設定されました', 'success');
+                } else {
+                    log('❌ spine-canvas要素が見つかりません', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ BB編集開始時のAutoPin分離エラー: ${error.message}`, 'error');
+            }
+        });
+        
+        /**
+         * 🎯 BB編集完了時: AutoPin座標レイヤー安全復元
+         */
+        document.addEventListener('boundingBoxDeselected', (event) => {
+            try {
+                log('🎯 BB選択解除検出 → AutoPin座標レイヤー安全復元開始', 'info');
+                log(`📋 BB選択解除詳細: ${JSON.stringify(event.detail)}`, 'info');
+                
+                // AutoPin座標レイヤーを安全に復元
+                if (window.pureBoundingBoxAutoPin) {
+                    window.pureBoundingBoxAutoPin.restartWithCoordinateLayerProtection();
+                    log('✅ AutoPin座標レイヤー安全復元完了', 'success');
+                    
+                    // 復元後の状態確認
+                    const state = window.pureBoundingBoxAutoPin.getState();
+                    log(`📊 AutoPin復元後状態: ${state.coordinateSystem.mode}`, 'info');
+                    log(`📊 ピン同期状態: ${state.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                } else {
+                    log('⚠️ AutoPinインスタンスが見つかりません', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ BB編集完了時のAutoPin復元エラー: ${error.message}`, 'error');
+            }
+        });
+        
+        /**
+         * 🎯 BB保存完了時の追加処理（オプション）
+         */
+        document.addEventListener('boundingBoxSaved', (event) => {
+            try {
+                log('💾 BB保存完了検出 → AutoPin統合処理開始', 'info');
+                log(`📋 BB保存詳細: ${JSON.stringify(event.detail)}`, 'info');
+                
+                // BB保存後の自動ピン適用（AutoPinシステムと統合）
+                if (window.pureBoundingBoxAutoPin && event.detail?.saveData) {
+                    // 保存データを使ってAutoPin適用
+                    setTimeout(async () => {
+                        try {
+                            const result = await window.pureBoundingBoxAutoPin.applyAutoPinOnSave(event.detail.saveData);
+                            if (result.success) {
+                                log('✅ BB保存 → AutoPin適用成功', 'success');
+                                log(`📌 ${result.message}`, 'info');
+                            } else {
+                                log(`⚠️ BB保存 → AutoPin適用失敗: ${result.error}`, 'warning');
+                            }
+                        } catch (applyError) {
+                            log(`❌ AutoPin適用エラー: ${applyError.message}`, 'error');
+                        }
+                    }, 200); // BB保存処理完了を待つ
+                }
+                
+            } catch (error) {
+                log(`❌ BB保存完了時のAutoPin統合エラー: ${error.message}`, 'error');
+            }
+        });
+        
+        // ==========================================
+        // 🎯 スケーリングモードテスト関数
+        // ==========================================
+        
+        window.testScalingContain = function testScalingContain() {
+            try {
+                if (window.pureBoundingBoxAutoPin) {
+                    window.pureBoundingBoxAutoPin.setScalingMode('contain');
+                    log('🎯 スケーリングモード: contain (歪み防止) に変更しました', 'success');
+                    log('💡 ウィンドウをリサイズしてキャラクターの縦横比を確認してください', 'info');
+                } else {
+                    log('❌ PureBoundingBoxAutoPin が初期化されていません', 'error');
+                }
+            } catch (error) {
+                log(`❌ contain モード設定エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        window.testScalingCover = function testScalingCover() {
+            try {
+                if (window.pureBoundingBoxAutoPin) {
+                    window.pureBoundingBoxAutoPin.setScalingMode('cover');
+                    log('🎨 スケーリングモード: cover (領域満たす) に変更しました', 'success');
+                    log('💡 ウィンドウをリサイズしてキャラクターのスケーリングを確認してください', 'info');
+                } else {
+                    log('❌ PureBoundingBoxAutoPin が初期化されていません', 'error');
+                }
+            } catch (error) {
+                log(`❌ cover モード設定エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        window.checkScalingConfig = function checkScalingConfig() {
+            try {
+                if (window.pureBoundingBoxAutoPin) {
+                    const config = window.pureBoundingBoxAutoPin.getConfig();
+                    log('⚙️ 現在のスケーリング設定:', 'info');
+                    log(`  モード: ${config.scaling.mode}`, 'info');
+                    log(`  uniform のみ: ${config.scaling.uniformOnly}`, 'info');
+                    log(`  アンカー設定: ${JSON.stringify(config.anchor)}`, 'info');
+                } else {
+                    log('❌ PureBoundingBoxAutoPin が初期化されていません', 'error');
+                }
+            } catch (error) {
+                log(`❌ 設定確認エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🔍 ピンデータ形式チェック
+        window.testPinDataFormats = function testPinDataFormats() {
+            try {
+                log('🔍 ピンデータ形式チェック開始', 'info');
+                
+                // localStorage の全キーを確認
+                const keys = Object.keys(localStorage);
+                const autoPinKeys = keys.filter(key => key.startsWith('autopin-'));
+                
+                log(`📋 localStorage内のAutoPin関連キー: ${autoPinKeys.length}個`, 'info');
+                
+                for (const key of autoPinKeys) {
+                    const data = localStorage.getItem(key);
+                    log(`  ${key}: ${data ? 'データあり' : 'データなし'}`, 'info');
+                    
+                    if (data && key === 'autopin-active-pins') {
+                        try {
+                            const parsed = JSON.parse(data);
+                            log(`    統合データ: ${Object.keys(parsed.pins || {}).length}個のピン`, 'info');
+                        } catch (e) {
+                            log(`    パースエラー: ${e.message}`, 'warning');
+                        }
+                    }
+                }
+                
+                // PersistenceManager互換性チェック（実際のAPIを使用）
+                if (window.currentAutoPin?.persistenceManager) {
+                    // 実際に保存されているノードIDでテスト
+                    const existingKeys = autoPinKeys.filter(key => key.startsWith('autopin-bb-'));
+                    if (existingKeys.length > 0) {
+                        const nodeId = existingKeys[0].replace('autopin-', '');
+                        const result = window.currentAutoPin.persistenceManager.loadPinData(nodeId);
+                        log(`📌 PersistenceManagerテスト (${nodeId}): ${result.success ? '成功' : '失敗'}`, 
+                            result.success ? 'success' : 'warning');
+                        
+                        if (result.success) {
+                            log(`    データ詳細: anchor=${result.data.anchor}, target=${result.data.targetElement}`, 'info');
+                        }
+                    } else {
+                        log('📌 テスト用の個別キーが見つかりません', 'warning');
+                    }
+                } else {
+                    log('❌ PersistenceManager が利用できません', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ データ形式チェックエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 📌 強制ピン表示
+        window.forcePinDisplay = function forcePinDisplay() {
+            try {
+                log('📌 強制ピン表示開始', 'info');
+                
+                // 保存されたピンデータを直接使用
+                const activeData = localStorage.getItem('autopin-active-pins');
+                if (!activeData) {
+                    log('❌ 保存されたピンデータがありません', 'error');
+                    return;
+                }
+                
+                const parsed = JSON.parse(activeData);
+                const pins = parsed.pins || {};
+                
+                log(`📋 検出されたピン数: ${Object.keys(pins).length}`, 'info');
+                
+                for (const [nodeId, pinData] of Object.entries(pins)) {
+                    log(`📍 ピン ${nodeId} を表示中...`, 'info');
+                    
+                    // ピン表示ロジック
+                    if (window.currentAutoPin?.pinDisplayManager) {
+                        try {
+                            // 要素の存在確認
+                            const targetElement = document.getElementById(pinData.targetElement);
+                            const spineElement = document.getElementById(pinData.spineElement);
+                            
+                            log(`    要素確認: target=${!!targetElement}, spine=${!!spineElement}`, 'info');
+                            
+                            if (targetElement && spineElement) {
+                                // PinDisplayManagerの実際のAPIを使用
+                                window.currentAutoPin.pinDisplayManager.showAnchorPoint(nodeId);
+                                window.currentAutoPin.pinDisplayManager.showUserPin(nodeId);
+                                log(`  ✅ ピン ${nodeId} 表示成功`, 'success');
+                            } else {
+                                log(`  ⚠️ 要素が見つかりません (target: ${!!targetElement}, spine: ${!!spineElement})`, 'warning');
+                            }
+                            
+                        } catch (pinError) {
+                            log(`  ❌ ピン表示エラー: ${pinError.message}`, 'error');
+                        }
+                    } else {
+                        log(`  ❌ PinDisplayManager が利用できません`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ 強制ピン表示エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🔄 追従システムテスト
+        window.testResponsiveTracking = function testResponsiveTracking() {
+            try {
+                log('🔄 追従システムテスト開始', 'info');
+                
+                if (!window.currentAutoPin) {
+                    log('❌ AutoPinシステムが初期化されていません', 'error');
+                    return;
+                }
+                
+                // 1. レスポンシブシステムの状態確認
+                const hasResizeHandler = !!window.currentAutoPin._resizeHandler;
+                const hasMutationObserver = !!window.currentAutoPin.mutationObserver;
+                
+                log(`📊 追従システム状態:`, 'info');
+                log(`  ウィンドウリサイズハンドラー: ${hasResizeHandler ? '✅ 設定済み' : '❌ 未設定'}`, 'info');
+                log(`  要素変更監視: ${hasMutationObserver ? '✅ 動作中' : '❌ 停止中'}`, 'info');
+                
+                // 2. 手動で位置更新をテスト
+                if (typeof window.currentAutoPin.updateAllPinPositions === 'function') {
+                    log('🔄 手動ピン位置更新実行中...', 'info');
+                    window.currentAutoPin.updateAllPinPositions();
+                    log('✅ 手動ピン位置更新完了', 'success');
+                } else {
+                    log('❌ updateAllPinPositions メソッドが利用できません', 'error');
+                }
+                
+                // 3. PinDisplayManagerの状態確認
+                if (window.currentAutoPin.pinDisplayManager) {
+                    const debugInfo = window.currentAutoPin.pinDisplayManager.getDebugInfo();
+                    log(`📌 PinDisplayManager状態: ${debugInfo.activeMarkersCount}個のマーカー`, 'info');
+                    log(`  アクティブマーカー: ${JSON.stringify(debugInfo.activeMarkers)}`, 'info');
+                } else {
+                    log('❌ PinDisplayManager が利用できません', 'error');
+                }
+                
+                // 4. 追従テストのための動的スタイル変更
+                log('🧪 動的スタイル変更テスト開始...', 'info');
+                const heroSection = document.getElementById('hero-section');
+                if (heroSection) {
+                    const originalTransform = heroSection.style.transform || '';
+                    
+                    // 一時的にスタイルを変更（MutationObserverをトリガー）
+                    heroSection.style.transform = 'translateX(10px)';
+                    
+                    setTimeout(() => {
+                        heroSection.style.transform = originalTransform;
+                        log('✅ 動的スタイル変更テスト完了', 'success');
+                    }, 1000);
+                    
+                    log('⏱️ 1秒後に元のスタイルに復元します', 'info');
+                } else {
+                    log('⚠️ hero-section が見つかりません', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ 追従システムテストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // ==========================================
+        // 🎯 AutoPin完全分離検証・診断システム
+        // ==========================================
+        
+        /**
+         * 🔍 AutoPin完全分離状態の詳細診断（パネル表示版）
+         * BB編集中にAutoPin座標レイヤーが確実に分離されているかを詳細チェックし、視覚的なパネルで結果表示
+         */
+        window.diagnoseAutoPinSeparationState = function diagnoseAutoPinSeparationState() {
+            const diagnosis = diagnoseAutoPinSeparationStateCore();
+            
+            if (diagnosis && !diagnosis.error) {
+                // 診断パネルを表示
+                const htmlContent = generateDiagnosisHTML(diagnosis);
+                showDiagnosisPanel(htmlContent);
+            }
+            
+            return diagnosis;
+        }
+        
+        /**
+         * 🔍 AutoPin完全分離状態の詳細診断（コア機能）
+         * 実際の診断処理を行う内部関数
+         */
+        window.diagnoseAutoPinSeparationStateCore = function diagnoseAutoPinSeparationStateCore() {
+            try {
+                log('🔍 AutoPin完全分離診断開始', 'info');
+                
+                if (!window.pureBoundingBoxAutoPin) {
+                    log('❌ AutoPinインスタンスが見つかりません', 'error');
+                    return {
+                        isFullySeparated: false,
+                        error: 'AutoPinインスタンス未存在',
+                        separationScore: 0
+                    };
+                }
+                
+                const diagnosis = {
+                    timestamp: new Date().toISOString(),
+                    autoPinStatus: {},
+                    spineCanvasState: {},
+                    separationQuality: {},
+                    domElementState: {},
+                    eventSystemState: {}
+                };
+                
+                // 1. AutoPin座標レイヤー状態確認
+                try {
+                    const autoPinState = window.pureBoundingBoxAutoPin.getState();
+                    diagnosis.autoPinStatus = {
+                        pinSyncEnabled: autoPinState.coordinateSystem.pinSyncEnabled,
+                        coordinateMode: autoPinState.coordinateSystem.mode,
+                        activeCanvases: autoPinState.coordinateSystem.activeCanvases,
+                        backupCount: autoPinState.coordinateSystem.originalSpineSettingsCount,
+                        mutationObserverConnected: !!window.pureBoundingBoxAutoPin.mutationObserver,
+                        resizeHandlerActive: !!window.pureBoundingBoxAutoPin._resizeHandler
+                    };
+                    
+                    log('📊 AutoPin座標レイヤー状態:', 'info');
+                    log(`  ピン同期: ${diagnosis.autoPinStatus.pinSyncEnabled ? '🔴 有効（問題あり）' : '✅ 無効（正常）'}`, diagnosis.autoPinStatus.pinSyncEnabled ? 'error' : 'success');
+                    log(`  座標モード: ${diagnosis.autoPinStatus.coordinateMode}`, 'info');
+                    log(`  MutationObserver: ${diagnosis.autoPinStatus.mutationObserverConnected ? '🔴 接続中（問題あり）' : '✅ 切断済み（正常）'}`, diagnosis.autoPinStatus.mutationObserverConnected ? 'error' : 'success');
+                    log(`  ResizeHandler: ${diagnosis.autoPinStatus.resizeHandlerActive ? '🔴 動作中（問題あり）' : '✅ 停止済み（正常）'}`, diagnosis.autoPinStatus.resizeHandlerActive ? 'error' : 'success');
+                    log(`  バックアップ数: ${diagnosis.autoPinStatus.backupCount}個`, 'info');
+                    
+                } catch (stateError) {
+                    log(`❌ AutoPin状態取得エラー: ${stateError.message}`, 'error');
+                    diagnosis.autoPinStatus.error = stateError.message;
+                }
+                
+                // 2. spine-canvas CSS状態詳細確認
+                const spineCanvas = document.getElementById('spine-canvas');
+                if (spineCanvas) {
+                    const computedStyle = getComputedStyle(spineCanvas);
+                    diagnosis.spineCanvasState = {
+                        // インラインスタイル（AutoPin制御による設定）
+                        inlinePosition: spineCanvas.style.position || '未設定',
+                        inlineLeft: spineCanvas.style.left || '未設定',
+                        inlineTop: spineCanvas.style.top || '未設定',
+                        inlineTransform: spineCanvas.style.transform || '未設定',
+                        inlineWidth: spineCanvas.style.width || '未設定',
+                        inlineHeight: spineCanvas.style.height || '未設定',
+                        
+                        // 計算済みスタイル（最終的な表示状態）
+                        computedPosition: computedStyle.position,
+                        computedLeft: computedStyle.left,
+                        computedTop: computedStyle.top,
+                        computedTransform: computedStyle.transform,
+                        computedWidth: computedStyle.width,
+                        computedHeight: computedStyle.height,
+                        
+                        // 位置・サイズ情報
+                        boundingRect: spineCanvas.getBoundingClientRect()
+                    };
+                    
+                    log('📊 spine-canvas CSS状態:', 'info');
+                    log(`  position: inline='${diagnosis.spineCanvasState.inlinePosition}' computed='${diagnosis.spineCanvasState.computedPosition}'`, 'info');
+                    log(`  left: inline='${diagnosis.spineCanvasState.inlineLeft}' computed='${diagnosis.spineCanvasState.computedLeft}'`, 'info');
+                    log(`  top: inline='${diagnosis.spineCanvasState.inlineTop}' computed='${diagnosis.spineCanvasState.computedTop}'`, 'info');
+                    log(`  transform: inline='${diagnosis.spineCanvasState.inlineTransform}'`, 'info');
+                    log(`  computed='${diagnosis.spineCanvasState.computedTransform}'`, 'info');
+                    
+                    // AutoPin制御の痕跡チェック
+                    const hasAutoPinTraces = (
+                        diagnosis.spineCanvasState.inlinePosition === 'fixed' || 
+                        diagnosis.spineCanvasState.inlineLeft !== '未設定' || 
+                        diagnosis.spineCanvasState.inlineTop !== '未設定'
+                    );
+                    
+                    log(`🎯 AutoPin制御痕跡: ${hasAutoPinTraces ? '🔴 検出（問題あり）' : '✅ なし（正常）'}`, hasAutoPinTraces ? 'error' : 'success');
+                    
+                } else {
+                    log('❌ spine-canvas要素が見つかりません', 'error');
+                    diagnosis.spineCanvasState.error = 'spine-canvas要素未存在';
+                }
+                
+                // 3. DOM要素状態確認
+                const pinMarkers = document.querySelectorAll('[id*="marker"], [class*="pin"], [class*="anchor"]');
+                const autoPinElements = document.querySelectorAll('[id*="autopin"]');
+                
+                diagnosis.domElementState = {
+                    pinMarkersCount: pinMarkers.length,
+                    autoPinElementsCount: autoPinElements.length,
+                    visiblePinMarkers: Array.from(pinMarkers).filter(el => 
+                        getComputedStyle(el).display !== 'none' && 
+                        getComputedStyle(el).visibility !== 'hidden'
+                    ).length
+                };
+                
+                log('📊 DOM要素状態:', 'info');
+                log(`  ピンマーカー総数: ${diagnosis.domElementState.pinMarkersCount}個`, 'info');
+                log(`  表示中ピンマーカー: ${diagnosis.domElementState.visiblePinMarkers}個`, 'info');
+                log(`  AutoPin関連要素: ${diagnosis.domElementState.autoPinElementsCount}個`, 'info');
+                
+                // 4. 分離品質スコア算出
+                let separationScore = 0;
+                const checks = [
+                    { condition: !diagnosis.autoPinStatus.pinSyncEnabled, weight: 30, name: 'ピン同期無効化' },
+                    { condition: !diagnosis.autoPinStatus.mutationObserverConnected, weight: 20, name: 'MutationObserver切断' },
+                    { condition: !diagnosis.autoPinStatus.resizeHandlerActive, weight: 20, name: 'ResizeHandler停止' },
+                    { condition: diagnosis.spineCanvasState.inlinePosition !== 'fixed', weight: 15, name: 'position固定解除' },
+                    { condition: diagnosis.spineCanvasState.inlineLeft === '未設定', weight: 5, name: 'left値クリア' },
+                    { condition: diagnosis.spineCanvasState.inlineTop === '未設定', weight: 5, name: 'top値クリア' },
+                    { condition: diagnosis.domElementState.visiblePinMarkers === 0, weight: 5, name: '表示ピンマーカーなし' }
+                ];
+                
+                const passedChecks = [];
+                const failedChecks = [];
+                
+                checks.forEach(check => {
+                    if (check.condition) {
+                        separationScore += check.weight;
+                        passedChecks.push(check.name);
+                    } else {
+                        failedChecks.push(check.name);
+                    }
+                });
+                
+                diagnosis.separationQuality = {
+                    isFullySeparated: separationScore >= 95,
+                    separationScore: separationScore,
+                    totalChecks: checks.length,
+                    passedChecks: passedChecks,
+                    failedChecks: failedChecks,
+                    remainingInterferences: failedChecks
+                };
+                
+                // 5. 診断結果レポート
+                log('\n🎯 === AutoPin完全分離診断結果 ===', 'info');
+                log(`📊 分離スコア: ${separationScore}/100 ${separationScore >= 95 ? '✅' : separationScore >= 70 ? '⚠️' : '🔴'}`, 
+                    separationScore >= 95 ? 'success' : separationScore >= 70 ? 'warning' : 'error');
+                log(`✅ 成功チェック (${passedChecks.length}/${checks.length}):`, 'success');
+                passedChecks.forEach(check => log(`  ✓ ${check}`, 'success'));
+                
+                if (failedChecks.length > 0) {
+                    log(`🔴 失敗チェック (${failedChecks.length}/${checks.length}):`, 'error');
+                    failedChecks.forEach(check => log(`  ✗ ${check}`, 'error'));
+                }
+                
+                const status = separationScore >= 95 ? '完全分離達成' : 
+                              separationScore >= 70 ? '部分分離達成' : '分離不完全';
+                log(`🎯 総合判定: ${status}`, separationScore >= 95 ? 'success' : separationScore >= 70 ? 'warning' : 'error');
+                
+                // グローバル変数に診断結果を保存（他の関数から参照可能）
+                window.lastSeparationDiagnosis = diagnosis;
+                
+                return diagnosis;
+                
+            } catch (error) {
+                log(`❌ 完全分離診断エラー: ${error.message}`, 'error');
+                return {
+                    isFullySeparated: false,
+                    error: error.message,
+                    separationScore: 0
+                };
+            }
+        }
+        
+        /**
+         * 📊 AutoPin状態の詳細レポート生成
+         */
+        window.generateAutoPinSeparationReport = function generateAutoPinSeparationReport() {
+            try {
+                log('📊 AutoPin状態レポート生成開始', 'info');
+                
+                // 先にコア診断を実行（パネル表示なし版）
+                const diagnosis = diagnoseAutoPinSeparationStateCore();
+                
+                if (!diagnosis || diagnosis.error) {
+                    log('❌ レポート生成に必要な診断が失敗しました', 'error');
+                    return null;
+                }
+                
+                // 詳細レポート構造体
+                const report = {
+                    timestamp: diagnosis.timestamp,
+                    summary: {
+                        isFullySeparated: diagnosis.separationQuality.isFullySeparated,
+                        separationScore: diagnosis.separationQuality.separationScore,
+                        status: diagnosis.separationQuality.separationScore >= 95 ? 'FULLY_SEPARATED' : 
+                               diagnosis.separationQuality.separationScore >= 70 ? 'PARTIALLY_SEPARATED' : 'SEPARATION_FAILED'
+                    },
+                    autoPinStatus: diagnosis.autoPinStatus,
+                    spineCanvasState: diagnosis.spineCanvasState,
+                    separationQuality: diagnosis.separationQuality,
+                    domElementState: diagnosis.domElementState,
+                    recommendations: [],
+                    technicalDetails: {}
+                };
+                
+                // 改善推奨事項の生成
+                if (!report.summary.isFullySeparated) {
+                    if (diagnosis.autoPinStatus.pinSyncEnabled) {
+                        report.recommendations.push('AutoPin座標同期を無効化してください');
+                    }
+                    if (diagnosis.autoPinStatus.mutationObserverConnected) {
+                        report.recommendations.push('MutationObserverを切断してください');
+                    }
+                    if (diagnosis.autoPinStatus.resizeHandlerActive) {
+                        report.recommendations.push('WindowResizeHandlerを停止してください');
+                    }
+                    if (diagnosis.spineCanvasState.inlinePosition === 'fixed') {
+                        report.recommendations.push('spine-canvasのpostion:fixedを解除してください');
+                    }
+                }
+                
+                // 技術詳細情報の追加
+                report.technicalDetails = {
+                    browserInfo: {
+                        userAgent: navigator.userAgent,
+                        viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+                        devicePixelRatio: window.devicePixelRatio
+                    },
+                    moduleVersions: {
+                        StableSpineRenderer: typeof window.StableSpineRenderer !== 'undefined' ? 'loaded' : 'missing',
+                        PureBoundingBox: typeof window.PureBoundingBox !== 'undefined' ? 'loaded' : 'missing',
+                        PureBoundingBoxAutoPin: typeof window.PureBoundingBoxAutoPin !== 'undefined' ? 'loaded' : 'missing',
+                        ElementObserver: typeof window.ElementObserver !== 'undefined' ? 'loaded' : 'missing'
+                    },
+                    localStorage: {
+                        autoPinKeys: Object.keys(localStorage).filter(key => key.startsWith('autopin-')),
+                        spineKeys: Object.keys(localStorage).filter(key => key.startsWith('spine'))
+                    }
+                };
+                
+                // レポート表示
+                log('\n📊 === AutoPin詳細状態レポート ===', 'info');
+                log(`🕒 生成時刻: ${report.timestamp}`, 'info');
+                log(`📋 総合ステータス: ${report.summary.status}`, 
+                    report.summary.status === 'FULLY_SEPARATED' ? 'success' : 
+                    report.summary.status === 'PARTIALLY_SEPARATED' ? 'warning' : 'error');
+                log(`📊 分離スコア: ${report.summary.separationScore}/100`, 'info');
+                
+                // AutoPin詳細状態
+                log('\n🎯 AutoPin座標レイヤー詳細:', 'info');
+                Object.entries(report.autoPinStatus).forEach(([key, value]) => {
+                    if (key !== 'error') {
+                        log(`  ${key}: ${value}`, 'info');
+                    }
+                });
+                
+                // Canvas詳細状態
+                log('\n🎨 spine-canvas詳細状態:', 'info');
+                if (report.spineCanvasState.error) {
+                    log(`  ❌ エラー: ${report.spineCanvasState.error}`, 'error');
+                } else {
+                    log(`  inline styles: position=${report.spineCanvasState.inlinePosition}, left=${report.spineCanvasState.inlineLeft}, top=${report.spineCanvasState.inlineTop}`, 'info');
+                    log(`  computed styles: position=${report.spineCanvasState.computedPosition}, left=${report.spineCanvasState.computedLeft}, top=${report.spineCanvasState.computedTop}`, 'info');
+                    log(`  画面位置: x=${Math.round(report.spineCanvasState.boundingRect.x)}, y=${Math.round(report.spineCanvasState.boundingRect.y)}`, 'info');
+                    log(`  サイズ: ${Math.round(report.spineCanvasState.boundingRect.width)}×${Math.round(report.spineCanvasState.boundingRect.height)}px`, 'info');
+                }
+                
+                // 推奨事項
+                if (report.recommendations.length > 0) {
+                    log('\n💡 改善推奨事項:', 'warning');
+                    report.recommendations.forEach((rec, index) => {
+                        log(`  ${index + 1}. ${rec}`, 'warning');
+                    });
+                }
+                
+                // 技術詳細
+                log('\n🔧 技術詳細情報:', 'info');
+                log(`  ブラウザ: ${report.technicalDetails.browserInfo.userAgent.split(' ').slice(-2).join(' ')}`, 'info');
+                log(`  ビューポート: ${report.technicalDetails.browserInfo.viewportSize}`, 'info');
+                log(`  モジュール: ${Object.entries(report.technicalDetails.moduleVersions).filter(([,v]) => v === 'loaded').length}個読み込み済み`, 'info');
+                log(`  localStorage: autopin=${report.technicalDetails.localStorage.autoPinKeys.length}個, spine=${report.technicalDetails.localStorage.spineKeys.length}個`, 'info');
+                
+                // グローバル変数にレポートを保存
+                window.lastSeparationReport = report;
+                
+                log('\n✅ AutoPin状態レポート生成完了', 'success');
+                log('💾 レポートは window.lastSeparationReport で参照可能です', 'info');
+                
+                return report;
+                
+            } catch (error) {
+                log(`❌ レポート生成エラー: ${error.message}`, 'error');
+                return null;
+            }
+        }
+        
+        /**
+         * 🧪 BB編集完全フローの自動テスト
+         * BB編集開始→編集中→編集終了の各段階で自動的に状態確認を実行
+         */
+        window.runFullSeparationTest = async function runFullSeparationTest() {
+            try {
+                log('🧪 BB編集完全分離テスト開始', 'info');
+                log('📋 テスト手順: 初期状態→BB開始→分離確認→BB終了→復元確認', 'info');
+                
+                if (!window.pureBoundingBoxAutoPin) {
+                    log('❌ AutoPinインスタンスが必要です', 'error');
+                    return { success: false, error: 'AutoPinインスタンス未存在' };
+                }
+                
+                const testResults = {
+                    timestamp: new Date().toISOString(),
+                    phases: {},
+                    overall: { success: false, score: 0 }
+                };
+                
+                // Phase 1: 初期状態確認
+                log('\n📋 Phase 1: 初期状態確認', 'info');
+                const initialDiagnosis = diagnoseAutoPinSeparationStateCore();
+                testResults.phases.initial = {
+                    separationScore: initialDiagnosis.separationQuality.separationScore,
+                    isFullySeparated: initialDiagnosis.separationQuality.isFullySeparated,
+                    pinSyncEnabled: initialDiagnosis.autoPinStatus.pinSyncEnabled
+                };
+                log(`初期状態: 分離スコア=${initialDiagnosis.separationQuality.separationScore}/100`, 'info');
+                
+                // Phase 2: BB編集開始シミュレーション
+                log('\n📋 Phase 2: BB編集開始シミュレーション', 'info');
+                const boundingBoxSelectedEvent = new CustomEvent('boundingBoxSelected', {
+                    detail: {
+                        targetElement: document.getElementById('spine-canvas'),
+                        testMode: true,
+                        timestamp: Date.now()
+                    }
+                });
+                document.dispatchEvent(boundingBoxSelectedEvent);
+                
+                // 状態変化を待つ
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // Phase 3: BB編集中の分離状態確認
+                log('\n📋 Phase 3: BB編集中の完全分離確認', 'info');
+                const separationDiagnosis = diagnoseAutoPinSeparationStateCore();
+                testResults.phases.separated = {
+                    separationScore: separationDiagnosis.separationQuality.separationScore,
+                    isFullySeparated: separationDiagnosis.separationQuality.isFullySeparated,
+                    pinSyncEnabled: separationDiagnosis.autoPinStatus.pinSyncEnabled,
+                    mutationObserverConnected: separationDiagnosis.autoPinStatus.mutationObserverConnected,
+                    resizeHandlerActive: separationDiagnosis.autoPinStatus.resizeHandlerActive
+                };
+                
+                const separationSuccess = separationDiagnosis.separationQuality.separationScore >= 95;
+                log(`分離状態: ${separationSuccess ? '✅ 完全分離達成' : '❌ 分離不完全'} (${separationDiagnosis.separationQuality.separationScore}/100)`, 
+                    separationSuccess ? 'success' : 'error');
+                
+                if (separationSuccess) {
+                    log('  ✅ AutoPin座標レイヤー: 完全停止', 'success');
+                    log('  ✅ spine-canvas CSS: クリーン状態', 'success');
+                    log('  ✅ イベントハンドラー: 全停止', 'success');
+                } else {
+                    log('  🔴 分離不完全 - 以下を確認してください:', 'error');
+                    separationDiagnosis.separationQuality.failedChecks.forEach(check => {
+                        log(`    ✗ ${check}`, 'error');
+                    });
+                }
+                
+                // Phase 4: BB編集終了シミュレーション
+                log('\n📋 Phase 4: BB編集終了シミュレーション', 'info');
+                const boundingBoxDeselectedEvent = new CustomEvent('boundingBoxDeselected', {
+                    detail: {
+                        targetElement: document.getElementById('spine-canvas'),
+                        saveData: {
+                            bounds: { x: 100, y: 100, width: 200, height: 200 },
+                            targetElement: document.getElementById('spine-canvas')
+                        },
+                        testMode: true,
+                        timestamp: Date.now()
+                    }
+                });
+                document.dispatchEvent(boundingBoxDeselectedEvent);
+                
+                // 復元処理を待つ
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Phase 5: 復元状態確認
+                log('\n📋 Phase 5: AutoPin復元状態確認', 'info');
+                const restoredDiagnosis = diagnoseAutoPinSeparationStateCore();
+                testResults.phases.restored = {
+                    separationScore: restoredDiagnosis.separationQuality.separationScore,
+                    isFullySeparated: restoredDiagnosis.separationQuality.isFullySeparated,
+                    pinSyncEnabled: restoredDiagnosis.autoPinStatus.pinSyncEnabled,
+                    mutationObserverConnected: restoredDiagnosis.autoPinStatus.mutationObserverConnected,
+                    resizeHandlerActive: restoredDiagnosis.autoPinStatus.resizeHandlerActive
+                };
+                
+                const restorationSuccess = restoredDiagnosis.autoPinStatus.pinSyncEnabled;
+                log(`復元状態: ${restorationSuccess ? '✅ AutoPin復元成功' : '❌ 復元失敗'}`, 
+                    restorationSuccess ? 'success' : 'error');
+                
+                if (restorationSuccess) {
+                    log('  ✅ ピン同期: 再有効化', 'success');
+                    log('  ✅ イベントハンドラー: 復元完了', 'success');
+                } else {
+                    log('  🔴 復元不完全 - AutoPinが再開されていません', 'error');
+                }
+                
+                // 総合判定
+                const overallScore = Math.round((
+                    (separationSuccess ? 50 : 0) + 
+                    (restorationSuccess ? 50 : 0)
+                ));
+                
+                testResults.overall = {
+                    success: separationSuccess && restorationSuccess,
+                    score: overallScore,
+                    separationPhase: separationSuccess,
+                    restorationPhase: restorationSuccess
+                };
+                
+                // 最終結果報告
+                log('\n🎯 === 完全分離テスト結果 ===', 'info');
+                log(`📊 総合スコア: ${overallScore}/100`, overallScore >= 90 ? 'success' : overallScore >= 70 ? 'warning' : 'error');
+                log(`🎯 分離フェーズ: ${separationSuccess ? '✅ 成功' : '❌ 失敗'}`, separationSuccess ? 'success' : 'error');
+                log(`🔄 復元フェーズ: ${restorationSuccess ? '✅ 成功' : '❌ 失敗'}`, restorationSuccess ? 'success' : 'error');
+                
+                const finalStatus = testResults.overall.success ? 'テスト合格 - BB編集中AutoPin完全分離システム正常' : 
+                                   'テスト不合格 - システムに問題があります';
+                log(`🏆 最終判定: ${finalStatus}`, testResults.overall.success ? 'success' : 'error');
+                
+                // グローバル変数にテスト結果を保存
+                window.lastFullSeparationTest = testResults;
+                
+                return testResults;
+                
+            } catch (error) {
+                log(`❌ 完全分離テストエラー: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+        
+        /**
+         * 📈 リアルタイム監視システム
+         * BB編集中の状態変化をリアルタイム監視
+         */
+        let realtimeMonitoringInterval = null;
+        
+        window.startRealtimeMonitoring = function startRealtimeMonitoring() {
+            try {
+                log('📈 リアルタイム監視システム開始', 'info');
+                
+                if (realtimeMonitoringInterval) {
+                    log('⚠️ 既に監視中です - 先に停止してください', 'warning');
+                    return;
+                }
+                
+                if (!window.pureBoundingBoxAutoPin) {
+                    log('❌ AutoPinインスタンスが必要です', 'error');
+                    return;
+                }
+                
+                let previousState = null;
+                let monitoringCount = 0;
+                
+                log('📊 監視項目: AutoPin状態、CSS変更、座標競合、DOM変更', 'info');
+                log('⏱️ 監視間隔: 1秒', 'info');
+                
+                realtimeMonitoringInterval = setInterval(() => {
+                    try {
+                        monitoringCount++;
+                        
+                        // 軽量な状態チェック
+                        const currentState = {
+                            pinSyncEnabled: window.pureBoundingBoxAutoPin.getState().coordinateSystem.pinSyncEnabled,
+                            mutationObserverConnected: !!window.pureBoundingBoxAutoPin.mutationObserver,
+                            resizeHandlerActive: !!window.pureBoundingBoxAutoPin._resizeHandler
+                        };
+                        
+                        // spine-canvas CSS監視
+                        const spineCanvas = document.getElementById('spine-canvas');
+                        if (spineCanvas) {
+                            currentState.spineCanvasCSS = {
+                                position: spineCanvas.style.position || '未設定',
+                                left: spineCanvas.style.left || '未設定',
+                                top: spineCanvas.style.top || '未設定'
+                            };
+                        }
+                        
+                        // 状態変化の検出
+                        if (previousState && JSON.stringify(previousState) !== JSON.stringify(currentState)) {
+                            log(`🔄 [監視 #${monitoringCount}] 状態変化検出:`, 'warning');
+                            
+                            // 変更箇所の特定と報告
+                            Object.keys(currentState).forEach(key => {
+                                if (JSON.stringify(previousState[key]) !== JSON.stringify(currentState[key])) {
+                                    if (key === 'spineCanvasCSS') {
+                                        log(`  CSS変更: ${JSON.stringify(currentState[key])}`, 'warning');
+                                        
+                                        // AutoPin制御の意図しない実行をチェック
+                                        if (currentState[key].position === 'fixed') {
+                                            log('  ⚠️ AutoPin座標制御が実行された可能性があります', 'warning');
+                                        }
+                                    } else {
+                                        log(`  ${key}: ${previousState[key]} → ${currentState[key]}`, 'info');
+                                        
+                                        // 重要な状態変化のアラート
+                                        if (key === 'pinSyncEnabled' && currentState[key]) {
+                                            log('  🚨 BB編集中にAutoPin同期が有効化されました！', 'error');
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        
+                        // 定期レポート（10秒ごと）
+                        if (monitoringCount % 10 === 0) {
+                            log(`📊 [監視 #${monitoringCount}] 定期レポート: ピン同期=${currentState.pinSyncEnabled ? '有効' : '無効'}, 監視=${currentState.mutationObserverConnected ? '動作中' : '停止中'}, CSS制御=${currentState.spineCanvasCSS?.position !== '未設定' ? 'あり' : 'なし'}`, 'info');
+                        }
+                        
+                        previousState = JSON.parse(JSON.stringify(currentState));
+                        
+                    } catch (monitorError) {
+                        log(`❌ 監視エラー: ${monitorError.message}`, 'error');
+                    }
+                }, 1000);
+                
+                log('✅ リアルタイム監視開始 - stopRealtimeMonitoring() で停止', 'success');
+                
+            } catch (error) {
+                log(`❌ リアルタイム監視開始エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        window.stopRealtimeMonitoring = function stopRealtimeMonitoring() {
+            try {
+                if (realtimeMonitoringInterval) {
+                    clearInterval(realtimeMonitoringInterval);
+                    realtimeMonitoringInterval = null;
+                    log('⏹️ リアルタイム監視停止', 'success');
+                } else {
+                    log('⚠️ リアルタイム監視は動作していません', 'warning');
+                }
+            } catch (error) {
+                log(`❌ リアルタイム監視停止エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // ページ離脱時に監視を自動停止
+        window.addEventListener('beforeunload', () => {
+            if (realtimeMonitoringInterval) {
+                clearInterval(realtimeMonitoringInterval);
+            }
+        });
+        
+        // 🔍 背景検出テスト
+        window.testBackgroundDetection = function testBackgroundDetection() {
+            try {
+                log('🔍 背景検出テスト開始', 'info');
+                
+                if (!window.currentAutoPin?.backgroundDetector) {
+                    log('❌ BackgroundDetectorが利用できません', 'error');
+                    return;
+                }
+                
+                // 複数の要素で背景検出をテスト
+                const testElements = [
+                    document.getElementById('spine-canvas'),
+                    document.querySelector('.hero-section'),
+                    document.querySelector('img'),
+                    document.body
+                ];
+                
+                testElements.forEach((element, index) => {
+                    if (element) {
+                        log(`📍 テスト ${index + 1}: ${element.tagName}${element.id ? '#' + element.id : ''}${element.className ? '.' + element.className.split(' ')[0] : ''}`, 'info');
+                        
+                        const detectedBackground = window.currentAutoPin.backgroundDetector.detectBackgroundElement(element);
+                        
+                        if (detectedBackground) {
+                            const bgInfo = `${detectedBackground.tagName}${detectedBackground.id ? '#' + detectedBackground.id : ''}${detectedBackground.className ? '.' + detectedBackground.className.split(' ')[0] : ''}`;
+                            log(`  ✅ 検出結果: ${bgInfo}`, 'success');
+                            
+                            // 背景画像情報
+                            const style = getComputedStyle(detectedBackground);
+                            const hasBackgroundImage = style.backgroundImage !== 'none';
+                            const hasBackgroundColor = style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent';
+                            
+                            log(`  🎨 背景情報: 画像=${hasBackgroundImage ? '✅' : '❌'}, 色=${hasBackgroundColor ? '✅' : '❌'}`, 'info');
+                        } else {
+                            log(`  ❌ 背景要素が見つかりませんでした`, 'warning');
+                        }
+                    } else {
+                        log(`📍 テスト ${index + 1}: 要素が見つかりません`, 'warning');
+                    }
+                });
+                
+                // 現在のピンデータも確認
+                const activeData = localStorage.getItem('autopin-active-pins');
+                if (activeData) {
+                    const parsed = JSON.parse(activeData);
+                    const pins = parsed.pins || {};
+                    
+                    log(`🎯 保存済みピンの背景要素:`, 'info');
+                    Object.entries(pins).forEach(([nodeId, pinData]) => {
+                        const bgElement = pinData.backgroundElement;
+                        if (bgElement) {
+                            log(`  ${nodeId}: ${bgElement.tagName}#${bgElement.id} (${bgElement.selector})`, 'info');
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                log(`❌ 背景検出テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        /**
+         * 診断パネルの表示・非表示制御
+         */
+        window.showDiagnosisPanel = function showDiagnosisPanel(content) {
+            const panel = document.getElementById('separation-diagnosis-panel');
+            const contentDiv = document.getElementById('diagnosis-content');
+            
+            contentDiv.innerHTML = content;
+            panel.style.display = 'block';
+        }
+        
+        window.closeDiagnosisPanel = function closeDiagnosisPanel() {
+            const panel = document.getElementById('separation-diagnosis-panel');
+            panel.style.display = 'none';
+        }
+        
+        /**
+         * 診断結果のHTML生成
+         */
+        window.generateDiagnosisHTML = function generateDiagnosisHTML(diagnosis) {
+            if (!diagnosis) return '<p>診断データがありません</p>';
+            
+            const scoreClass = diagnosis.separationQuality.separationScore >= 95 ? 'excellent' : 
+                              diagnosis.separationQuality.separationScore >= 70 ? 'good' : 'poor';
+            
+            const statusText = diagnosis.separationQuality.separationScore >= 95 ? '🎯 完全分離達成' : 
+                              diagnosis.separationQuality.separationScore >= 70 ? '⚠️ 部分分離' : '❌ 分離不完全';
+            
+            let html = `
+                <div class="score-display ${scoreClass}">
+                    ${statusText}<br>
+                    分離スコア: ${diagnosis.separationQuality.separationScore}/100
+                </div>
+            `;
+            
+            // AutoPin状態セクション
+            const autoPinClass = !diagnosis.autoPinStatus.pinSyncEnabled ? 'success' : 'error';
+            html += `
+                <div class="diagnosis-section ${autoPinClass}">
+                    <h4>🎯 AutoPin座標レイヤー状態</h4>
+                    <div class="diagnosis-item">ピン同期: ${diagnosis.autoPinStatus.pinSyncEnabled ? '🔴 有効（問題あり）' : '✅ 無効（正常）'}</div>
+                    <div class="diagnosis-item">座標モード: ${diagnosis.autoPinStatus.coordinateMode}</div>
+                    <div class="diagnosis-item">MutationObserver: ${diagnosis.autoPinStatus.mutationObserverConnected ? '🔴 接続中（問題あり）' : '✅ 切断済み（正常）'}</div>
+                    <div class="diagnosis-item">ResizeHandler: ${diagnosis.autoPinStatus.resizeHandlerActive ? '🔴 動作中（問題あり）' : '✅ 停止済み（正常）'}</div>
+                    <div class="diagnosis-item">バックアップ数: ${diagnosis.autoPinStatus.backupCount}個</div>
+                </div>
+            `;
+            
+            // spine-canvas状態セクション
+            if (diagnosis.spineCanvasState.error) {
+                html += `
+                    <div class="diagnosis-section error">
+                        <h4>🎨 spine-canvas状態</h4>
+                        <div class="diagnosis-item">❌ エラー: ${diagnosis.spineCanvasState.error}</div>
+                    </div>
+                `;
+            } else {
+                const hasAutoPinTraces = (
+                    diagnosis.spineCanvasState.inlinePosition === 'fixed' ||
+                    diagnosis.spineCanvasState.inlineLeft !== '未設定' ||
+                    diagnosis.spineCanvasState.inlineTop !== '未設定'
+                );
+                const canvasClass = !hasAutoPinTraces ? 'success' : 'error';
+                
+                html += `
+                    <div class="diagnosis-section ${canvasClass}">
+                        <h4>🎨 spine-canvas CSS状態</h4>
+                        <div class="diagnosis-item">position: inline='${diagnosis.spineCanvasState.inlinePosition}' computed='${diagnosis.spineCanvasState.computedPosition}'</div>
+                        <div class="diagnosis-item">left: inline='${diagnosis.spineCanvasState.inlineLeft}' computed='${diagnosis.spineCanvasState.computedLeft}'</div>
+                        <div class="diagnosis-item">top: inline='${diagnosis.spineCanvasState.inlineTop}' computed='${diagnosis.spineCanvasState.computedTop}'</div>
+                        <div class="diagnosis-item">transform: inline='${diagnosis.spineCanvasState.inlineTransform?.substring(0,50) || '未設定'}${diagnosis.spineCanvasState.inlineTransform?.length > 50 ? '...' : ''}'</div>
+                        <div class="diagnosis-item">AutoPin制御痕跡: ${hasAutoPinTraces ? '🔴 検出（問題あり）' : '✅ なし（正常）'}</div>
+                    </div>
+                `;
+            }
+            
+            // DOM要素状態セクション
+            html += `
+                <div class="diagnosis-section info">
+                    <h4>🎭 DOM要素状態</h4>
+                    <div class="diagnosis-item">ピンマーカー総数: ${diagnosis.domElementState.pinMarkersCount}個</div>
+                    <div class="diagnosis-item">表示中ピンマーカー: ${diagnosis.domElementState.visiblePinMarkers}個</div>
+                    <div class="diagnosis-item">AutoPin関連要素: ${diagnosis.domElementState.autoPinElementsCount}個</div>
+                </div>
+            `;
+            
+            // 成功・失敗チェック項目
+            if (diagnosis.separationQuality.passedChecks.length > 0) {
+                html += `
+                    <div class="diagnosis-section success">
+                        <h4>✅ 成功チェック項目 (${diagnosis.separationQuality.passedChecks.length}項目)</h4>
+                        ${diagnosis.separationQuality.passedChecks.map(check => `<div class="diagnosis-item">✓ ${check}</div>`).join('')}
+                    </div>
+                `;
+            }
+            
+            if (diagnosis.separationQuality.failedChecks.length > 0) {
+                html += `
+                    <div class="diagnosis-section error">
+                        <h4>❌ 失敗チェック項目 (${diagnosis.separationQuality.failedChecks.length}項目)</h4>
+                        ${diagnosis.separationQuality.failedChecks.map(check => `<div class="diagnosis-item">✗ ${check}</div>`).join('')}
+                    </div>
+                `;
+            }
+            
+            // 診断時刻
+            html += `
+                <div class="diagnosis-section info">
+                    <h4>📊 診断情報</h4>
+                    <div class="diagnosis-item">診断時刻: ${new Date(diagnosis.timestamp).toLocaleString()}</div>
+                    <div class="diagnosis-item">ブラウザ: ${navigator.userAgent.split(' ').slice(-2).join(' ')}</div>
+                    <div class="diagnosis-item">ビューポート: ${window.innerWidth}×${window.innerHeight}px</div>
+                </div>
+            `;
+            
+            return html;
+        }
+        
+        // 🎯 BB座標分離テスト
+        window.testCoordinateLayerSeparation = function testCoordinateLayerSeparation() {
+            try {
+                log('🎯 BB座標分離テスト開始', 'info');
+                
+                if (!window.pureBoundingBoxAutoPin) {
+                    log('❌ AutoPinインスタンスが必要です', 'error');
+                    return;
+                }
+                
+                // テスト前の状態確認
+                const beforeState = window.pureBoundingBoxAutoPin.getState();
+                log(`テスト前状態: ${beforeState.coordinateSystem.mode}`, 'info');
+                log(`ピン同期: ${beforeState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                
+                // 手動でBB編集開始イベントを発生させる
+                const testEvent = new CustomEvent('boundingBoxSelected', {
+                    detail: {
+                        targetElement: document.getElementById('spine-canvas'),
+                        testMode: true,
+                        timestamp: Date.now()
+                    }
+                });
+                
+                document.dispatchEvent(testEvent);
+                
+                // テスト後の状態確認
+                setTimeout(() => {
+                    const afterState = window.pureBoundingBoxAutoPin.getState();
+                    log(`テスト後状態: ${afterState.coordinateSystem.mode}`, 'info');
+                    log(`ピン同期: ${afterState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                    
+                    if (!afterState.coordinateSystem.pinSyncEnabled) {
+                        log('✅ BB座標分離テスト成功 - AutoPinを無効化しました', 'success');
+                    } else {
+                        log('⚠️ BB座標分離テスト部分成功 - ピン同期がまだ有効です', 'warning');
+                    }
+                    
+                    // spine-canvasのCSS状態を確認
+                    const spineCanvas = document.getElementById('spine-canvas');
+                    if (spineCanvas) {
+                        const style = {
+                            position: spineCanvas.style.position || '空',
+                            left: spineCanvas.style.left || '空',
+                            top: spineCanvas.style.top || '空',
+                            transform: spineCanvas.style.transform || '空'
+                        };
+                        log(`spine-canvasスタイル: ${JSON.stringify(style)}`, 'info');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                log(`❌ BB座標分離テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🔄 AutoPin復元テスト
+        window.testCoordinateLayerRestore = function testCoordinateLayerRestore() {
+            try {
+                log('🔄 AutoPin復元テスト開始', 'info');
+                
+                if (!window.pureBoundingBoxAutoPin) {
+                    log('❌ AutoPinインスタンスが必要です', 'error');
+                    return;
+                }
+                
+                // テスト前の状態確認
+                const beforeState = window.pureBoundingBoxAutoPin.getState();
+                log(`復元前状態: ${beforeState.coordinateSystem.mode}`, 'info');
+                log(`ピン同期: ${beforeState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                
+                // 手動でBB編集完了イベントを発生させる
+                const testEvent = new CustomEvent('boundingBoxDeselected', {
+                    detail: {
+                        targetElement: document.getElementById('spine-canvas'),
+                        saveData: {
+                            bounds: { x: 100, y: 100, width: 200, height: 200 },
+                            targetElement: document.getElementById('spine-canvas')
+                        },
+                        testMode: true,
+                        timestamp: Date.now()
+                    }
+                });
+                
+                document.dispatchEvent(testEvent);
+                
+                // テスト後の状態確認を遅延実行（非同期復元を待つ）
+                setTimeout(() => {
+                    const afterState = window.pureBoundingBoxAutoPin.getState();
+                    log(`復元後状態: ${afterState.coordinateSystem.mode}`, 'info');
+                    log(`ピン同期: ${afterState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                    
+                    if (afterState.coordinateSystem.pinSyncEnabled) {
+                        log('✅ AutoPin復元テスト成功 - AutoPinを再有効化しました', 'success');
+                    } else {
+                        log('⚠️ AutoPin復元テスト部分成功 - ピン同期がまだ無効です', 'warning');
+                    }
+                    
+                    // レスポンシブシステムの状態確認
+                    const hasResizeHandler = !!window.pureBoundingBoxAutoPin._resizeHandler;
+                    const hasMutationObserver = !!window.pureBoundingBoxAutoPin.mutationObserver;
+                    
+                    log(`レスポンシブシステム: リサイズ=${hasResizeHandler ? '有効' : '無効'}, 監視=${hasMutationObserver ? '有効' : '無効'}`, 'info');
+                    
+                    if (hasResizeHandler && hasMutationObserver) {
+                        log('✅ レスポンシブシステムも正常に復元されました', 'success');
+                    } else {
+                        log('⚠️ レスポンシブシステムの一部が復元されていません', 'warning');
+                    }
+                    
+                }, 300); // 300ms遅延で非同期復元を待つ
+                
+            } catch (error) {
+                log(`❌ AutoPin復元テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // =========================================================================
+        // 🆕 座標純度チェック機能
+        // BB編集中の座標レイヤーにAutoPin座標が混入していないかを詳細確認
+        // =========================================================================
+        
+        /**
+         * 🧪 座標純度チェック - BB編集中の座標レイヤーの純度確認
+         */
+        window.checkCoordinatePurity = function checkCoordinatePurity() {
+            try {
+                log('🧪 座標純度チェック開始', 'info');
+                
+                const spineCanvas = document.getElementById('spine-canvas');
+                if (!spineCanvas) {
+                    log('❌ spine-canvas要素が見つかりません', 'error');
+                    return;
+                }
+                
+                // 座標由来分析
+                const analysis = analyzeCoordinateOriginDetailed(spineCanvas);
+                
+                // 純度スコア計算
+                const purityScore = calculateCoordinatePurity(analysis);
+                
+                log('\n🎯 === 座標純度チェック結果 ===', 'info');
+                log(`📊 座標純度スコア: ${purityScore}%`, purityScore >= 90 ? 'success' : purityScore >= 70 ? 'warning' : 'error');
+                
+                // 各座標プロパティの詳細表示
+                displayCoordinateAnalysis(analysis);
+                
+                // 混入検出時の警告
+                if (purityScore < 90) {
+                    log(`🚨 AutoPin座標混入の可能性: ${100 - purityScore}%`, 'warning');
+                    showContaminationRecommendations(analysis);
+                }
+                
+                return { purityScore, analysis };
+                
+            } catch (error) {
+                log(`❌ 座標純度チェックエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        /**
+         * 🔍 座標由来分析 - 座標値の詳細由来分析
+         */
+        window.analyzeCoordinateOrigin = function analyzeCoordinateOrigin() {
+            try {
+                log('🔍 座標由来分析開始', 'info');
+                
+                const spineCanvas = document.getElementById('spine-canvas');
+                if (!spineCanvas) {
+                    log('❌ spine-canvas要素が見つかりません', 'error');
+                    return;
+                }
+                
+                const analysis = analyzeCoordinateOriginDetailed(spineCanvas);
+                
+                log('\n📋 === 座標由来詳細分析 ===', 'info');
+                
+                // position プロパティ詳細
+                log(`🎯 position: ${analysis.position.value}`, 'info');
+                log(`  由来判定: ${analysis.position.isPinDerived ? '🚨 AutoPin由来' : '✅ BB専用'}`, analysis.position.isPinDerived ? 'warning' : 'success');
+                log(`  純度状態: ${analysis.position.isClean ? '✅ クリーン' : '❌ 汚染'}`, analysis.position.isClean ? 'success' : 'error');
+                
+                // left プロパティ詳細
+                log(`🎯 left: ${analysis.left.value}`, 'info');
+                log(`  由来判定: ${analysis.left.isPinDerived ? '🚨 ピン座標由来' : '✅ レスポンシブ由来'}`, analysis.left.isPinDerived ? 'warning' : 'success');
+                log(`  純度状態: ${analysis.left.isClean ? '✅ クリーン' : '❌ 汚染'}`, analysis.left.isClean ? 'success' : 'error');
+                
+                // top プロパティ詳細
+                log(`🎯 top: ${analysis.top.value}`, 'info');
+                log(`  由来判定: ${analysis.top.isPinDerived ? '🚨 ピン座標由来' : '✅ レスポンシブ由来'}`, analysis.top.isPinDerived ? 'warning' : 'success');
+                log(`  純度状態: ${analysis.top.isClean ? '✅ クリーン' : '❌ 汚染'}`, analysis.top.isClean ? 'success' : 'error');
+                
+                // transform プロパティ詳細
+                log(`🎯 transform: ${analysis.transform.value}`, 'info');
+                log(`  由来判定: ${analysis.transform.isPinDerived ? '🚨 AutoPin動的変更' : '✅ 正常な変換'}`, analysis.transform.isPinDerived ? 'warning' : 'success');
+                log(`  純度状態: ${analysis.transform.isClean ? '✅ クリーン' : '❌ 汚染'}`, analysis.transform.isClean ? 'success' : 'error');
+                
+                return analysis;
+                
+            } catch (error) {
+                log(`❌ 座標由来分析エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        /**
+         * 📊 座標純度レポート生成
+         */
+        window.generateCoordinatePurityReport = function generateCoordinatePurityReport() {
+            try {
+                log('📊 座標純度レポート生成開始', 'info');
+                
+                const spineCanvas = document.getElementById('spine-canvas');
+                if (!spineCanvas) {
+                    log('❌ spine-canvas要素が見つかりません', 'error');
+                    return;
+                }
+                
+                const analysis = analyzeCoordinateOriginDetailed(spineCanvas);
+                const purityScore = calculateCoordinatePurity(analysis);
+                const contaminations = findCoordinateContaminations(analysis);
+                const recommendations = generateCleanupRecommendations(analysis);
+                
+                const report = {
+                    timestamp: Date.now(),
+                    canvasElement: 'spine-canvas',
+                    purityScore: purityScore,
+                    coordinates: analysis,
+                    contaminations: contaminations,
+                    recommendations: recommendations,
+                    systemState: {
+                        boundingBoxActive: !!window.boundingBox,
+                        autoPinActive: window.pureBoundingBoxAutoPin ? window.pureBoundingBoxAutoPin.getState().coordinateSystem.pinSyncEnabled : false
+                    }
+                };
+                
+                // レポート表示
+                log('\n📋 === 座標純度詳細レポート ===', 'info');
+                log(`⏰ 生成日時: ${new Date(report.timestamp).toLocaleString()}`, 'info');
+                log(`🎯 対象要素: ${report.canvasElement}`, 'info');
+                log(`📊 総合純度スコア: ${report.purityScore}%`, report.purityScore >= 90 ? 'success' : report.purityScore >= 70 ? 'warning' : 'error');
+                
+                if (contaminations.length > 0) {
+                    log(`🚨 検出された汚染: ${contaminations.length}件`, 'warning');
+                    contaminations.forEach((contamination, index) => {
+                        log(`  ${index + 1}. ${contamination.property}: ${contamination.issue}`, 'warning');
+                    });
+                } else {
+                    log('✅ 汚染なし - 座標レイヤーは純粋です', 'success');
+                }
+                
+                if (recommendations.length > 0) {
+                    log(`💡 改善推奨事項: ${recommendations.length}件`, 'info');
+                    recommendations.forEach((recommendation, index) => {
+                        log(`  ${index + 1}. ${recommendation}`, 'info');
+                    });
+                }
+                
+                // グローバル変数に保存
+                window.lastCoordinatePurityReport = report;
+                
+                return report;
+                
+            } catch (error) {
+                log(`❌ 座標純度レポート生成エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        /**
+         * 🚨 座標混入監視開始 - リアルタイム監視
+         */
+        let coordinateContaminationObserver = null;
+        
+        window.startCoordinateContaminationMonitor = function startCoordinateContaminationMonitor() {
+            try {
+                log('🚨 座標混入監視開始', 'info');
+                
+                if (coordinateContaminationObserver) {
+                    log('⚠️ 既に監視中です - 先に停止してください', 'warning');
+                    return;
+                }
+                
+                const spineCanvas = document.getElementById('spine-canvas');
+                if (!spineCanvas) {
+                    log('❌ spine-canvas要素が見つかりません', 'error');
+                    return;
+                }
+                
+                log('👁️ 監視対象: spine-canvas の style 属性変更', 'info');
+                log('🔍 検出項目: AutoPin座標混入、ピクセル値設定、position変更', 'info');
+                
+                coordinateContaminationObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            // 座標変更を即座にチェック
+                            const analysis = analyzeCoordinateOriginDetailed(spineCanvas);
+                            const purityScore = calculateCoordinatePurity(analysis);
+                            
+                            if (purityScore < 90) {
+                                log(`🚨 リアルタイム汚染検出! 純度: ${purityScore}%`, 'warning');
+                                
+                                // 詳細な汚染情報
+                                const contaminations = findCoordinateContaminations(analysis);
+                                contaminations.forEach(contamination => {
+                                    log(`  ⚠️ ${contamination.property}: ${contamination.issue}`, 'warning');
+                                });
+                                
+                                // 即座に警告表示
+                                showContaminationAlert(analysis);
+                            }
+                        }
+                    });
+                });
+                
+                coordinateContaminationObserver.observe(spineCanvas, {
+                    attributes: true,
+                    attributeFilter: ['style']
+                });
+                
+                log('✅ 座標混入監視開始完了 - BB編集中の汚染を検出します', 'success');
+                
+                // 監視停止用関数もグローバルに追加
+                window.stopCoordinateContaminationMonitor = function() {
+                    if (coordinateContaminationObserver) {
+                        coordinateContaminationObserver.disconnect();
+                        coordinateContaminationObserver = null;
+                        log('🛑 座標混入監視停止', 'info');
+                    }
+                };
+                
+                return coordinateContaminationObserver;
+                
+            } catch (error) {
+                log(`❌ 座標混入監視開始エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // =========================================================================
+        // 座標純度チェック用ヘルパー関数群
+        // =========================================================================
+        
+        /**
+         * 座標由来の詳細分析
+         */
+        function analyzeCoordinateOriginDetailed(spineCanvas) {
+            const style = spineCanvas.style;
+            const computed = getComputedStyle(spineCanvas);
+            
+            return {
+                position: {
+                    value: style.position || computed.position,
+                    isPinDerived: style.position === 'fixed',  // AutoPin由来チェック
+                    isClean: !style.position || style.position !== 'fixed'
+                },
+                left: {
+                    value: style.left || computed.left,
+                    isPinDerived: /^\d+px$/.test(style.left),  // ピクセル値=ピン座標由来
+                    isClean: !style.left || style.left.includes('%') || style.left === 'auto'
+                },
+                top: {
+                    value: style.top || computed.top,
+                    isPinDerived: /^\d+px$/.test(style.top),   // ピクセル値=ピン座標由来
+                    isClean: !style.top || style.top.includes('%') || style.top === 'auto'
+                },
+                transform: {
+                    value: style.transform || computed.transform,
+                    isPinDerived: style.transform && style.transform !== 'none' && /translate\(\d+px,\s*\d+px\)/.test(style.transform),
+                    isClean: !style.transform || style.transform === 'none' || !style.transform.includes('px')
+                },
+                // インラインスタイル全体の汚染チェック
+                inlineStyles: {
+                    hasInlineStyles: !!style.cssText,
+                    cssText: style.cssText,
+                    suspiciousProperties: findSuspiciousInlineProperties(style)
+                }
+            };
+        }
+        
+        /**
+         * 🔍 純度スコア計算（詳細内訳付き）
+         */
+        function calculateCoordinatePurity(analysis) {
+            let score = 100;
+            const breakdown = []; // 減点詳細記録
+            
+            // position が固定値なら大幅減点
+            if (!analysis.position.isClean) {
+                score -= 30;
+                breakdown.push(`📍 Position汚染: -30pt (値: "${analysis.position.value}")`);
+            }
+            
+            // left/top がピクセル値なら減点
+            if (!analysis.left.isClean) {
+                score -= 25;
+                breakdown.push(`📏 Left汚染: -25pt (値: "${analysis.left.value}")`);
+            }
+            if (!analysis.top.isClean) {
+                score -= 25;
+                breakdown.push(`📏 Top汚染: -25pt (値: "${analysis.top.value}")`);
+            }
+            
+            // transform が怪しいなら減点
+            if (!analysis.transform.isClean) {
+                score -= 15;
+                breakdown.push(`🔄 Transform汚染: -15pt (値: "${analysis.transform.value}")`);
+            }
+            
+            // インラインスタイルの怪しいプロパティがあれば減点
+            const suspiciousCount = analysis.inlineStyles.suspiciousProperties.length;
+            if (suspiciousCount > 0) {
+                const points = suspiciousCount * 5;
+                score -= points;
+                breakdown.push(`📝 怪しいStyle: -${points}pt (${suspiciousCount}個の疑わしいプロパティ)`);
+            }
+            
+            const finalScore = Math.max(0, score);
+            
+            // 詳細内訳をコンソールとログに出力
+            console.log('🔍 === 純度スコア詳細内訳 ===');
+            console.log('基本スコア: 100pt');
+            breakdown.forEach(item => console.log(item));
+            console.log(`最終スコア: ${finalScore}pt`);
+            
+            log('\n🔍 === 純度スコア詳細内訳 ===', 'info');
+            log('基本スコア: 100pt', 'info');
+            breakdown.forEach(item => log(item, 'warning'));
+            log(`🎯 最終純度スコア: ${finalScore}%`, finalScore >= 90 ? 'success' : finalScore >= 70 ? 'warning' : 'error');
+            
+            return finalScore;
+        }
+        
+        /**
+         * 汚染検出
+         */
+        function findCoordinateContaminations(analysis) {
+            const contaminations = [];
+            
+            if (!analysis.position.isClean) {
+                contaminations.push({
+                    property: 'position',
+                    issue: `固定値 "${analysis.position.value}" はAutoPin由来の可能性`
+                });
+            }
+            
+            if (!analysis.left.isClean) {
+                contaminations.push({
+                    property: 'left',
+                    issue: `ピクセル値 "${analysis.left.value}" はピン座標由来の可能性`
+                });
+            }
+            
+            if (!analysis.top.isClean) {
+                contaminations.push({
+                    property: 'top',
+                    issue: `ピクセル値 "${analysis.top.value}" はピン座標由来の可能性`
+                });
+            }
+            
+            if (!analysis.transform.isClean) {
+                contaminations.push({
+                    property: 'transform',
+                    issue: `ピクセル変換 "${analysis.transform.value}" はAutoPin動的変更の可能性`
+                });
+            }
+            
+            analysis.inlineStyles.suspiciousProperties.forEach(prop => {
+                contaminations.push({
+                    property: prop.name,
+                    issue: `怪しいインラインスタイル: ${prop.value}`
+                });
+            });
+            
+            return contaminations;
+        }
+        
+        /**
+         * 怪しいインラインプロパティ検出
+         */
+        function findSuspiciousInlineProperties(style) {
+            const suspicious = [];
+            const suspiciousPatterns = [
+                'position', 'left', 'top', 'right', 'bottom', 'transform',
+                'margin-left', 'margin-top', 'translate'
+            ];
+            
+            for (let prop of suspiciousPatterns) {
+                const value = style.getPropertyValue(prop);
+                if (value && value !== 'auto' && value !== 'none') {
+                    suspicious.push({ name: prop, value: value });
+                }
+            }
+            
+            return suspicious;
+        }
+        
+        /**
+         * クリーンアップ推奨事項生成
+         */
+        function generateCleanupRecommendations(analysis) {
+            const recommendations = [];
+            
+            if (!analysis.position.isClean) {
+                recommendations.push('AutoPin座標レイヤーを再削除してください');
+            }
+            
+            if (!analysis.left.isClean || !analysis.top.isClean) {
+                recommendations.push('ピン座標を削除してレスポンシブ座標に戻してください');
+            }
+            
+            if (!analysis.transform.isClean) {
+                recommendations.push('AutoPin動的変更を停止してください');
+            }
+            
+            if (analysis.inlineStyles.suspiciousProperties.length > 0) {
+                recommendations.push('怪しいインラインスタイルを除去してください');
+            }
+            
+            if (recommendations.length === 0) {
+                recommendations.push('座標レイヤーは純粋です - 改善不要');
+            }
+            
+            return recommendations;
+        }
+        
+        /**
+         * 汚染警告表示
+         */
+        function showContaminationAlert(analysis) {
+            const contaminations = findCoordinateContaminations(analysis);
+            if (contaminations.length > 0) {
+                log('🚨 === AutoPin座標混入警告 ===', 'error');
+                contaminations.forEach(contamination => {
+                    log(`❌ ${contamination.property}: ${contamination.issue}`, 'error');
+                });
+                log('💡 推奨: BB編集前にAutoPin座標レイヤー完全削除を実行してください', 'warning');
+            }
+        }
+        
+        /**
+         * 座標分析結果表示
+         */
+        function displayCoordinateAnalysis(analysis) {
+            log('🎯 position:', analysis.position.isClean ? 'success' : 'error');
+            log(`  値: ${analysis.position.value}`, 'info');
+            log(`  判定: ${analysis.position.isClean ? '✅ BB専用' : '❌ AutoPin由来'}`, analysis.position.isClean ? 'success' : 'error');
+            
+            log('🎯 left:', analysis.left.isClean ? 'success' : 'error');
+            log(`  値: ${analysis.left.value}`, 'info');
+            log(`  判定: ${analysis.left.isClean ? '✅ レスポンシブ' : '❌ ピン座標由来'}`, analysis.left.isClean ? 'success' : 'error');
+            
+            log('🎯 top:', analysis.top.isClean ? 'success' : 'error');
+            log(`  値: ${analysis.top.value}`, 'info');
+            log(`  判定: ${analysis.top.isClean ? '✅ レスポンシブ' : '❌ ピン座標由来'}`, analysis.top.isClean ? 'success' : 'error');
+            
+            log('🎯 transform:', analysis.transform.isClean ? 'success' : 'error');
+            log(`  値: ${analysis.transform.value}`, 'info');
+            log(`  判定: ${analysis.transform.isClean ? '✅ 正常な変換' : '❌ AutoPin動的変更'}`, analysis.transform.isClean ? 'success' : 'error');
+        }
+        
+        /**
+         * 汚染推奨事項表示
+         */
+        
+        // =========================================================================
+        // 🆕 DOM状態詳細確認システム
+        // AutoPin座標混入95%問題の根本原因特定用
+        // =========================================================================
+        
+        // BB編集前後比較用の状態保持
+        let beforeState = null;
+        
+        /**
+         * 🔍 spine-canvas DOM状態の詳細確認
+         */
+        window.debugSpineCanvasState = function debugSpineCanvasState() {
+            const canvas = document.getElementById('spine-canvas');
+            
+            console.log('🔍 === spine-canvas DOM状態詳細確認 ===');
+            console.log('element:', canvas);
+            console.log('style.position:', canvas.style.position);
+            console.log('style.left:', canvas.style.left);
+            console.log('style.top:', canvas.style.top);
+            console.log('style.transform:', canvas.style.transform);
+            console.log('style.cssText:', canvas.style.cssText);
+            console.log('getAttribute("style"):', canvas.getAttribute('style'));
+            console.log('computed style:', getComputedStyle(canvas));
+            
+            // AutoPinシステム状態確認
+            console.log('AutoPin system exists:', typeof window.pureBoundingBoxAutoPin);
+            if (window.pureBoundingBoxAutoPin) {
+                console.log('pinSyncEnabled:', window.pureBoundingBoxAutoPin.pinSyncEnabled);
+            }
+            
+            const state = {
+                element: canvas,
+                stylePosition: canvas.style.position,
+                styleLeft: canvas.style.left,
+                styleTop: canvas.style.top,
+                styleTransform: canvas.style.transform,
+                cssText: canvas.style.cssText,
+                styleAttribute: canvas.getAttribute('style')
+            };
+            
+            // ログにも詳細情報出力
+            log('\n🔍 === DOM状態詳細確認結果 ===', 'info');
+            log(`📍 Position: ${state.stylePosition || '未設定'}`, 'info');
+            log(`📏 Left: ${state.styleLeft || '未設定'}`, 'info');
+            log(`📏 Top: ${state.styleTop || '未設定'}`, 'info');
+            log(`🔄 Transform: ${state.styleTransform || '未設定'}`, 'info');
+            log(`📝 Style属性: ${state.styleAttribute || '未設定'}`, 'info');
+            
+            return state;
+        }
+        
+        /**
+         * 📋 BB編集前状態をキャプチャ
+         */
+        window.captureBeforeState = function captureBeforeState() {
+            beforeState = debugSpineCanvasState();
+            log('📋 BB編集前状態をキャプチャしました', 'success');
+            return beforeState;
+        }
+        
+        /**
+         * 🔄 BB編集前後のDOM状態比較
+         */
+        window.compareAfterState = function compareAfterState() {
+            if (!beforeState) {
+                log('⚠️ 比較用の編集前状態がありません。先に「📋 DOM状態キャプチャ」を実行してください。', 'warning');
+                return;
+            }
+            
+            const afterState = debugSpineCanvasState();
+            
+            console.log('🔄 === BB編集前後比較 ===');
+            console.log('Before position:', beforeState?.stylePosition);
+            console.log('After position:', afterState.stylePosition);
+            console.log('Before left:', beforeState?.styleLeft);
+            console.log('After left:', afterState.styleLeft);
+            console.log('Before top:', beforeState?.styleTop);
+            console.log('After top:', afterState.styleTop);
+            console.log('Before transform:', beforeState?.styleTransform);
+            console.log('After transform:', afterState.styleTransform);
+            
+            const changed = {
+                position: beforeState?.stylePosition !== afterState.stylePosition,
+                left: beforeState?.styleLeft !== afterState.styleLeft,
+                top: beforeState?.styleTop !== afterState.styleTop,
+                transform: beforeState?.styleTransform !== afterState.styleTransform
+            };
+            
+            console.log('変更検出:', changed);
+            
+            // ログにも比較結果出力
+            log('\n🔄 === BB編集前後比較結果 ===', 'info');
+            if (changed.position) {
+                log(`📍 Position変更: ${beforeState?.stylePosition || '未設定'} → ${afterState.stylePosition || '未設定'}`, 'warning');
+            }
+            if (changed.left) {
+                log(`📏 Left変更: ${beforeState?.styleLeft || '未設定'} → ${afterState.styleLeft || '未設定'}`, 'warning');
+            }
+            if (changed.top) {
+                log(`📏 Top変更: ${beforeState?.styleTop || '未設定'} → ${afterState.styleTop || '未設定'}`, 'warning');
+            }
+            if (changed.transform) {
+                log(`🔄 Transform変更: ${beforeState?.styleTransform || '未設定'} → ${afterState.styleTransform || '未設定'}`, 'warning');
+            }
+            
+            const changeCount = Object.values(changed).filter(v => v).length;
+            if (changeCount === 0) {
+                log('✅ DOM状態に変更はありませんでした', 'success');
+            } else {
+                log(`⚠️ ${changeCount}個のプロパティに変更が検出されました`, 'warning');
+            }
+            
+            return { before: beforeState, after: afterState, changed };
+        }
+        
+        /**
+         * 🕵️ AutoPin座標混入リアルタイム監視強化版
+         */
+        window.startAdvancedContaminationWatch = function startAdvancedContaminationWatch() {
+            log('🕵️ 高度座標混入監視を開始します', 'info');
+            
+            const canvas = document.getElementById('spine-canvas');
+            if (!canvas) {
+                log('❌ spine-canvas要素が見つかりません', 'error');
+                return;
+            }
+            
+            // MutationObserverでDOM変更を詳細監視
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                        const timestamp = new Date().toISOString();
+                        log(`🕵️ [${timestamp}] spine-canvas style属性変更検出`, 'warning');
+                        log(`  変更前: ${mutation.oldValue}`, 'info');
+                        log(`  変更後: ${canvas.getAttribute('style')}`, 'info');
+                        
+                        // 座標純度チェック自動実行
+                        setTimeout(() => {
+                            log('🔍 変更後の座標純度を自動チェック中...', 'info');
+                            window.checkCoordinatePurity();
+                        }, 100);
+                    }
+                });
+            });
+            
+            observer.observe(canvas, {
+                attributes: true,
+                attributeOldValue: true,
+                attributeFilter: ['style']
+            });
+            
+            // グローバルに保存（停止用）
+            window._advancedContaminationObserver = observer;
+            
+            log('✅ 高度座標混入監視が開始されました', 'success');
+            return observer;
+        }
+        
+        /**
+         * 🛑 高度座標混入監視停止
+         */
+        window.stopAdvancedContaminationWatch = function stopAdvancedContaminationWatch() {
+            if (window._advancedContaminationObserver) {
+                window._advancedContaminationObserver.disconnect();
+                window._advancedContaminationObserver = null;
+                log('🛑 高度座標混入監視を停止しました', 'success');
+            } else {
+                log('⚠️ 監視は実行されていません', 'warning');
+            }
+        }
+        
+    </script>
+</body>
+</html>

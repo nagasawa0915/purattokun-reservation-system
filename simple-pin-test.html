@@ -342,7 +342,7 @@
         }
         
         // 1. Spineキャラクター初期化（StableSpineRendererマニュアル通り）
-        async function initializeSpineCharacter() {
+        window.initializeSpineCharacter = async function initializeSpineCharacter() {
             try {
                 log('🎨 Spineキャラクター初期化開始', 'info');
                 
@@ -364,13 +364,19 @@
         }
         
         // 2. バウンディングボックス編集開始（PureBoundingBoxマニュアル通り）
-        async function startBoundingBoxEdit() {
+        window.startBoundingBoxEdit = async function startBoundingBoxEdit() {
             try {
                 log('📦 バウンディングボックス編集開始', 'info');
                 
                 const targetElement = document.getElementById('spine-canvas');
                 if (!targetElement) {
                     throw new Error('spine-canvas要素が見つかりません');
+                }
+                
+                // 🎯 BB編集前のAutoPin状態確認
+                if (window.pureBoundingBoxAutoPin) {
+                    const preBBState = window.pureBoundingBoxAutoPin.getState();
+                    log(`🔍 BB編集前AutoPin状態: ${preBBState.coordinateSystem.mode}`, 'info');
                 }
                 
                 // PureBoundingBox作成（マニュアル通り）
@@ -383,6 +389,7 @@
                 
                 if (result.success) {
                     log('✅ バウンディングボックス編集モード開始成功', 'success');
+                    log('💡 BB編集中はAutoPin座標レイヤーが完全分離されています', 'info');
                 } else {
                     throw new Error(result.error);
                 }
@@ -393,7 +400,7 @@
         }
         
         // 3. ピン設定開始（TwoStageSelector使用）
-        async function startPinSetting() {
+        window.startPinSetting = async function startPinSetting() {
             try {
                 log('📍 ピン設定開始', 'info');
                 
@@ -412,7 +419,7 @@
         }
         
         // 4. 全ピン表示
-        function showAllPins() {
+        window.showAllPins = function showAllPins() {
             try {
                 log('👁️ 全ピン表示開始', 'info');
                 
@@ -436,7 +443,7 @@
         }
         
         // AutoPin初期化ヘルパー（boundingBoxに依存しない独立初期化）
-        function initializeAutoPin() {
+        window.initializeAutoPin = function initializeAutoPin() {
             if (!window.currentAutoPin) {
                 try {
                     log('🔧 AutoPin初期化開始', 'info');
@@ -509,7 +516,7 @@
         }
         
         // 5. 全ピン非表示
-        function hideAllPins() {
+        window.hideAllPins = function hideAllPins() {
             try {
                 log('🚫 全ピン非表示開始', 'info');
                 
@@ -525,7 +532,7 @@
         }
         
         // 6. 全クリーンアップ
-        function cleanupAll() {
+        window.cleanupAll = function cleanupAll() {
             try {
                 log('🧹 全クリーンアップ開始', 'warning');
                 
@@ -565,7 +572,7 @@
         }
         
         // システム診断
-        function diagnoseSystem() {
+        window.diagnoseSystem = function diagnoseSystem() {
             try {
                 log('🔍 システム診断開始', 'info');
                 
@@ -590,6 +597,18 @@
                 log(`  SpineRenderer: ${spineRenderer ? '✅ 初期化済み' : '❌ 未初期化'}`, spineRenderer ? 'success' : 'warning');
                 log(`  BoundingBox: ${boundingBox ? '✅ 初期化済み' : '❌ 未初期化'}`, boundingBox ? 'success' : 'warning');
                 log(`  AutoPin: ${window.currentAutoPin ? '✅ 初期化済み' : '❌ 未初期化'}`, window.currentAutoPin ? 'success' : 'warning');
+                
+                // 🎯 BB編集中AutoPin完全分離システム状態確認
+                if (window.pureBoundingBoxAutoPin) {
+                    const autoPinState = window.pureBoundingBoxAutoPin.getState();
+                    log('🎯 AutoPin座標レイヤー管理状態:', 'info');
+                    log(`  座標システム: ${autoPinState.coordinateSystem.mode}`, 'info');
+                    log(`  ピン同期: ${autoPinState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                    log(`  バックアップ数: ${autoPinState.coordinateSystem.originalSpineSettingsCount}個`, 'info');
+                    log(`  アクティブCanvas: [${autoPinState.coordinateSystem.activeCanvases.join(', ')}]`, 'info');
+                } else {
+                    log('⚠️ AutoPin座標レイヤー管理システムが利用できません', 'warning');
+                }
                 
                 // 要素確認
                 const elements = {
@@ -617,7 +636,7 @@
         }
         
         // 縦横比チェック機能
-        function checkAspectRatio() {
+        window.checkAspectRatio = function checkAspectRatio() {
             try {
                 log('📐 縦横比チェック開始', 'info');
                 
@@ -675,7 +694,7 @@
         }
         
         // SpineSettingsPersistence テスト機能
-        function testSpineSettings() {
+        window.testSpineSettings = function testSpineSettings() {
             try {
                 log('💾 SpineSettings保存テスト開始', 'info');
                 
@@ -740,7 +759,7 @@
             }
         }
         
-        function loadSpineSettings() {
+        window.loadSpineSettings = function loadSpineSettings() {
             try {
                 log('📥 SpineSettings読み込みテスト開始', 'info');
                 
@@ -783,7 +802,7 @@
         }
         
         // SpineSettingsPersistence初期化（マニュアル通り）
-        function initializeSpineSettingsPersistence() {
+        window.initializeSpineSettingsPersistence = function initializeSpineSettingsPersistence() {
             try {
                 log('💾 SpineSettingsPersistence初期化開始', 'info');
                 
@@ -811,7 +830,7 @@
         }
         
         // 🎯 Canvas情報をUIに送信する機能
-        function updateCanvasUI() {
+        window.updateCanvasUI = function updateCanvasUI() {
             try {
                 log('🔄 Canvas情報をUIに送信開始', 'info');
                 
@@ -866,7 +885,7 @@
         }
         
         // CanvasResizeController初期化（iframe通信処理）
-        function initializeCanvasResizeController() {
+        window.initializeCanvasResizeController = function initializeCanvasResizeController() {
             try {
                 log('🎛️ CanvasResizeController初期化開始', 'info');
                 
@@ -927,7 +946,7 @@
         }
         
         // Canvas制御処理
-        function handleCanvasResize(size) {
+        window.handleCanvasResize = function handleCanvasResize(size) {
             try {
                 log(`🔍 Canvasサイズ変更: ${size}px`, 'info');
                 
@@ -950,7 +969,7 @@
             }
         }
         
-        function handleScaleChanged(data) {
+        window.handleScaleChanged = function handleScaleChanged(data) {
             try {
                 log(`🔄 スケール変更: X:${data.scaleX}, Y:${data.scaleY}`, 'info');
                 
@@ -966,7 +985,7 @@
             }
         }
         
-        function handlePositionChanged(data) {
+        window.handlePositionChanged = function handlePositionChanged(data) {
             try {
                 log(`📍 位置変更: X:${data.x}, Y:${data.y}`, 'info');
                 
@@ -1004,10 +1023,111 @@
         });
         
         // ==========================================
+        // 🎯 BB編集中AutoPin完全分離システム（イベントリスナー）
+        // ==========================================
+        
+        /**
+         * 🎯 BB編集開始時: AutoPin座標レイヤー完全分離
+         */
+        document.addEventListener('boundingBoxSelected', (event) => {
+            try {
+                log('🎯 BB選択検出 → AutoPin座標レイヤー完全分離開始', 'warning');
+                log(`📋 BB選択詳細: ${JSON.stringify(event.detail)}`, 'info');
+                
+                // AutoPin座標レイヤーを完全停止・削除
+                if (window.pureBoundingBoxAutoPin) {
+                    window.pureBoundingBoxAutoPin.forceStopAndClearCoordinateLayers();
+                    log('✅ AutoPin座標レイヤー完全分離完了', 'success');
+                } else {
+                    log('⚠️ AutoPinインスタンスが見つかりません', 'warning');
+                }
+                
+                // spine-canvasを元のCSS状態に完全復元
+                const spineCanvas = document.getElementById('spine-canvas');
+                if (spineCanvas) {
+                    log('🔄 spine-canvas CSS状態を確認中...', 'info');
+                    
+                    // 現在のCSS設定をログ出力（デバッグ用）
+                    const currentStyle = {
+                        position: spineCanvas.style.position || getComputedStyle(spineCanvas).position,
+                        left: spineCanvas.style.left || getComputedStyle(spineCanvas).left,
+                        top: spineCanvas.style.top || getComputedStyle(spineCanvas).top,
+                        transform: spineCanvas.style.transform || getComputedStyle(spineCanvas).transform
+                    };
+                    
+                    log(`📊 spine-canvas現在設定: ${JSON.stringify(currentStyle)}`, 'info');
+                    log('✅ BB編集用のクリーンな状態に設定されました', 'success');
+                } else {
+                    log('❌ spine-canvas要素が見つかりません', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ BB編集開始時のAutoPin分離エラー: ${error.message}`, 'error');
+            }
+        });
+        
+        /**
+         * 🎯 BB編集完了時: AutoPin座標レイヤー安全復元
+         */
+        document.addEventListener('boundingBoxDeselected', (event) => {
+            try {
+                log('🎯 BB選択解除検出 → AutoPin座標レイヤー安全復元開始', 'info');
+                log(`📋 BB選択解除詳細: ${JSON.stringify(event.detail)}`, 'info');
+                
+                // AutoPin座標レイヤーを安全に復元
+                if (window.pureBoundingBoxAutoPin) {
+                    window.pureBoundingBoxAutoPin.restartWithCoordinateLayerProtection();
+                    log('✅ AutoPin座標レイヤー安全復元完了', 'success');
+                    
+                    // 復元後の状態確認
+                    const state = window.pureBoundingBoxAutoPin.getState();
+                    log(`📊 AutoPin復元後状態: ${state.coordinateSystem.mode}`, 'info');
+                    log(`📊 ピン同期状態: ${state.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                } else {
+                    log('⚠️ AutoPinインスタンスが見つかりません', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ BB編集完了時のAutoPin復元エラー: ${error.message}`, 'error');
+            }
+        });
+        
+        /**
+         * 🎯 BB保存完了時の追加処理（オプション）
+         */
+        document.addEventListener('boundingBoxSaved', (event) => {
+            try {
+                log('💾 BB保存完了検出 → AutoPin統合処理開始', 'info');
+                log(`📋 BB保存詳細: ${JSON.stringify(event.detail)}`, 'info');
+                
+                // BB保存後の自動ピン適用（AutoPinシステムと統合）
+                if (window.pureBoundingBoxAutoPin && event.detail?.saveData) {
+                    // 保存データを使ってAutoPin適用
+                    setTimeout(async () => {
+                        try {
+                            const result = await window.pureBoundingBoxAutoPin.applyAutoPinOnSave(event.detail.saveData);
+                            if (result.success) {
+                                log('✅ BB保存 → AutoPin適用成功', 'success');
+                                log(`📌 ${result.message}`, 'info');
+                            } else {
+                                log(`⚠️ BB保存 → AutoPin適用失敗: ${result.error}`, 'warning');
+                            }
+                        } catch (applyError) {
+                            log(`❌ AutoPin適用エラー: ${applyError.message}`, 'error');
+                        }
+                    }, 200); // BB保存処理完了を待つ
+                }
+                
+            } catch (error) {
+                log(`❌ BB保存完了時のAutoPin統合エラー: ${error.message}`, 'error');
+            }
+        });
+        
+        // ==========================================
         // 🎯 スケーリングモードテスト関数
         // ==========================================
         
-        function testScalingContain() {
+        window.testScalingContain = function testScalingContain() {
             try {
                 if (window.pureBoundingBoxAutoPin) {
                     window.pureBoundingBoxAutoPin.setScalingMode('contain');
@@ -1021,7 +1141,7 @@
             }
         }
         
-        function testScalingCover() {
+        window.testScalingCover = function testScalingCover() {
             try {
                 if (window.pureBoundingBoxAutoPin) {
                     window.pureBoundingBoxAutoPin.setScalingMode('cover');
@@ -1035,7 +1155,7 @@
             }
         }
         
-        function checkScalingConfig() {
+        window.checkScalingConfig = function checkScalingConfig() {
             try {
                 if (window.pureBoundingBoxAutoPin) {
                     const config = window.pureBoundingBoxAutoPin.getConfig();
@@ -1052,7 +1172,7 @@
         }
         
         // 🔍 ピンデータ形式チェック
-        function testPinDataFormats() {
+        window.testPinDataFormats = function testPinDataFormats() {
             try {
                 log('🔍 ピンデータ形式チェック開始', 'info');
                 
@@ -1102,7 +1222,7 @@
         }
         
         // 📌 強制ピン表示
-        function forcePinDisplay() {
+        window.forcePinDisplay = function forcePinDisplay() {
             try {
                 log('📌 強制ピン表示開始', 'info');
                 
@@ -1153,7 +1273,7 @@
         }
         
         // 🔄 追従システムテスト
-        function testResponsiveTracking() {
+        window.testResponsiveTracking = function testResponsiveTracking() {
             try {
                 log('🔄 追従システムテスト開始', 'info');
                 
@@ -1213,7 +1333,7 @@
         }
         
         // 🔍 背景検出テスト
-        function testBackgroundDetection() {
+        window.testBackgroundDetection = function testBackgroundDetection() {
             try {
                 log('🔍 背景検出テスト開始', 'info');
                 
@@ -1271,6 +1391,123 @@
                 
             } catch (error) {
                 log(`❌ 背景検出テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🎯 BB座標分離テスト
+        window.testCoordinateLayerSeparation = function testCoordinateLayerSeparation() {
+            try {
+                log('🎯 BB座標分離テスト開始', 'info');
+                
+                if (!window.pureBoundingBoxAutoPin) {
+                    log('❌ AutoPinインスタンスが必要です', 'error');
+                    return;
+                }
+                
+                // テスト前の状態確認
+                const beforeState = window.pureBoundingBoxAutoPin.getState();
+                log(`テスト前状態: ${beforeState.coordinateSystem.mode}`, 'info');
+                log(`ピン同期: ${beforeState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                
+                // 手動でBB編集開始イベントを発生させる
+                const testEvent = new CustomEvent('boundingBoxSelected', {
+                    detail: {
+                        targetElement: document.getElementById('spine-canvas'),
+                        testMode: true,
+                        timestamp: Date.now()
+                    }
+                });
+                
+                document.dispatchEvent(testEvent);
+                
+                // テスト後の状態確認
+                setTimeout(() => {
+                    const afterState = window.pureBoundingBoxAutoPin.getState();
+                    log(`テスト後状態: ${afterState.coordinateSystem.mode}`, 'info');
+                    log(`ピン同期: ${afterState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                    
+                    if (!afterState.coordinateSystem.pinSyncEnabled) {
+                        log('✅ BB座標分離テスト成功 - AutoPinを無効化しました', 'success');
+                    } else {
+                        log('⚠️ BB座標分離テスト部分成功 - ピン同期がまだ有効です', 'warning');
+                    }
+                    
+                    // spine-canvasのCSS状態を確認
+                    const spineCanvas = document.getElementById('spine-canvas');
+                    if (spineCanvas) {
+                        const style = {
+                            position: spineCanvas.style.position || '空',
+                            left: spineCanvas.style.left || '空',
+                            top: spineCanvas.style.top || '空',
+                            transform: spineCanvas.style.transform || '空'
+                        };
+                        log(`spine-canvasスタイル: ${JSON.stringify(style)}`, 'info');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                log(`❌ BB座標分離テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 🔄 AutoPin復元テスト
+        window.testCoordinateLayerRestore = function testCoordinateLayerRestore() {
+            try {
+                log('🔄 AutoPin復元テスト開始', 'info');
+                
+                if (!window.pureBoundingBoxAutoPin) {
+                    log('❌ AutoPinインスタンスが必要です', 'error');
+                    return;
+                }
+                
+                // テスト前の状態確認
+                const beforeState = window.pureBoundingBoxAutoPin.getState();
+                log(`復元前状態: ${beforeState.coordinateSystem.mode}`, 'info');
+                log(`ピン同期: ${beforeState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                
+                // 手動でBB編集完了イベントを発生させる
+                const testEvent = new CustomEvent('boundingBoxDeselected', {
+                    detail: {
+                        targetElement: document.getElementById('spine-canvas'),
+                        saveData: {
+                            bounds: { x: 100, y: 100, width: 200, height: 200 },
+                            targetElement: document.getElementById('spine-canvas')
+                        },
+                        testMode: true,
+                        timestamp: Date.now()
+                    }
+                });
+                
+                document.dispatchEvent(testEvent);
+                
+                // テスト後の状態確認を遅延実行（非同期復元を待つ）
+                setTimeout(() => {
+                    const afterState = window.pureBoundingBoxAutoPin.getState();
+                    log(`復元後状態: ${afterState.coordinateSystem.mode}`, 'info');
+                    log(`ピン同期: ${afterState.coordinateSystem.pinSyncEnabled ? '有効' : '無効'}`, 'info');
+                    
+                    if (afterState.coordinateSystem.pinSyncEnabled) {
+                        log('✅ AutoPin復元テスト成功 - AutoPinを再有効化しました', 'success');
+                    } else {
+                        log('⚠️ AutoPin復元テスト部分成功 - ピン同期がまだ無効です', 'warning');
+                    }
+                    
+                    // レスポンシブシステムの状態確認
+                    const hasResizeHandler = !!window.pureBoundingBoxAutoPin._resizeHandler;
+                    const hasMutationObserver = !!window.pureBoundingBoxAutoPin.mutationObserver;
+                    
+                    log(`レスポンシブシステム: リサイズ=${hasResizeHandler ? '有効' : '無効'}, 監視=${hasMutationObserver ? '有効' : '無効'}`, 'info');
+                    
+                    if (hasResizeHandler && hasMutationObserver) {
+                        log('✅ レスポンシブシステムも正常に復元されました', 'success');
+                    } else {
+                        log('⚠️ レスポンシブシステムの一部が復元されていません', 'warning');
+                    }
+                    
+                }, 300); // 300ms遅延で非同期復元を待つ
+                
+            } catch (error) {
+                log(`❌ AutoPin復元テストエラー: ${error.message}`, 'error');
             }
         }
         

@@ -2762,28 +2762,8 @@
 
         if (packageExportMicromoduleBtn) {
           packageExportMicromoduleBtn.onclick = async () => {
-            try {
-              console.log('📦 マイクロモジュール版パッケージ出力開始...');
-              
-              // マイクロモジュール版を動的に読み込み
-              if (!window.PackageExportSystemNew) {
-                console.log('🔄 マイクロモジュール版を読み込み中...');
-                const PackageExportSystem = await import('./micromodules/package-export/index.js');
-                window.PackageExportSystemNew = PackageExportSystem.default;
-                console.log('✅ マイクロモジュール版読み込み完了');
-              }
-
-              if (window.PackageExportSystemNew) {
-                await window.PackageExportSystemNew.exportPackage();
-                console.log('✅ マイクロモジュール版パッケージ出力完了');
-              } else {
-                console.error('❌ マイクロモジュール版パッケージ出力システムが読み込まれていません');
-                alert('エラー: マイクロモジュール版パッケージ出力システムが読み込まれていません');
-              }
-            } catch (error) {
-              console.error('❌ マイクロモジュール版パッケージ出力エラー:', error);
-              alert('エラー: ' + error.message);
-            }
+            alert('⚠️ マイクロモジュール版は現在メンテナンス中です。\nオリジナル版をご利用ください。');
+            console.log('⚠️ マイクロモジュール版は現在無効化されています - 技術的課題により一時停止');
           };
         }
       });
