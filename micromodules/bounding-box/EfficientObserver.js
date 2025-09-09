@@ -54,13 +54,13 @@ class EfficientObserver {
         // ResizeObserver (要素サイズ変更検出)
         if (this.config.enableResize && window.ResizeObserver) {
             this.resizeObserver = new ResizeObserver(this.handleResize.bind(this));
-            console.log('📏 ResizeObserver 初期化完了');
+            // console.log('📏 ResizeObserver 初期化完了'); // Observer初期化ログ無効化
         }
         
         // MutationObserver (DOM構造変更検出)
         if (this.config.enableMutation && window.MutationObserver) {
             this.mutationObserver = new MutationObserver(this.handleMutation.bind(this));
-            console.log('🔄 MutationObserver 初期化完了');
+            // console.log('🔄 MutationObserver 初期化完了'); // Observer初期化ログ無効化
         }
         
         // IntersectionObserver (可視性変更検出・オプション)
@@ -73,7 +73,7 @@ class EfficientObserver {
                     threshold: [0, 0.1, 0.5, 1.0]
                 }
             );
-            console.log('👁️ IntersectionObserver 初期化完了');
+            // console.log('👁️ IntersectionObserver 初期化完了'); // Observer初期化ログ無効化
         }
         
         // ウィンドウリサイズ検出

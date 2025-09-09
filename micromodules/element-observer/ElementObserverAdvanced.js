@@ -1112,7 +1112,7 @@ class ElementObserverAdvanced {
         // ResizeObserver開始
         this.startResizeObservation(target, observationData);
         
-        console.log('🌊 環境揺れ吸収observer開始:', {
+        // console.log('🌊 環境揺れ吸収observer開始:', { // Observerログ無効化
             targetId,
             mode: observationData.mode,
             anchor: observationData.anchor,
@@ -1139,7 +1139,7 @@ class ElementObserverAdvanced {
      * ResizeObserver エントリー処理
      */
     handleResizeEntries(entries) {
-        console.log('🔍 ResizeObserver エントリー処理:', {
+        // console.log('🔍 ResizeObserver エントリー処理:', { // リサイズログ無効化
             entriesCount: entries.length,
             entries: entries.map(e => ({
                 target: e.target.tagName,
@@ -1404,7 +1404,7 @@ class ElementObserverAdvanced {
         this.environmentObserver.pendingUpdates.delete(target);
         this.environmentObserver.stableValues.delete(target);
         
-        console.log('🌊 環境observer停止:', observationData.targetId);
+        // console.log('🌊 環境observer停止:', observationData.targetId); // Observerログ無効化
     }
     
     // ====================

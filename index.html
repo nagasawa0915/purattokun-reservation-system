@@ -41,7 +41,8 @@
             position: absolute;          /* 背景画像上に重ねる */
             left: 35%;                   /* 背景画像基準の位置（調整可能） */
             top: 75%;                    /* 背景画像基準の位置（調整可能） */
-            transform: translate(-50%, -50%); /* 中央寄せ */
+            /* 🔧 修正: レイアウト用transform + 編集用transformの合成 */
+            transform: translate(-50%, -50%) var(--pbx-edit, none); /* 中央寄せ + 編集用transform */
             width: 25%;                  /* 🔑 背景画像と同じ比例拡縮 */
             aspect-ratio: 3/2;           /* 🔑 縦横比固定（潰れ防止） */
             z-index: 10;                 /* 前面表示 */
@@ -55,7 +56,8 @@
             position: absolute;
             left: 60%;
             top: 45%;
-            transform: translate(-50%, -50%);
+            /* 🔧 修正: レイアウト用transform + 編集用transformの合成 */
+            transform: translate(-50%, -50%) var(--pbx-edit, none);
             width: 20%;
             aspect-ratio: 3/2;
             z-index: 11;
@@ -69,7 +71,8 @@
             position: absolute;          /* Canvas位置と同期 */
             left: 35%;                   /* Canvasと同じ位置 */
             top: 75%;                    /* Canvasと同じ位置 */
-            transform: translate(-50%, -50%);
+            /* 🔧 修正: レイアウト用transform + 編集用transformの合成 */
+            transform: translate(-50%, -50%) var(--pbx-edit, none);
             width: 10%;                  /* 🔑 背景画像と同じ比例拡縮 */
             aspect-ratio: 1/1;           /* 正方形維持 */
             object-fit: contain;         /* 画像比率維持 */
@@ -84,7 +87,8 @@
             position: absolute;
             left: 60%;
             top: 45%;
-            transform: translate(-50%, -50%);
+            /* 🔧 修正: レイアウト用transform + 編集用transformの合成 */
+            transform: translate(-50%, -50%) var(--pbx-edit, none);
             width: 8%;
             aspect-ratio: 1/1;
             object-fit: contain;
@@ -108,7 +112,8 @@
             position: absolute;
             left: 60%;
             top: 45%;
-            transform: translate(-50%, -50%);
+            /* 🔧 修正: レイアウト用transform + 編集用transformの合成 */
+            transform: translate(-50%, -50%) var(--pbx-edit, none);
             width: 20%;
             aspect-ratio: 3/2;
             z-index: 11;
@@ -124,7 +129,8 @@
             position: absolute;
             left: 60%;
             top: 45%;
-            transform: translate(-50%, -50%);
+            /* 🔧 修正: レイアウト用transform + 編集用transformの合成 */
+            transform: translate(-50%, -50%) var(--pbx-edit, none);
             width: 8%;
             aspect-ratio: 1/1;
             object-fit: contain;

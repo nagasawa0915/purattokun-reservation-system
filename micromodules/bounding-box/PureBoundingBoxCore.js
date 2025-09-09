@@ -70,7 +70,7 @@ class PureBoundingBoxCore {
     
     /**
      * 🎯 BB座標系スワップ: Transform → Bounds
-     * 🔧 CSS Transform中心基準補正の競合解決
+     * 🔧 CSS Transform中心基準補正の競合解決 + Canvas歪み解決
      */
     enterEditingMode() {
         if (this.swapState.currentMode === 'editing') return;
@@ -82,7 +82,7 @@ class PureBoundingBoxCore {
         // スワップ前の状態を詳細に記録
         const beforeState = this.captureDetailedState('BEFORE_ENTER_EDITING', timestamp);
         
-        console.log('🔄 [SWAP] enterEditingMode: CSS Transform競合解決開始', {
+        console.log('🔄 [SWAP] enterEditingMode: CSS Transform競合解決+Canvas歪み解決開始', {
             timestamp: timestamp,
             nodeId: this.config.nodeId,
             attempt: this.getSwapAttemptCount(),
@@ -111,14 +111,76 @@ class PureBoundingBoxCore {
         const currentRect = element.getBoundingClientRect();
         const parentRect = element.parentElement.getBoundingClientRect();
         
-        // 現在の視覚的位置を保持したままtransformを無効化
+        // 🎯 座標継承: 現在の視覚的位置を完全に保持
         const absoluteLeft = currentRect.left - parentRect.left;
         const absoluteTop = currentRect.top - parentRect.top;
+        
+        console.log('🎯 座標継承:', {
+            currentVisual: `${Math.round(currentRect.left)}, ${Math.round(currentRect.top)}`,
+            parentPosition: `${Math.round(parentRect.left)}, ${Math.round(parentRect.top)}`,
+            calculatedAbsolute: `${Math.round(absoluteLeft)}, ${Math.round(absoluteTop)}`
+        });
         
         // 絶対座標でtransformなし状態に設定
         element.style.left = absoluteLeft + 'px';
         element.style.top = absoluteTop + 'px';
-        element.style.transform = 'none'; // 中心基準補正を一時無効化
+        
+        // 🔧 修正: レイアウト用transformを保持し、編集用のみクリア
+        element.style.setProperty('--pbx-edit', 'none'); // 編集用transform無効化
+        
+        // 🎯 サイズ・Canvas解像度の固定化（歪み防止） + 🔧 Canvas強制正方形化
+        const computedStyle = window.getComputedStyle(element);
+        let fixedWidth = computedStyle.width;
+        let fixedHeight = computedStyle.height;
+        
+        // 🚨 緊急修正: Canvas要素の場合、強制正方形化を実行
+        if (element.tagName === 'CANVAS') {
+            const currentWidth = parseFloat(fixedWidth);
+            const currentHeight = parseFloat(fixedHeight);
+            
+            console.log('🚨 Canvas歪み検出 - 強制正方形化開始:', {
+                現在のサイズ: `${currentWidth} × ${currentHeight}`,
+                長方形判定: currentWidth !== currentHeight ? '歪みあり' : '正方形',
+                修正方針: '小さい方のサイズに統一'
+            });
+            
+            // 小さい方のサイズに統一（縦横比1:1強制）
+            const squareSize = Math.min(currentWidth, currentHeight);
+            fixedWidth = squareSize + 'px';
+            fixedHeight = squareSize + 'px';
+            
+            console.log('🔧 Canvas強制正方形化完了:', {
+                修正後サイズ: `${squareSize} × ${squareSize}`,
+                縦横比: '1:1',
+                適用方法: 'CSS width/height統一'
+            });
+            
+            // CSS強制正方形も適用
+            element.style.aspectRatio = '1 / 1';
+            element.style.objectFit = 'contain';
+        }
+        
+        // 固定サイズを適用
+        element.style.width = fixedWidth;
+        element.style.height = fixedHeight;
+        
+        // Canvas要素の場合、内部解像度も正方形に固定
+        if (element.tagName === 'CANVAS') {
+            // DPR対応の内部解像度も正方形に統一
+            const squareSize = Math.min(parseFloat(fixedWidth), parseFloat(fixedHeight));
+            const dpr = window.devicePixelRatio || 1;
+            const internalRes = Math.round(squareSize * dpr);
+            
+            element.width = internalRes;
+            element.height = internalRes; // 内部バッファも正方形
+            
+            console.log('🎯 Canvas内部解像度正方形固定:', {
+                displaySize: `${fixedWidth} × ${fixedHeight}`,
+                internalRes: `${element.width} × ${element.height}`,
+                dpr: dpr,
+                正方形確認: element.width === element.height ? '✅ 正方形' : '❌ 長方形'
+            });
+        }
         
         // 編集モード開始
         this.swapState.currentMode = 'editing';
@@ -126,11 +188,12 @@ class PureBoundingBoxCore {
         // スワップ後の状態を詳細に記録
         const afterState = this.captureDetailedState('AFTER_ENTER_EDITING', timestamp);
         
-        console.log('✅ [SWAP] enterEditingMode完了 - CSS Transform競合解決', {
+        console.log('✅ [SWAP] enterEditingMode完了 - CSS Transform競合解決+Canvas歪み解決', {
             timestamp: timestamp,
             beforeAfterComparison: this.compareStates(beforeState, afterState),
             editingModeActive: this.swapState.currentMode === 'editing',
-            transformConflictSolution: 'temp-disable-center-offset'
+            transformConflictSolution: 'temp-disable-center-offset',
+            canvasDistortionSolution: 'force-square-aspect-ratio'
         });
         
         // 初回/2回目以降の判定ログ
@@ -176,7 +239,9 @@ class PureBoundingBoxCore {
         element.style.top = newTopPercent.toFixed(1) + '%';
         element.style.width = newWidthPercent.toFixed(1) + '%';
         element.style.height = newHeightPercent.toFixed(1) + '%';
-        element.style.transform = 'translate(-50%, -50%)'; // 中心基準補正を復元
+        
+        // 🔧 修正: CSS変数で編集用transformをクリア（レイアウト用は保持）
+        element.style.setProperty('--pbx-edit', 'none');
         
         // 状態をリセット
         this.swapState.currentMode = 'idle';

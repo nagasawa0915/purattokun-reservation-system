@@ -191,6 +191,7 @@
         <button onclick="diagnosticSpineElementDuplication()">🔍 Spine要素重複確認</button>
         <button onclick="diagnosticCoordinateConflict()">⚡ 座標競合診断</button>
         <button onclick="diagnosticCSSPositionMismatch()">🎯 CSS座標矛盾診断</button>
+        <button onclick="diagnosticCanvasDistortion()">🔧 Canvas歪み診断</button>
     </div>
     
     <div id="status-area"></div>
@@ -1175,6 +1176,158 @@
             
             console.groupEnd();
             updateStatus("🔍 Spine要素重複診断完了。コンソールを確認してください。");
+        };
+
+        /**
+         * 🔧 Canvas歪み診断 (長方形Canvas検出・強制正方形化確認)
+         */
+        window.diagnosticCanvasDistortion = function() {
+            console.group("🔧 Canvas歪み診断 - 長方形Canvas検出・強制正方形化確認");
+            updateStatus("🔧 Canvas歪み診断を開始中...");
+            
+            // DOM内の全Canvas要素を検索
+            const canvasElements = document.querySelectorAll('canvas');
+            
+            if (canvasElements.length === 0) {
+                console.warn("⚠️ Canvas要素が見つかりません");
+                updateStatus("⚠️ 診断対象のCanvas要素がありません", true);
+                console.groupEnd();
+                return;
+            }
+            
+            console.log(`🎯 ${canvasElements.length}個のCanvas要素を発見`);
+            
+            // 各Canvas要素の歪み診断
+            const distortionResults = [];
+            canvasElements.forEach((canvas, index) => {
+                const rect = canvas.getBoundingClientRect();
+                const computedStyle = getComputedStyle(canvas);
+                
+                // 表示サイズ取得
+                const displayWidth = rect.width;
+                const displayHeight = rect.height;
+                const isSquareDisplay = Math.abs(displayWidth - displayHeight) < 1; // 1px未満の差は許容
+                
+                // 内部解像度取得
+                const internalWidth = canvas.width;
+                const internalHeight = canvas.height;
+                const isSquareInternal = internalWidth === internalHeight;
+                
+                // 期待される正方形サイズ
+                const expectedSquareSize = Math.min(displayWidth, displayHeight);
+                const expectedInternalSize = Math.round(expectedSquareSize * (window.devicePixelRatio || 1));
+                
+                // 歪み判定
+                const hasDisplayDistortion = !isSquareDisplay;
+                const hasInternalDistortion = !isSquareInternal;
+                const hasAnyDistortion = hasDisplayDistortion || hasInternalDistortion;
+                
+                const result = {
+                    element: canvas,
+                    index: index,
+                    id: canvas.id || `canvas-${index}`,
+                    displaySize: {
+                        width: displayWidth,
+                        height: displayHeight,
+                        isSquare: isSquareDisplay,
+                        aspectRatio: (displayWidth / displayHeight).toFixed(3)
+                    },
+                    internalRes: {
+                        width: internalWidth,
+                        height: internalHeight,
+                        isSquare: isSquareInternal,
+                        aspectRatio: (internalWidth / internalHeight).toFixed(3)
+                    },
+                    expected: {
+                        squareSize: expectedSquareSize,
+                        internalSize: expectedInternalSize
+                    },
+                    distortion: {
+                        display: hasDisplayDistortion,
+                        internal: hasInternalDistortion,
+                        any: hasAnyDistortion
+                    },
+                    css: {
+                        aspectRatio: computedStyle.aspectRatio,
+                        objectFit: computedStyle.objectFit,
+                        width: computedStyle.width,
+                        height: computedStyle.height
+                    }
+                };
+                
+                distortionResults.push(result);
+                
+                console.log(`\n🎯 Canvas #${index} (${result.id}) 歪み診断:`, {
+                    "表示サイズ": `${displayWidth.toFixed(1)} × ${displayHeight.toFixed(1)} ${isSquareDisplay ? '✅ 正方形' : '❌ 長方形！'}`,
+                    "内部バッファ": `${internalWidth} × ${internalHeight} ${isSquareInternal ? '✅ 正方形' : '❌ 長方形！'}`,
+                    "歪み判定": hasAnyDistortion ? '🚨 歪みあり' : '✅ 正常',
+                    "期待関係": {
+                        "表示→内部": `${expectedSquareSize}px → ${expectedInternalSize}px`,
+                        "DPR倍率": window.devicePixelRatio || 1,
+                        "期待一致": (displayWidth === expectedSquareSize && internalWidth === expectedInternalSize) ? "✅" : "❌"
+                    }
+                });
+                
+                if (hasAnyDistortion) {
+                    console.error(`🚨 Canvas #${index} 歪み検出:`, {
+                        "表示歪み": hasDisplayDistortion ? `${displayWidth.toFixed(1)}×${displayHeight.toFixed(1)}` : "なし",
+                        "内部歪み": hasInternalDistortion ? `${internalWidth}×${internalHeight}` : "なし",
+                        "修正提案": `${expectedSquareSize}px × ${expectedSquareSize}px (内部: ${expectedInternalSize}×${expectedInternalSize})`
+                    });
+                }
+            });
+            
+            // 統計情報
+            const totalCanvas = distortionResults.length;
+            const distortedCanvas = distortionResults.filter(r => r.distortion.any).length;
+            const squareCanvas = totalCanvas - distortedCanvas;
+            
+            console.log("\n📊 Canvas歪み統計:", {
+                "総Canvas数": totalCanvas,
+                "正方形Canvas": squareCanvas,
+                "歪みCanvas": distortedCanvas,
+                "歪み率": ((distortedCanvas / totalCanvas) * 100).toFixed(1) + "%"
+            });
+            
+            // 修正提案
+            if (distortedCanvas > 0) {
+                console.warn(`\n🔧 修正提案 (${distortedCanvas}個の歪みCanvas):`);
+                distortionResults.filter(r => r.distortion.any).forEach(result => {
+                    console.log(`- Canvas #${result.index}:`, {
+                        "現在": `${result.displaySize.width}×${result.displaySize.height} (内部: ${result.internalRes.width}×${result.internalRes.height})`,
+                        "修正後": `${result.expected.squareSize}×${result.expected.squareSize} (内部: ${result.expected.internalSize}×${result.expected.internalSize})`,
+                        "CSS修正": `aspect-ratio: 1/1; object-fit: contain;`
+                    });
+                });
+                
+                updateStatus(`🚨 ${distortedCanvas}個のCanvas歪みを検出 - 修正が必要`, true);
+            } else {
+                console.log("✅ 全Canvas正方形 - 歪みなし");
+                updateStatus("✅ 全Canvas正方形確認 - 歪みなし");
+            }
+            
+            // 実際の例 (診断結果と照合)
+            if (distortedCanvas > 0) {
+                console.log("\n🎯 診断結果との照合:");
+                console.log("期待される修正結果:");
+                console.log("- 表示サイズ（CSS）: 359 × 359 ✅ 正方形");
+                console.log("- 内部バッファ: 323 × 323 ✅ 正方形");
+                console.log("- 期待関係チェック: true ✅");
+                
+                const exampleResult = distortionResults.find(r => r.distortion.any);
+                if (exampleResult) {
+                    const actualSquareSize = Math.min(exampleResult.displaySize.width, exampleResult.displaySize.height);
+                    const actualInternalSize = Math.round(actualSquareSize * (window.devicePixelRatio || 1));
+                    
+                    console.log("実際の修正予測:");
+                    console.log(`- 表示サイズ（CSS）: ${actualSquareSize} × ${actualSquareSize} ✅ 正方形`);
+                    console.log(`- 内部バッファ: ${actualInternalSize} × ${actualInternalSize} ✅ 正方形`);
+                    console.log("- 期待関係チェック: true ✅");
+                }
+            }
+            
+            console.groupEnd();
+            updateStatus("🔧 Canvas歪み診断完了。コンソールを確認してください。");
         };
     </script>
 </body>

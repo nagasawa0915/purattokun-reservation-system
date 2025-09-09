@@ -194,8 +194,8 @@ class SpineCoordinateUtils {
      * 最重要：ユーザーが報告した位置ズレ問題を解決する関数
      */
     updateOnResize(character, config) {
-        console.log('🔄 ウィンドウリサイズ検出、キャラクター位置を更新中...');
-        console.log('📱 現在のウィンドウサイズ:', window.innerWidth + 'x' + window.innerHeight);
+        // console.log('🔄 ウィンドウリサイズ検出、キャラクター位置を更新中...'); // リサイズログ無効化
+        // console.log('📱 現在のウィンドウサイズ:', window.innerWidth + 'x' + window.innerHeight); // リサイズログ無効化
         console.log('⚙️ 設定値:', config);
         
         // 座標計算前の背景画像情報を取得
@@ -273,7 +273,7 @@ class SpineCoordinateUtils {
             console.log('📝 プレースホルダー位置更新:', pixel);
         }
         
-        console.log('✅ ウィンドウリサイズに対応したキャラクター位置更新完了');
+        // console.log('✅ ウィンドウリサイズに対応したキャラクター位置更新完了'); // リサイズログ無効化
         console.log(''); // 空行でログを見やすく
     }
 
@@ -306,7 +306,7 @@ class SpineCoordinateUtils {
         console.log('📐 ビューポート→ピクセル:', pixel);
         console.log('🖼️ 背景画像境界:', bgBounds);
         console.log('🎯 最終配置:', placement);
-        console.log('📱 ウィンドウサイズ:', window.innerWidth + 'x' + window.innerHeight);
+        // console.log('📱 ウィンドウサイズ:', window.innerWidth + 'x' + window.innerHeight); // リサイズログ無効化
         
         console.groupEnd();
     }
@@ -414,6 +414,6 @@ class SpineCoordinateUtils {
 
         console.log('🔍 デバッグ関数を設定（CSS基準配置対応）:');
         console.log('  - window.debugSpineCharacters(): キャラクター状態確認');
-        console.log('  - window.cleanupOldResizeHandlers(): 古いリサイズハンドラー削除');
+        // console.log('  - window.cleanupOldResizeHandlers(): 古いリサイズハンドラー削除'); // デバッグログ無効化
     }
 }

@@ -39,7 +39,7 @@ class StableSpineRenderer {
       character: config.character,
       basePath: config.basePath || "/assets/spine/characters/",
 
-      // 位置・スケール設定（自然な比率）
+      // 位置・スケール設定（自然な比率・横歪み防止）
       position: {
         x: config.position?.x ?? 100,
         y: config.position?.y ?? -100,
@@ -194,18 +194,44 @@ class StableSpineRenderer {
       throw new Error(`Canvas要素が見つかりません: ${this.config.canvas}`);
     }
 
-    // Canvas属性設定（既存サイズを尊重、設定がある場合のみ変更）
+    // Canvas属性設定（DPR対応・正方形統一）
+    const dpr = window.devicePixelRatio || 1;
+    
     if (this.config.canvasWidth && this.config.canvasHeight) {
-      this.canvas.width = this.config.canvasWidth;
-      this.canvas.height = this.config.canvasHeight;
+      // 🚨 横歪み修正: Canvas解像度を正方形に強制統一
+      const cssSquareSize = Math.max(this.config.canvasWidth, this.config.canvasHeight);
+      const bufferSquareSize = Math.round(cssSquareSize * dpr);
+      
+      // CSS表示サイズ設定（正方形統一）
+      this.canvas.style.width = `${cssSquareSize}px`;
+      this.canvas.style.height = `${cssSquareSize}px`;
+      this.canvas.style.aspectRatio = '1 / 1';
+      
+      // 内部バッファサイズ設定（DPR対応）
+      this.canvas.width = bufferSquareSize;
+      this.canvas.height = bufferSquareSize;
+      
       this.log(
-        `📏 Canvasサイズ変更: ${this.config.canvasWidth}x${this.config.canvasHeight}`,
+        `📏 Canvasサイズ変更（DPR対応）: CSS ${cssSquareSize}×${cssSquareSize}px, バッファ ${bufferSquareSize}×${bufferSquareSize}px (DPR: ${dpr.toFixed(3)})`,
         "info"
       );
     } else {
-      // 既存のHTMLサイズを使用
+      // 既存のHTMLサイズを使用（DPR対応・正方形統一）
+      const rect = this.canvas.getBoundingClientRect();
+      const cssSquareSize = Math.max(rect.width, rect.height);
+      const bufferSquareSize = Math.round(cssSquareSize * dpr);
+      
+      // CSS表示サイズ設定（正方形統一）
+      this.canvas.style.width = `${cssSquareSize}px`;
+      this.canvas.style.height = `${cssSquareSize}px`;
+      this.canvas.style.aspectRatio = '1 / 1';
+      
+      // 内部バッファサイズ設定（DPR対応）
+      this.canvas.width = bufferSquareSize;
+      this.canvas.height = bufferSquareSize;
+      
       this.log(
-        `📏 既存Canvasサイズ使用: ${this.canvas.width}x${this.canvas.height}`,
+        `📏 既存Canvasサイズ使用（DPR対応）: CSS ${cssSquareSize}×${cssSquareSize}px, バッファ ${bufferSquareSize}×${bufferSquareSize}px (DPR: ${dpr.toFixed(3)})`,
         "info"
       );
     }
@@ -330,11 +356,14 @@ class StableSpineRenderer {
     // スケルトン作成（成功パターンと同じ）
     this.skeleton = new window.spine.Skeleton(skeletonData);
 
-    // 位置・スケール設定（成功パターンと同じデフォルト値）
+    // 位置・スケール設定（成功パターンと同じデフォルト値・横歪み防止）
     this.skeleton.x = this.config.position.x;
     this.skeleton.y = this.config.position.y;
-    this.skeleton.scaleX = this.config.position.scaleX;
-    this.skeleton.scaleY = this.config.position.scaleY;
+    
+    // 🚨 横歪み修正: スケールを統一して歪みを防止
+    const unifiedScale = Math.min(this.config.position.scaleX, this.config.position.scaleY);
+    this.skeleton.scaleX = unifiedScale;
+    this.skeleton.scaleY = unifiedScale;
 
     this.log(`📍 位置設定: (${this.skeleton.x}, ${this.skeleton.y})`, "info");
     this.log(`🔍 スケール設定: ${this.skeleton.scaleX}`, "info");
@@ -556,11 +585,19 @@ class StableSpineRenderer {
 
     if (x !== null) this.skeleton.x = x;
     if (y !== null) this.skeleton.y = y;
-    if (scaleX !== null) this.skeleton.scaleX = scaleX;
-    if (scaleY !== null) this.skeleton.scaleY = scaleY;
+    
+    // 🚨 横歪み修正: スケールを統一して歪みを防止
+    if (scaleX !== null || scaleY !== null) {
+      const currentScaleX = scaleX !== null ? scaleX : this.skeleton.scaleX;
+      const currentScaleY = scaleY !== null ? scaleY : this.skeleton.scaleY;
+      const unifiedScale = Math.min(currentScaleX, currentScaleY);
+      
+      this.skeleton.scaleX = unifiedScale;
+      this.skeleton.scaleY = unifiedScale;
+    }
 
     this.log(
-      `📍 位置・スケール更新: (${this.skeleton.x}, ${this.skeleton.y}) scale: ${this.skeleton.scaleX}`,
+      `📍 位置・スケール更新: (${this.skeleton.x}, ${this.skeleton.y}) scale: ${this.skeleton.scaleX}（統一値）`,
       "info"
     );
     return true;
@@ -639,10 +676,21 @@ class StableSpineRenderer {
     }
 
     for (const character of characters) {
-      // Canvas要素を動的作成
+      // Canvas要素を動的作成（DPR対応・正方形統一）
       const canvas = document.createElement("canvas");
-      canvas.width = 400;
-      canvas.height = 400;
+      const dpr = window.devicePixelRatio || 1;
+      const cssSquareSize = 400;
+      const bufferSquareSize = Math.round(cssSquareSize * dpr);
+      
+      // CSS表示サイズ設定（正方形統一）
+      canvas.style.width = `${cssSquareSize}px`;
+      canvas.style.height = `${cssSquareSize}px`;
+      canvas.style.aspectRatio = '1 / 1';
+      
+      // 内部バッファサイズ設定（DPR対応）
+      canvas.width = bufferSquareSize;
+      canvas.height = bufferSquareSize;
+      
       canvas.id = `spine-canvas-${character}`;
       container.appendChild(canvas);
 

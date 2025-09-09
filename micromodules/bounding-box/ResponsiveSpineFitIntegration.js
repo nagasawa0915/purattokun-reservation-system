@@ -278,7 +278,7 @@ class ResponsiveSpineFitIntegration {
         // ウィンドウリサイズも監視
         window.addEventListener('resize', this.throttledUpdate);
         
-        console.log('👀 ResizeObserver開始 - 監視要素数:', this.state.observingElements.size);
+        // console.log('👀 ResizeObserver開始 - 監視要素数:', this.state.observingElements.size); // リサイズログ無効化
     }
     
     /**
