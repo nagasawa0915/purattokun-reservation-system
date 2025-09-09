@@ -13,7 +13,10 @@ class PureBoundingBoxCore {
             targetElement: config.targetElement,
             nodeId: config.nodeId || 'bb-' + Date.now(),
             minWidth: config.minWidth || 20,
-            minHeight: config.minHeight || 20
+            minHeight: config.minHeight || 20,
+            // 🆕 許容範囲内誤差設定
+            tolerancePx: config.tolerancePx || 5,
+            gentleCorrectionRatio: config.gentleCorrectionRatio || 0.5
         };
         
         // 🎯 Transform座標系（通常時）
@@ -242,8 +245,8 @@ class PureBoundingBoxCore {
     }
     
     /**
-     * 🆕 Phase 3: 見た目の中心基準のコミット処理
-     * transform(-50%, -50%)を考慮した正確な%値再計算
+     * 🆕 Phase 2改良版: Toleranceシステム統合コミット処理
+     * 許容範囲内誤差を考慮したシンプルな%値再計算
      */
     commitToPercent() {
         const timestamp = new Date().toISOString();
@@ -301,11 +304,15 @@ class PureBoundingBoxCore {
         // コミット前の状態を詳細に記録
         const beforeCommitState = this.captureDetailedState('BEFORE_COMMIT', timestamp);
         
-        console.log('🔄 [SWAP] commitToPercent: 見た目の中心基準変換開始', {
+        console.log('🔄 [SWAP] commitToPercent: Toleranceシステム統合変換開始', {
             timestamp: timestamp,
             nodeId: this.config.nodeId,
             attempt: this.getCommitAttemptCount(),
-            beforeCommitState: beforeCommitState
+            beforeCommitState: beforeCommitState,
+            toleranceSettings: {
+                tolerancePx: this.config.tolerancePx,
+                gentleCorrectionRatio: this.config.gentleCorrectionRatio
+            }
         });
         
         try {
@@ -331,8 +338,8 @@ class PureBoundingBoxCore {
                 });
             }
             
-            // 🎯 瞬間移動問題修正: 現在の正確な位置を親要素基準で計算
-            console.log('🎯 [FIX] 瞬間移動修正 - 座標計算を親要素基準に統一');
+            // 🎯 Toleranceシステム統合: 許容範囲内誤差を考慮した位置計算
+            console.log('🎯 [TOLERANCE] 許容範囲内誤差システム統合 - シンプル座標計算');
             
             // 親要素基準での相対位置を直接計算（ページ座標を使わない）
             const currentLeft = parseFloat(getComputedStyle(element).left) || 0;
@@ -342,32 +349,47 @@ class PureBoundingBoxCore {
             const leftIsPercent = getComputedStyle(element).left.includes('%');
             const topIsPercent = getComputedStyle(element).top.includes('%');
             
+            // 🆕 Toleranceチェック: CSS変数による微小なずれを許容範囲内誤差として扱う
+            const txTolerant = Math.abs(tx) <= this.config.tolerancePx ? 0 : tx * this.config.gentleCorrectionRatio;
+            const tyTolerant = Math.abs(ty) <= this.config.tolerancePx ? 0 : ty * this.config.gentleCorrectionRatio;
+            
+            console.log('🔍 [TOLERANCE] 許容範囲チェック結果:', {
+                originalOffset: { tx: tx.toFixed(1), ty: ty.toFixed(1) },
+                tolerancePx: this.config.tolerancePx,
+                tolerantOffset: { tx: txTolerant.toFixed(1), ty: tyTolerant.toFixed(1) },
+                withinToleranceX: Math.abs(tx) <= this.config.tolerancePx,
+                withinToleranceY: Math.abs(ty) <= this.config.tolerancePx
+            });
+            
             let leftPct, topPct;
             
             if (leftIsPercent) {
-                // 既に%の場合はそのまま使用（CSS変数分のみ加算）
-                leftPct = currentLeft + (tx / parentRect.width * 100);
+                // 既に%の場合はTolerance適用済みオフセットを使用
+                leftPct = currentLeft + (txTolerant / parentRect.width * 100);
             } else {
                 // px値の場合は%に変換
-                leftPct = (currentLeft / parentRect.width) * 100 + (tx / parentRect.width * 100);
+                leftPct = (currentLeft / parentRect.width) * 100 + (txTolerant / parentRect.width * 100);
             }
             
             if (topIsPercent) {
-                // 既に%の場合はそのまま使用（CSS変数分のみ加算）
-                topPct = currentTop + (ty / parentRect.height * 100);
+                // 既に%の場合はTolerance適用済みオフセットを使用
+                topPct = currentTop + (tyTolerant / parentRect.height * 100);
             } else {
                 // px値の場合は%に変換
-                topPct = (currentTop / parentRect.height) * 100 + (ty / parentRect.height * 100);
+                topPct = (currentTop / parentRect.height) * 100 + (tyTolerant / parentRect.height * 100);
             }
             
-            console.log('🔍 [DEBUG] 修正後座標計算詳細:', {
+            console.log('🔍 [DEBUG] Tolerance適用後座標計算詳細:', {
                 currentStyles: {
                     left: getComputedStyle(element).left,
                     top: getComputedStyle(element).top,
                     leftIsPercent: leftIsPercent,
                     topIsPercent: topIsPercent
                 },
-                cssVariables: {tx: tx, ty: ty},
+                cssVariables: {
+                    original: {tx: tx, ty: ty},
+                    tolerant: {tx: txTolerant, ty: tyTolerant}
+                },
                 parentSize: {width: parentRect.width, height: parentRect.height},
                 calculatedPercent: {left: leftPct.toFixed(2), top: topPct.toFixed(2)}
             });
@@ -400,12 +422,18 @@ class PureBoundingBoxCore {
             // コミット後の状態を詳細に記録
             const afterCommitState = this.captureDetailedState('AFTER_COMMIT', timestamp);
             
-            console.log('✅ [SWAP] commitToPercent完了 - 修正版座標計算', {
+            console.log('✅ [SWAP] commitToPercent完了 - Toleranceシステム統合版', {
                 timestamp: timestamp,
                 conversionDetails: {
                     originalPosition: {left: currentLeft.toFixed(1), top: currentTop.toFixed(1)},
                     cssOffsetsBefore: {tx: tx, ty: ty},
                     cssOffsetsAfter: {tx: '0px', ty: '0px'},
+                    toleranceApplied: {
+                        beforeTolerance: {tx: tx, ty: ty},
+                        afterTolerance: {tx: txTolerant, ty: tyTolerant},
+                        withinToleranceX: Math.abs(tx) <= this.config.tolerancePx,
+                        withinToleranceY: Math.abs(ty) <= this.config.tolerancePx
+                    },
                     percentValues: {left: leftPct.toFixed(2) + '%', top: topPct.toFixed(2) + '%'},
                     hasInteractive: !!interactive,
                     coordinateType: {leftIsPercent: leftIsPercent, topIsPercent: topIsPercent}

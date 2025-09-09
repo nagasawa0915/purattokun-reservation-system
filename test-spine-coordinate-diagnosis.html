@@ -284,30 +284,8 @@
                 }
             }
             
-            // スクロール監視を追加 (Spine要素の位置追従)
-            let scrollUpdateThrottle = null;
-            window.addEventListener('scroll', () => {
-                if (scrollUpdateThrottle) {
-                    clearTimeout(scrollUpdateThrottle);
-                }
-                
-                scrollUpdateThrottle = setTimeout(() => {
-                    // 全てのアクティブなSpine要素を再配置
-                    for (const [targetElement, spineInfo] of activeSpines) {
-                        try {
-                            // 要素が現在も有効かチェック
-                            if (document.body.contains(targetElement) && document.body.contains(spineInfo.spineElement)) {
-                                // 既存のObserverコールバックを再実行してSpine位置を更新
-                                // updateSpinePositionを直接呼び出すのではなく、Observerシステムに位置再計算を依頼
-                                triggerObserverUpdate(targetElement);
-                            }
-                        } catch (error) {
-                            console.warn('⚠️ スクロール時Spine更新エラー:', error.message);
-                        }
-                    }
-                    
-                }, 16); // 60fps対応
-            }, { passive: true });
+            // スクロール監視を無効化 (AutoPin座標混入問題解決)
+            console.log('✅ スクロール監視を無効化 - AutoPin問題修正済み');
             
             updateStatus('✅ システム初期化完了 (スクロール監視付き)');
             console.log('🚀 Integration test initialized with scroll monitoring');
@@ -375,7 +353,7 @@
             const spine = document.createElement('div');
             spine.className = 'spine-display-area';
             spine.textContent = 'SPINE';
-            spine.style.position = 'absolute'; // position: absolute に変更でスクロール対応
+            spine.style.position = 'fixed'; // position: fixed に変更 - AutoPin問題解決
             spine.style.zIndex = '1000';
             
             // テキスト要素に合わせたサイズ調整
@@ -553,44 +531,12 @@
         }
         
         /**
-         * Observer更新をトリガー (スクロール時のSpine再配置用)
+         * Observer更新をトリガー (無効化済み - AutoPin座標混入問題解決)
          */
         function triggerObserverUpdate(targetElement) {
-            const spineInfo = activeSpines.get(targetElement);
-            if (!spineInfo) return;
-            
-            try {
-                // 対象要素の現在の矩形を取得
-                const targetRect = targetElement.getBoundingClientRect();
-                const parentRect = targetElement.parentElement ? 
-                    targetElement.parentElement.getBoundingClientRect() : null;
-                
-                if (!parentRect || targetRect.width === 0 || targetRect.height === 0) {
-                    console.warn('⚠️ triggerObserverUpdate: 無効な要素サイズ');
-                    return;
-                }
-                
-                // 簡易的なpayloadオブジェクトを作成 (Observerと同等の構造)
-                const simulatedPayload = {
-                    rect: targetRect,
-                    parentRect: parentRect,
-                    scaleX: 1,
-                    scaleY: 1,
-                    finalScale: 1,
-                    resolve: function(anchorPosition) {
-                        return {
-                            x: targetRect.left + (anchorPosition.x / 100) * targetRect.width,
-                            y: targetRect.top + (anchorPosition.y / 100) * targetRect.height
-                        };
-                    }
-                };
-                
-                // updateSpinePositionを呼び出してSpine位置を更新
-                updateSpinePosition(targetElement, simulatedPayload);
-                
-            } catch (error) {
-                console.error('❌ triggerObserverUpdate エラー:', error);
-            }
+            // AutoPin座標混入問題解決のため無効化
+            console.log('🔒 triggerObserverUpdate無効化済み');
+            return;
         }
         
         /**

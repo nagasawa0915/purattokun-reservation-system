@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 PureBoundingBox Toleranceシステムテスト</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+            min-height: 100vh;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .hero-section {
+            position: relative;
+            width: 80vw;
+            max-width: 800px;
+            min-width: 400px;
+            height: 60vh;
+            min-height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            margin: 20px auto;
+            overflow: visible;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .layout-anchor {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 100px;
+            height: 80px;
+            background: rgba(255, 107, 107, 0.9);
+            border-radius: 8px;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            border: 3px solid #ff6b6b;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        }
+        
+        .layout-anchor .interactive {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 70%;
+            background: white;
+            border-radius: 4px;
+            transform: translate(-50%, -50%) translate(var(--tx, 0px), var(--ty, 0px));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 100;
+            min-width: 250px;
+        }
+        
+        .control-panel h3 {
+            margin-top: 0;
+            color: #007bff;
+            font-size: 16px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        
+        .control-group {
+            margin: 10px 0;
+        }
+        
+        .control-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .control-group input, select, button {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .control-group button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 2px 0;
+        }
+        
+        .control-group button:hover {
+            background: #0056b3;
+        }
+        
+        .status-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        
+        .tolerance-display {
+            background: #e8f5e8;
+            border: 1px solid #28a745;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+        
+        .tolerance-display.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+        
+        .tolerance-display.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+        
+        /* ウィンドウリサイズテスト用のレスポンシブ設定 */
+        @media (max-width: 768px) {
+            .hero-section {
+                width: 95vw;
+                height: 50vh;
+            }
+            
+            .control-panel {
+                position: static;
+                margin: 20px auto;
+                max-width: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎯 PureBoundingBox Toleranceシステムテスト</h1>
+        <p>許容範囲内誤差方式のテスト環境です。ウィンドウをリサイズして位置復元の精度を確認してください。</p>
+        
+        <div class="hero-section" id="hero-section">
+            <div class="layout-anchor" id="test-anchor">
+                <div class="interactive">
+                    🎯 Test Element<br>
+                    Tolerance Test
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <h3>🔧 Toleranceシステム制御</h3>
+            
+            <div class="control-group">
+                <label>Tolerance (px):</label>
+                <input type="range" id="tolerance-slider" min="0" max="20" value="5" step="1">
+                <span id="tolerance-value">5px</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Gentle Correction Ratio:</label>
+                <input type="range" id="correction-slider" min="0" max="1" value="0.5" step="0.1">
+                <span id="correction-value">0.5</span>
+            </div>
+            
+            <div class="control-group">
+                <button onclick="testToleranceSystem()">🧪 Toleranceテスト実行</button>
+                <button onclick="simulateWindowResize()">📐 ウィンドウリサイズ模擬</button>
+                <button onclick="resetPosition()">🔄 位置リセット</button>
+            </div>
+            
+            <div class="control-group">
+                <label>🎯 ワンクリック微調整:</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px;">
+                    <button onclick="quickAdjust(-5, -5)" style="font-size: 10px;">↖ -5px</button>
+                    <button onclick="quickAdjust(0, -5)" style="font-size: 10px;">↑ -5px</button>
+                    <button onclick="quickAdjust(5, -5)" style="font-size: 10px;">↗ -5px</button>
+                    <button onclick="quickAdjust(-5, 0)" style="font-size: 10px;">← -5px</button>
+                    <button onclick="quickCenter()" style="font-size: 10px;">🎯 中央</button>
+                    <button onclick="quickAdjust(5, 0)" style="font-size: 10px;">→ +5px</button>
+                    <button onclick="quickAdjust(-5, 5)" style="font-size: 10px;">↙ +5px</button>
+                    <button onclick="quickAdjust(0, 5)" style="font-size: 10px;">↓ +5px</button>
+                    <button onclick="quickAdjust(5, 5)" style="font-size: 10px;">↘ +5px</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <button onclick="autoCorrect()">✨ 自動補正実行</button>
+                <button onclick="commitToleranceCorrection()">💾 Tolerance補正確定</button>
+            </div>
+            
+            <div class="tolerance-display" id="tolerance-status">
+                <strong>📊 Toleranceステータス:</strong><br>
+                待機中...
+            </div>
+            
+            <div class="status-panel" id="debug-info">
+                <strong>🔍 デバッグ情報:</strong><br>
+                システム初期化中...
+            </div>
+        </div>
+    </div>
+
+    <!-- 必要なマイクロモジュールを読み込み -->
+    <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="micromodules/bounding-box/AutoPinConfigManager.js"></script>
+    <script src="micromodules/bounding-box/AnchorCalculator.js"></script>
+    
+    <script>
+        // グローバル変数
+        let toleranceCore = null;
+        let toleranceSettings = {
+            tolerancePx: 5,
+            gentleCorrectionRatio: 0.5
+        };
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeToleranceTest();
+            setupEventListeners();
+        });
+        
+        function initializeToleranceTest() {
+            const targetElement = document.getElementById('test-anchor');
+            
+            // Toleranceシステム統合Core初期化
+            toleranceCore = new PureBoundingBoxCore({
+                targetElement: targetElement,
+                nodeId: 'tolerance-test',
+                tolerancePx: toleranceSettings.tolerancePx,
+                gentleCorrectionRatio: toleranceSettings.gentleCorrectionRatio
+            });
+            
+            updateDebugInfo('✅ Toleranceシステム初期化完了');
+            console.log('🎯 Toleranceテストシステム初期化完了');
+        }
+        
+        function setupEventListeners() {
+            const toleranceSlider = document.getElementById('tolerance-slider');
+            const correctionSlider = document.getElementById('correction-slider');
+            
+            toleranceSlider.addEventListener('input', function() {
+                toleranceSettings.tolerancePx = parseInt(this.value);
+                document.getElementById('tolerance-value').textContent = this.value + 'px';
+                updateToleranceSettings();
+            });
+            
+            correctionSlider.addEventListener('input', function() {
+                toleranceSettings.gentleCorrectionRatio = parseFloat(this.value);
+                document.getElementById('correction-value').textContent = this.value;
+                updateToleranceSettings();
+            });
+            
+            // ウィンドウリサイズイベント
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    testToleranceSystem();
+                }, 300);
+            });
+        }
+        
+        function updateToleranceSettings() {
+            if (toleranceCore) {
+                toleranceCore.config.tolerancePx = toleranceSettings.tolerancePx;
+                toleranceCore.config.gentleCorrectionRatio = toleranceSettings.gentleCorrectionRatio;
+                
+                updateDebugInfo(`⚙️ Tolerance更新: ${toleranceSettings.tolerancePx}px, 補正比率: ${toleranceSettings.gentleCorrectionRatio}`);
+            }
+        }
+        
+        function testToleranceSystem() {
+            if (!toleranceCore) {
+                updateToleranceStatus('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            const targetElement = document.getElementById('test-anchor');
+            const parentElement = document.getElementById('hero-section');
+            
+            // 現在の位置情報を取得
+            const targetRect = targetElement.getBoundingClientRect();
+            const parentRect = parentElement.getBoundingClientRect();
+            
+            // CSS変数から現在のオフセットを取得
+            const interactive = targetElement.querySelector('.interactive');
+            const cs = getComputedStyle(interactive);
+            const tx = parseFloat(cs.getPropertyValue('--tx')) || 0;
+            const ty = parseFloat(cs.getPropertyValue('--ty')) || 0;
+            
+            // Toleranceチェック
+            const withinToleranceX = Math.abs(tx) <= toleranceSettings.tolerancePx;
+            const withinToleranceY = Math.abs(ty) <= toleranceSettings.tolerancePx;
+            const isWithinTolerance = withinToleranceX && withinToleranceY;
+            
+            // 結果表示
+            let statusClass = 'tolerance-display';
+            let statusText = '';
+            
+            if (isWithinTolerance) {
+                statusClass += '';
+                statusText = `✅ 許容範囲内: ΔX=${tx.toFixed(1)}px, ΔY=${ty.toFixed(1)}px<br>補正不要`;
+            } else {
+                statusClass += ' warning';
+                const correctedTx = tx * toleranceSettings.gentleCorrectionRatio;
+                const correctedTy = ty * toleranceSettings.gentleCorrectionRatio;
+                statusText = `⚠️ 許容範囲外: ΔX=${tx.toFixed(1)}px, ΔY=${ty.toFixed(1)}px<br>補正後: ΔX=${correctedTx.toFixed(1)}px, ΔY=${correctedTy.toFixed(1)}px`;
+            }
+            
+            updateToleranceStatus(statusText, statusClass);
+            
+            // デバッグ情報更新
+            updateDebugInfo(`🧪 Toleranceテスト完了<br>
+                位置: ${targetRect.left.toFixed(1)}, ${targetRect.top.toFixed(1)}<br>
+                親サイズ: ${parentRect.width.toFixed(1)}×${parentRect.height.toFixed(1)}<br>
+                CSS変数: --tx=${tx.toFixed(1)}px, --ty=${ty.toFixed(1)}px<br>
+                許容範囲: ${toleranceSettings.tolerancePx}px`);
+            
+            console.log('🎯 Toleranceテスト結果:', {
+                offset: {tx: tx, ty: ty},
+                tolerance: toleranceSettings.tolerancePx,
+                withinTolerance: isWithinTolerance,
+                correctionRatio: toleranceSettings.gentleCorrectionRatio
+            });
+        }
+        
+        function simulateWindowResize() {
+            const heroSection = document.getElementById('hero-section');
+            const currentWidth = heroSection.style.width || '80vw';
+            
+            // 幅を一時的に変更してリサイズを模擬
+            heroSection.style.width = currentWidth === '80vw' ? '60vw' : '80vw';
+            
+            setTimeout(() => {
+                testToleranceSystem();
+            }, 100);
+            
+            updateDebugInfo('📐 ウィンドウリサイズ模擬実行');
+        }
+        
+        function resetPosition() {
+            const targetElement = document.getElementById('test-anchor');
+            const interactive = targetElement.querySelector('.interactive');
+            
+            // 位置をリセット
+            targetElement.style.left = '50%';
+            targetElement.style.top = '50%';
+            interactive.style.setProperty('--tx', '0px');
+            interactive.style.setProperty('--ty', '0px');
+            
+            updateToleranceStatus('🔄 位置リセット完了', '');
+            updateDebugInfo('🔄 位置リセット完了 - 中央位置に復帰');
+            
+            setTimeout(() => {
+                testToleranceSystem();
+            }, 100);
+        }
+        
+        function updateToleranceStatus(message, className = '') {
+            const statusElement = document.getElementById('tolerance-status');
+            statusElement.innerHTML = '<strong>📊 Toleranceステータス:</strong><br>' + message;
+            statusElement.className = className || 'tolerance-display';
+        }
+        
+        function updateDebugInfo(message) {
+            const debugElement = document.getElementById('debug-info');
+            debugElement.innerHTML = '<strong>🔍 デバッグ情報:</strong><br>' + message;
+        }
+        
+        // 🆕 ユーザビリティ向上機能
+        function quickAdjust(deltaX, deltaY) {
+            const targetElement = document.getElementById('test-anchor');
+            const interactive = targetElement.querySelector('.interactive');
+            
+            // 現在のCSS変数を取得
+            const cs = getComputedStyle(interactive);
+            const currentTx = parseFloat(cs.getPropertyValue('--tx')) || 0;
+            const currentTy = parseFloat(cs.getPropertyValue('--ty')) || 0;
+            
+            // 新しい値を設定
+            const newTx = currentTx + deltaX;
+            const newTy = currentTy + deltaY;
+            
+            interactive.style.setProperty('--tx', newTx + 'px');
+            interactive.style.setProperty('--ty', newTy + 'px');
+            
+            updateDebugInfo(`🎯 ワンクリック微調整: ΔX=${deltaX}px, ΔY=${deltaY}px<br>新しい位置: --tx=${newTx.toFixed(1)}px, --ty=${newTy.toFixed(1)}px`);
+            
+            setTimeout(() => {
+                testToleranceSystem();
+            }, 100);
+        }
+        
+        function quickCenter() {
+            const targetElement = document.getElementById('test-anchor');
+            const interactive = targetElement.querySelector('.interactive');
+            
+            // 中央に戻す
+            interactive.style.setProperty('--tx', '0px');
+            interactive.style.setProperty('--ty', '0px');
+            
+            updateDebugInfo('🎯 ワンクリック中央復帰完了');
+            
+            setTimeout(() => {
+                testToleranceSystem();
+            }, 100);
+        }
+        
+        function autoCorrect() {
+            if (!toleranceCore) {
+                updateToleranceStatus('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            const targetElement = document.getElementById('test-anchor');
+            const interactive = targetElement.querySelector('.interactive');
+            
+            // 現在のオフセットを取得
+            const cs = getComputedStyle(interactive);
+            const tx = parseFloat(cs.getPropertyValue('--tx')) || 0;
+            const ty = parseFloat(cs.getPropertyValue('--ty')) || 0;
+            
+            // Tolerance方式で自動補正
+            const txTolerant = Math.abs(tx) <= toleranceSettings.tolerancePx ? 0 : tx * toleranceSettings.gentleCorrectionRatio;
+            const tyTolerant = Math.abs(ty) <= toleranceSettings.tolerancePx ? 0 : ty * toleranceSettings.gentleCorrectionRatio;
+            
+            // 補正を適用
+            interactive.style.setProperty('--tx', txTolerant + 'px');
+            interactive.style.setProperty('--ty', tyTolerant + 'px');
+            
+            updateDebugInfo(`✨ 自動補正実行<br>
+                補正前: --tx=${tx.toFixed(1)}px, --ty=${ty.toFixed(1)}px<br>
+                補正後: --tx=${txTolerant.toFixed(1)}px, --ty=${tyTolerant.toFixed(1)}px<br>
+                Tolerance: ${toleranceSettings.tolerancePx}px, 補正比率: ${toleranceSettings.gentleCorrectionRatio}`);
+            
+            updateToleranceStatus('✨ 自動補正が実行されました', 'tolerance-display');
+            
+            setTimeout(() => {
+                testToleranceSystem();
+            }, 100);
+        }
+        
+        function commitToleranceCorrection() {
+            if (!toleranceCore) {
+                updateToleranceStatus('❌ システムが初期化されていません', 'error');
+                return;
+            }
+            
+            // PureBoundingBoxCoreのcommitToPercent()メソッドを呼び出し
+            const success = toleranceCore.commitToPercent();
+            
+            if (success) {
+                updateToleranceStatus('💾 Tolerance補正確定完了', 'tolerance-display');
+                updateDebugInfo('💾 Tolerance補正確定 - %値に変換して固定されました');
+            } else {
+                updateToleranceStatus('❌ Tolerance補正確定失敗', 'error');
+                updateDebugInfo('❌ Tolerance補正確定に失敗しました');
+            }
+            
+            setTimeout(() => {
+                testToleranceSystem();
+            }, 200);
+        }
+        
+        // グローバル関数をwindowオブジェクトに追加
+        window.testToleranceSystem = testToleranceSystem;
+        window.simulateWindowResize = simulateWindowResize;
+        window.resetPosition = resetPosition;
+        window.quickAdjust = quickAdjust;
+        window.quickCenter = quickCenter;
+        window.autoCorrect = autoCorrect;
+        window.commitToleranceCorrection = commitToleranceCorrection;
+    </script>
+</body>
+</html>

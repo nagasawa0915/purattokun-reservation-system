@@ -253,7 +253,8 @@ class PureBoundingBoxAutoPin {
             
             // VI座標系を使用したピン作成（AnchorCalculatorに委譲）
             const contentRect = this.backgroundDetector.calculateContentRect(config.targetElement);
-            const viRatio = this.anchorCalculator.calculateViewportIndependentRatio(contentRect, contentRect);
+            // 🆕 シンプル比率計算に変更
+            const simpleRatio = this.anchorCalculator.calculateSimpleRatio(contentRect, contentRect);
             
             // 通常のピン作成処理を実行
             const anchorRatio = this.anchorCalculator.getAnchorRatio(config.anchor);

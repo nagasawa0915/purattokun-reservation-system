@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>椅子とキャラクター配置テスト - バウンディングボックス実用検証</title>
+    
+    <style>
+        /* 📱 ベーススタイル */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* 📄 ヘッダー */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header h1 {
+            text-align: center;
+            color: #333;
+            font-size: 1.8em;
+        }
+        
+        .header p {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        /* 📊 ブレイクポイント表示 */
+        .breakpoint-display {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 10000;
+            font-family: monospace;
+        }
+        
+        /* 🏠 メインコンテナ */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* 💻 コントロールパネル */
+        .control-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+        
+        .control-button.primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .control-button.success {
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+            color: white;
+        }
+        
+        .control-button.warning {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            color: white;
+        }
+        
+        .control-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        /* 🛠️ デバッグ情報 */
+        .debug-info {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        /* 🎨 シーンコンテナ */
+        .scene-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: linear-gradient(to bottom, #87ceeb 0%, #98fb98 70%, #8fbc8f 100%);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin: 20px 0;
+        }
+        
+        /* 🪑 フリー画像椅子デザイン（実用テスト用） */
+        .chair {
+            position: absolute;
+            width: 200px;
+            height: 180px;
+            left: 50%;
+            top: 62%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            /* フリー画像椅子: エレガントなダイニングチェア（Pixabay） */
+            background-image: url('https://cdn.pixabay.com/photo/2017/08/27/10/16/interior-2681608_1280.jpg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            /* 椅子のコントラストと鮮明度向上 */
+            filter: contrast(1.2) brightness(1.1) saturate(1.1);
+            border-radius: 10px;
+        }
+        
+        /* 椅子フォールバック（画像読み込み失敗時） */
+        .chair.fallback {
+            background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #654321 100%);
+            border: 3px solid #654321;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chair.fallback::before {
+            content: '🪑';
+            font-size: 80px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* 代替椅子画像（複数のフリー画像から選択可能） */
+        .chair.style-modern {
+            /* モダンオフィスチェア（Unsplash） */
+            background-image: url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80');
+        }
+        
+        .chair.style-vintage {
+            /* ヴィンテージアームチェア（Unsplash） */
+            background-image: url('https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80');
+        }
+        
+        .chair.style-bench {
+            /* パークベンチ（屋外シーン用）（Unsplash） */
+            background-image: url('https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80');
+            width: 280px;
+            height: 120px;
+        }
+        
+        .chair.style-sofa {
+            /* エレガントソファ（リビングシーン用）（Unsplash） */
+            background-image: url('https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80');
+            width: 300px;
+            height: 200px;
+        }
+        
+        /* 🎯 Spineキャンバス */
+        #purattokun-canvas {
+            position: absolute;
+            z-index: 5;
+            pointer-events: none; /* バウンディングボックス編集を優先 */
+            /* 初期位置: 椅子に座った状態 */
+            left: 50%;
+            top: 55%;
+            transform: translate(-50%, -50%);
+            width: 120px;           /* 固定サイズ（歪み防止） */
+            height: 120px;          /* 固定サイズ（歪み防止） */
+            aspect-ratio: 1 / 1;    /* 1:1の正方形を強制維持 */
+        }
+        
+        /* 📊 レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.4em;
+            }
+            
+            .scene-container {
+                height: 400px;
+            }
+            
+            .chair {
+                width: 120px;
+                height: 100px;
+            }
+            
+            .chair.style-bench {
+                width: 160px;
+                height: 80px;
+            }
+            
+            .chair.style-sofa {
+                width: 180px;
+                height: 120px;
+            }
+            
+            #purattokun-canvas {
+                width: 100px;         /* モバイル用固定サイズ */
+                height: 100px;        /* モバイル用固定サイズ */
+                aspect-ratio: 1 / 1;  /* モバイルでもアスペクト比固定 */
+            }
+            
+            .control-row {
+                flex-direction: column;
+            }
+            
+            .control-button {
+                min-width: 100%;
+            }
+        }
+        
+        /* 🎨 椅子スタイル切り替えUI */
+        .chair-style-selector {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            max-width: 120px;
+        }
+        
+        .style-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+        
+        .style-btn:hover {
+            background: rgba(102, 126, 234, 0.8);
+            color: white;
+            transform: translateX(3px);
+        }
+        
+        .style-btn.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            .chair-style-selector {
+                flex-direction: row;
+                max-width: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                overflow-x: auto;
+            }
+            
+            .style-btn {
+                white-space: nowrap;
+                min-width: 80px;
+                text-align: center;
+                font-size: 10px;
+            }
+        }
+        
+        /* 🌿 装飾的要素 */
+        .floor-pattern {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: repeating-linear-gradient(
+                90deg,
+                #deb887 0px,
+                #deb887 50px,
+                #d2b48c 50px,
+                #d2b48c 100px
+            );
+            opacity: 0.3;
+        }
+        
+        .wall-texture {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 100px;
+            background: linear-gradient(
+                180deg,
+                rgba(255,255,255,0.1) 0%,
+                rgba(255,255,255,0.05) 50%,
+                rgba(0,0,0,0.05) 100%
+            );
+        }
+        
+        /* 🎆 アニメーション */
+        @keyframes chairGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6); }
+        }
+        
+        .chair.highlight {
+            animation: chairGlow 2s ease-in-out infinite;
+        }
+        
+        /* バウンディングボックス関連スタイル */
+        .bb-edit-active {
+            border: 2px dashed #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+        
+        .bb-edit-active #purattokun-canvas {
+            pointer-events: auto;
+            border: 2px solid #4ecdc4;
+            border-radius: 10px;
+            /* 🎯 編集中もアスペクト比固定表示 */
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
+        }
+        
+        /* 🎯 アスペクト比固定の視覚的フィードバック */
+        .bb-edit-active #purattokun-canvas::after {
+            content: "📐 1:1比率固定";
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(78, 205, 196, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 📊 ブレイクポイント表示 -->
+    <div class="breakpoint-display" id="breakpointDisplay">
+        PC: 1024px+
+    </div>
+    
+    <!-- 📄 ヘッダー -->
+    <div class="header">
+        <h1>🪑 椅子とキャラクター配置テスト</h1>
+        <p>PureBoundingBox統合インターフェース（マニュアル準拠版） - 「椅子に座る」シーン<br>
+        🎯 <strong>アスペクト比固定機能搭載</strong> - キャラクターの縦横比歪みを完全防止</p>
+    </div>
+    
+    <div class="main-container">
+        <!-- 💻 コントロールパネル -->
+        <div class="control-panel">
+            <div class="control-row">
+                <button class="control-button primary" onclick="startBoundingBoxEdit()">
+                    🎯 バウンディングボックス編集開始
+                </button>
+                <button class="control-button success" onclick="saveBoundingBoxPosition()">
+                    💾 位置保存
+                </button>
+                <button class="control-button warning" onclick="cancelBoundingBoxEdit()">
+                    ❌ 編集キャンセル
+                </button>
+            </div>
+            <div class="control-row">
+                <button class="control-button primary" onclick="toggleChairHighlight()">
+                    ✨ 椅子ハイライト切替
+                </button>
+                <button class="control-button primary" onclick="testResponsivePositioning()">
+                    📱 レスポンシブテスト
+                </button>
+                <button class="control-button success" onclick="resetToChairPosition()">
+                    🪑 椅子位置にリセット
+                </button>
+                <button class="control-button primary" onclick="analyzeImageQuality()">
+                    🖼️ 画像品質分析
+                </button>
+                <button class="control-button warning" onclick="cleanupBoundingBox()">
+                    🧹 バウンディングボックスクリーンアップ
+                </button>
+                <button class="control-button primary" onclick="checkAspectRatio()">
+                    📐 縦横比検証
+                </button>
+                <button class="control-button danger" onclick="diagnoseEditingTransformIssue()">
+                    🔍 編集前後CSS状態診断
+                </button>
+            </div>
+        </div>
+        
+        <!-- 🎆 シーンコンテナ -->
+        <div class="scene-container" id="sceneContainer">
+            <!-- 壁のテクスチャ -->
+            <div class="wall-texture"></div>
+            
+            <!-- 床のパターン -->
+            <div class="floor-pattern"></div>
+            
+            <!-- フリー画像椅子（実用テスト用） -->
+            <div class="chair" id="chairElement" data-style="default">
+                <!-- 画像が自動的に表示されます -->
+            </div>
+            
+            <!-- 椅子スタイル切り替えボタン（実用検証用） -->
+            <div class="chair-style-selector" id="chairStyleSelector">
+                <button onclick="changeChairStyle('default')" class="style-btn active" data-style="default">🪑 ダイニング</button>
+                <button onclick="changeChairStyle('modern')" class="style-btn" data-style="modern">💺 モダン</button>
+                <button onclick="changeChairStyle('vintage')" class="style-btn" data-style="vintage">🛋️ ヴィンテージ</button>
+                <button onclick="changeChairStyle('bench')" class="style-btn" data-style="bench">🪑 ベンチ</button>
+                <button onclick="changeChairStyle('sofa')" class="style-btn" data-style="sofa">🛋️ ソファ</button>
+            </div>
+            
+            <!-- Spineキャンバス -->
+            <canvas id="purattokun-canvas" width="200" height="200"></canvas>
+        </div>
+        
+        <!-- 🛠️ デバッグ情報 -->
+        <div class="debug-info" id="debugInfo">
+            🗺️ デバッグ情報: 初期化中...<br>
+            ⌨️ キーボードショートカット: [E]編集開始 [S]保存 [ESC]キャンセル [H]椅子ハイライト [R]リセット [A]縦横比検証 [C]クリーンアップ
+        </div>
+    </div>
+    
+    <!-- 🚀 JavaScriptモジュール読み込み -->
+    <script src="/assets/js/libs/spine-webgl.js"></script>
+    <script src="/micromodules/spine-renderer/StableSpineRenderer.js"></script>
+    
+    <!-- ✅ PureBoundingBox マニュアル準拠の正しい読み込み順序 -->
+    <script src="micromodules/bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxBounds.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxUI.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBoxEvents.js"></script>
+    <script src="micromodules/bounding-box/PureBoundingBox.js"></script>
+    
+    <script>
+        // 🌏 グローバル変数
+        let spineRenderer = null;
+        let boundingBox = null;  // ✅ 統合インターフェース使用
+        let isEditingBB = false;
+        let chairHighlighted = false;
+        
+        // 📊 ブレイクポイント監視
+        function updateBreakpointDisplay() {
+            const width = window.innerWidth;
+            const display = document.getElementById('breakpointDisplay');
+            
+            if (width <= 768) {
+                display.textContent = `Mobile: ${width}px`;
+                display.style.background = 'rgba(255, 107, 107, 0.9)';
+            } else if (width <= 1024) {
+                display.textContent = `Tablet: ${width}px`;
+                display.style.background = 'rgba(255, 193, 7, 0.9)';
+            } else {
+                display.textContent = `PC: ${width}px`;
+                display.style.background = 'rgba(40, 167, 69, 0.9)';
+            }
+        }
+        
+        // 🛠️ デバッグ情報更新
+        function updateDebugInfo(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.innerHTML += `<br>[${timestamp}] ${message}`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+        
+        // 🚀 初期化処理
+        async function initializeChairTest() {
+            try {
+                updateDebugInfo('🚀 椅子テスト環境初期化開始');
+                
+                // StableSpineRenderer初期化
+                updateDebugInfo('🎯 StableSpineRenderer初期化中...');
+                spineRenderer = new StableSpineRenderer({
+                    canvas: '#purattokun-canvas',
+                    character: 'purattokun',
+                    basePath: '/assets/spine/characters/',
+                    position: {
+                        x: 0,    // Canvas中央を基準
+                        y: -30,   // 少し上へ（椅子に座った状態）
+                        scaleX: 0.8,
+                        scaleY: 0.8
+                    }
+                });
+                
+                await spineRenderer.initialize();
+                updateDebugInfo('✅ Spineキャラクター読み込み成功');
+                
+                // アニメーション開始
+                spineRenderer.playAnimation('taiki');
+                
+                // 🎯 アスペクト比固定確認
+                updateDebugInfo('📐 アスペクト比固定設定確認中...');
+                checkAspectRatio();
+                
+                // ✅ PureBoundingBox統合インターフェース初期化（マニュアル準拠）
+                updateDebugInfo('📜 PureBoundingBox統合インターフェース初期化中...');
+                const targetElement = document.querySelector('#purattokun-canvas');
+                
+                boundingBox = new PureBoundingBox({
+                    targetElement: targetElement
+                });
+                
+                updateDebugInfo('✅ バウンディングボックスシステム準備完了（統合インターフェース使用）');
+                updateDebugInfo('🏠 椅子とキャラクターの実用テスト環境が準備完了しました！');
+                
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                updateDebugInfo(`❌ 初期化エラー: ${error.message}`);
+            }
+        }
+        
+        // 🎯 バウンディングボックス編集開始（マニュアル準拠）
+        async function startBoundingBoxEdit() {
+            if (!boundingBox) {
+                updateDebugInfo('❌ バウンディングボックスシステムが初期化されていません');
+                return;
+            }
+            
+            try {
+                // ✅ マニュアル準拠の execute() メソッド使用
+                const result = await boundingBox.execute();
+                
+                if (result.success) {
+                    isEditingBB = true;
+                    // シーンコンテナに編集モードスタイルを適用
+                    document.getElementById('sceneContainer').classList.add('bb-edit-active');
+                    updateDebugInfo('🎯 バウンディングボックス編集モード開始 - 椅子との位置関係を調整してください');
+                } else {
+                    updateDebugInfo(`❌ 編集開始エラー: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('編集開始エラー:', error);
+                updateDebugInfo(`❌ 編集開始エラー: ${error.message}`);
+            }
+        }
+        
+        // 💾 位置保存（マニュアル準拠の状態取得使用）
+        function saveBoundingBoxPosition() {
+            if (!boundingBox || !isEditingBB) {
+                updateDebugInfo('❌ 編集モードではありません');
+                return;
+            }
+            
+            try {
+                // ✅ マニュアル準拠の getState() メソッド使用
+                const state = boundingBox.getState();
+                updateDebugInfo(`💾 現在の状態: ${JSON.stringify(state, null, 2)}`);
+                
+                // 編集終了（非表示）
+                boundingBox.hide();
+                isEditingBB = false;
+                
+                // 編集モードスタイルを解除
+                document.getElementById('sceneContainer').classList.remove('bb-edit-active');
+                updateDebugInfo('💾 位置が保存されました - 椅子とキャラクターの位置関係が固定されました');
+                
+                // 保存後の位置情報を表示
+                showPositionInfo();
+                
+                // 🎯 保存後の縦横比検証
+                setTimeout(() => {
+                    checkAspectRatio();
+                }, 100);
+            } catch (error) {
+                console.error('位置保存エラー:', error);
+                updateDebugInfo(`❌ 位置保存エラー: ${error.message}`);
+            }
+        }
+        
+        // ❌ 編集キャンセル（マニュアル準拠）
+        function cancelBoundingBoxEdit() {
+            if (!boundingBox) return;
+            
+            try {
+                // ✅ マニュアル準拠の hide() メソッドでキャンセル
+                boundingBox.hide();
+                isEditingBB = false;
+                
+                // 編集モードスタイルを解除
+                document.getElementById('sceneContainer').classList.remove('bb-edit-active');
+                updateDebugInfo('❌ 編集がキャンセルされました - 元の位置に戻りました');
+            } catch (error) {
+                console.error('編集キャンセルエラー:', error);
+                updateDebugInfo(`❌ 編集キャンセルエラー: ${error.message}`);
+            }
+        }
+        
+        // ✨ 椅子ハイライト切替
+        function toggleChairHighlight() {
+            chairHighlighted = !chairHighlighted;
+            const chair = document.getElementById('chairElement');
+            
+            if (chairHighlighted) {
+                chair.classList.add('highlight');
+                updateDebugInfo('✨ 椅子ハイライトON - 椅子の位置が分かりやすくなりました');
+            } else {
+                chair.classList.remove('highlight');
+                updateDebugInfo('🔆 椅子ハイライトOFF');
+            }
+        }
+        
+        // 📱 レスポンシブテスト
+        function testResponsivePositioning() {
+            updateDebugInfo('📱 レスポンシブテスト開始 - ブラウザサイズを変更して位置関係を確認してください');
+            showPositionInfo();
+        }
+        
+        // 🪑 椅子位置にリセット
+        function resetToChairPosition() {
+            const canvas = document.getElementById('purattokun-canvas');
+            const chair = document.getElementById('chairElement');
+            const currentStyle = chair.dataset.style || 'default';
+            
+            // 椅子スタイル別の最適位置
+            const positions = {
+                'default': { left: '50%', top: '55%' },    // ダイニング
+                'modern': { left: '50%', top: '52%' },     // モダン（少し高め）
+                'vintage': { left: '50%', top: '58%' },    // ヴィンテージ（低め）
+                'bench': { left: '50%', top: '45%' },      // ベンチ（高め）
+                'sofa': { left: '50%', top: '62%' }        // ソファ（最も低め）
+            };
+            
+            const pos = positions[currentStyle] || positions.default;
+            canvas.style.left = pos.left;
+            canvas.style.top = pos.top;
+            canvas.style.transform = 'translate(-50%, -50%)';
+            
+            updateDebugInfo(`🪑 キャラクターを${currentStyle}椅子の最適位置にリセットしました`);
+        }
+        
+        // 🎨 椅子スタイル変更
+        function changeChairStyle(style) {
+            const chair = document.getElementById('chairElement');
+            const buttons = document.querySelectorAll('.style-btn');
+            
+            // 椅子のクラスを更新
+            chair.className = 'chair';
+            if (style !== 'default') {
+                chair.classList.add(`style-${style}`);
+            }
+            chair.dataset.style = style;
+            
+            // ボタンの状態更新
+            buttons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-style="${style}"]`).classList.add('active');
+            
+            updateDebugInfo(`🎨 椅子スタイルを「${style}」に変更しました`);
+            
+            // 画像読み込み状況をチェック
+            setTimeout(checkImageLoad, 500);
+        }
+        
+        // 🖼️ 画像読み込み状況チェック
+        function checkImageLoad() {
+            const chair = document.getElementById('chairElement');
+            const computedStyle = window.getComputedStyle(chair);
+            const backgroundImage = computedStyle.backgroundImage;
+            
+            if (backgroundImage === 'none' || backgroundImage === '') {
+                chair.classList.add('fallback');
+                updateDebugInfo('⚠️ 画像読み込み失敗 - フォールバック表示中');
+            } else {
+                chair.classList.remove('fallback');
+                updateDebugInfo('✅ 椅子画像読み込み成功');
+            }
+        }
+        
+        // 🖼️ 画像品質分析
+        function analyzeImageQuality() {
+            const chair = document.getElementById('chairElement');
+            const rect = chair.getBoundingClientRect();
+            const style = chair.dataset.style || 'default';
+            
+            const imageInfo = {
+                'default': { name: 'エレガントダイニングチェア', source: 'Pixabay', resolution: '1280x960' },
+                'modern': { name: 'モダンオフィスチェア', source: 'Unsplash', resolution: '1000x1333' },
+                'vintage': { name: 'ヴィンテージアームチェア', source: 'Unsplash', resolution: '1000x1500' },
+                'bench': { name: 'パークベンチ', source: 'Unsplash', resolution: '1000x667' },
+                'sofa': { name: 'エレガントソファ', source: 'Unsplash', resolution: '1000x667' }
+            };
+            
+            const info = imageInfo[style] || imageInfo.default;
+            
+            updateDebugInfo(`🖼️ 画像品質分析:`);
+            updateDebugInfo(`  椅子: ${info.name}`);
+            updateDebugInfo(`  出典: ${info.source} (商用利用可)`);
+            updateDebugInfo(`  元解像度: ${info.resolution}`);
+            updateDebugInfo(`  表示サイズ: ${rect.width.toFixed(0)}x${rect.height.toFixed(0)}px`);
+            updateDebugInfo(`  スケール比: ${(rect.width/parseInt(info.resolution.split('x')[0])*100).toFixed(1)}%`);
+        }
+        
+        // 🗺️ 位置情報表示
+        function showPositionInfo() {
+            const canvas = document.getElementById('purattokun-canvas');
+            const chair = document.getElementById('chairElement');
+            const canvasRect = canvas.getBoundingClientRect();
+            const chairRect = chair.getBoundingClientRect();
+            
+            updateDebugInfo(`🗺️ 位置情報:`);
+            updateDebugInfo(`  キャラクター: left=${canvas.style.left}, top=${canvas.style.top}`);
+            updateDebugInfo(`  椅子との相対位置: 横${(canvasRect.left - chairRect.left).toFixed(1)}px, 縦${(canvasRect.top - chairRect.top).toFixed(1)}px`);
+            updateDebugInfo(`  ウィンドウサイズ: ${window.innerWidth} x ${window.innerHeight}`);
+        }
+        
+        // 🧹 バウンディングボックスクリーンアップ（マニュアル準拠）
+        function cleanupBoundingBox() {
+            if (!boundingBox) {
+                updateDebugInfo('⚠️ バウンディングボックスが初期化されていません');
+                return;
+            }
+            
+            try {
+                // ✅ マニュアル準拠の cleanup() メソッド使用
+                boundingBox.cleanup();
+                isEditingBB = false;
+                
+                // 編集モードスタイルを解除
+                document.getElementById('sceneContainer').classList.remove('bb-edit-active');
+                updateDebugInfo('🧹 バウンディングボックスのクリーンアップが完了しました');
+            } catch (error) {
+                console.error('クリーンアップエラー:', error);
+                updateDebugInfo(`❌ クリーンアップエラー: ${error.message}`);
+            }
+        }
+        
+        // 📐 縦横比検証（アスペクト比固定確認）
+        function checkAspectRatio() {
+            const canvas = document.getElementById('purattokun-canvas');
+            const rect = canvas.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(canvas);
+            
+            // 実際のサイズ
+            const actualWidth = rect.width;
+            const actualHeight = rect.height;
+            const aspectRatio = (actualWidth / actualHeight).toFixed(3);
+            
+            // CSS設定確認
+            const cssAspectRatio = computedStyle.aspectRatio;
+            const cssWidth = computedStyle.width;
+            const cssHeight = computedStyle.height;
+            
+            updateDebugInfo(`📐 縦横比検証結果:`);
+            updateDebugInfo(`  CSS設定: aspect-ratio=${cssAspectRatio}`);
+            updateDebugInfo(`  CSS サイズ: ${cssWidth} x ${cssHeight}`);
+            updateDebugInfo(`  実際のサイズ: ${actualWidth.toFixed(1)} x ${actualHeight.toFixed(1)}px`);
+            updateDebugInfo(`  実際の比率: ${aspectRatio} (1.000 = 正方形)`);
+            
+            if (Math.abs(parseFloat(aspectRatio) - 1.0) < 0.01) {
+                updateDebugInfo(`✅ 縦横比固定: 正常（完璧な1:1正方形）`);
+            } else if (Math.abs(parseFloat(aspectRatio) - 1.0) < 0.1) {
+                updateDebugInfo(`⚠️ 縦横比固定: ほぼ正常（わずかな誤差: ${aspectRatio}）`);
+            } else {
+                updateDebugInfo(`❌ 縦横比固定: 異常（歪みが発生: ${aspectRatio}）`);
+                updateDebugInfo(`   → バウンディングボックス編集で修正してください`);
+            }
+        }
+
+        // 🔍 編集前後のCSS状態診断機能
+        let beforeEditingState = null;
+        let afterEditingState = null;
+
+        function diagnoseEditingTransformIssue() {
+            const canvas = document.getElementById("purattokun-canvas");
+            
+            updateDebugInfo("🔍 編集前後CSS状態診断開始...");
+            updateDebugInfo("   1. まず[📐 縦横比検証]ボタンを押して初期状態を確認");
+            updateDebugInfo("   2. 次に[🎯 バウンディングボックス編集開始]ボタンを押す");
+            updateDebugInfo("   3. 再度この診断ボタンを押して状態比較");
+            
+            // 現在の詳細なCSS状態をキャプチャ
+            const currentState = captureDetailedCSSState(canvas);
+            
+            if (!isEditingBB) {
+                // 編集開始前の状態を保存
+                beforeEditingState = currentState;
+                updateDebugInfo("✅ 編集開始前の状態をキャプチャしました");
+                showCSSState("編集前", currentState);
+            } else {
+                // 編集中の状態を保存して比較
+                afterEditingState = currentState;
+                updateDebugInfo("✅ 編集中の状態をキャプチャしました");
+                showCSSState("編集中", currentState);
+                
+                if (beforeEditingState) {
+                    updateDebugInfo("🔍 ==================== 詳細比較分析 ====================");
+                    compareCSSStates(beforeEditingState, afterEditingState);
+                    analyzePotentialIssues(beforeEditingState, afterEditingState);
+                }
+            }
+        }
+        
+        function captureDetailedCSSState(element) {
+            const computed = getComputedStyle(element);
+            const inline = element.style;
+            const rect = element.getBoundingClientRect();
+            
+            return {
+                timestamp: new Date().toISOString(),
+                // インラインスタイル
+                inline: {
+                    left: inline.left || "unset",
+                    top: inline.top || "unset",
+                    width: inline.width || "unset",
+                    height: inline.height || "unset",
+                    transform: inline.transform || "unset",
+                    aspectRatio: inline.aspectRatio || "unset"
+                },
+                // 計算済みスタイル
+                computed: {
+                    left: computed.left,
+                    top: computed.top,
+                    width: computed.width,
+                    height: computed.height,
+                    transform: computed.transform,
+                    aspectRatio: computed.aspectRatio,
+                    position: computed.position,
+                    display: computed.display
+                },
+                // 実際の描画状態
+                rect: {
+                    width: rect.width,
+                    height: rect.height,
+                    left: rect.left,
+                    top: rect.top,
+                    aspectRatio: (rect.width / rect.height).toFixed(4)
+                }
+            };
+        }
+        
+        function showCSSState(phase, state) {
+            updateDebugInfo(`📊 ${phase}の詳細状態:`);
+            updateDebugInfo(`  インラインCSS: transform="${state.inline.transform}"`);
+            updateDebugInfo(`  計算済みCSS: transform="${state.computed.transform}"`);
+            updateDebugInfo(`  aspect-ratio: inline="${state.inline.aspectRatio}" computed="${state.computed.aspectRatio}"`);
+            updateDebugInfo(`  実際のサイズ: ${state.rect.width.toFixed(1)}×${state.rect.height.toFixed(1)}px`);
+            updateDebugInfo(`  実際の縦横比: ${state.rect.aspectRatio}`);
+        }
+        
+        function compareCSSStates(before, after) {
+            updateDebugInfo("🔍 変更点分析:");
+            
+            // transformの変化
+            if (before.inline.transform !== after.inline.transform) {
+                updateDebugInfo(`  🔄 transform変化: "${before.inline.transform}" → "${after.inline.transform}"`);
+            }
+            if (before.computed.transform !== after.computed.transform) {
+                updateDebugInfo(`  🔄 計算済みtransform変化: "${before.computed.transform}" → "${after.computed.transform}"`);
+            }
+            
+            // aspect-ratioの変化
+            if (before.computed.aspectRatio !== after.computed.aspectRatio) {
+                updateDebugInfo(`  📐 aspect-ratio変化: "${before.computed.aspectRatio}" → "${after.computed.aspectRatio}"`);
+            }
+            
+            // 実際の縦横比の変化
+            const aspectRatioDiff = Math.abs(parseFloat(before.rect.aspectRatio) - parseFloat(after.rect.aspectRatio));
+            if (aspectRatioDiff > 0.001) {
+                updateDebugInfo(`  ❌ 実際の縦横比変化: ${before.rect.aspectRatio} → ${after.rect.aspectRatio} (差: ${aspectRatioDiff.toFixed(4)})`);
+            } else {
+                updateDebugInfo(`  ✅ 実際の縦横比維持: ${before.rect.aspectRatio}`);
+            }
+        }
+        
+        function analyzePotentialIssues(before, after) {
+            updateDebugInfo("🔍 問題分析:");
+            
+            // transform: noneの問題
+            if (after.inline.transform === "none" && before.inline.transform !== "none") {
+                updateDebugInfo(`  ⚠️ 潜在的問題: transform無効化により aspect-ratio が影響を受ける可能性`);
+                updateDebugInfo(`     - 編集前: "${before.inline.transform}"`);
+                updateDebugInfo(`     - 編集中: "${after.inline.transform}"`);
+                updateDebugInfo(`     → これが歪みの根本原因の可能性が高い`);
+            }
+            
+            // aspect-ratioの無効化
+            if (before.computed.aspectRatio !== "auto" && after.computed.aspectRatio === "auto") {
+                updateDebugInfo(`  🚨 critical: aspect-ratio が無効化されました`);
+                updateDebugInfo(`     - 編集前: "${before.computed.aspectRatio}"`);
+                updateDebugInfo(`     - 編集中: "${after.computed.aspectRatio}"`);
+                updateDebugInfo(`     → これにより縦横比が固定されなくなりました`);
+            }
+            
+            // 実際の歪み検出
+            const aspectRatioDiff = Math.abs(parseFloat(before.rect.aspectRatio) - parseFloat(after.rect.aspectRatio));
+            if (aspectRatioDiff > 0.01) {
+                updateDebugInfo(`  🚨 歪み検出: 実際の縦横比が${aspectRatioDiff.toFixed(4)}変化`);
+                updateDebugInfo(`     → ウィンドウリサイズ時に歪みが発生する可能性`);
+            }
+            
+            // 解決策の提示
+            if (after.inline.transform === "none") {
+                updateDebugInfo("🔧 推奨解決策:");
+                updateDebugInfo("   1. enterEditingMode() で transform = none にする代わりに");
+                updateDebugInfo("   2. transform-origin を調整して aspect-ratio を維持");
+                updateDebugInfo("   3. または aspect-ratio を明示的に保持する仕組みの実装");
+            }
+        }
+        
+        // 🔄 イベントリスナー
+        window.addEventListener('resize', updateBreakpointDisplay);
+        window.addEventListener('resize', () => {
+            updateDebugInfo('🔄 ウィンドウリサイズ検知 - 位置関係を確認中...');
+            setTimeout(showPositionInfo, 100); // リサイズ後に情報更新
+        });
+        
+        // 🚀 ページ読み込み後の初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            updateBreakpointDisplay();
+            initializeChairTest();
+            
+            // 画像読み込み状況を監視
+            setTimeout(checkImageLoad, 1000);
+        });
+        
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'e' || e.key === 'E') {
+                startBoundingBoxEdit();
+            } else if (e.key === 's' || e.key === 'S') {
+                saveBoundingBoxPosition();
+            } else if (e.key === 'Escape') {
+                cancelBoundingBoxEdit();
+            } else if (e.key === 'h' || e.key === 'H') {
+                toggleChairHighlight();
+            } else if (e.key === 'r' || e.key === 'R') {
+                resetToChairPosition();
+            } else if (e.key === 'c' || e.key === 'C') {
+                cleanupBoundingBox();
+            } else if (e.key === 'a' || e.key === 'A') {
+                checkAspectRatio();
+            }
+        });
+    </script>
+</body>
+</html>
