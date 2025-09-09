@@ -446,27 +446,6 @@
             <button class="control-button secondary-button" onclick="switchCharacter()">
                 🔄 キャラクター切り替え (Purattokun/Nezumi)
             </button>
-            <button class="control-button success-button" onclick="toggleLogicalCoordinateSystem()">
-                🎯 論理座標系 切り替えテスト
-            </button>
-            
-            <!-- 🪑 椅子テスト成功パターン統合セクション -->
-            <div style="border-top: 2px solid #2e7d32; margin-top: 15px; padding-top: 15px;">
-                <h4 style="color: #2e7d32; margin-bottom: 10px;">🪑 椅子テスト成功パターン統合</h4>
-                <p style="font-size: 14px; color: #666; margin-bottom: 10px;">椅子テストの「絶対にズレない」CSS設定をこのシステムに適用</p>
-                <button class="control-button" onclick="applyChairTestSuccessPattern()" style="background: linear-gradient(45deg, #2e7d32, #4caf50); color: white;">
-                    🪑 椅子テスト方式適用
-                </button>
-                <button class="control-button" onclick="testChairPatternBefore()" style="background: linear-gradient(45deg, #1976d2, #2196f3); color: white;">
-                    📊 Before: 現在の精度測定
-                </button>
-                <button class="control-button" onclick="testChairPatternAfter()" style="background: linear-gradient(45deg, #f57c00, #ff9800); color: white;">
-                    📈 After: 改善効果確認
-                </button>
-                <button class="control-button" onclick="showChairPatternComparison()" style="background: linear-gradient(45deg, #7b1fa2, #9c27b0); color: white;">
-                    🔍 Before/After比較
-                </button>
-            </div>
             <button class="control-button secondary-button" onclick="testCanvasResize()">
                 📐 Canvasリサイズテスト
             </button>
@@ -550,21 +529,6 @@
             <button class="control-button secondary-button" onclick="debugWindowResizeImpact()">
                 🔍 ウィンドウリサイズ影響診断
             </button>
-            <button class="control-button secondary-button" onclick="runMinimalDiagnosis()" style="background: #28a745; color: white; font-weight: bold;">
-                🔍 最小診断実行
-            </button>
-            <button class="control-button secondary-button" onclick="diagnosePositionAccuracy()" style="background: #dc3545; color: white; font-weight: bold;">
-                🎯 ポジション精度診断
-            </button>
-            <button class="control-button primary-button" onclick="correctTransformPrecision()" style="background: #28a745; color: white; font-weight: bold;">
-                🔧 Transform精度修正
-            </button>
-            <button class="control-button emergency-fix" onclick="emergency499pxFix()" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; font-weight: bold; border: 2px solid #a93226; box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);" title="499px座標誤差を緊急修正">
-                🚀 座標誤差自動修正
-            </button>
-            <button class="control-button emergency-fix" onclick="emergencyCanvasSquareFix()" style="background: linear-gradient(135deg, #ff5722, #d84315); color: white; font-weight: bold; border: 2px solid #bf360c; box-shadow: 0 4px 8px rgba(255, 87, 34, 0.3);" title="Canvas歪み問題を正方形強制修正">
-                🚨 Canvas歪み緊急修正
-            </button>
             <button class="control-button secondary-button" onclick="togglePinVisibility()">
                 📍 ピン表示切り替え
             </button>
@@ -597,15 +561,6 @@
                 
                 <div style="background: #0066cc; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">5</div>
                 <div><strong>📐 リサイズテスト</strong><br><small>「📐 リサイズテスト」ボタンでウィンドウサイズを変更 → 自動追従動作を確認</small></div>
-                
-                <div style="background: #28a745; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">🔍</div>
-                <div><strong>🔍 最小診断実行</strong><br><small>歪み問題発生時の根本原因特定。編集状態で実行し、コンソール（F12）で詳細確認</small></div>
-                
-                <div style="background: #dc3545; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">🎯</div>
-                <div><strong>🎯 ポジション精度診断</strong><br><small>CSS設定値と実際の配置座標の差異をpixel単位で測定。微妙なズレの原因を特定</small></div>
-                
-                <div style="background: #28a745; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">🔧</div>
-                <div><strong>🔧 Transform精度修正</strong><br><small>0.021px, 0.005px等の微妙な誤差を0.5px単位に強制丸め。診断で発見された精度問題を自動修正</small></div>
             </div>
         </div>
         
@@ -648,42 +603,6 @@
                     <div style="background: #007cff; color: white; text-align: center; padding: 8px; border-radius: 3px; font-size: 10px;">BR</div>
                 </div>
                 <p><small>MC（中央）がデフォルト、位置に応じて最適選択</small></p>
-            </div>
-            
-            <div class="feature-card">
-                <h3>🔍 最小診断システム</h3>
-                <p>歪み問題発生時の根本原因を特定する5つの診断機能：</p>
-                <ol>
-                    <li><strong>Canvas三兄弟</strong>: 表示サイズ・内部バッファ・DPRの適正関係確認</li>
-                    <li><strong>Matrix等方性</strong>: スケール・スキューの歪み要因検出</li>
-                    <li><strong>Spineスケール1本化</strong>: 競合するスケール経路の統一</li>
-                    <li><strong>CanvasPX固定</strong>: 編集中のサイズ変動防止</li>
-                    <li><strong>Transform レイヤー確認</strong>: CSS変数合成の正当性確認</li>
-                </ol>
-                <p><strong>使用方法:</strong> 編集状態で「🔍 最小診断実行」ボタンを押してコンソール（F12）で詳細確認</p>
-            </div>
-            <div class="feature-card">
-                <h3>🎯 ポジション精度診断システム</h3>
-                <p>Canvas品質は完璧だが微妙な位置ズレが発生する場合の精密診断機能：</p>
-                <ol>
-                    <li><strong>CSS座標 vs 実配置差異</strong>: style設定値と実際のgetBoundingClientRect値の比較</li>
-                    <li><strong>Transform計算精度</strong>: CSS transformの実適用値と期待値の差異</li>
-                    <li><strong>背景要素相対位置</strong>: AutoPin対象要素との相対位置精度測定</li>
-                    <li><strong>小数点丸め誤差</strong>: 計算過程で発生する丸め誤差の検出</li>
-                    <li><strong>Matrix合成精度</strong>: 複数transformの合成による誤差測定</li>
-                </ol>
-                <p><strong>使用方法:</strong> 「🎯 ポジション精度診断」ボタンでpixel単位の誤差を測定・表示</p>
-            </div>
-            <div class="feature-card">
-                <h3>🔧 Transform精度修正システム</h3>
-                <p>診断で発見された微妙な誤差を自動修正する機能：</p>
-                <ol>
-                    <li><strong>0.5px単位の強制丸め</strong>: 0.021px, 0.005px等の微妙な誤差を排除</li>
-                    <li><strong>中心座標の精密計算</strong>: transform(-50%, -50%)の正確な値を再計算</li>
-                    <li><strong>既存Transform値保持</strong>: rotate, scale等の他のtransform値は保持</li>
-                    <li><strong>両方式対応</strong>: PureBoundingBoxCore統合版と独立版を自動選択</li>
-                </ol>
-                <p><strong>使用方法:</strong> 「🔧 Transform精度修正」ボタンで微妙な誤差を自動修正</p>
             </div>
         </div>
         
@@ -791,19 +710,6 @@
     <script src="micromodules/spine-settings-persistence/SpineSettingsPersistence.js"></script>
 
     <script>
-        // 🚫 全てのコンソールログを完全無効化（診断用に元の関数を保存）
-        window.originalConsoleLog = console.log;
-        window.originalConsoleWarn = console.warn;
-        window.originalConsoleInfo = console.info;
-        window.originalConsoleDebug = console.debug;
-        window.originalConsoleError = console.error;
-        
-        console.log = function() {};
-        console.warn = function() {};  
-        console.info = function() {};
-        console.debug = function() {};
-        console.error = function() {};
-        
         // グローバル変数
         let currentBoundingBox = null;
         let testCharacter = null;
@@ -813,24 +719,6 @@
         
         // 🎯 SpineSettingsPersistence統合
         let spinePersistence = null;
-        
-        // 🔧 デバッグ設定
-        const DEBUG_CONFIG = {
-            resizeObserver: false,  // ResizeObserverログを無効化（大量ログ防止）
-            generalLogs: true,      // 一般的なログは有効
-            errorLogs: true         // エラーログは常に有効
-        };
-        
-        // 🛠️ デバッグ設定変更関数（コンソールから使用可能）
-        window.enableResizeObserverLogs = () => {
-            DEBUG_CONFIG.resizeObserver = true;
-            console.log('🔧 ResizeObserverログを有効化しました');
-        };
-        
-        window.disableResizeObserverLogs = () => {
-            DEBUG_CONFIG.resizeObserver = false;
-            console.log('🔧 ResizeObserverログを無効化しました');
-        };
         
         // ログ関数
         function log(message, type = 'info') {
@@ -843,7 +731,7 @@
                 logDisplay.scrollTop = logDisplay.scrollHeight;
             }
             
-            // console.log(`${icon} ${message}`); // デバッグログ無効化
+            console.log(`${icon} ${message}`);
         }
         
         // 初期化
@@ -958,21 +846,10 @@
                     case 'canvasResize':
                         log(`📐 Canvas解像度変更: ${data.size}px`, 'info');
                         if (spineRenderer && spineRenderer.canvas) {
-                            // 🚨 横歪み修正: Canvas解像度を正方形に強制統一（DPR対応）
-                            const cssSquareSize = data.size;
-                            const dpr = window.devicePixelRatio || 1;
-                            const bufferSquareSize = Math.round(cssSquareSize * dpr);
-                            
-                            spineRenderer.canvas.width = bufferSquareSize;
-                            spineRenderer.canvas.height = bufferSquareSize;
-                            
-                            // CSS表示サイズも正方形に統一（歪み防止）
-                            spineRenderer.canvas.style.width = `${cssSquareSize}px`;
-                            spineRenderer.canvas.style.height = `${cssSquareSize}px`;
-                            spineRenderer.canvas.style.aspectRatio = '1 / 1';
-                            
-                            spineRenderer.resize(cssSquareSize, cssSquareSize);
-                            log(`✅ Canvas解像度変更完了（正方形統一・DPR対応）: CSS ${cssSquareSize}px, バッファ ${bufferSquareSize}px`, 'success');
+                            spineRenderer.canvas.width = data.size;
+                            spineRenderer.canvas.height = data.size;
+                            spineRenderer.resize(data.size, data.size);
+                            log('✅ Canvas解像度変更完了', 'success');
                             
                             // 🎯 SpineSettingsPersistence自動保存
                             saveSpineSettingsIntegrated(currentCharacterName, { canvasSize: data.size });
@@ -982,16 +859,14 @@
                     case 'scaleChanged':
                         log(`📏 スケール変更: X${data.scaleX}, Y${data.scaleY}`, 'info');
                         if (spineRenderer && spineRenderer.skeleton) {
-                            // 🚨 横歪み修正: スケールを統一して歪みを防止
-                            const unifiedScale = Math.min(data.scaleX, data.scaleY);
-                            spineRenderer.skeleton.scaleX = unifiedScale;
-                            spineRenderer.skeleton.scaleY = unifiedScale;
-                            log(`✅ スケール変更完了（統一値: ${unifiedScale}）`, 'success');
+                            spineRenderer.skeleton.scaleX = data.scaleX;
+                            spineRenderer.skeleton.scaleY = data.scaleY;
+                            log('✅ スケール変更完了', 'success');
                             
-                            // 🎯 SpineSettingsPersistence自動保存（統一値で保存）
+                            // 🎯 SpineSettingsPersistence自動保存
                             saveSpineSettingsIntegrated(currentCharacterName, { 
-                                scaleX: unifiedScale, 
-                                scaleY: unifiedScale 
+                                scaleX: data.scaleX, 
+                                scaleY: data.scaleY 
                             });
                         }
                         break;
@@ -1099,24 +974,16 @@
             // 2. heroSectionサイズ変更監視（ResizeObserver）
             const heroSection = document.getElementById('test-hero');
             if (heroSection) {
-                if (DEBUG_CONFIG.resizeObserver) {
-                    log('🔍 ResizeObserver 初期化開始', 'info');
-                }
+                log('🔍 ResizeObserver 初期化開始', 'info');
                 const resizeObserver = new ResizeObserver(entries => {
-                    if (DEBUG_CONFIG.resizeObserver) {
-                        log(`🔍 ResizeObserver トリガー: ${entries.length} エントリー`, 'info');
-                    }
+                    log(`🔍 ResizeObserver トリガー: ${entries.length} エントリー`, 'info');
                     for (const entry of entries) {
                         const { width, height } = entry.contentRect;
-                        if (DEBUG_CONFIG.resizeObserver) {
-                            log(`📐 ヒーローセクションサイズ変更検出: ${width.toFixed(0)}x${height.toFixed(0)}`, 'info');
-                        }
+                        log(`📐 ヒーローセクションサイズ変更検出: ${width.toFixed(0)}x${height.toFixed(0)}`, 'info');
                         
                         clearTimeout(resizeTimeout);
                         resizeTimeout = setTimeout(() => {
-                            if (DEBUG_CONFIG.resizeObserver) {
-                                log('📐 ヒーローセクションリサイズ検出 - BB比率保持実行', 'info');
-                            }
+                            log('📐 ヒーローセクションリサイズ検出 - BB比率保持実行', 'info');
                             // 🎯 BB位置管理はPureBoundingBoxAutoPinに委譲 - 独自システム削除
                         }, 100);
                     }
@@ -1149,7 +1016,7 @@
                     PureBoundingBox: typeof window.PureBoundingBox !== 'undefined'
                 };
                 
-                // console.log('🔍 モジュール読み込み状況:', moduleStatus); // デバッグログ無効化
+                console.log('🔍 モジュール読み込み状況:', moduleStatus);
                 log(`🔍 モジュール状況: Core=${moduleStatus.PureBoundingBoxCore}, Bounds=${moduleStatus.PureBoundingBoxBounds}, UI=${moduleStatus.PureBoundingBoxUI}, Events=${moduleStatus.PureBoundingBoxEvents}`, 'info');
                 
                 const missingModules = Object.keys(moduleStatus).filter(key => !moduleStatus[key]);
@@ -1184,27 +1051,10 @@
                 
                 // 新しいバウンディングボックス作成
                 log('🔧 新しいBBを作成中...', 'info');
-                
-                // 🎯 論理座標系テスト設定（椅子テスト成功パターン統合）
-                // グローバル変数から現在の設定を取得
-                const enableLogicalTest = typeof logicalCoordinateEnabled !== 'undefined' ? logicalCoordinateEnabled : true;
-                
                 currentBoundingBox = new PureBoundingBox({
                     targetElement: testCharacter,
-                    nodeId: 'test-character',
-                    
-                    // 🎯 論理座標系設定（椅子テスト成功パターン）
-                    enableLogicalCoordinate: enableLogicalTest,
-                    logicalBaseSize: 120,              // 椅子テスト基準サイズ
-                    groundBasedPositioning: enableLogicalTest,  // 論理座標時のみ足元基準
-                    chairTestCompatible: enableLogicalTest,     // 椅子テスト完全準拠
-                    
-                    // 従来設定も保持
-                    tolerancePx: 5,
-                    gentleCorrectionRatio: 0.5
+                    nodeId: 'test-character'
                 });
-                
-                log(`🎯 論理座標系${enableLogicalTest ? '有効' : '無効'}でBB作成`, enableLogicalTest ? 'success' : 'info');
                 
                 log('✅ PureBoundingBox インスタンス作成完了', 'success');
                 
@@ -1874,45 +1724,34 @@
                     // spineRendererが準備完了していることを確認
                     if (spineRenderer && spineRenderer.skeleton && spineRenderer.canvas) {
                         
-                        // ✅ Canvas解像度復元（確実に実行・横歪み修正対応）
+                        // ✅ Canvas解像度復元（確実に実行）
                         if (settings.canvasSize) {
                             log(`📐 Canvas解像度復元実行前: ${spineRenderer.canvas.width}x${spineRenderer.canvas.height}`, 'info');
                             
-                            // 🚨 横歪み修正: Canvas解像度を正方形に強制統一（DPR対応）
-                            const cssSquareSize = settings.canvasSize;
-                            const dpr = window.devicePixelRatio || 1;
-                            const bufferSquareSize = Math.round(cssSquareSize * dpr);
-                            
-                            spineRenderer.canvas.width = bufferSquareSize;
-                            spineRenderer.canvas.height = bufferSquareSize;
-                            
-                            // CSS表示サイズも正方形に統一（歪み防止）
-                            spineRenderer.canvas.style.width = `${cssSquareSize}px`;
-                            spineRenderer.canvas.style.height = `${cssSquareSize}px`;
-                            spineRenderer.canvas.style.aspectRatio = '1 / 1';
+                            // Canvas要素とRenderer両方のサイズを更新
+                            spineRenderer.canvas.width = settings.canvasSize;
+                            spineRenderer.canvas.height = settings.canvasSize;
                             
                             // Rendererのリサイズ（重要: WebGL contextを更新）
                             if (typeof spineRenderer.resize === 'function') {
-                                spineRenderer.resize(cssSquareSize, cssSquareSize);
+                                spineRenderer.resize(settings.canvasSize, settings.canvasSize);
                             } else if (spineRenderer.gl) {
-                                // 手動でviewportを更新（DPR対応）
-                                spineRenderer.gl.viewport(0, 0, bufferSquareSize, bufferSquareSize);
+                                // 手動でviewportを更新
+                                spineRenderer.gl.viewport(0, 0, settings.canvasSize, settings.canvasSize);
                             }
                             
-                            log(`📐 Canvas解像度復元完了（正方形統一・DPR対応）: CSS ${cssSquareSize}px, バッファ ${bufferSquareSize}px`, 'success');
+                            log(`📐 Canvas解像度復元完了: ${settings.canvasSize}px`, 'success');
                             log(`📐 Canvas解像度復元実行後: ${spineRenderer.canvas.width}x${spineRenderer.canvas.height}`, 'info');
                         }
                         
-                        // ✅ スケール復元（確実に実行・横歪み修正対応）
+                        // ✅ スケール復元（確実に実行）
                         if (settings.scaleX !== undefined && settings.scaleY !== undefined) {
                             log(`📏 スケール復元実行前: X=${spineRenderer.skeleton.scaleX}, Y=${spineRenderer.skeleton.scaleY}`, 'info');
                             
-                            // 🚨 横歪み修正: スケールを統一して歪みを防止
-                            const unifiedScale = Math.min(settings.scaleX, settings.scaleY);
-                            spineRenderer.skeleton.scaleX = unifiedScale;
-                            spineRenderer.skeleton.scaleY = unifiedScale;
+                            spineRenderer.skeleton.scaleX = settings.scaleX;
+                            spineRenderer.skeleton.scaleY = settings.scaleY;
                             
-                            log(`📏 スケール復元完了（統一値: ${unifiedScale}）`, 'success');
+                            log(`📏 スケール復元完了: X=${settings.scaleX}, Y=${settings.scaleY}`, 'success');
                             log(`📏 スケール復元実行後: X=${spineRenderer.skeleton.scaleX}, Y=${spineRenderer.skeleton.scaleY}`, 'info');
                         }
                         
@@ -2017,60 +1856,6 @@
                 log(`❌ ${characterId} 設定保存エラー: ${error.message}`, 'error');
                 console.error('設定保存エラー:', error);
                 return false;
-            }
-        }
-        
-        // 🎯 論理座標系切り替えテスト機能（椅子テスト成功パターン統合）
-        let logicalCoordinateEnabled = true; // 初期値
-        
-        async function toggleLogicalCoordinateSystem() {
-            try {
-                // 現在の状態を切り替え
-                logicalCoordinateEnabled = !logicalCoordinateEnabled;
-                
-                log(`🎯 論理座標系を${logicalCoordinateEnabled ? '有効' : '無効'}に切り替え`, 'info');
-                log('🔄 キャラクターを再読み込みして変更を適用中...', 'info');
-                
-                // BBシステムをクリーンアップ
-                if (currentBoundingBox) {
-                    log('🧹 既存BBシステムをクリーンアップ中...', 'info');
-                    try {
-                        // destroyメソッドが存在するかチェック
-                        if (typeof currentBoundingBox.destroy === 'function') {
-                            currentBoundingBox.destroy();
-                        } else if (typeof currentBoundingBox.cleanup === 'function') {
-                            currentBoundingBox.cleanup();
-                        } else {
-                            log('⚠️ クリーンアップメソッドが見つからないため、参照のみクリア', 'warning');
-                        }
-                    } catch (error) {
-                        log(`⚠️ クリーンアップ中にエラー: ${error.message}`, 'warning');
-                    }
-                    currentBoundingBox = null;
-                    log('✅ 既存BBシステムクリーンアップ完了', 'success');
-                }
-                
-                // キャラクターを再読み込み（新しい設定で）
-                await loadSpineCharacter();
-                
-                log(`✅ 論理座標系切り替え完了: ${logicalCoordinateEnabled ? '椅子テスト成功パターン適用' : '従来システム'}`, 'success');
-                
-                if (logicalCoordinateEnabled) {
-                    log('🪑 椅子テスト成功パターン特徴:', 'info');
-                    log('  - 120px固定サイズ', 'info');
-                    log('  - aspect-ratio: 1/1 強制', 'info');
-                    log('  - 足元基準配置 (62%)', 'info');
-                    log('  - 確実にズレない座標系', 'success');
-                } else {
-                    log('🔄 従来システム特徴:', 'info');
-                    log('  - 可変サイズ対応', 'info');
-                    log('  - 複雑な座標変換', 'info');
-                    log('  - CSS Transform中心基準', 'info');
-                }
-                
-            } catch (error) {
-                log(`❌ 論理座標系切り替えエラー: ${error.message}`, 'error');
-                console.error('論理座標系切り替えエラー:', error);
             }
         }
         
@@ -2390,7 +2175,7 @@
                     
                     if (contentRect) {
                         log('🎯 IMG要素のコンテンツ矩形計算結果:', 'info');
-                        // console.log('📊 Content Rect Details:', contentRect); // ResizeObserver詳細ログ無効化
+                        console.log('📊 Content Rect Details:', contentRect);
                         
                         log(`  • 位置: (${contentRect.x.toFixed(1)}, ${contentRect.y.toFixed(1)})`, 'info');
                         log(`  • サイズ: ${contentRect.width.toFixed(1)}×${contentRect.height.toFixed(1)}`, 'info');
@@ -2606,7 +2391,7 @@
          * 🚀 Phase 3: パフォーマンスベンチマーク & 移行判定システム
          */
         window.performanceBenchmark = function() {
-            // console.log('🚀 Phase 3パフォーマンスベンチマーク開始'); // ベンチマークログ無効化
+            console.log('🚀 Phase 3パフォーマンスベンチマーク開始');
             
             const results = {
                 legacy: null,
@@ -2624,7 +2409,7 @@
             }
             
             // レガシーシステムのベンチマーク
-            // console.log('📊 レガシーシステムのパフォーマンス測定開始'); // ベンチマークログ無効化
+            console.log('📊 レガシーシステムのパフォーマンス測定開始');
             adapter.updateMigrationConfig({ mode: 'legacy-first' });
             
             const legacyStartTime = performance.now();
@@ -2638,10 +2423,10 @@
                 };
                 
                 legacyUnobserve();
-                // console.log('✅ レガシーシステム測定完了:', results.legacy); // ベンチマークログ無効化
+                console.log('✅ レガシーシステム測定完了:', results.legacy);
                 
                 // 効率的システムのベンチマーク
-                // console.log('🚀 効率的ピンシステムのパフォーマンス測定開始'); // ベンチマークログ無効化
+                console.log('🚀 効率的ピンシステムのパフォーマンス測定開始');
                 adapter.updateMigrationConfig({ mode: 'efficient-first' });
                 
                 const efficientStartTime = performance.now();
@@ -2655,7 +2440,7 @@
                     };
                     
                     efficientUnobserve();
-                    // console.log('✅ 効率的システム測定完了:', results.efficient); // ベンチマークログ無効化
+                    console.log('✅ 効率的システム測定完了:', results.efficient);
                     
                     // 比較分析と移行判定
                     performMigrationAnalysis(results);
@@ -2666,7 +2451,7 @@
         
         // 📊 移行判定分析システム
         function performMigrationAnalysis(results) {
-            // console.log('📊 移行判定分析開始'); // ベンチマークログ無効化
+            console.log('📊 移行判定分析開始');
             
             const comparison = {
                 initTimeRatio: results.efficient.initTime / results.legacy.initTime,
@@ -2681,8 +2466,8 @@
             const migrationDecision = makeMigrationDecision(comparison);
             results.migrationDecision = migrationDecision;
             
-            // console.log('📊 パフォーマンス比較結果:', comparison); // ベンチマークログ無効化
-            // console.log('🎯 移行判定結果:', migrationDecision); // ベンチマークログ無効化
+            console.log('📊 パフォーマンス比較結果:', comparison);
+            console.log('🎯 移行判定結果:', migrationDecision);
             
             // 判定結果の可視化
             displayMigrationResults(results);
@@ -2733,7 +2518,7 @@
         function displayMigrationResults(results) {
             console.group('🎯 Phase 3移行判定レポート');
             
-            console.log('📊 システム比較:'); // 重要な結果表示は保持
+            console.log('📊 システム比較:');
             console.table({
                 'レガシーシステム': {
                     '初期化時間': `${results.legacy.initTime.toFixed(2)}ms`,
@@ -2783,20 +2568,20 @@
                 return;
             }
             
-            // console.log('🎯 効率的ピンシステム v2.0 優先モードで稼働開始'); // ベンチマークログ無効化
+            console.log('🎯 効率的ピンシステム v2.0 優先モードで稼働開始');
             
             const unobserve = adapter.observe(heroSection, (rect, changeType) => {
-                // console.log('📊 efficient-first動作:', { // ベンチマークログ無効化
-                //     changeType, 
-                //     size: `${rect.width}x${rect.height}`,
-                //     timestamp: Date.now() 
-                // });
+                console.log('📊 efficient-first動作:', { 
+                    changeType, 
+                    size: `${rect.width}x${rect.height}`,
+                    timestamp: Date.now() 
+                });
             });
             
             // 10秒間の稼働テスト
             setTimeout(() => {
                 const metrics = adapter.getPerformanceMetrics();
-                // console.log('📊 efficient-first稼働結果:', metrics); // ベンチマークログ無効化
+                console.log('📊 efficient-first稼働結果:', metrics);
                 
                 console.log('🎯 移行成功度評価:');
                 if (metrics.efficientCallCount > 0 && metrics.fallbackCount === 0) {
@@ -3216,970 +3001,6 @@
             log('💡 手順: ウィンドウサイズを変更してから再度このボタンを押して比較してください', 'info');
         }
 
-        // 🔍 最小診断システム
-        function runMinimalDiagnosis() {
-            log('🔍 最小診断実行開始 - 歪み問題根本原因特定', 'info');
-            
-            // 診断時のみログを有効化（保存済みのoriginalLogを復元）
-            console.log = window.originalConsoleLog || console.log;
-            
-            try {
-                // Canvasを動的に検索（複数のID候補を試行）
-                let canvas = document.getElementById('purattokun-canvas') || 
-                            document.getElementById('spine-canvas') ||
-                            document.getElementById('spine-test-canvas') ||
-                            document.querySelector('canvas');
-                
-                console.log('🔍 Canvas検索結果:', {
-                    purattokun: !!document.getElementById('purattokun-canvas'),
-                    spine: !!document.getElementById('spine-canvas'),
-                    spineTest: !!document.getElementById('spine-test-canvas'),
-                    anyCanvas: !!document.querySelector('canvas'),
-                    foundCanvas: canvas ? canvas.id : 'none'
-                });
-                
-                if (!canvas) {
-                    log('❌ Canvasが見つかりません - 利用可能な要素を確認してください', 'error');
-                    console.log('利用可能なcanvas要素:', Array.from(document.querySelectorAll('canvas')).map(c => c.id || 'no-id'));
-                    return;
-                }
-
-                // 5つの診断を順次実行
-                logCanvasTriple(canvas);
-                checkMatrixIsometric(canvas);
-                if (window.skeleton) {
-                    normalizeSpineScaling(window.skeleton);
-                } else {
-                    log('⚠️ Skeletonオブジェクトが見つかりません', 'warning');
-                }
-                freezeCanvasSize(canvas);
-                checkTransformLayering(canvas);
-                
-                log('✅ 最小診断完了 - コンソールで詳細情報を確認してください', 'success');
-                
-            } catch (error) {
-                log(`❌ 最小診断エラー: ${error.message}`, 'error');
-                window.originalConsoleError('最小診断エラー:', error);
-            }
-            
-            // 診断後はログ無効化に戻す
-            setTimeout(() => {
-                console.log = function() {};
-                console.warn = function() {};
-                console.info = function() {};
-                console.debug = function() {};
-                console.error = function() {};
-            }, 2000); // 2秒後に無効化
-        }
-        
-        // 🎯 ポジション精度診断システム
-        function diagnosePositionAccuracy() {
-            log('🎯 ポジション精度診断開始 - pixel単位誤差測定', 'info');
-            
-            // 診断時のみログを有効化
-            console.log = window.originalConsoleLog || console.log;
-            
-            try {
-                // Canvasを検索
-                let canvas = document.getElementById('purattokun-canvas') || 
-                            document.getElementById('spine-canvas') ||
-                            document.getElementById('spine-test-canvas') ||
-                            document.querySelector('canvas');
-                            
-                if (!canvas) {
-                    log('❌ Canvasが見つかりません', 'error');
-                    return;
-                }
-                
-                console.log('🎯 ポジション精度診断実行中...');
-                console.log('======================================');
-                
-                // 段階的実行システム - エラー耐性向上
-                executeDiagnosticSteps(canvas);
-                
-            } catch (error) {
-                log(`❌ ポジション精度診断エラー: ${error.message}`, 'error');
-                console.error('ポジション精度診断エラー:', error);
-            }
-            
-            // 診断後はログ無効化に戻す
-            setTimeout(() => {
-                console.log = function() {};
-                console.warn = function() {};
-                console.info = function() {};
-                console.debug = function() {};
-                console.error = function() {};
-            }, 2000);
-        }
-        
-        // 🔧 Transform精度修正システム
-        function correctTransformPrecision() {
-            log('🔧 Transform精度修正開始 - 0.5px単位での強制丸め', 'info');
-            
-            try {
-                // Canvasを検索
-                let canvas = document.getElementById('purattokun-canvas') || 
-                            document.getElementById('spine-canvas') ||
-                            document.getElementById('spine-test-canvas') ||
-                            document.querySelector('canvas');
-                            
-                if (!canvas) {
-                    log('❌ Canvasが見つかりません', 'error');
-                    return;
-                }
-                
-                // BB編集システムが利用可能かチェック
-                if (window.pureBoundingBoxSystem && canvas.pureBoundingBoxCore) {
-                    // 既存のPureBoundingBoxCoreのメソッドを使用
-                    log('✅ PureBoundingBoxCore.correctTransformPrecision()を実行', 'info');
-                    canvas.pureBoundingBoxCore.correctTransformPrecision(canvas);
-                } else {
-                    // 独立実装版を使用
-                    log('🔧 独立版Transform精度修正を実行', 'info');
-                    correctTransformPrecisionStandalone(canvas);
-                }
-                
-                log('✅ Transform精度修正完了 - 0.021px, 0.005px等の誤差を解消', 'success');
-                
-            } catch (error) {
-                log(`❌ Transform精度修正エラー: ${error.message}`, 'error');
-                console.error('Transform精度修正エラー:', error);
-            }
-        }
-        
-        // 🔧 独立版Transform精度修正（PureBoundingBoxCore非依存）
-        function correctTransformPrecisionStandalone(element) {
-            if (!element) return;
-            
-            const rect = element.getBoundingClientRect();
-            const computedStyle = getComputedStyle(element);
-            
-            console.log('🔧 [PRECISION-STANDALONE] Transform精度修正開始', {
-                currentRect: {
-                    width: rect.width.toFixed(3),
-                    height: rect.height.toFixed(3)
-                },
-                currentTransform: computedStyle.transform
-            });
-            
-            // 🎯 精密な中心座標計算: 0.5px単位での強制丸め
-            const preciseWidth = Math.round(rect.width * 2) / 2;
-            const preciseHeight = Math.round(rect.height * 2) / 2;
-            const preciseCenterX = Math.round(preciseWidth / 2 * 2) / 2;
-            const preciseCenterY = Math.round(preciseHeight / 2 * 2) / 2;
-            
-            // 🔧 Transform値を強制的に0.5px精度に修正
-            const correctedTransform = `translate(-${preciseCenterX}px, -${preciseCenterY}px)`;
-            
-            // 元のtransformから他の値（rotate, scale等）を抽出
-            const originalTransform = element.style.transform || '';
-            let preservedTransformParts = '';
-            
-            // rotate, scale等の他のtransform値を保持
-            const transformMatch = originalTransform.match(/(?!translate\([^)]+\))(rotate\([^)]+\)|scale\([^)]+\)|skew\([^)]+\))/g);
-            if (transformMatch) {
-                preservedTransformParts = ' ' + transformMatch.join(' ');
-            }
-            
-            const finalTransform = correctedTransform + preservedTransformParts;
-            
-            // 精度修正を適用
-            element.style.transform = finalTransform;
-            
-            console.log('✅ [PRECISION-STANDALONE] Transform精度修正完了', {
-                precisionCorrection: {
-                    originalWidth: rect.width.toFixed(3),
-                    originalHeight: rect.height.toFixed(3),
-                    preciseWidth: preciseWidth.toFixed(1),
-                    preciseHeight: preciseHeight.toFixed(1),
-                    originalTransform: originalTransform,
-                    correctedTransform: finalTransform,
-                    centerCorrection: {
-                        x: `${(rect.width / 2).toFixed(3)} → ${preciseCenterX.toFixed(1)}`,
-                        y: `${(rect.height / 2).toFixed(3)} → ${preciseCenterY.toFixed(1)}`
-                    },
-                    errorCorrected: {
-                        x: Math.abs(rect.width / 2 - preciseCenterX).toFixed(3) + 'px',
-                        y: Math.abs(rect.height / 2 - preciseCenterY).toFixed(3) + 'px'
-                    }
-                }
-            });
-        }
-        
-        // 🚀 段階的診断実行システム（エラー耐性・安全性重視）
-        function executeDiagnosticSteps(canvas) {
-            const diagnostics = [
-                { name: 'CSS設定値 vs 実配置座標', func: diagnoseCSSvsActual, id: 1 },
-                { name: 'Transform計算精度', func: diagnoseTransformAccuracy, id: 2 },
-                { name: '背景要素との相対位置精度', func: diagnoseBackgroundRelativePosition, id: 3 },
-                { name: '小数点丸め誤差', func: diagnoseRoundingErrors, id: 4 },
-                { name: 'Matrix合成精度', func: diagnoseMatrixCompositionAccuracy, id: 5 }
-            ];
-            
-            let currentStep = 0;
-            let errorCount = 0;
-            
-            function executeNextStep() {
-                if (currentStep >= diagnostics.length) {
-                    // 全診断完了
-                    console.log('======================================');
-                    console.log('🎉 全診断完了！ 総合結果:');
-                    console.log(`✅ ${diagnostics.length}個の診断項目を実行しました`);
-                    if (errorCount > 0) {
-                        console.warn(`⚠️ ${errorCount}個の診断でエラーが発生しました`);
-                    }
-                    console.log('======================================');
-                    log('✅ ポジション精度診断完了 - コンソールで詳細確認', 'success');
-                    return;
-                }
-                
-                // エラーが多すぎる場合はシンプル診断に切り替え
-                if (errorCount >= 3) {
-                    console.warn('⚠️ エラーが多すぎます。シンプル診断モードに切り替えます...');
-                    runSimpleDiagnostic(canvas);
-                    return;
-                }
-                
-                const diagnostic = diagnostics[currentStep];
-                
-                try {
-                    console.log(`🎯 診断${diagnostic.id}/5 開始: ${diagnostic.name}`);
-                    
-                    // 安全な診断実行
-                    diagnostic.func(canvas);
-                    
-                    console.log(`✅ 診断${diagnostic.id}/5 完了`);
-                    currentStep++;
-                    
-                    // 次のステップを少し遅延して実行（UI応答性確保）
-                    setTimeout(executeNextStep, 50);
-                    
-                } catch (error) {
-                    console.error(`❌ 診断${diagnostic.id}/5 エラー:`, error);
-                    console.log(`⚠️ 診断${diagnostic.id}/5 スキップして続行`);
-                    errorCount++;
-                    currentStep++;
-                    
-                    // エラーが発生してもスキップして続行
-                    setTimeout(executeNextStep, 50);
-                }
-            }
-            
-            // 最初のステップを開始
-            executeNextStep();
-        }
-        
-        // 1. CSS座標 vs 実際の配置座標診断
-        function diagnoseCSSvsActual(canvas) {
-            console.log('=== 1. CSS設定値 vs 実配置座標 差異診断 ===');
-            
-            try {
-                const style = canvas.style;
-                const computed = getComputedStyle(canvas);
-                const rect = canvas.getBoundingClientRect();
-                const parent = canvas.parentElement;
-                const parentRect = parent ? parent.getBoundingClientRect() : null;
-            
-            // CSS設定値取得
-            const cssLeft = parseFloat(style.left) || 0;
-            const cssTop = parseFloat(style.top) || 0;
-            const cssTransform = style.transform || 'none';
-            
-            // Computed値取得  
-            const computedLeft = parseFloat(computed.left) || 0;
-            const computedTop = parseFloat(computed.top) || 0;
-            const computedTransform = computed.transform;
-            
-            // 実際の位置
-            const actualX = rect.left - (parentRect ? parentRect.left : 0);
-            const actualY = rect.top - (parentRect ? parentRect.top : 0);
-            
-            // 期待値計算（CSS設定値ベース）
-            let expectedX = cssLeft;
-            let expectedY = cssTop;
-            
-            // Transform考慮
-            if (cssTransform !== 'none') {
-                const matrix = new DOMMatrix(cssTransform);
-                expectedX += matrix.e;
-                expectedY += matrix.f;
-            }
-            
-            // 誤差計算
-            const errorX = Math.abs(actualX - expectedX);
-            const errorY = Math.abs(actualY - expectedY);
-            const totalError = Math.sqrt(errorX * errorX + errorY * errorY);
-            
-            console.log('CSS設定値:', { left: cssLeft, top: cssTop, transform: cssTransform });
-            console.log('Computed値:', { left: computedLeft, top: computedTop, transform: computedTransform });
-            console.log('実際の座標:', { x: actualX.toFixed(3), y: actualY.toFixed(3) });
-            console.log('期待される座標:', { x: expectedX.toFixed(3), y: expectedY.toFixed(3) });
-            console.log('🎯 座標誤差:', { 
-                X軸: `${errorX.toFixed(3)}px`, 
-                Y軸: `${errorY.toFixed(3)}px`, 
-                総合: `${totalError.toFixed(3)}px` 
-            });
-            
-            if (totalError > 1) {
-                console.warn('⚠️ 大きな位置誤差を検出しました（1px超過）');
-            } else if (totalError > 0.5) {
-                console.warn('⚠️ 中程度の位置誤差を検出しました（0.5px超過）');
-            } else {
-                console.log('✅ 位置誤差は許容範囲内です');
-            }
-            
-            } catch (error) {
-                console.error('❌ CSS vs 実配置座標診断エラー:', error);
-                console.log('⚠️ 診断1をスキップして続行します');
-            }
-            
-            console.log('');
-        }
-        
-        // 2. Transform計算精度診断
-        function diagnoseTransformAccuracy(canvas) {
-            console.log('=== 2. Transform計算精度診断 ===');
-            
-            try {
-                const computed = getComputedStyle(canvas);
-                const computedTransform = computed.transform;
-            
-            if (computedTransform === 'none') {
-                console.log('Transform未適用 - 診断スキップ');
-                console.log('');
-                return;
-            }
-            
-            try {
-                const matrix = new DOMMatrix(computedTransform);
-                
-                // Matrix値の分析
-                const scaleX = Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b);
-                const scaleY = Math.sqrt(matrix.c * matrix.c + matrix.d * matrix.d);
-                const translateX = matrix.e;
-                const translateY = matrix.f;
-                
-                // 小数点誤差チェック
-                const scaleXError = Math.abs(scaleX - Math.round(scaleX * 1000) / 1000);
-                const scaleYError = Math.abs(scaleY - Math.round(scaleY * 1000) / 1000);
-                const translateXError = Math.abs(translateX - Math.round(translateX * 1000) / 1000);
-                const translateYError = Math.abs(translateY - Math.round(translateY * 1000) / 1000);
-                
-                console.log('Transform Matrix値:', {
-                    scaleX: scaleX.toFixed(6),
-                    scaleY: scaleY.toFixed(6), 
-                    translateX: translateX.toFixed(3),
-                    translateY: translateY.toFixed(3)
-                });
-                
-                console.log('🎯 小数点精度誤差:', {
-                    scaleX: `${scaleXError.toFixed(6)}`,
-                    scaleY: `${scaleYError.toFixed(6)}`,
-                    translateX: `${translateXError.toFixed(6)}px`,
-                    translateY: `${translateYError.toFixed(6)}px`
-                });
-                
-                // 歪み検出
-                const skew = Math.abs(matrix.b) + Math.abs(matrix.c);
-                if (skew > 0.001) {
-                    console.warn('⚠️ Skew変形を検出:', skew.toFixed(6));
-                }
-                
-                // Scale比率チェック
-                const scaleRatio = Math.abs(scaleX - scaleY);
-                if (scaleRatio > 0.001) {
-                    console.warn('⚠️ 非等比スケールを検出:', scaleRatio.toFixed(6));
-                } else {
-                    console.log('✅ 等比スケール - 歪みなし');
-                }
-                
-            } catch (error) {
-                console.error('Transform解析エラー:', error);
-            }
-            
-            } catch (error) {
-                console.error('❌ Transform計算精度診断エラー:', error);
-                console.log('⚠️ 診断2をスキップして続行します');
-            }
-            
-            console.log('');
-        }
-        
-        // 3. 背景要素との相対位置精度診断
-        function diagnoseBackgroundRelativePosition(canvas) {
-            console.log('=== 3. 背景要素との相対位置精度診断 ===');
-            
-            try {
-                // 背景要素を検索
-                const backgroundElements = [
-                document.querySelector('.hero-section'),
-                document.querySelector('.background-image'),
-                document.getElementById('hero-section'),
-                canvas.parentElement
-            ].filter(Boolean);
-            
-            if (backgroundElements.length === 0) {
-                console.log('背景要素が見つかりません - 診断スキップ');
-                console.log('');
-                return;
-            }
-            
-            const canvasRect = canvas.getBoundingClientRect();
-            
-            backgroundElements.forEach((bg, index) => {
-                const bgRect = bg.getBoundingClientRect();
-                
-                // 相対位置計算
-                const relativeX = canvasRect.left - bgRect.left;
-                const relativeY = canvasRect.top - bgRect.top;
-                
-                // パーセンテージ計算
-                const percentX = (relativeX / bgRect.width) * 100;
-                const percentY = (relativeY / bgRect.height) * 100;
-                
-                console.log(`背景要素${index + 1}: ${bg.className || bg.tagName}`);
-                console.log(`相対位置: (${relativeX.toFixed(3)}px, ${relativeY.toFixed(3)}px)`);
-                console.log(`パーセンテージ: (${percentX.toFixed(3)}%, ${percentY.toFixed(3)}%)`);
-                
-                // 精度チェック - 小数点以下が多い場合は計算誤差の可能性
-                const xDecimalPlaces = (relativeX.toString().split('.')[1] || '').length;
-                const yDecimalPlaces = (relativeY.toString().split('.')[1] || '').length;
-                
-                if (xDecimalPlaces > 3 || yDecimalPlaces > 3) {
-                    console.warn('⚠️ 高精度小数点検出 - 計算誤差の可能性');
-                }
-                
-                console.log('');
-            });
-            
-            } catch (error) {
-                console.error('❌ 背景要素相対位置診断エラー:', error);
-                console.log('⚠️ 診断3をスキップして続行します');
-            }
-        }
-        
-        // 4. 小数点丸め誤差診断
-        function diagnoseRoundingErrors(canvas) {
-            console.log('=== 4. 小数点丸め誤差診断 ===');
-            
-            try {
-                const rect = canvas.getBoundingClientRect();
-                const computed = getComputedStyle(canvas);
-            
-            // 各値の小数点精度チェック
-            const values = {
-                'rect.left': rect.left,
-                'rect.top': rect.top,
-                'rect.width': rect.width,
-                'rect.height': rect.height,
-                'computed.left': parseFloat(computed.left) || 0,
-                'computed.top': parseFloat(computed.top) || 0,
-                'computed.width': parseFloat(computed.width) || 0,
-                'computed.height': parseFloat(computed.height) || 0
-            };
-            
-            let highPrecisionCount = 0;
-            
-            Object.entries(values).forEach(([name, value]) => {
-                const decimalPlaces = (value.toString().split('.')[1] || '').length;
-                const roundedValue = Math.round(value * 1000) / 1000;
-                const roundingError = Math.abs(value - roundedValue);
-                
-                console.log(`${name}: ${value.toFixed(6)} (小数点: ${decimalPlaces}桁, 丸め誤差: ${roundingError.toFixed(6)})`);
-                
-                if (decimalPlaces > 3) {
-                    highPrecisionCount++;
-                }
-            });
-            
-            console.log('');
-            console.log('🎯 丸め誤差分析:');
-            if (highPrecisionCount > 2) {
-                console.warn('⚠️ 多数の高精度小数点を検出 - 累積誤差の可能性');
-            } else {
-                console.log('✅ 丸め誤差は正常範囲');
-            }
-            
-            } catch (error) {
-                console.error('❌ 小数点丸め誤差診断エラー:', error);
-                console.log('⚠️ 診断4をスキップして続行します');
-            }
-            
-            console.log('');
-        }
-        
-        // 5. Matrix合成精度診断
-        function diagnoseMatrixCompositionAccuracy(canvas) {
-            console.log('=== 5. Matrix合成精度診断 ===');
-            
-            try {
-                const computed = getComputedStyle(canvas);
-                const computedTransform = computed.transform;
-            
-            if (computedTransform === 'none') {
-                console.log('Transform未適用 - Matrix合成診断スキップ');
-                console.log('');
-                return;
-            }
-            
-            try {
-                // 現在のMatrix
-                const currentMatrix = new DOMMatrix(computedTransform);
-                
-                // 理想的なMatrix作成（既知の変換パターンから）
-                const idealMatrix = new DOMMatrix();
-                
-                // CSS変数からの変換値取得（もし存在すれば）
-                const cssVarX = getComputedStyle(canvas).getPropertyValue('--tx');
-                const cssVarY = getComputedStyle(canvas).getPropertyValue('--ty');
-                const cssVarScale = getComputedStyle(canvas).getPropertyValue('--scale');
-                
-                if (cssVarX || cssVarY) {
-                    const tx = parseFloat(cssVarX) || 0;
-                    const ty = parseFloat(cssVarY) || 0;
-                    const scale = parseFloat(cssVarScale) || 1;
-                    
-                    idealMatrix.translateSelf(tx, ty);
-                    idealMatrix.scaleSelf(scale, scale);
-                    
-                    // Matrix差異計算
-                    const diffA = Math.abs(currentMatrix.a - idealMatrix.a);
-                    const diffB = Math.abs(currentMatrix.b - idealMatrix.b);
-                    const diffC = Math.abs(currentMatrix.c - idealMatrix.c);
-                    const diffD = Math.abs(currentMatrix.d - idealMatrix.d);
-                    const diffE = Math.abs(currentMatrix.e - idealMatrix.e);
-                    const diffF = Math.abs(currentMatrix.f - idealMatrix.f);
-                    
-                    const totalDiff = diffA + diffB + diffC + diffD + diffE + diffF;
-                    
-                    console.log('現在のMatrix:', currentMatrix);
-                    console.log('理想のMatrix:', idealMatrix);
-                    console.log('🎯 Matrix合成誤差:', {
-                        scaleX_diff: diffA.toFixed(6),
-                        skewY_diff: diffB.toFixed(6),
-                        skewX_diff: diffC.toFixed(6),
-                        scaleY_diff: diffD.toFixed(6),
-                        translateX_diff: `${diffE.toFixed(3)}px`,
-                        translateY_diff: `${diffF.toFixed(3)}px`,
-                        total: totalDiff.toFixed(6)
-                    });
-                    
-                    if (totalDiff > 0.01) {
-                        console.warn('⚠️ Matrix合成で大きな誤差を検出');
-                    } else if (totalDiff > 0.001) {
-                        console.warn('⚠️ Matrix合成で軽微な誤差を検出');
-                    } else {
-                        console.log('✅ Matrix合成精度良好');
-                    }
-                } else {
-                    console.log('CSS変数が見つかりません - Matrix合成精度は手動確認してください');
-                }
-                
-            } catch (error) {
-                console.error('Matrix合成分析エラー:', error);
-            }
-            
-            } catch (error) {
-                console.error('❌ Matrix合成精度診断エラー:', error);
-                console.log('⚠️ 診断5をスキップして続行します');
-            }
-            
-            console.log('');
-        }
-        
-        // 🚀 緊急499px座標誤差修正システム
-        function emergency499pxFix() {
-            log('🚀 緊急499px座標誤差修正開始', 'info');
-            
-            try {
-                // Canvas検索
-                let canvas = document.getElementById('purattokun-canvas') || 
-                           document.getElementById('spine-canvas') ||
-                           document.getElementById('spine-test-canvas') ||
-                           document.querySelector('canvas');
-                           
-                if (!canvas) {
-                    log('❌ Canvas要素が見つかりません', 'error');
-                    return;
-                }
-                
-                // 現在の誤差を診断
-                const errorReport = diagnoseCoordinateError(canvas);
-                
-                if (errorReport.totalError > 50) {
-                    // 大きな誤差（50px以上）の場合は椅子テスト方式で修正
-                    log(`🚨 大きな座標誤差検出: ${errorReport.totalError.toFixed(1)}px`, 'warning');
-                    applyChairTestCoordinateSystem(canvas, errorReport);
-                } else if (errorReport.totalError > 1) {
-                    // 中程度の誤差（1-50px）の場合は精密修正
-                    log(`⚠️ 中程度の座標誤差検出: ${errorReport.totalError.toFixed(1)}px`, 'warning');
-                    applyPrecisionCoordinateFix(canvas, errorReport);
-                } else {
-                    log('✅ 座標誤差は許容範囲内です', 'success');
-                    return;
-                }
-                
-                // 修正後の再診断
-                setTimeout(() => {
-                    const afterReport = diagnoseCoordinateError(canvas);
-                    const improvement = errorReport.totalError - afterReport.totalError;
-                    
-                    log(`🎯 修正完了 - 誤差改善: ${improvement.toFixed(1)}px（${errorReport.totalError.toFixed(1)}px → ${afterReport.totalError.toFixed(1)}px）`, 'success');
-                    
-                    if (afterReport.totalError < 1) {
-                        log('✅ 座標誤差が許容範囲内に収束しました', 'success');
-                    } else {
-                        log('⚠️ さらなる調整が必要な可能性があります', 'warning');
-                    }
-                }, 100);
-                
-            } catch (error) {
-                log(`❌ 緊急修正エラー: ${error.message}`, 'error');
-                console.error('緊急修正エラー:', error);
-            }
-        }
-        
-        // 🚨 Canvas歪み緊急修正（正方形強制修正）
-        function emergencyCanvasSquareFix() {
-            log('🚨 Canvas歪み緊急修正開始', 'info');
-            
-            try {
-                // Canvas検索
-                let canvas = document.getElementById('purattokun-canvas') || 
-                           document.getElementById('spine-canvas') ||
-                           document.getElementById('spine-test-canvas') ||
-                           document.querySelector('canvas');
-                           
-                if (!canvas) {
-                    log('❌ Canvas要素が見つかりません', 'error');
-                    return;
-                }
-                
-                // 現在のCanvas状態を診断
-                const rect = canvas.getBoundingClientRect();
-                const computed = getComputedStyle(canvas);
-                const dpr = window.devicePixelRatio || 1;
-                
-                log(`📊 修正前Canvas状態:`, 'info');
-                log(`  - 表示サイズ: ${rect.width.toFixed(1)} × ${rect.height.toFixed(1)}px`, 'info');
-                log(`  - CSS設定: ${computed.width} × ${computed.height}`, 'info');
-                log(`  - 内部解像度: ${canvas.width} × ${canvas.height}px`, 'info');
-                log(`  - DPR: ${dpr}`, 'info');
-                
-                // 目標サイズ計算（最小値ベース）
-                const targetDisplaySize = Math.min(rect.width, rect.height);
-                const targetInternalSize = Math.round(targetDisplaySize * dpr);
-                
-                log(`🎯 修正目標:`, 'info');
-                log(`  - 表示サイズ: ${targetDisplaySize.toFixed(1)} × ${targetDisplaySize.toFixed(1)}px （正方形）`, 'info');
-                log(`  - 内部解像度: ${targetInternalSize} × ${targetInternalSize}px （正方形）`, 'info');
-                
-                // CSS強制修正（正方形）
-                canvas.style.width = `${targetDisplaySize.toFixed(1)}px`;
-                canvas.style.height = `${targetDisplaySize.toFixed(1)}px`;
-                
-                // Canvas内部解像度修正（正方形）
-                canvas.width = targetInternalSize;
-                canvas.height = targetInternalSize;
-                
-                log('🔧 CSS強制修正完了', 'success');
-                log('🔧 Canvas内部解像度修正完了', 'success');
-                
-                // 修正結果確認
-                setTimeout(() => {
-                    const afterRect = canvas.getBoundingClientRect();
-                    const afterComputed = getComputedStyle(canvas);
-                    
-                    log(`✅ 修正後Canvas状態:`, 'success');
-                    log(`  - 表示サイズ: ${afterRect.width.toFixed(1)} × ${afterRect.height.toFixed(1)}px`, 'success');
-                    log(`  - CSS設定: ${afterComputed.width} × ${afterComputed.height}`, 'success');
-                    log(`  - 内部解像度: ${canvas.width} × ${canvas.height}px`, 'success');
-                    
-                    const widthDiff = Math.abs(afterRect.width - afterRect.height);
-                    if (widthDiff < 0.1) {
-                        log('🎯 完全正方形修正成功！', 'success');
-                    } else {
-                        log(`⚠️ 完全正方形にはなっていません（差: ${widthDiff.toFixed(3)}px）`, 'warning');
-                    }
-                    
-                    // Spine再描画をトリガー（もし存在すれば）
-                    if (typeof drawSpine === 'function') {
-                        drawSpine();
-                        log('🎨 Spine再描画実行', 'info');
-                    }
-                }, 50);
-                
-            } catch (error) {
-                log(`❌ Canvas歪み修正エラー: ${error.message}`, 'error');
-                console.error('Canvas歪み修正エラー:', error);
-            }
-        }
-        
-        // 🔍 座標誤差診断（return付き）
-        function diagnoseCoordinateError(canvas) {
-            const style = canvas.style;
-            const computed = getComputedStyle(canvas);
-            const rect = canvas.getBoundingClientRect();
-            const parent = canvas.parentElement;
-            const parentRect = parent ? parent.getBoundingClientRect() : { left: 0, top: 0 };
-            
-            // CSS設定値
-            const cssLeft = parseFloat(style.left) || 0;
-            const cssTop = parseFloat(style.top) || 0;
-            const cssTransform = style.transform || 'none';
-            
-            // 実際の位置
-            const actualX = rect.left - parentRect.left;
-            const actualY = rect.top - parentRect.top;
-            
-            // 期待値計算
-            let expectedX = cssLeft;
-            let expectedY = cssTop;
-            
-            if (cssTransform !== 'none') {
-                const matrix = new DOMMatrix(cssTransform);
-                expectedX += matrix.e;
-                expectedY += matrix.f;
-            }
-            
-            // 誤差計算
-            const errorX = Math.abs(actualX - expectedX);
-            const errorY = Math.abs(actualY - expectedY);
-            const totalError = Math.sqrt(errorX * errorX + errorY * errorY);
-            
-            return {
-                cssLeft, cssTop, cssTransform,
-                actualX, actualY,
-                expectedX, expectedY,
-                errorX, errorY, totalError,
-                rect, parentRect
-            };
-        }
-        
-        // 🎯 椅子テスト方式座標システム適用
-        function applyChairTestCoordinateSystem(canvas, errorReport) {
-            log('🎯 椅子テスト方式座標システム適用開始', 'info');
-            
-            try {
-                // 椅子テストの成功パターン: シンプルな比例計算
-                const BASE = {
-                    svgW: 1200,  // 論理座標系の基準幅
-                    svgH: 800    // 論理座標系の基準高
-                };
-                
-                const parent = canvas.parentElement;
-                const parentRect = parent.getBoundingClientRect();
-                
-                // 表示領域サイズ
-                const displayWidth = parentRect.width;
-                const displayHeight = parentRect.height;
-                
-                // スケール計算
-                const scaleX = displayWidth / BASE.svgW;
-                const scaleY = displayHeight / BASE.svgH;
-                
-                // 現在の論理座標を推測（実座標から逆算）
-                const logicalX = errorReport.actualX / scaleX;
-                const logicalY = errorReport.actualY / scaleY;
-                
-                // 椅子テスト方式で正確な実座標を計算
-                const correctedRealX = logicalX * scaleX;
-                const correctedRealY = logicalY * scaleY;
-                
-                // CSSを更新
-                canvas.style.left = `${correctedRealX}px`;
-                canvas.style.top = `${correctedRealY}px`;
-                
-                // Transform基準点も修正
-                const canvasRect = canvas.getBoundingClientRect();
-                const centerX = canvasRect.width / 2;
-                const centerY = canvasRect.height / 2;
-                canvas.style.transform = `translate(-${centerX}px, -${centerY}px)`;
-                
-                log(`✅ 椅子テスト方式適用完了 - 座標: (${correctedRealX.toFixed(1)}, ${correctedRealY.toFixed(1)})`, 'success');
-                
-            } catch (error) {
-                log(`❌ 椅子テスト方式適用エラー: ${error.message}`, 'error');
-                console.error('椅子テスト方式エラー:', error);
-            }
-        }
-        
-        // 🔧 精密座標修正
-        function applyPrecisionCoordinateFix(canvas, errorReport) {
-            log('🔧 精密座標修正開始', 'info');
-            
-            try {
-                // 誤差をそのまま補正
-                const correctedX = errorReport.cssLeft + (errorReport.expectedX - errorReport.actualX);
-                const correctedY = errorReport.cssTop + (errorReport.expectedY - errorReport.actualY);
-                
-                // CSSを更新
-                canvas.style.left = `${correctedX}px`;
-                canvas.style.top = `${correctedY}px`;
-                
-                log(`✅ 精密座標修正完了 - 補正量: (${(errorReport.expectedX - errorReport.actualX).toFixed(1)}, ${(errorReport.expectedY - errorReport.actualY).toFixed(1)})px`, 'success');
-                
-            } catch (error) {
-                log(`❌ 精密座標修正エラー: ${error.message}`, 'error');
-                console.error('精密座標修正エラー:', error);
-            }
-        }
-        
-        // 🔧 シンプル版診断（エラー発生時の代替機能）
-        function runSimpleDiagnostic(canvas) {
-            console.log('🔧 シンプル診断モード実行中...');
-            console.log('======================================');
-            
-            try {
-                // 基本情報のみ取得
-                const rect = canvas.getBoundingClientRect();
-                const style = canvas.style;
-                const computed = getComputedStyle(canvas);
-                
-                console.log('🎯 基本座標情報:');
-                console.log(`Canvas位置: (${rect.left.toFixed(1)}, ${rect.top.toFixed(1)})`);
-                console.log(`Canvas サイズ: ${rect.width.toFixed(1)}×${rect.height.toFixed(1)}`);
-                console.log(`CSS left: ${style.left || 'auto'}`);
-                console.log(`CSS top: ${style.top || 'auto'}`);
-                console.log(`CSS transform: ${style.transform || 'none'}`);
-                console.log(`Computed transform: ${computed.transform || 'none'}`);
-                
-                console.log('======================================');
-                log('✅ シンプル診断完了', 'success');
-                
-            } catch (error) {
-                console.error('❌ シンプル診断でもエラー:', error);
-                log('❌ 診断システムで重大なエラーが発生しています', 'error');
-            }
-        }
-
-        // 1. Canvas三兄弟のログ（編集中状態で実施）
-        function logCanvasTriple(canvas) {
-            const rect = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            
-            console.log('=== Canvas三兄弟診断 ===');
-            console.log('表示サイズ（CSS）:', rect.width, '×', rect.height);
-            console.log('内部バッファ:', canvas.width, '×', canvas.height);
-            console.log('DPR:', dpr);
-            console.log('期待関係チェック:');
-            console.log('  X軸:', canvas.width, '≈', rect.width * dpr, '?', Math.abs(canvas.width - rect.width * dpr) < 1);
-            console.log('  Y軸:', canvas.height, '≈', rect.height * dpr, '?', Math.abs(canvas.height - rect.height * dpr) < 1);
-            
-            // ログシステムにも出力
-            log(`📐 表示サイズ: ${rect.width.toFixed(1)}×${rect.height.toFixed(1)}`, 'info');
-            log(`🖥️ 内部バッファ: ${canvas.width}×${canvas.height}`, 'info');
-            log(`📱 DPR: ${dpr}`, 'info');
-            log(`✅ X軸適正: ${Math.abs(canvas.width - rect.width * dpr) < 1 ? 'OK' : 'NG'}`, 
-                Math.abs(canvas.width - rect.width * dpr) < 1 ? 'success' : 'error');
-            log(`✅ Y軸適正: ${Math.abs(canvas.height - rect.height * dpr) < 1 ? 'OK' : 'NG'}`, 
-                Math.abs(canvas.height - rect.height * dpr) < 1 ? 'success' : 'error');
-        }
-
-        // 2. Matrixの"等方"チェック
-        function checkMatrixIsometric(element) {
-            const style = getComputedStyle(element);
-            const matrix = new DOMMatrix(style.transform);
-            
-            console.log('=== Matrix等方性診断 ===');
-            console.log('transform:', style.transform);
-            console.log('scaleX (a):', matrix.a);
-            console.log('scaleY (d):', matrix.d);
-            console.log('skewX (b):', matrix.b);
-            console.log('skewY (c):', matrix.c);
-            console.log('等方性チェック: |a| ≈ |d|?', Math.abs(Math.abs(matrix.a) - Math.abs(matrix.d)) < 0.01);
-            console.log('スキューなし: b≈0, c≈0?', Math.abs(matrix.b) < 0.01 && Math.abs(matrix.c) < 0.01);
-            
-            // ログシステムにも出力
-            log(`🔄 Transform: ${style.transform}`, 'info');
-            log(`📏 ScaleX: ${matrix.a.toFixed(3)}, ScaleY: ${matrix.d.toFixed(3)}`, 'info');
-            log(`🔀 SkewX: ${matrix.b.toFixed(3)}, SkewY: ${matrix.c.toFixed(3)}`, 'info');
-            const isIsometric = Math.abs(Math.abs(matrix.a) - Math.abs(matrix.d)) < 0.01;
-            const noSkew = Math.abs(matrix.b) < 0.01 && Math.abs(matrix.c) < 0.01;
-            log(`✅ 等方性: ${isIsometric ? 'OK' : 'NG'}`, isIsometric ? 'success' : 'warning');
-            log(`✅ スキューなし: ${noSkew ? 'OK' : 'NG'}`, noSkew ? 'success' : 'warning');
-        }
-
-        // 3. Spine側のスケール経路を1本化
-        function normalizeSpineScaling(skeleton) {
-            console.log('=== Spineスケール1本化 ===');
-            console.log('変更前 scaleX:', skeleton.scaleX, 'scaleY:', skeleton.scaleY);
-            
-            // 現在の値を記録
-            const originalScaleX = skeleton.scaleX;
-            const originalScaleY = skeleton.scaleY;
-            
-            // 一時的に等方スケールに統一
-            skeleton.scaleX = skeleton.scaleY = 1;
-            
-            console.log('変更後 scaleX:', skeleton.scaleX, 'scaleY:', skeleton.scaleY);
-            console.log('→ Canvas側でのみスケール制御に変更');
-            
-            // ログシステムにも出力
-            log(`🔄 元のSpineスケール: X=${originalScaleX.toFixed(3)}, Y=${originalScaleY.toFixed(3)}`, 'info');
-            log(`🎯 正規化後: X=1.000, Y=1.000 (Canvas側制御に統一)`, 'success');
-        }
-
-        // 4. 編集中はCanvasサイズをPX固定（DPR対応修正）
-        function freezeCanvasSize(canvas) {
-            const rect = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            
-            console.log('=== Canvas PX固定 (DPR対応) ===');
-            console.log('固定前 CSS:', canvas.style.width, canvas.style.height);
-            console.log('DPR:', dpr);
-            
-            const originalWidth = canvas.style.width;
-            const originalHeight = canvas.style.height;
-            
-            // 正方形サイズ統一（歪み防止）
-            const cssSquareSize = Math.max(rect.width, rect.height);
-            const bufferSquareSize = Math.round(cssSquareSize * dpr);
-            
-            // CSS表示サイズ設定（正方形統一）
-            canvas.style.width = cssSquareSize + 'px';
-            canvas.style.height = cssSquareSize + 'px';
-            canvas.style.aspectRatio = '1 / 1';
-            
-            // 内部バッファサイズ設定（DPR対応）
-            canvas.width = bufferSquareSize;
-            canvas.height = bufferSquareSize;
-            
-            console.log('固定後 CSS:', canvas.style.width, canvas.style.height);
-            console.log('固定後内部:', canvas.width, canvas.height);
-            console.log('DPR整合性確認:', bufferSquareSize, '=', cssSquareSize, 'x', dpr.toFixed(3));
-            
-            // ログシステムにも出力
-            log(`🔒 元のCSS: width=${originalWidth || 'auto'}, height=${originalHeight || 'auto'}`, 'info');
-            log(`🔒 CSS固定後: ${canvas.style.width} × ${canvas.style.height} (正方形統一)`, 'success');
-            log(`🖥️ 内部バッファ: ${canvas.width} × ${canvas.height} (DPR: ${dpr.toFixed(3)})`, 'success');
-            log(`✅ DPR整合性: ${bufferSquareSize} ≈ ${cssSquareSize} × ${dpr.toFixed(3)} = ${(cssSquareSize * dpr).toFixed(1)}`, 
-                Math.abs(bufferSquareSize - cssSquareSize * dpr) < 1 ? 'success' : 'warning');
-        }
-
-        // 5. レイヤー分離またはCSS変数合成の確認
-        function checkTransformLayering(element) {
-            const style = getComputedStyle(element);
-            
-            console.log('=== Transform レイヤー確認 ===');
-            console.log('現在のtransform:', style.transform);
-            console.log('--base-transform:', style.getPropertyValue('--base-transform'));
-            console.log('--autopin-transform:', style.getPropertyValue('--autopin-transform'));
-            console.log('translate(-50%, -50%)保持確認');
-            
-            // ログシステムにも出力
-            log(`🔄 合成Transform: ${style.transform}`, 'info');
-            const baseTransform = style.getPropertyValue('--base-transform');
-            const autopinTransform = style.getPropertyValue('--autopin-transform');
-            log(`🎯 Base Transform: ${baseTransform || 'なし'}`, baseTransform ? 'info' : 'warning');
-            log(`📍 AutoPin Transform: ${autopinTransform || 'なし'}`, autopinTransform ? 'info' : 'warning');
-            
-            // 中心化transform検査
-            const hasCenterTransform = style.transform.includes('translate(-50%, -50%)') || 
-                                     style.transform.includes('translate3d(-50%, -50%, 0)');
-            log(`✅ 中心化保持: ${hasCenterTransform ? 'OK' : 'NG'}`, hasCenterTransform ? 'success' : 'error');
-        }
-
         // 📍 ピン表示切り替え機能
         let pinsVisible = false;
         let currentPinMarkers = [];
@@ -4249,13 +3070,13 @@
                                     pinY = elementRect.top + contentRect.y + (contentRect.height * anchor.y);
                                 }
                                 
-                                // console.log(`🔍 ${name} ${anchor.id} ピン計算:`, { // ピン計算ログ無効化
-                                //     elementRect: `${elementRect.left.toFixed(1)}, ${elementRect.top.toFixed(1)}, ${elementRect.width.toFixed(1)}×${elementRect.height.toFixed(1)}`,
-                                //     contentRect: `${contentRect.x}, ${contentRect.y}, ${contentRect.width.toFixed(1)}×${contentRect.height.toFixed(1)}`,
-                                //     anchorOffset: `${anchor.x}×${anchor.y}`,
-                                //     calculatedPin: `(${pinX.toFixed(1)}, ${pinY.toFixed(1)})`,
-                                //     windowSize: `${window.innerWidth}×${window.innerHeight}`
-                                // });
+                                console.log(`🔍 ${name} ${anchor.id} ピン計算:`, {
+                                    elementRect: `${elementRect.left.toFixed(1)}, ${elementRect.top.toFixed(1)}, ${elementRect.width.toFixed(1)}×${elementRect.height.toFixed(1)}`,
+                                    contentRect: `${contentRect.x}, ${contentRect.y}, ${contentRect.width.toFixed(1)}×${contentRect.height.toFixed(1)}`,
+                                    anchorOffset: `${anchor.x}×${anchor.y}`,
+                                    calculatedPin: `(${pinX.toFixed(1)}, ${pinY.toFixed(1)})`,
+                                    windowSize: `${window.innerWidth}×${window.innerHeight}`
+                                });
                                 
                                 const pin = document.createElement('div');
                                 pin.className = `autopin-marker anchor-${anchor.id}`;
@@ -4265,7 +3086,7 @@
                                 
                                 // ウィンドウ外に出る場合の警告
                                 if (pinX < 0 || pinY < 0 || pinX > window.innerWidth || pinY > window.innerHeight) {
-                                    // console.warn(`⚠️ ${name} ${anchor.id} ピンがウィンドウ外: (${pinX.toFixed(1)}, ${pinY.toFixed(1)})`); // ピン警告ログ無効化
+                                    console.warn(`⚠️ ${name} ${anchor.id} ピンがウィンドウ外: (${pinX.toFixed(1)}, ${pinY.toFixed(1)})`);
                                     pin.style.border = '3px solid orange'; // 警告色
                                 }
                                 
@@ -4483,15 +3304,9 @@
             const canvas = document.getElementById('spine-test-canvas');
             const characterInfo = document.getElementById('spine-character-info');
             
-            // キャンバス設定（DPR対応）
-            const cssMockSize = 300;
-            const dpr = window.devicePixelRatio || 1;
-            const bufferMockSize = Math.round(cssMockSize * dpr);
-            
-            canvas.width = bufferMockSize;
-            canvas.height = bufferMockSize;
-            canvas.style.width = `${cssMockSize}px`;
-            canvas.style.height = `${cssMockSize}px`;
+            // キャンバス設定
+            canvas.width = 300;
+            canvas.height = 300;
             canvas.style.border = '2px solid #ff6b35';
             canvas.style.borderRadius = '8px';
             canvas.style.background = 'radial-gradient(circle, #fff3e0 0%, #ffcc80 100%)';
@@ -4817,190 +3632,6 @@
             
             log("🎉 Canvas Resize設定保存・復元テスト完了", "success");
         };
-
-        // 🪑 椅子テスト成功パターン統合関数群
-
-        /**
-         * 🪑 椅子テストの成功パターンを適用
-         * - 固定ピクセルサイズ
-         * - aspect-ratio強制
-         * - 中央基準配置
-         */
-        let chairTestResults = {
-            beforeState: null,
-            afterState: null
-        };
-
-        function applyChairTestSuccessPattern() {
-            log("🪑 椅子テスト成功パターン適用開始", "info");
-            
-            // 1. 対象Canvas要素を取得
-            const canvas = document.querySelector('#spine-canvas');
-            if (!canvas) {
-                log("❌ Canvas要素が見つかりません", "error");
-                return;
-            }
-
-            // 2. 椅子テスト成功パターンのCSS設定適用
-            log("📐 椅子テスト成功設定: 固定サイズ + aspect-ratio強制", "info");
-            
-            canvas.style.width = '120px';           // 固定サイズ（歪み防止）
-            canvas.style.height = '120px';          // 固定サイズ（歪み防止）
-            canvas.style.aspectRatio = '1 / 1';     // 1:1の正方形を強制維持
-            canvas.style.position = 'absolute';
-            canvas.style.left = '50%';
-            canvas.style.top = '55%';
-            canvas.style.transform = 'translate(-50%, -50%)';
-            
-            // 3. Canvas内部解像度も正方形に統一（椅子テスト方式）
-            const dpr = window.devicePixelRatio || 1;
-            const internalRes = Math.round(120 * dpr);
-            canvas.width = internalRes;
-            canvas.height = internalRes;
-            
-            log("✅ 椅子テスト成功パターン適用完了", "success");
-            log(`📊 設定詳細: 120x120px, aspect-ratio: 1/1, 内部解像度: ${internalRes}x${internalRes}`, "info");
-            
-            // 4. SpineRenderer再初期化（必要に応じて）
-            if (spineRenderer) {
-                log("🔄 SpineRenderer再初期化実行中...", "info");
-                setTimeout(() => {
-                    spineRenderer.setTransform(0, -30, 0.8, 0.8);
-                    log("✅ SpineRenderer位置・スケール再設定完了", "success");
-                }, 100);
-            }
-        }
-
-        function testChairPatternBefore() {
-            log("📊 Before: 現在の精度測定開始", "info");
-            
-            const canvas = document.querySelector('#spine-canvas');
-            if (!canvas) {
-                log("❌ Canvas要素が見つかりません", "error");
-                return;
-            }
-
-            const rect = canvas.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(canvas);
-            
-            chairTestResults.beforeState = {
-                timestamp: new Date().toISOString(),
-                displaySize: {
-                    width: rect.width,
-                    height: rect.height
-                },
-                aspectRatio: (rect.width / rect.height).toFixed(4),
-                cssSettings: {
-                    width: computedStyle.width,
-                    height: computedStyle.height,
-                    aspectRatio: computedStyle.aspectRatio,
-                    transform: computedStyle.transform
-                },
-                internalResolution: {
-                    width: canvas.width,
-                    height: canvas.height
-                },
-                isSquare: Math.abs(rect.width - rect.height) < 1,
-                aspectRatioAccuracy: Math.abs(rect.width / rect.height - 1.0)
-            };
-            
-            log("📊 測定完了 - 現在の状態:", "info");
-            log(`  表示サイズ: ${rect.width.toFixed(1)} x ${rect.height.toFixed(1)}px`, "info");
-            log(`  縦横比: ${chairTestResults.beforeState.aspectRatio}`, "info");
-            log(`  正方形精度: ${chairTestResults.beforeState.isSquare ? "✅" : "❌"} (誤差: ${chairTestResults.beforeState.aspectRatioAccuracy.toFixed(4)})`, chairTestResults.beforeState.isSquare ? "success" : "warning");
-            log(`  CSS aspect-ratio: ${computedStyle.aspectRatio}`, "info");
-        }
-
-        function testChairPatternAfter() {
-            log("📈 After: 改善効果確認開始", "info");
-            
-            if (!chairTestResults.beforeState) {
-                log("⚠️ Before測定が未実行です。先にBeforeボタンを押してください", "warning");
-                return;
-            }
-
-            const canvas = document.querySelector('#spine-canvas');
-            if (!canvas) {
-                log("❌ Canvas要素が見つかりません", "error");
-                return;
-            }
-
-            const rect = canvas.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(canvas);
-            
-            chairTestResults.afterState = {
-                timestamp: new Date().toISOString(),
-                displaySize: {
-                    width: rect.width,
-                    height: rect.height
-                },
-                aspectRatio: (rect.width / rect.height).toFixed(4),
-                cssSettings: {
-                    width: computedStyle.width,
-                    height: computedStyle.height,
-                    aspectRatio: computedStyle.aspectRatio,
-                    transform: computedStyle.transform
-                },
-                internalResolution: {
-                    width: canvas.width,
-                    height: canvas.height
-                },
-                isSquare: Math.abs(rect.width - rect.height) < 1,
-                aspectRatioAccuracy: Math.abs(rect.width / rect.height - 1.0)
-            };
-            
-            log("📈 測定完了 - 改善後の状態:", "info");
-            log(`  表示サイズ: ${rect.width.toFixed(1)} x ${rect.height.toFixed(1)}px`, "info");
-            log(`  縦横比: ${chairTestResults.afterState.aspectRatio}`, "info");
-            log(`  正方形精度: ${chairTestResults.afterState.isSquare ? "✅" : "❌"} (誤差: ${chairTestResults.afterState.aspectRatioAccuracy.toFixed(4)})`, chairTestResults.afterState.isSquare ? "success" : "warning");
-            log(`  CSS aspect-ratio: ${computedStyle.aspectRatio}`, "info");
-        }
-
-        function showChairPatternComparison() {
-            log("🔍 Before/After比較分析開始", "info");
-            
-            if (!chairTestResults.beforeState || !chairTestResults.afterState) {
-                log("⚠️ Before/After測定が完了していません", "warning");
-                return;
-            }
-
-            const before = chairTestResults.beforeState;
-            const after = chairTestResults.afterState;
-            
-            log("🔍 ==================== 詳細比較分析 ====================", "info");
-            
-            // サイズ精度の改善
-            const sizeImprovement = before.aspectRatioAccuracy - after.aspectRatioAccuracy;
-            log(`📐 縦横比精度改善: ${sizeImprovement > 0 ? "✅" : "❌"} (${sizeImprovement.toFixed(6)} 改善)`, sizeImprovement > 0 ? "success" : "warning");
-            
-            // 正方形維持の改善
-            const squareStatusImproved = !before.isSquare && after.isSquare;
-            log(`⭐ 正方形維持: Before=${before.isSquare ? "✅" : "❌"} → After=${after.isSquare ? "✅" : "❌"} ${squareStatusImproved ? "(改善!)" : ""}`, squareStatusImproved ? "success" : "info");
-            
-            // CSS設定変化
-            log(`🎨 CSS Width: "${before.cssSettings.width}" → "${after.cssSettings.width}"`, "info");
-            log(`🎨 CSS Height: "${before.cssSettings.height}" → "${after.cssSettings.height}"`, "info");
-            log(`🎨 CSS aspect-ratio: "${before.cssSettings.aspectRatio}" → "${after.cssSettings.aspectRatio}"`, "info");
-            
-            // 内部解像度統一確認
-            const beforeInternal = before.internalResolution;
-            const afterInternal = after.internalResolution;
-            const internalSquareBefore = beforeInternal.width === beforeInternal.height;
-            const internalSquareAfter = afterInternal.width === afterInternal.height;
-            
-            log(`🖼️ 内部解像度: ${beforeInternal.width}x${beforeInternal.height} → ${afterInternal.width}x${afterInternal.height}`, "info");
-            log(`🔲 内部正方形: Before=${internalSquareBefore ? "✅" : "❌"} → After=${internalSquareAfter ? "✅" : "❌"}`, internalSquareAfter ? "success" : "warning");
-            
-            // 総合判定
-            const overallImprovement = sizeImprovement > 0 || squareStatusImproved || (!internalSquareBefore && internalSquareAfter);
-            log(`🎯 総合判定: ${overallImprovement ? "✅ 改善効果あり" : "⚠️ 要検討"}`, overallImprovement ? "success" : "warning");
-            
-            if (overallImprovement) {
-                log("🎉 椅子テスト成功パターンの統合が効果的でした！", "success");
-            } else {
-                log("🔧 さらなる調整が必要かもしれません", "info");
-            }
-        }
     </script>
 </body>
 </html>
