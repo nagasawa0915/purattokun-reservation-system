@@ -50,8 +50,10 @@ export class AutoPinSelector {
      * @returns {Promise<PinContract>} 選択完了時にContract返却
      */
     async selectElement(options = {}) {
+        // 既に選択中の場合は前の選択をキャンセルして新しい選択を開始
         if (this.isSelecting) {
-            throw new Error('Selection already in progress');
+            console.log('🔄 既存の選択をキャンセルして新しい選択を開始');
+            this._forceCleanup();
         }
         
         this.isSelecting = true;
@@ -133,9 +135,15 @@ export class AutoPinSelector {
     _handleElementClick(e, options, resolve, reject) {
         const element = e.target;
         
-        // ダイアログが表示中の場合はハンドリングしない（ダイアログのボタンクリックを妨げない）
+        // ダイアログが表示中でもダイアログ外の要素クリックなら新しい選択を開始
         if (this.selectionDialog) {
-            return;
+            // ダイアログまたはその子要素をクリックした場合は何もしない
+            if (this.selectionDialog.contains(element)) {
+                return;
+            }
+            // ダイアログ外をクリックした場合は前のダイアログを閉じて新しい選択を開始
+            console.log('🔄 ダイアログを閉じて新しい要素を選択');
+            this._removeDialog();
         }
         
         e.preventDefault();
@@ -1005,7 +1013,33 @@ export class AutoPinSelector {
     _cancelSelection(reject) {
         this.cleanupSelection();
         console.log('❌ Element selection cancelled');
-        reject(new Error('Selection cancelled'));
+        if (reject) {
+            reject(new Error('Selection cancelled'));
+        }
+    }
+    
+    /**
+     * 強制クリーンアップ処理（新しい選択開始時）
+     * @private
+     */
+    _forceCleanup() {
+        // 既存のダイアログを削除
+        this._removeDialog();
+        
+        // ハイライトを非表示
+        this._hideHighlight();
+        
+        // イベントリスナーをクリーンアップ
+        if (this.cleanupSelection) {
+            this.cleanupSelection();
+        }
+        
+        // 状態をリセット
+        this.isSelecting = false;
+        this.selectedElement = null;
+        this.clickPosition = null;
+        
+        console.log('🧹 強制クリーンアップ完了');
     }
     
     /**
