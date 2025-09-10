@@ -36,7 +36,8 @@ export class AutoPinSelector {
         this.config = {
             highlightColor: '#007acc',
             zIndex: 10000,
-            minElementSize: 10  // 見出し、段落、テキスト要素も選択可能に（極小装飾要素のみ除外）
+            minElementSize: 10,  // 見出し、段落、テキスト要素も選択可能に（極小装飾要素のみ除外）
+            pinAnimationDuration: 1500  // ピンアニメーション表示時間（ms）
         };
         
         this._initializeUI();
@@ -154,6 +155,14 @@ export class AutoPinSelector {
         this.selectedElement = element;
         this._hideHighlight();
         
+        // クリック位置を保存（テキスト要素とリスト要素で使用）
+        this.clickPosition = {
+            offsetX: e.offsetX,
+            offsetY: e.offsetY,
+            clientX: e.clientX,
+            clientY: e.clientY
+        };
+        
         // 要素別最適化UIを表示
         this._showElementOptimizedUI(element, options, resolve, reject);
     }
@@ -234,6 +243,135 @@ export class AutoPinSelector {
     _hideHighlight() {
         if (this.highlightOverlay) {
             this.highlightOverlay.style.display = 'none';
+        }
+    }
+    
+    /**
+     * ピンアニメーション表示（テキスト要素用）
+     * @param {number} x - 画面上のX座標
+     * @param {number} y - 画面上のY座標
+     * @private
+     */
+    _showPinAnimation(x, y) {
+        const pinIcon = document.createElement('div');
+        pinIcon.innerHTML = '📌';
+        pinIcon.style.cssText = `
+            position: fixed;
+            left: ${x - 12}px;
+            top: ${y - 24}px;
+            font-size: 24px;
+            z-index: ${this.config.zIndex + 10};
+            pointer-events: none;
+            user-select: none;
+            transform-origin: center bottom;
+            animation: pinAnimation ${this.config.pinAnimationDuration}ms ease-out;
+        `;
+        
+        // CSSアニメーションを追加
+        if (!document.getElementById('pin-animation-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'pin-animation-styles';
+            styles.textContent = `
+                @keyframes pinAnimation {
+                    0% { 
+                        transform: scale(0) rotate(-45deg);
+                        opacity: 0;
+                    }
+                    20% { 
+                        transform: scale(1.2) rotate(0deg);
+                        opacity: 1;
+                    }
+                    60% { 
+                        transform: scale(1) rotate(0deg);
+                        opacity: 1;
+                    }
+                    100% { 
+                        transform: scale(1) rotate(0deg);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+        
+        document.body.appendChild(pinIcon);
+        
+        // アニメーション終了後に削除
+        setTimeout(() => {
+            if (pinIcon.parentNode) {
+                pinIcon.parentNode.removeChild(pinIcon);
+            }
+        }, this.config.pinAnimationDuration);
+        
+        console.log('📌 Pin animation shown at:', { x, y });
+    }
+    
+    /**
+     * リスト要素のクリック位置検出（マーカー/テキスト判定）
+     * @param {HTMLElement} element - リスト要素
+     * @returns {string} 'marker' | 'text-start' | 'text-end'
+     * @private
+     */
+    _detectListClickPosition(element) {
+        const rect = element.getBoundingClientRect();
+        const clickX = this.clickPosition.offsetX;
+        const elementWidth = rect.width;
+        
+        // 左端20%以内はマーカー、それ以外はテキスト
+        if (clickX < elementWidth * 0.2) {
+            return 'marker';
+        } else if (clickX > elementWidth * 0.8) {
+            return 'text-end';
+        } else {
+            return 'text-start';
+        }
+    }
+    
+    /**
+     * テキスト要素用イベントハンドラー設定
+     * @param {HTMLElement} dialog - ダイアログ要素
+     * @param {HTMLElement} element - 選択された要素
+     * @param {Object} options - 選択設定
+     * @param {Function} resolve - Promise resolve
+     * @param {Function} reject - Promise reject
+     * @private
+     */
+    _setupTextElementHandlers(dialog, element, options, resolve, reject) {
+        const confirmBtn = dialog.querySelector('#confirm-btn');
+        const cancelBtn = dialog.querySelector('#cancel-btn');
+        
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // テキスト要素はクリック位置を使用
+                const settings = {
+                    anchorKind: 'click-position',
+                    clickPosition: this.clickPosition,
+                    scaleMode: dialog.querySelector('input[name="scaleMode"]:checked')?.value || 'typography'
+                };
+                
+                console.log('✅ テキスト要素設定確定:', { element: element.tagName, settings });
+                
+                // PinContract生成
+                const contract = this._createElementOptimizedContract(element, options, settings);
+                
+                this._removeDialog();
+                this._completeSelection(contract, resolve);
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('❌ テキスト要素設定キャンセル');
+                
+                this._removeDialog();
+                this._cancelSelection(reject);
+            });
         }
     }
     
@@ -360,7 +498,7 @@ export class AutoPinSelector {
     }
     
     /**
-     * テキスト要素専用ダイアログ作成
+     * テキスト要素専用ダイアログ作成（クリック位置使用）
      * @param {HTMLElement} element - 対象要素
      * @param {Object} options - 選択設定
      * @param {Function} resolve - Promise resolve
@@ -368,6 +506,9 @@ export class AutoPinSelector {
      * @private
      */
     _createTextElementDialog(element, options, resolve, reject) {
+        // クリック位置にピンアニメーションを表示
+        this._showPinAnimation(this.clickPosition.clientX, this.clickPosition.clientY);
+        
         const dialog = document.createElement('div');
         dialog.style.cssText = `
             position: fixed;
@@ -384,23 +525,30 @@ export class AutoPinSelector {
             max-width: 400px;
         `;
         
+        const textContent = element.textContent || '';
+        const truncatedText = textContent.length > 30 ? textContent.substring(0, 30) + '...' : textContent;
+        
         dialog.innerHTML = `
-            <h3 style="margin-top:0;">📝 テキスト配置設定</h3>
+            <h3 style="margin-top:0;">📝 テキスト要素選択完了</h3>
             <p><strong>選択要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}</p>
-            <p style="font-size: 0.9em; color: #666;">「${element.textContent.substring(0, 30)}...」</p>
+            <p style="font-size: 0.9em; color: #666;">「${truncatedText}」</p>
             
-            <div style="margin: 15px 0;">
-                <h4>配置位置:</h4>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-start"> 📍 テキスト先頭（最初の文字の前）</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-end" checked> 📍 テキスト末尾（最後の文字の後）</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-center"> 📍 テキスト中央</label>
+            <div style="background: #e8f4fd; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                <div style="font-size: 1.1em; margin-bottom: 8px;">📌 クリック位置で自動配置</div>
+                <div style="font-size: 0.9em; color: #666;">
+                    配置位置: クリック位置 (${this.clickPosition.offsetX}, ${this.clickPosition.offsetY})
+                </div>
             </div>
             
-            <div style="margin: 15px 0;">
-                <h4>サイズ連動:</h4>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography" checked> 🔤 フォントサイズ連動</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
-            </div>
+            <details style="margin: 15px 0;">
+                <summary style="cursor: pointer; font-weight: bold; margin-bottom: 10px;">⚙️ 詳細設定</summary>
+                <div style="margin: 10px 0;">
+                    <h4>サイズ連動:</h4>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography" checked> 🔤 フォントサイズ連動</label>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="element-linked"> 🔗 要素サイズ連動</label>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
+                </div>
+            </details>
             
             <div style="text-align: right; margin-top: 20px;">
                 <button id="cancel-btn" style="margin-right: 10px; padding: 8px 16px;">キャンセル</button>
@@ -412,11 +560,11 @@ export class AutoPinSelector {
         this.selectionDialog = dialog;
         
         // イベントハンドラー設定
-        this._setupDialogEventHandlers(dialog, element, options, resolve, reject);
+        this._setupTextElementHandlers(dialog, element, options, resolve, reject);
     }
     
     /**
-     * 画像要素専用ダイアログ作成
+     * 画像要素専用ダイアログ作成（シンプル選択）
      * @param {HTMLElement} element - 対象要素
      * @param {Object} options - 選択設定
      * @param {Function} resolve - Promise resolve
@@ -437,25 +585,31 @@ export class AutoPinSelector {
             z-index: ${this.config.zIndex + 1};
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             font-family: Arial, sans-serif;
-            max-width: 450px;
+            max-width: 400px;
         `;
         
+        const imageSrc = element.src ? element.src.substring(element.src.lastIndexOf('/') + 1) : '(画像なし)';
+        
         dialog.innerHTML = `
-            <h3 style="margin-top:0;">🖼️ 画像配置設定</h3>
+            <h3 style="margin-top:0;">🖼️ 画像要素選択完了</h3>
             <p><strong>選択要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}</p>
+            <p style="font-size: 0.9em; color: #666;">画像: ${imageSrc}</p>
             
-            <div style="margin: 15px 0;">
-                <h4>サイズ連動:</h4>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="element-linked" checked> 🔗 画像サイズ連動</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
-            </div>
-            
-            <div style="margin: 15px 0;">
-                <h4>配置位置（9アンカー）:</h4>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px;">
-                    ${this._create9AnchorGrid()}
+            <div style="background: #e8f4fd; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                <div style="font-size: 1.1em; margin-bottom: 8px;">🖼️ 画像中央で自動配置</div>
+                <div style="font-size: 0.9em; color: #666;">
+                    画像要素の中心を基準に配置されます
                 </div>
             </div>
+            
+            <details style="margin: 15px 0;">
+                <summary style="cursor: pointer; font-weight: bold; margin-bottom: 10px;">⚙️ 詳細設定</summary>
+                <div style="margin: 10px 0;">
+                    <h4>サイズ連動:</h4>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="element-linked" checked> 🔗 画像サイズ連動</label>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
+                </div>
+            </details>
             
             <div style="text-align: right; margin-top: 20px;">
                 <button id="cancel-btn" style="margin-right: 10px; padding: 8px 16px;">キャンセル</button>
@@ -471,7 +625,7 @@ export class AutoPinSelector {
     }
     
     /**
-     * リスト要素専用ダイアログ作成
+     * リスト要素専用ダイアログ作成（クリック位置検出）
      * @param {HTMLElement} element - 対象要素
      * @param {Object} options - 選択設定
      * @param {Function} resolve - Promise resolve
@@ -479,6 +633,9 @@ export class AutoPinSelector {
      * @private
      */
     _createListElementDialog(element, options, resolve, reject) {
+        // クリック位置からマーカー/テキスト判定
+        const detectedPosition = this._detectListClickPosition(element);
+        
         const dialog = document.createElement('div');
         dialog.style.cssText = `
             position: fixed;
@@ -495,23 +652,35 @@ export class AutoPinSelector {
             max-width: 400px;
         `;
         
+        const textContent = element.textContent || '';
+        const truncatedText = textContent.length > 30 ? textContent.substring(0, 30) + '...' : textContent;
+        
         dialog.innerHTML = `
-            <h3 style="margin-top:0;">📋 リスト配置設定</h3>
+            <h3 style="margin-top:0;">📋 リスト要素選択完了</h3>
             <p><strong>選択要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}</p>
-            <p style="font-size: 0.9em; color: #666;">「${element.textContent.substring(0, 30)}...」</p>
+            <p style="font-size: 0.9em; color: #666;">「${truncatedText}」</p>
             
-            <div style="margin: 15px 0;">
-                <h4>配置位置:</h4>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="marker" checked> 🎯 マーカー位置（• 1.）</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-start"> 📍 テキスト先頭</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-end"> 📍 テキスト末尾</label>
+            <div style="background: #e8f4fd; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                <div style="font-size: 1.1em; margin-bottom: 8px;">🎯 ${detectedPosition === 'marker' ? 'マーカー位置' : 'テキスト位置'}で自動配置</div>
+                <div style="font-size: 0.9em; color: #666;">
+                    クリック位置: (${this.clickPosition.offsetX}, ${this.clickPosition.offsetY}) → ${detectedPosition === 'marker' ? 'マーカー' : 'テキスト'}エリア
+                </div>
             </div>
             
-            <div style="margin: 15px 0;">
-                <h4>サイズ連動:</h4>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography" checked> 🔤 フォントサイズ連動</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
-            </div>
+            <details style="margin: 15px 0;">
+                <summary style="cursor: pointer; font-weight: bold; margin-bottom: 10px;">⚙️ 詳細設定</summary>
+                <div style="margin: 10px 0;">
+                    <h4>配置位置を変更:</h4>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="marker" ${detectedPosition === 'marker' ? 'checked' : ''}> 🎯 マーカー位置（• 1.）</label>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-start" ${detectedPosition === 'text-start' ? 'checked' : ''}> 📍 テキスト先頭</label>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-end" ${detectedPosition === 'text-end' ? 'checked' : ''}> 📍 テキスト末尾</label>
+                </div>
+                <div style="margin: 10px 0;">
+                    <h4>サイズ連動:</h4>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography" checked> 🔤 フォントサイズ連動</label>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
+                </div>
+            </details>
             
             <div style="text-align: right; margin-top: 20px;">
                 <button id="cancel-btn" style="margin-right: 10px; padding: 8px 16px;">キャンセル</button>
@@ -527,7 +696,7 @@ export class AutoPinSelector {
     }
     
     /**
-     * 汎用要素ダイアログ作成
+     * 汎用要素ダイアログ作成（中央基準 + オプション）
      * @param {HTMLElement} element - 対象要素
      * @param {Object} options - 選択設定
      * @param {Function} resolve - Promise resolve
@@ -548,32 +717,39 @@ export class AutoPinSelector {
             z-index: ${this.config.zIndex + 1};
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             font-family: Arial, sans-serif;
-            max-width: 450px;
+            max-width: 400px;
         `;
         
+        const hasText = (element.textContent || '').trim().length > 0;
+        const hasImage = element.querySelector('img') !== null;
+        const contentType = hasImage && hasText ? '画像+テキスト' : hasText ? 'テキスト' : hasImage ? '画像' : 'その他';
+        
         dialog.innerHTML = `
-            <h3 style="margin-top:0;">⚙️ 汎用配置設定</h3>
+            <h3 style="margin-top:0;">⚙️ 汎用要素選択完了</h3>
             <p><strong>選択要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}</p>
+            <p style="font-size: 0.9em; color: #666;">内容: ${contentType}</p>
             
-            <div style="margin: 15px 0;">
-                <h4>配置方式:</h4>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="anchorKind" value="block" checked> 📦 要素全体（Block）</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="anchorKind" value="text-end"> 📝 テキスト末尾</label>
-            </div>
-            
-            <div style="margin: 15px 0;">
-                <h4>配置位置（9アンカー）:</h4>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px;">
-                    ${this._create9AnchorGrid()}
+            <div style="background: #e8f4fd; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                <div style="font-size: 1.1em; margin-bottom: 8px;">📦 要素中央で自動配置</div>
+                <div style="font-size: 0.9em; color: #666;">
+                    要素の中心を基準に配置されます
                 </div>
             </div>
             
-            <div style="margin: 15px 0;">
-                <h4>サイズ連動:</h4>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="element-linked" checked> 🔗 要素サイズ連動</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
-                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography"> 🔤 フォントサイズ連動</label>
-            </div>
+            <details style="margin: 15px 0;">
+                <summary style="cursor: pointer; font-weight: bold; margin-bottom: 10px;">⚙️ 詳細設定</summary>
+                <div style="margin: 10px 0;">
+                    <h4>配置方式:</h4>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="anchorKind" value="block" checked> 📦 要素全体（Block）</label>
+                    ${hasText ? '<label style="display: block; margin: 8px 0;"><input type="radio" name="anchorKind" value="text-end"> 📝 テキスト末尾</label>' : ''}
+                </div>
+                <div style="margin: 10px 0;">
+                    <h4>サイズ連動:</h4>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="element-linked" checked> 🔗 要素サイズ連動</label>
+                    <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
+                    ${hasText ? '<label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography"> 🔤 フォントサイズ連動</label>' : ''}
+                </div>
+            </details>
             
             <div style="text-align: right; margin-top: 20px;">
                 <button id="cancel-btn" style="margin-right: 10px; padding: 8px 16px;">キャンセル</button>
@@ -677,18 +853,28 @@ export class AutoPinSelector {
      * @private
      */
     _createElementOptimizedContract(element, options, settings) {
-        return {
+        const contract = {
             refElement: element,
             logicalSize: options.logicalSize,
             anchorKind: settings.anchorKind || 'block',
-            align: settings.align || 'CC',
+            align: settings.align || 'CC',  // デフォルト中央
             fit: options.fit,
             objectPosition: options.objectPosition || '50% 50%',
             scaleMode: settings.scaleMode || 'element-linked',
-            baseFontPx: options.baseFontPx || 16,
-            fixedSize: settings.scaleMode === 'fixed-size' ? 
-                { width: options.width || 100, height: options.height || 100 } : undefined
+            baseFontPx: options.baseFontPx || 16
         };
+        
+        // クリック位置情報を追加（テキスト・リスト要素）
+        if (settings.clickPosition) {
+            contract.clickPosition = settings.clickPosition;
+        }
+        
+        // 固定サイズ設定
+        if (settings.scaleMode === 'fixed-size') {
+            contract.fixedSize = { width: options.width || 100, height: options.height || 100 };
+        }
+        
+        return contract;
     }
     
     /**

@@ -100,14 +100,18 @@
                 実際のAutoPinSelector.jsのダイアログを確認できます
             </div>
             <div class="operation-guide">
-                <strong>操作方法:</strong> 下の要素をクリックして、実際のダイアログメニューを確認してください
+                <strong>新しいUI操作方法:</strong><br>
+                📝 テキスト要素: クリック位置にピンアニメーション表示<br>
+                🖼️ 画像要素: シンプル選択（中央配置）<br>
+                📋 リスト要素: クリック位置でマーカー/テキスト自動検出<br>
+                ⚙️ 汎用要素: 中央基準 + 詳細設定オプション
             </div>
         </div>
 
         <!-- テキスト要素 -->
         <div class="test-element" id="text-test">
-            <h3>📝 テキスト要素テスト</h3>
-            <p>この段落をクリックすると、本番のテキスト要素ダイアログが表示されます。AutoPinSelectorの_createTextElementDialog()メソッドが呼ばれます。</p>
+            <h3>📝 テキスト要素テスト（クリック位置検出）</h3>
+            <p>この段落をクリックすると、クリック位置にピンアニメーションが表示され、位置情報が自動保存されます。従来の9アンカー選択は不要になりました。</p>
         </div>
 
         <!-- 画像要素 -->
@@ -117,15 +121,15 @@
 
         <!-- リスト要素 -->
         <ul class="test-element test-list" id="list-test">
-            <li>📋 この項目をクリック - リスト要素ダイアログ表示</li>
-            <li>📌 本番AutoPinSelectorの_createListElementDialog()が動作</li>
-            <li>🎯 markerアンカーなどの専門設定を確認</li>
+            <li>📋 左端クリック → マーカー位置自動検出</li>
+            <li>📌 中央クリック → テキスト先頭自動検出</li>
+            <li>🎯 右端クリック → テキスト末尾自動検出</li>
         </ul>
 
         <!-- 汎用要素 -->
         <div class="test-element" id="generic-test" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-align: center;">
-            <h3>🔧 汎用要素テスト</h3>
-            <p>DIV要素 - 画像とテキストが混在</p>
+            <h3>🔧 汎用要素テスト（中央基準）</h3>
+            <p>DIV要素 - 画像とテキストが混在（中央自動配置 + 詳細設定で調整可能）</p>
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgZmlsbD0iIzI3YWU2MCIgcng9IjUiLz4KPC9zdmc+" 
                  alt="小アイコン" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 10px;">
         </div>
@@ -167,9 +171,14 @@
                     console.log('🎯 要素クリック:', element.tagName, element.id);
                     
                     try {
-                        // 本番AutoPinSelectorの要素選択呼び出し
-                        const result = await autoPin.selectElement(element);
-                        console.log('✅ AutoPin処理完了:', result);
+                        // 本番AutoPinSelectorの要素選択呼び出し（新しいUI）
+                        const result = await autoPin.selectElement({
+                            logicalSize: { w: 600, h: 400 },
+                            anchorKind: 'block',
+                            fit: 'contain',
+                            scaleMode: 'element-linked'
+                        });
+                        console.log('✅ AutoPin処理完了（新UI）:', result);
                         
                         // ステータス更新
                         document.getElementById('status-content').innerHTML = `
