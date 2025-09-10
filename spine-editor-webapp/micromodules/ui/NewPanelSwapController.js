@@ -257,24 +257,45 @@ export class NewPanelSwapController {
      * 🔍 隣接チェック
      */
     checkAdjacency(draggedPanelId, targetPanelId) {
-        // 現在のレイアウトから隣接関係を判定
-        // 簡易実装：基本4パネルレイアウトでの隣接関係
-        const adjacencyMap = {
-            'outliner': { right: 'preview', bottom: false, top: false, left: false },
-            'preview': { left: 'outliner', right: 'properties', bottom: false, top: false },
-            'properties': { left: 'preview', right: false, bottom: false, top: false },
-            'timeline': { top: false, right: false, bottom: false, left: false }
+        // 現在のCSS Gridレイアウトから隣接関係を動的に判定
+        return this.calculateCurrentAdjacency(draggedPanelId, targetPanelId);
+    }
+
+    /**
+     * 🧮 現在のレイアウトから隣接関係を計算
+     */
+    calculateCurrentAdjacency(draggedPanelId, targetPanelId) {
+        // 各パネルの現在の位置を取得
+        const draggedElement = this.panelManager.findPanel(draggedPanelId)?.element;
+        const targetElement = this.panelManager.findPanel(targetPanelId)?.element;
+        
+        if (!draggedElement || !targetElement) {
+            return { top: false, right: false, bottom: false, left: false };
+        }
+        
+        const draggedRect = draggedElement.getBoundingClientRect();
+        const targetRect = targetElement.getBoundingClientRect();
+        
+        // 隣接判定の許容誤差（1px）
+        const tolerance = 1;
+        
+        // 各方向での隣接チェック
+        const adjacency = {
+            top: this.isAdjacent(draggedRect.bottom, targetRect.top, tolerance),      // ドラッグパネルの下辺 = ターゲットの上辺
+            right: this.isAdjacent(draggedRect.left, targetRect.right, tolerance),   // ドラッグパネルの左辺 = ターゲットの右辺
+            bottom: this.isAdjacent(draggedRect.top, targetRect.bottom, tolerance),  // ドラッグパネルの上辺 = ターゲットの下辺
+            left: this.isAdjacent(draggedRect.right, targetRect.left, tolerance)     // ドラッグパネルの右辺 = ターゲットの左辺
         };
         
-        const draggedAdjacency = adjacencyMap[draggedPanelId];
-        if (!draggedAdjacency) return { top: false, right: false, bottom: false, left: false };
-        
-        return {
-            top: false, // タイムライン以外は上に隣接なし
-            right: draggedAdjacency.right === targetPanelId,
-            bottom: false, // 基本レイアウトでは下隣接はタイムラインのみ
-            left: draggedAdjacency.left === targetPanelId
-        };
+        console.log(`🔍 隣接チェック: ${draggedPanelId} → ${targetPanelId}`, adjacency);
+        return adjacency;
+    }
+
+    /**
+     * 📏 座標の隣接判定
+     */
+    isAdjacent(coord1, coord2, tolerance) {
+        return Math.abs(coord1 - coord2) <= tolerance;
     }
 
     /**
