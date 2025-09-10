@@ -116,13 +116,15 @@ export class ObserverAutoPinBridge {
             const spineWidth = parseFloat(spineElement.style.width) || 100;
             const spineHeight = parseFloat(spineElement.style.height) || 100;
             
-            const finalX = position.x - (spineWidth / 2);  // 中心基準調整
+            // スケール時の位置ずれ防止: 中心基準配置
+            const finalX = position.x - (spineWidth / 2);
             const finalY = position.y - (spineHeight / 2);
             
-            // CSS適用
+            // CSS適用（transform-origin確実設定）
             spineElement.style.left = finalX + 'px';
             spineElement.style.top = finalY + 'px';
             spineElement.style.transform = `scale(${finalScale})`;
+            spineElement.style.transformOrigin = 'center center'; // 明示的設定
             
             // 詳細デバッグ情報出力
             console.log('🎯 修正後座標デバッグ:', {
@@ -186,6 +188,7 @@ export class ObserverAutoPinBridge {
             z-index: 9999;
             pointer-events: none;
             transform-origin: center center;
+            box-sizing: border-box;
         `;
         
         // 基準要素のタイプに応じた色分け
