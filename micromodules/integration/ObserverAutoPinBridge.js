@@ -107,13 +107,20 @@ export class ObserverAutoPinBridge {
         }
         
         try {
-            // 要素の中心座標を基準とした配置（論理座標は使わずに実座標で計算）
+            // 要素の基準座標を align 設定に応じて計算
             const targetRect = targetElement.getBoundingClientRect();
-            const centerX = targetRect.left + (targetRect.width / 2);
-            const centerY = targetRect.top + (targetRect.height / 2);
+            const rawPosition = this.calculateAlignPosition(targetRect, contract.align || 'CC', targetElement);
             
-            // position: fixedなので、getBoundingClientRect()の値をそのまま使用
-            const position = { x: centerX, y: centerY };
+            // 画面外配置を防ぐ安全装置
+            const position = this.constrainToViewport(rawPosition, options);
+            
+            console.log('🎯 align配置計算:', {
+                align: contract.align,
+                targetRect: { left: targetRect.left, top: targetRect.top, width: targetRect.width, height: targetRect.height },
+                rawPosition: rawPosition,
+                constrainedPosition: position,
+                viewport: { width: window.innerWidth, height: window.innerHeight }
+            });
             
             // スケール計算（scaleMode考慮済み）
             const finalScale = this.calculateFinalScale(contract, payload);
@@ -135,13 +142,14 @@ export class ObserverAutoPinBridge {
             // 詳細デバッグ情報出力
             console.log('🎯 修正後座標デバッグ:', {
                 target: targetElement.tagName,
+                align: contract.align,
                 targetRect: { 
                     left: targetRect.left, 
                     top: targetRect.top, 
                     width: targetRect.width, 
                     height: targetRect.height 
                 },
-                centerCalculated: { x: centerX, y: centerY },
+                alignCalculated: position,
                 finalPosition: { x: finalX, y: finalY },
                 spineSize: { width: spineWidth, height: spineHeight },
                 scale: finalScale,
@@ -156,6 +164,183 @@ export class ObserverAutoPinBridge {
         } catch (error) {
             console.error('❌ Spine配置エラー:', error);
         }
+    }
+    
+    /**
+     * align設定に応じた配置座標計算（9アンカーポイント対応）
+     * @param {DOMRect} targetRect - 要素のBoundingClientRect
+     * @param {string} align - LT/TC/RT/LC/CC/RC/LB/BC/RB
+     * @param {HTMLElement} targetElement - 対象要素（テキスト幅測定用）
+     * @returns {Object} {x, y} 配置座標
+     */
+    calculateAlignPosition(targetRect, align, targetElement = null) {
+        const { left, top, width, height } = targetRect;
+        
+        // RC (Right Center) でテキスト要素の場合はRange APIで最終グリフ位置を使用
+        if (align === 'RC' && targetElement && this.isTextElement(targetElement)) {
+            const glyphPosition = this.getLastGlyphPosition(targetElement);
+            
+            if (glyphPosition) {
+                // Range APIで取得した最終グリフの右端位置
+                console.log('📍 Range API配置:', {
+                    element: targetElement.tagName,
+                    glyphPosition: glyphPosition,
+                    elementRect: { left, top, width, height }
+                });
+                
+                return {
+                    x: glyphPosition.x,  // 最終グリフの右端
+                    y: glyphPosition.y   // 最終グリフの垂直中央
+                };
+            } else {
+                console.warn('⚠️ Range API取得失敗 - フォールバック');
+                // フォールバック: 従来方式
+                return { x: left + width * 0.9, y: top + height * 0.5 };
+            }
+        }
+        
+        // 通常の要素配置（従来通り）
+        const alignMap = {
+            'LT': { x: left, y: top },                                    // Left Top
+            'TC': { x: left + width * 0.5, y: top },                     // Top Center  
+            'RT': { x: left + width, y: top },                           // Right Top
+            'LC': { x: left, y: top + height * 0.5 },                   // Left Center
+            'CC': { x: left + width * 0.5, y: top + height * 0.5 },     // Center Center
+            'RC': { x: left + width, y: top + height * 0.5 },           // Right Center
+            'LB': { x: left, y: top + height },                         // Left Bottom
+            'BC': { x: left + width * 0.5, y: top + height },           // Bottom Center
+            'RB': { x: left + width, y: top + height }                  // Right Bottom
+        };
+        
+        return alignMap[align] || alignMap['CC']; // デフォルトはCenter Center
+    }
+    
+    /**
+     * テキスト要素かどうか判定
+     * @param {HTMLElement} element - 判定対象要素
+     * @returns {boolean} テキスト要素か
+     */
+    isTextElement(element) {
+        const textTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div'];
+        return textTags.includes(element.tagName.toLowerCase()) && element.textContent.trim().length > 0;
+    }
+    
+    /**
+     * Range APIで最終グリフの位置を取得（オーバーレイ方式）
+     * @param {HTMLElement} element - テキスト要素
+     * @returns {Object} {x, y, width, height} 最終グリフの矩形
+     */
+    getLastGlyphPosition(element) {
+        try {
+            const range = document.createRange();
+            const textNode = this.getLastTextNode(element);
+            
+            if (!textNode || textNode.textContent.trim().length === 0) {
+                console.warn('⚠️ テキストノードが見つかりません:', element);
+                return null;
+            }
+            
+            const text = textNode.textContent;
+            const lastCharIndex = text.length - 1;
+            
+            // 最後の文字（グリフ）を選択
+            range.setStart(textNode, lastCharIndex);
+            range.setEnd(textNode, lastCharIndex + 1);
+            
+            // getClientRects()で最終グリフの矩形を取得
+            const rects = range.getClientRects();
+            if (rects.length === 0) {
+                console.warn('⚠️ 最終グリフの矩形が取得できません');
+                return null;
+            }
+            
+            // 最後の矩形（最終行の最終グリフ）
+            const lastRect = rects[rects.length - 1];
+            
+            const glyphInfo = {
+                x: lastRect.right,  // グリフの右端（次の文字が来る位置）
+                y: lastRect.top + (lastRect.height / 2),  // グリフの垂直中央
+                width: lastRect.width,
+                height: lastRect.height,
+                left: lastRect.left,
+                right: lastRect.right,
+                top: lastRect.top,
+                bottom: lastRect.bottom
+            };
+            
+            console.log('📍 Range API最終グリフ取得:', {
+                element: element.tagName,
+                textContent: text.substring(Math.max(0, text.length - 10)),
+                lastChar: text.charAt(lastCharIndex),
+                glyphRect: glyphInfo,
+                totalRects: rects.length
+            });
+            
+            return glyphInfo;
+            
+        } catch (error) {
+            console.error('❌ Range API取得エラー:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * 要素内の最後のテキストノードを取得
+     * @param {HTMLElement} element - 検索対象要素
+     * @returns {Text|null} 最後のテキストノード
+     */
+    getLastTextNode(element) {
+        const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: function(node) {
+                    // 空白のみのノードは除外
+                    return node.textContent.trim().length > 0 ? 
+                        NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                }
+            }
+        );
+        
+        let lastTextNode = null;
+        let node;
+        while (node = walker.nextNode()) {
+            lastTextNode = node;
+        }
+        
+        return lastTextNode;
+    }
+    
+    /**
+     * ビューポート内に配置を制約（簡素化版）
+     * @param {Object} position - 配置座標 {x, y}
+     * @param {Object} options - Spine要素のオプション
+     * @returns {Object} 制約された座標 {x, y}
+     */
+    constrainToViewport(position, options) {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const spineWidth = options.width || 100;
+        const spineHeight = options.height || 100;
+        const margin = 20; // 画面端からのマージン
+        
+        // シンプルな画面内制約のみ（テストエリア制約は一時無効化）
+        const constrained = {
+            x: Math.max(margin, Math.min(position.x, viewportWidth - spineWidth - margin)),
+            y: position.y // Y座標は制約しない（元の位置を維持）
+        };
+        
+        // X座標制約が発生した場合のみ警告
+        if (constrained.x !== position.x) {
+            console.warn('⚠️ X座標制約適用:', {
+                originalX: position.x,
+                constrainedX: constrained.x,
+                viewport: { width: viewportWidth },
+                reason: position.x > viewportWidth - spineWidth - margin ? 'right-overflow' : 'left-overflow'
+            });
+        }
+        
+        return constrained;
     }
     
     /**

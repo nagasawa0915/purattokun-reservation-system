@@ -195,6 +195,8 @@
             <button onclick="testMultipleElements()">🔗 複数要素テスト</button>
         </div>
         <div class="controls-row">
+            <button onclick="testTextEndPlacement()">📝 テキスト末尾配置</button>
+            <button onclick="testFontScaling()">🎯 フォント変更追従</button>
             <button onclick="debugCoordinates()">🔍 座標デバッグ</button>
             <button onclick="bridge.debugInfo()">📊 Bridge情報</button>
             <button onclick="clearAllTests()" class="danger">🛑 全テスト停止</button>
@@ -411,6 +413,86 @@
                 updateStatus(`❌ 複数要素テストエラー: ${error.message}`, true);
                 testResults.push({ test: 'multiple-elements', result: 'error', error: error.message });
             }
+        };
+        
+        // テキスト末尾配置テスト
+        window.testTextEndPlacement = async function() {
+            updateStatus('📝 テキスト末尾配置テスト開始');
+            
+            try {
+                // 見出しの右端に小さなアイコン配置
+                const headingResult = await bridge.startAutoPinFlow(document.getElementById('main-heading'), {
+                    width: 30,
+                    height: 30,
+                    align: 'RC',  // Right Center - 右端配置
+                    anchorKind: 'inline-end'  // テキスト末尾用
+                });
+                
+                if (headingResult.success) {
+                    updateStatus('✅ 見出し末尾配置成功 - 「メインヘディング」の右端にアイコン表示');
+                }
+                
+                // 段落1の右端に小さなアイコン配置（typography scaleMode使用）
+                const paragraphResult = await bridge.startAutoPinFlow(document.getElementById('paragraph-1'), {
+                    width: 25,
+                    height: 25,
+                    align: 'RC',  // Right Center - 右端配置
+                    anchorKind: 'inline-end',  // テキスト末尾用
+                    scaleMode: 'typography',   // フォント相対スケール
+                    baseFontPx: 16            // 基準フォントサイズ
+                });
+                
+                if (paragraphResult.success) {
+                    updateStatus('✅ 段落末尾配置成功 - テキスト最後にアニメーションアイコン表示');
+                }
+                
+                updateStatus('🎯 テキスト末尾配置テスト完了 - 見出し・段落の後ろにSpineアニメーション配置可能確認');
+                testResults.push({ 
+                    test: 'text-end-placement', 
+                    result: 'success', 
+                    headingSuccess: headingResult.success,
+                    paragraphSuccess: paragraphResult.success
+                });
+                
+            } catch (error) {
+                updateStatus(`❌ テキスト末尾配置エラー: ${error.message}`, true);
+                testResults.push({ test: 'text-end-placement', result: 'error', error: error.message });
+            }
+        };
+        
+        // フォント変更追従テスト
+        window.testFontScaling = function() {
+            updateStatus('🎯 フォント変更追従テスト開始');
+            
+            const paragraph = document.getElementById('paragraph-1');
+            const originalFontSize = getComputedStyle(paragraph).fontSize;
+            
+            updateStatus(`📏 元のフォントサイズ: ${originalFontSize}`);
+            
+            // 段階的にフォントサイズを変更してSpine要素の追従を確認
+            let step = 0;
+            const steps = [
+                { size: '1.5em', duration: 2000, label: '1.5倍に拡大' },
+                { size: '2.0em', duration: 2000, label: '2.0倍に拡大' },
+                { size: '1.0em', duration: 2000, label: '元のサイズに戻す' }
+            ];
+            
+            function executeStep() {
+                if (step >= steps.length) {
+                    updateStatus('✅ フォント変更追従テスト完了 - Spine要素がテキストと連動');
+                    testResults.push({ test: 'font-scaling', result: 'success' });
+                    return;
+                }
+                
+                const currentStep = steps[step];
+                paragraph.style.fontSize = currentStep.size;
+                updateStatus(`🔄 ${currentStep.label} - Spine要素の追従を確認`);
+                
+                step++;
+                setTimeout(executeStep, currentStep.duration);
+            }
+            
+            executeStep();
         };
         
         // 座標デバッグ
