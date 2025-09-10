@@ -104,7 +104,8 @@
                 📝 テキスト要素: クリック位置にピンアニメーション表示<br>
                 🖼️ 画像要素: シンプル選択（中央配置）<br>
                 📋 リスト要素: クリック位置でマーカー/テキスト自動検出<br>
-                ⚙️ 汎用要素: 中央基準 + 詳細設定オプション
+                ⚙️ 汎用要素: 中央基準 + 詳細設定オプション<br>
+                🚫 <strong>BB要素除外テスト</strong>: 右上の赤いBB要素はハイライトされないはず
             </div>
         </div>
 
@@ -133,6 +134,15 @@
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgZmlsbD0iIzI3YWU2MCIgcng9IjUiLz4KPC9zdmc+" 
                  alt="小アイコン" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 10px;">
         </div>
+    </div>
+
+    <!-- BB要素除外テスト用（実際のBB要素を模擬） -->
+    <div id="bb-container-test" style="position: fixed; top: 50px; right: 50px; width: 100px; height: 100px; border: 2px dashed #ff0000; background: rgba(255,0,0,0.1); z-index: 9999; pointer-events: auto;">
+        <div style="padding: 10px; font-size: 12px; color: #ff0000;">
+            BB要素テスト<br>
+            <small>（選択されないはず）</small>
+        </div>
+        <div class="resize-handle" style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #ff0000; cursor: se-resize;"></div>
     </div>
 
     <!-- ステータス表示 -->

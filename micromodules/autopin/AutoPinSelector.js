@@ -214,10 +214,100 @@ export class AutoPinSelector {
             return true;
         }
         
+        // バウンディングボックス編集UI要素を除外
+        if (this._isBoundingBoxElement(element)) {
+            return true;
+        }
+        
         // 高いz-indexを持つ要素（UI要素の可能性が高い）
         const computedStyle = getComputedStyle(element);
         const zIndex = parseInt(computedStyle.zIndex);
         if (zIndex >= this.config.zIndex && zIndex !== this.config.zIndex + 1) {  // ダイアログ自体は除外しない
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * バウンディングボックス関連要素かどうか判定
+     * @param {HTMLElement} element - チェック対象要素
+     * @returns {boolean} BB関連要素か
+     * @private
+     */
+    _isBoundingBoxElement(element) {
+        // ID/クラスでBB要素を判定
+        const bbSelectors = [
+            // 実際のBB要素セレクタ（実装から抽出）
+            '[id^="bb-container-"]',  // bb-container-{nodeId}
+            '[id*="pin-renderer"]',   // pin-renderer-container
+            '[id*="bounding-box"]',   // 一般的なBB要素
+            '[class*="bounding-box"]', 
+            '[id*="bb-"]',
+            '[class*="bb-"]',
+            // リサイズハンドル
+            '[class*="resize-handle"]',
+            '[id*="resize-handle"]',
+            '[class*="handle"]',      // BB操作ハンドル
+            // BB編集UI
+            '[class*="bb-ui"]',
+            '[id*="bb-ui"]',
+            '[class*="boundingbox"]',
+            '[id*="boundingbox"]',
+            // PureBoundingBox系
+            '[class*="pure-bounding"]',
+            '[id*="pure-bounding"]'
+        ];
+        
+        // 要素自体がBB関連か
+        for (const selector of bbSelectors) {
+            if (element.matches && element.matches(selector)) {
+                console.log('🚫 BB要素を除外:', element.tagName, element.id || element.className);
+                return true;
+            }
+        }
+        
+        // 親要素がBB関連か（BB内の子要素も除外）
+        let parent = element.parentElement;
+        while (parent && parent !== document.body) {
+            for (const selector of bbSelectors) {
+                if (parent.matches && parent.matches(selector)) {
+                    console.log('🚫 BB子要素を除外:', element.tagName, '(親:', parent.tagName, parent.id || parent.className, ')');
+                    return true;
+                }
+            }
+            parent = parent.parentElement;
+        }
+        
+        // BB特有のstyle属性チェック（動的に生成されるBB要素対応）
+        const style = element.style;
+        if (style && (
+            style.cursor === 'move' ||  // ドラッグ用カーソル
+            style.cursor === 'resize' || // リサイズ用カーソル
+            style.cursor?.includes('resize') || // nw-resize, se-resize等
+            style.position === 'absolute' && style.border && style.border.includes('dashed') || // 点線枠
+            style.position === 'fixed' && style.pointerEvents === 'none' && style.border // BB枠
+        )) {
+            console.log('🚫 BBスタイル要素を除外:', element.tagName, style.cursor || 'border-style');
+            return true;
+        }
+        
+        // データ属性チェック（BB関連のdata-*属性）
+        if (element.dataset) {
+            const dataKeys = Object.keys(element.dataset);
+            for (const key of dataKeys) {
+                if (key.includes('bb') || key.includes('bounding') || key.includes('resize') || key.includes('handle')) {
+                    console.log('🚫 BBデータ属性を除外:', element.tagName, `data-${key}`);
+                    return true;
+                }
+            }
+        }
+        
+        // 高いz-index値をもつ編集UI要素（BB UIは高いz-indexを持つ傾向）
+        const computedStyle = getComputedStyle(element);
+        const zIndex = parseInt(computedStyle.zIndex);
+        if (zIndex >= 9000) {  // BB UIは通常高いz-indexを持つ
+            console.log('🚫 高z-index BB要素を除外:', element.tagName, 'z-index:', zIndex);
             return true;
         }
         
