@@ -600,6 +600,9 @@
             <div>💡 Ctrl+D: デバッグパネル切替</div>
             <div>💡 Ctrl+R: レイアウトリセット</div>
             <div>💡 Ctrl+Shift+D: システム状態出力</div>
+            <div style="margin-top: 5px; padding-top: 5px; border-top: 1px solid #333; color: #00ff88;">
+                <div>📚 パネルを画面端にドラッグ → 縦積み</div>
+            </div>
         </div>
     </div>
 
@@ -631,8 +634,17 @@
             }
         });
         
-        // 統合システム開始ログ
-        console.log('✅ SystemCoordinator統合版読み込み完了');
+        // SystemCoordinator初期化
+        let systemCoordinator = null;
+        
+        // SystemCoordinator起動
+        try {
+            systemCoordinator = new SystemCoordinator();
+            window.systemCoordinator = systemCoordinator;
+            console.log('✅ SystemCoordinator統合版初期化開始');
+        } catch (error) {
+            console.error('❌ SystemCoordinator初期化エラー:', error);
+        }
         
         // ツールバー機能実装
         window.selectHomeFolder = function() {
@@ -690,6 +702,38 @@
             URL.revokeObjectURL(url);
             
             console.log('📦 パッケージ出力完了:', exportData);
+        };
+        
+        // レイアウト関連機能
+        window.resetLayout = function() {
+            console.log('🔄 レイアウトリセット');
+            if (window.systemCoordinator?.layoutManager) {
+                window.systemCoordinator.layoutManager.resetLayout();
+                // 縦積み状態もクリア
+                localStorage.removeItem('spine-editor-stacks');
+                alert('レイアウトをデフォルトにリセットしました');
+            } else {
+                console.warn('⚠️ LayoutManagerが利用できません');
+            }
+        };
+        
+        // レイアウト切替機能（デバッグ用）
+        window.switchLayout = function(layoutId) {
+            console.log(`🔄 レイアウト切替: ${layoutId}`);
+            if (window.systemCoordinator?.layoutManager) {
+                return window.systemCoordinator.layoutManager.switchLayout(layoutId);
+            }
+            return false;
+        };
+        
+        // 縦積み状態確認機能（デバッグ用）
+        window.getStackingInfo = function() {
+            if (window.systemCoordinator?.dragDropController) {
+                const stacks = window.systemCoordinator.dragDropController.getCurrentStacks();
+                console.log('📚 現在の縦積み状態:', stacks);
+                return stacks;
+            }
+            return null;
         };
     </script>
 </body>

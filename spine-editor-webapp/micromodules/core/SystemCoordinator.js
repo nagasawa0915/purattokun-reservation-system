@@ -5,6 +5,7 @@
 import { PanelManager } from './PanelManager.js';
 import { ResizeController } from '../ui/ResizeController.js';
 import { DragDropController } from '../ui/DragDropController.js';
+import { LayoutManager } from '../ui/LayoutManager.js';
 import { DebugManager } from '../debug/DebugManager.js';
 
 export class SystemCoordinator {
@@ -15,9 +16,10 @@ export class SystemCoordinator {
         
         // マイクロモジュール初期化
         this.panelManager = new PanelManager();
+        this.layoutManager = new LayoutManager();
         this.resizeController = new ResizeController();
         this.debugManager = new DebugManager();
-        this.dragDropController = null; // PanelManager初期化後に作成
+        this.dragDropController = null; // PanelManager・LayoutManager初期化後に作成
         
         console.log('🎯 SystemCoordinator初期化開始');
         this.init();
@@ -54,11 +56,11 @@ export class SystemCoordinator {
                 this.debugManager.addDebugMessage(`パネル登録完了: ${panelCount}個`, 'info');
             });
 
-            // Phase 3: D&Dシステム初期化（パネル管理後）
+            // Phase 3: D&Dシステム初期化（パネル管理・レイアウト管理後）
             await this.executePhase('dragdrop-init', () => {
-                this.dragDropController = new DragDropController(this.panelManager);
+                this.dragDropController = new DragDropController(this.panelManager, this.layoutManager);
                 const ddCount = this.dragDropController.initializeDragDrop();
-                this.debugManager.addDebugMessage(`D&D機能初期化完了: ${ddCount}個`, 'info');
+                this.debugManager.addDebugMessage(`D&D機能初期化完了: ${ddCount}個（縦積み対応）`, 'info');
             });
 
             // Phase 4: リサイズシステム初期化
