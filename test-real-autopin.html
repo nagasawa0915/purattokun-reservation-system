@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 本番AutoPinSelector動作確認</title>
+    <style>
+        body {
+            font-family: 'Noto Sans JP', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+            border-bottom: 2px solid #eee;
+        }
+
+        .operation-guide {
+            background: linear-gradient(135deg, #e74c3c, #f39c12);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .test-element {
+            margin: 20px;
+            padding: 20px;
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .test-element:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+            border-color: #2980b9;
+        }
+
+        .test-image {
+            max-width: 300px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            display: block;
+            margin: 20px;
+        }
+
+        .test-list {
+            background: rgba(155, 89, 182, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px;
+        }
+
+        .test-list li {
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 5px;
+        }
+
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 本番AutoPinSelector動作確認</h1>
+            <div style="color: #7f8c8d; font-size: 1.1em;">
+                実際のAutoPinSelector.jsのダイアログを確認できます
+            </div>
+            <div class="operation-guide">
+                <strong>操作方法:</strong> 下の要素をクリックして、実際のダイアログメニューを確認してください
+            </div>
+        </div>
+
+        <!-- テキスト要素 -->
+        <div class="test-element" id="text-test">
+            <h3>📝 テキスト要素テスト</h3>
+            <p>この段落をクリックすると、本番のテキスト要素ダイアログが表示されます。AutoPinSelectorの_createTextElementDialog()メソッドが呼ばれます。</p>
+        </div>
+
+        <!-- 画像要素 -->
+        <img id="image-test" class="test-element test-image" 
+             src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgo8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZmY2YjZiO3N0b3Atb3BhY2l0eToxIiAvPgo8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM0ZWNkYzQ7c3RvcC1vcGFjaXR5OjEiIC8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiIC8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxOCIgZm9udC13ZWlnaHQ9ImJvbGQiPvCWlLcg55S75YOP6KaB57Sg44OG44K544OIPvCWlLc8L3RleHQ+Cjwvc3ZnPg==" 
+             alt="画像要素テスト">
+
+        <!-- リスト要素 -->
+        <ul class="test-element test-list" id="list-test">
+            <li>📋 この項目をクリック - リスト要素ダイアログ表示</li>
+            <li>📌 本番AutoPinSelectorの_createListElementDialog()が動作</li>
+            <li>🎯 markerアンカーなどの専門設定を確認</li>
+        </ul>
+
+        <!-- 汎用要素 -->
+        <div class="test-element" id="generic-test" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-align: center;">
+            <h3>🔧 汎用要素テスト</h3>
+            <p>DIV要素 - 画像とテキストが混在</p>
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgZmlsbD0iIzI3YWU2MCIgcng9IjUiLz4KPC9zdmc+" 
+                 alt="小アイコン" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 10px;">
+        </div>
+    </div>
+
+    <!-- ステータス表示 -->
+    <div class="status" id="status">
+        <h4>📊 AutoPin Status</h4>
+        <div id="status-content">初期化中...</div>
+    </div>
+
+    <!-- 本番AutoPinSystem読み込み -->
+    <script type="module">
+        // AutoPinSelector読み込み
+        const { AutoPinSelector } = await import('./micromodules/autopin/AutoPinSelector.js');
+        
+        console.log('🚀 本番AutoPinSelector読み込み完了');
+        
+        // AutoPinSelector初期化
+        const autoPin = new AutoPinSelector({
+            debug: true
+        });
+        
+        // ステータス更新
+        document.getElementById('status-content').innerHTML = `
+            <div>状態: 初期化完了</div>
+            <div>AutoPin: 動作中</div>
+            <div>モード: 本番テスト</div>
+        `;
+        
+        // テスト要素にクリックイベント設定
+        const testElements = ['#text-test', '#image-test', '#list-test', '#generic-test'];
+        
+        testElements.forEach(selector => {
+            const element = document.querySelector(selector);
+            if (element) {
+                element.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    console.log('🎯 要素クリック:', element.tagName, element.id);
+                    
+                    try {
+                        // 本番AutoPinSelectorの要素選択呼び出し
+                        const result = await autoPin.selectElement(element);
+                        console.log('✅ AutoPin処理完了:', result);
+                        
+                        // ステータス更新
+                        document.getElementById('status-content').innerHTML = `
+                            <div>状態: 処理完了</div>
+                            <div>選択要素: ${element.tagName}#${element.id}</div>
+                            <div>結果: ${JSON.stringify(result, null, 2)}</div>
+                        `;
+                        
+                    } catch (error) {
+                        console.error('❌ AutoPin処理エラー:', error);
+                        
+                        // エラー表示
+                        document.getElementById('status-content').innerHTML = `
+                            <div>状態: エラー</div>
+                            <div>エラー: ${error.message}</div>
+                        `;
+                    }
+                });
+                
+                // ホバー効果
+                element.style.cursor = 'pointer';
+            }
+        });
+        
+        // グローバルアクセス
+        window.autoPin = autoPin;
+        
+        console.log('✅ 本番AutoPinテスト環境準備完了');
+        console.log('💡 使用方法: 各要素をクリックして本番ダイアログを確認');
+    </script>
+</body>
+</html>

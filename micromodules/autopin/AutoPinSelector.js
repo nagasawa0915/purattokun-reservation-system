@@ -154,8 +154,8 @@ export class AutoPinSelector {
         this.selectedElement = element;
         this._hideHighlight();
         
-        // アンカー選択UIを表示
-        this._showAnchorSelector(element, options, resolve, reject);
+        // 要素別最適化UIを表示
+        this._showElementOptimizedUI(element, options, resolve, reject);
     }
     
     /**
@@ -238,20 +238,74 @@ export class AutoPinSelector {
     }
     
     /**
-     * アンカー選択UI表示
+     * 要素別最適化UI表示
      * @param {HTMLElement} element - 選択された要素
      * @param {Object} options - 選択設定
      * @param {Function} resolve - Promise resolve
      * @param {Function} reject - Promise reject
      * @private
      */
-    _showAnchorSelector(element, options, resolve, reject) {
-        this._createAnchorSelectorDialog(element, (selectedAlign, selectedAnchorKind) => {
-            // PinContract生成
-            const contract = this._createContract(element, options, selectedAlign, selectedAnchorKind);
-            
-            this._completeSelection(contract, resolve);
-        }, reject);
+    _showElementOptimizedUI(element, options, resolve, reject) {
+        const elementType = this._detectElementType(element);
+        
+        switch (elementType) {
+            case 'image':
+                this._createImageElementDialog(element, options, resolve, reject);
+                break;
+            case 'text':
+                this._createTextElementDialog(element, options, resolve, reject);
+                break;
+            case 'list':
+                this._createListElementDialog(element, options, resolve, reject);
+                break;
+            default:
+                this._createGenericElementDialog(element, options, resolve, reject);
+                break;
+        }
+    }
+    
+    /**
+     * 要素タイプ検出
+     * @param {HTMLElement} element - 検出対象要素
+     * @returns {string} 'image'|'text'|'list'|'generic'
+     * @private
+     */
+    _detectElementType(element) {
+        const tagName = element.tagName.toLowerCase();
+        
+        // 画像要素
+        if (tagName === 'img') {
+            return 'image';
+        }
+        
+        // リスト要素
+        if (tagName === 'li') {
+            return 'list';
+        }
+        
+        // テキスト要素
+        const textTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span'];
+        if (textTags.includes(tagName)) {
+            return 'text';
+        }
+        
+        // DIV・BUTTONなどの汎用要素 - 内容に応じて判定
+        if (tagName === 'div' || tagName === 'button' || tagName === 'section') {
+            // テキスト含有チェック
+            if (element.textContent.trim().length > 0) {
+                // 画像も含有している場合
+                if (element.querySelector('img')) {
+                    return 'generic'; // 混在 → 汎用UI
+                }
+                return 'text'; // テキストのみ
+            }
+            // 画像含有チェック
+            if (element.querySelector('img')) {
+                return 'image';
+            }
+        }
+        
+        return 'generic';
     }
     
     /**
@@ -306,7 +360,339 @@ export class AutoPinSelector {
     }
     
     /**
-     * アンカー選択ダイアログ作成
+     * テキスト要素専用ダイアログ作成
+     * @param {HTMLElement} element - 対象要素
+     * @param {Object} options - 選択設定
+     * @param {Function} resolve - Promise resolve
+     * @param {Function} reject - Promise reject
+     * @private
+     */
+    _createTextElementDialog(element, options, resolve, reject) {
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: ${this.config.zIndex + 1};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+        `;
+        
+        dialog.innerHTML = `
+            <h3 style="margin-top:0;">📝 テキスト配置設定</h3>
+            <p><strong>選択要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}</p>
+            <p style="font-size: 0.9em; color: #666;">「${element.textContent.substring(0, 30)}...」</p>
+            
+            <div style="margin: 15px 0;">
+                <h4>配置位置:</h4>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-start"> 📍 テキスト先頭（最初の文字の前）</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-end" checked> 📍 テキスト末尾（最後の文字の後）</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-center"> 📍 テキスト中央</label>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <h4>サイズ連動:</h4>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography" checked> 🔤 フォントサイズ連動</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
+            </div>
+            
+            <div style="text-align: right; margin-top: 20px;">
+                <button id="cancel-btn" style="margin-right: 10px; padding: 8px 16px;">キャンセル</button>
+                <button id="confirm-btn" style="padding: 8px 16px; background: #007acc; color: white; border: none; border-radius: 4px;">確定</button>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        this.selectionDialog = dialog;
+        
+        // イベントハンドラー設定
+        this._setupDialogEventHandlers(dialog, element, options, resolve, reject);
+    }
+    
+    /**
+     * 画像要素専用ダイアログ作成
+     * @param {HTMLElement} element - 対象要素
+     * @param {Object} options - 選択設定
+     * @param {Function} resolve - Promise resolve
+     * @param {Function} reject - Promise reject
+     * @private
+     */
+    _createImageElementDialog(element, options, resolve, reject) {
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: ${this.config.zIndex + 1};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            max-width: 450px;
+        `;
+        
+        dialog.innerHTML = `
+            <h3 style="margin-top:0;">🖼️ 画像配置設定</h3>
+            <p><strong>選択要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}</p>
+            
+            <div style="margin: 15px 0;">
+                <h4>サイズ連動:</h4>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="element-linked" checked> 🔗 画像サイズ連動</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <h4>配置位置（9アンカー）:</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px;">
+                    ${this._create9AnchorGrid()}
+                </div>
+            </div>
+            
+            <div style="text-align: right; margin-top: 20px;">
+                <button id="cancel-btn" style="margin-right: 10px; padding: 8px 16px;">キャンセル</button>
+                <button id="confirm-btn" style="padding: 8px 16px; background: #007acc; color: white; border: none; border-radius: 4px;">確定</button>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        this.selectionDialog = dialog;
+        
+        // イベントハンドラー設定
+        this._setupDialogEventHandlers(dialog, element, options, resolve, reject);
+    }
+    
+    /**
+     * リスト要素専用ダイアログ作成
+     * @param {HTMLElement} element - 対象要素
+     * @param {Object} options - 選択設定
+     * @param {Function} resolve - Promise resolve
+     * @param {Function} reject - Promise reject
+     * @private
+     */
+    _createListElementDialog(element, options, resolve, reject) {
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: ${this.config.zIndex + 1};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+        `;
+        
+        dialog.innerHTML = `
+            <h3 style="margin-top:0;">📋 リスト配置設定</h3>
+            <p><strong>選択要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}</p>
+            <p style="font-size: 0.9em; color: #666;">「${element.textContent.substring(0, 30)}...」</p>
+            
+            <div style="margin: 15px 0;">
+                <h4>配置位置:</h4>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="marker" checked> 🎯 マーカー位置（• 1.）</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-start"> 📍 テキスト先頭</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="textPosition" value="text-end"> 📍 テキスト末尾</label>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <h4>サイズ連動:</h4>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography" checked> 🔤 フォントサイズ連動</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
+            </div>
+            
+            <div style="text-align: right; margin-top: 20px;">
+                <button id="cancel-btn" style="margin-right: 10px; padding: 8px 16px;">キャンセル</button>
+                <button id="confirm-btn" style="padding: 8px 16px; background: #007acc; color: white; border: none; border-radius: 4px;">確定</button>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        this.selectionDialog = dialog;
+        
+        // イベントハンドラー設定
+        this._setupDialogEventHandlers(dialog, element, options, resolve, reject);
+    }
+    
+    /**
+     * 汎用要素ダイアログ作成
+     * @param {HTMLElement} element - 対象要素
+     * @param {Object} options - 選択設定
+     * @param {Function} resolve - Promise resolve
+     * @param {Function} reject - Promise reject
+     * @private
+     */
+    _createGenericElementDialog(element, options, resolve, reject) {
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: ${this.config.zIndex + 1};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            max-width: 450px;
+        `;
+        
+        dialog.innerHTML = `
+            <h3 style="margin-top:0;">⚙️ 汎用配置設定</h3>
+            <p><strong>選択要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}</p>
+            
+            <div style="margin: 15px 0;">
+                <h4>配置方式:</h4>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="anchorKind" value="block" checked> 📦 要素全体（Block）</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="anchorKind" value="text-end"> 📝 テキスト末尾</label>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <h4>配置位置（9アンカー）:</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px;">
+                    ${this._create9AnchorGrid()}
+                </div>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <h4>サイズ連動:</h4>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="element-linked" checked> 🔗 要素サイズ連動</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="fixed-size"> 📏 固定サイズ</label>
+                <label style="display: block; margin: 8px 0;"><input type="radio" name="scaleMode" value="typography"> 🔤 フォントサイズ連動</label>
+            </div>
+            
+            <div style="text-align: right; margin-top: 20px;">
+                <button id="cancel-btn" style="margin-right: 10px; padding: 8px 16px;">キャンセル</button>
+                <button id="confirm-btn" style="padding: 8px 16px; background: #007acc; color: white; border: none; border-radius: 4px;">確定</button>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        this.selectionDialog = dialog;
+        
+        // イベントハンドラー設定
+        this._setupDialogEventHandlers(dialog, element, options, resolve, reject);
+    }
+    
+    /**
+     * ダイアログ共通イベントハンドラー設定
+     * @param {HTMLElement} dialog - ダイアログ要素
+     * @param {HTMLElement} element - 選択された要素
+     * @param {Object} options - 選択設定
+     * @param {Function} resolve - Promise resolve
+     * @param {Function} reject - Promise reject
+     * @private
+     */
+    _setupDialogEventHandlers(dialog, element, options, resolve, reject) {
+        const confirmBtn = dialog.querySelector('#confirm-btn');
+        const cancelBtn = dialog.querySelector('#cancel-btn');
+        
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 選択された設定を収集
+                const settings = this._collectDialogSettings(dialog);
+                
+                console.log('✅ 要素別UI設定確定:', { element: element.tagName, settings });
+                
+                // PinContract生成
+                const contract = this._createElementOptimizedContract(element, options, settings);
+                
+                this._removeDialog();
+                this._completeSelection(contract, resolve);
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('❌ 要素別UI設定キャンセル');
+                
+                this._removeDialog();
+                this._cancelSelection(reject);
+            });
+        }
+    }
+    
+    /**
+     * ダイアログ設定収集
+     * @param {HTMLElement} dialog - ダイアログ要素
+     * @returns {Object} 収集された設定
+     * @private
+     */
+    _collectDialogSettings(dialog) {
+        const settings = {};
+        
+        // テキスト位置選択
+        const textPosition = dialog.querySelector('input[name="textPosition"]:checked');
+        if (textPosition) {
+            settings.anchorKind = textPosition.value;
+        }
+        
+        // 9アンカー選択
+        const anchor = dialog.querySelector('input[name="anchor"]:checked');
+        if (anchor) {
+            settings.align = anchor.value;
+        }
+        
+        // スケールモード選択
+        const scaleMode = dialog.querySelector('input[name="scaleMode"]:checked');
+        if (scaleMode) {
+            settings.scaleMode = scaleMode.value;
+        }
+        
+        // 汎用：配置方式
+        const anchorKind = dialog.querySelector('input[name="anchorKind"]:checked');
+        if (anchorKind) {
+            settings.anchorKind = anchorKind.value;
+        }
+        
+        return settings;
+    }
+    
+    /**
+     * 要素別最適化PinContract生成
+     * @param {HTMLElement} element - 基準要素
+     * @param {Object} options - 基本設定
+     * @param {Object} settings - UI設定
+     * @returns {PinContract} 生成されたContract
+     * @private
+     */
+    _createElementOptimizedContract(element, options, settings) {
+        return {
+            refElement: element,
+            logicalSize: options.logicalSize,
+            anchorKind: settings.anchorKind || 'block',
+            align: settings.align || 'CC',
+            fit: options.fit,
+            objectPosition: options.objectPosition || '50% 50%',
+            scaleMode: settings.scaleMode || 'element-linked',
+            baseFontPx: options.baseFontPx || 16,
+            fixedSize: settings.scaleMode === 'fixed-size' ? 
+                { width: options.width || 100, height: options.height || 100 } : undefined
+        };
+    }
+    
+    /**
+     * アンカー選択ダイアログ作成（従来互換用）
      * @param {HTMLElement} element - 対象要素
      * @param {Function} onConfirm - 確定コールバック
      * @param {Function} onCancel - キャンセルコールバック

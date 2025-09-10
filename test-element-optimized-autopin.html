@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 要素別最適化AutoPin統合テスト</title>
+    <style>
+        /* ベーススタイル */
+        body {
+            font-family: 'Noto Sans JP', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+            border-bottom: 2px solid #eee;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        /* 操作ガイド追加 */
+        .operation-guide {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .guide-step {
+            display: inline-block;
+            margin: 10px 15px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        /* テストセクション */
+        .test-section {
+            margin: 40px 0;
+            padding: 30px;
+            border: 2px dashed #bdc3c7;
+            border-radius: 10px;
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .test-section h2 {
+            color: #2980b9;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+
+        .test-section .description {
+            background: rgba(241, 196, 15, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f39c12;
+        }
+
+        /* クリック可能要素の共通スタイル */
+        .clickable-element {
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer !important;
+            border: 2px solid transparent;
+        }
+
+        .clickable-element:hover {
+            outline: 3px dashed #3498db;
+            outline-offset: 5px;
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+        }
+
+        .clickable-element::before {
+            content: '🎯 クリックでUI表示';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3498db;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+            z-index: 100;
+        }
+
+        .clickable-element:hover::before {
+            opacity: 1;
+        }
+
+        /* テキスト要素テスト */
+        .text-elements h3 {
+            color: #27ae60;
+            font-size: 1.8em;
+            margin: 20px 0;
+        }
+
+        .text-elements p {
+            font-size: 1.1em;
+            color: #34495e;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(46, 204, 113, 0.1);
+            border-radius: 5px;
+        }
+
+        .text-elements .highlight {
+            background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+            padding: 8px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 10px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        /* 画像要素テスト */
+        .image-elements img {
+            max-width: 300px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .image-elements img:hover {
+            transform: translateY(-5px);
+        }
+
+        /* リスト要素テスト */
+        .list-elements ul {
+            background: rgba(155, 89, 182, 0.1);
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #9b59b6;
+        }
+
+        .list-elements li {
+            margin: 12px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 5px;
+            font-size: 1.1em;
+        }
+
+        .list-elements .priority-high {
+            border-left: 4px solid #e74c3c;
+        }
+
+        .list-elements .priority-medium {
+            border-left: 4px solid #f39c12;
+        }
+
+        .list-elements .priority-low {
+            border-left: 4px solid #27ae60;
+        }
+
+        /* 汎用要素テスト */
+        .generic-elements .card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px;
+            display: inline-block;
+            width: 250px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .generic-elements .button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            margin: 10px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .generic-elements .button:hover {
+            transform: scale(1.05);
+        }
+
+        /* ステータス表示エリア */
+        .status-area {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            font-family: 'Arial', sans-serif;
+            font-size: 0.9em;
+            max-width: 350px;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 2px solid #3498db;
+        }
+
+        .status-area h4 {
+            margin: 0 0 15px 0;
+            color: #3498db;
+            font-size: 1.1em;
+            text-align: center;
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 8px;
+        }
+
+        .status-item {
+            margin: 8px 0;
+            padding: 5px 0;
+            border-left: 3px solid #27ae60;
+            padding-left: 10px;
+        }
+
+        .status-item strong {
+            color: #ecf0f1;
+        }
+
+        /* RTL言語テスト */
+        .rtl-test {
+            direction: rtl;
+            text-align: right;
+            background: rgba(230, 126, 34, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 要素別最適化AutoPin統合テスト</h1>
+            <div class="subtitle">Element-Optimized AutoPin Integration Test Environment</div>
+            
+            <!-- 操作ガイド -->
+            <div class="operation-guide">
+                <div style="font-size: 1.3em; margin-bottom: 15px;">🚀 簡単3ステップ操作ガイド</div>
+                <div class="guide-step">1️⃣ 下の要素をクリック</div>
+                <div class="guide-step">2️⃣ 要素別UIが自動表示</div>
+                <div class="guide-step">3️⃣ 設定を選んで「適用」</div>
+                <div style="margin-top: 15px; font-size: 0.95em;">
+                    💡 各要素タイプで異なる最適化UIが表示されます
+                </div>
+            </div>
+        </div>
+
+        <!-- テキスト要素テストセクション -->
+        <div class="test-section text-elements">
+            <h2>📝 テキスト要素 (Text Elements)</h2>
+            <div class="description">
+                <strong>期待されるUI:</strong> text-start, text-end, text-center アンカー / typography ScaleMode / フォントサイズ連動
+            </div>
+            
+            <h3 id="test-heading">テスト見出し (H3要素)</h3>
+            <p id="test-paragraph">これはテスト用の段落要素です。AutoPin要素別最適化システムがテキスト要素として認識し、テキスト専用のアンカーオプション（text-start, text-end, text-center）を提供するかテストします。</p>
+            
+            <span class="highlight" id="test-span">ハイライトSpan要素</span>
+            <span class="highlight" id="test-span2">インライン要素テスト</span>
+            
+            <!-- RTL言語テスト -->
+            <div class="rtl-test" id="test-rtl">
+                <p>اختبار النص العربي - RTL言語方向テスト</p>
+            </div>
+        </div>
+
+        <!-- 画像要素テストセクション -->
+        <div class="test-section image-elements">
+            <h2>🖼️ 画像要素 (Image Elements)</h2>
+            <div class="description">
+                <strong>期待されるUI:</strong> 9アンカー / element-linked ScaleMode / アスペクト比維持
+            </div>
+            
+            <img id="test-image1" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgo8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZmY2YjZiO3N0b3Atb3BhY2l0eToxIiAvPgo8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM0ZWNkYzQ7c3RvcC1vcGFjaXR5OjEiIC8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiIC8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxOCIgZm9udC13ZWlnaHQ9ImJvbGQiPuODhuOCueODiOeUu+WDjzE8L3RleHQ+Cjwvc3ZnPg==" alt="テスト画像1">
+            
+            <img id="test-image2" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQyIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2N2VlYTtzdG9wLW9wYWNpdHk6MSIgLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojNzY0YmEyO3N0b3Atb3BhY2l0eToxIiAvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+CjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JhZGllbnQyKSIgLz4KPHRleHQgeD0iMTUwIiB5PSIxMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjE4IiBmb250LXdlaWdodD0iYm9sZCI+44OG44K544OI55S75YOP77yiPC90ZXh0Pgo8L3N2Zz4=" alt="テスト画像2">
+        </div>
+
+        <!-- リスト要素テストセクション -->
+        <div class="test-section list-elements">
+            <h2>📋 リスト要素 (List Elements)</h2>
+            <div class="description">
+                <strong>期待されるUI:</strong> marker アンカー / element-linked ScaleMode / マーカー位置基準
+            </div>
+            
+            <ul>
+                <li id="test-li1" class="priority-high">高優先度タスク - AutoPin要素別最適化UI実装</li>
+                <li id="test-li2" class="priority-medium">中優先度タスク - テスト環境構築</li>
+                <li id="test-li3" class="priority-low">低優先度タスク - ドキュメント更新</li>
+                <li id="test-li4">通常のリスト項目 - marker アンカーテスト</li>
+            </ul>
+        </div>
+
+        <!-- 汎用要素テストセクション -->
+        <div class="test-section generic-elements">
+            <h2>🔧 汎用要素 (Generic Elements)</h2>
+            <div class="description">
+                <strong>期待されるUI:</strong> 9アンカー / element-linked ScaleMode / 標準的なオプション
+            </div>
+            
+            <div class="card" id="test-div">
+                <h3>DIV要素テスト</h3>
+                <p>汎用要素として認識されるかテスト</p>
+            </div>
+            
+            <button class="button" id="test-button">ボタン要素テスト</button>
+            <button class="button" id="test-button2">汎用UI確認</button>
+        </div>
+
+        <!-- 混在要素テストセクション -->
+        <div class="test-section">
+            <h2>🔀 混在要素 (Mixed Content Elements)</h2>
+            <div class="description">
+                <strong>期待される動作:</strong> テキスト+画像など複雑な内容 → 汎用要素として処理
+            </div>
+            
+            <div id="test-mixed" style="padding: 20px; border: 2px solid #3498db; border-radius: 10px; background: rgba(52, 152, 219, 0.1);">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgZmlsbD0iIzI3YWU2MCIgcng9IjUiLz4KPHN0b3AgY29sb3I9IiNmZmYiIC8+Cjwvc3ZnPg==" alt="小アイコン" style="width: 30px; height: 30px; vertical-align: middle; margin-right: 10px;">
+                <span>画像とテキストが混在する要素 - 汎用UIが表示されるかテスト</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ステータス表示エリア -->
+    <div class="status-area" id="status-display">
+        <h4>📊 AutoPin リアルタイム状況</h4>
+        <div id="status-content">
+            <div class="status-item"><strong>状態:</strong> 待機中</div>
+            <div class="status-item"><strong>最終選択:</strong> なし</div>
+            <div class="status-item"><strong>要素タイプ:</strong> --</div>
+            <div class="status-item"><strong>時刻:</strong> 初期化中</div>
+        </div>
+    </div>
+
+    <!-- テスト制御スクリプト（モジュール形式） -->
+    <script type="module">
+        class ElementOptimizedAutoPinTest {
+            constructor() {
+                this.autopin = null;
+                this.statusDisplay = document.getElementById('status-display');
+                this.statusContent = document.getElementById('status-content');
+                this.lastSelectedElement = null;
+                this.init();
+            }
+
+            async init() {
+                try {
+                    console.log('🚀 要素別最適化AutoPinテスト環境初期化開始');
+                    
+                    // シンプルなテスト環境として、AutoPinSelectorの機能をモック実装
+                    // 要素別UI最適化のロジックのみをテスト
+                    this.autopin = {
+                        selectElement: this.mockAutoPinSelect.bind(this)
+                    };
+                    
+                    console.log('✅ AutoPin機能（テスト版）初期化完了');
+                    this.updateStatus('テスト環境初期化完了', '待機中', '--');
+                    
+                    // テスト用イベント監視
+                    this.setupEventListeners();
+                    
+                } catch (error) {
+                    console.error('❌ 初期化エラー:', error);
+                    this.updateStatus('初期化エラー', error.message, '--');
+                }
+            }
+
+            // AutoPinSelectorの要素別最適化UIロジックをテスト用にモック実装
+            async mockAutoPinSelect(element) {
+                console.log('🎯 要素別最適化UIテスト開始:', element.tagName, element.id);
+                
+                // 要素タイプ検出
+                const elementType = this.detectElementType(element);
+                console.log('📋 検出された要素タイプ:', elementType);
+                
+                // 要素別最適化UIを表示（モック）
+                this.showOptimizedUIDialog(element, elementType);
+            }
+
+            // 要素別最適化UI表示（テスト用）
+            showOptimizedUIDialog(element, elementType) {
+                // 既存のダイアログがあれば削除
+                const existingDialog = document.querySelector('.autopin-dialog');
+                if (existingDialog) {
+                    existingDialog.remove();
+                }
+
+                // 要素タイプ別のUI作成
+                let dialogContent = '';
+                
+                switch (elementType) {
+                    case 'text':
+                        dialogContent = this.createTextElementDialog(element);
+                        break;
+                    case 'image':
+                        dialogContent = this.createImageElementDialog(element);
+                        break;
+                    case 'list':
+                        dialogContent = this.createListElementDialog(element);
+                        break;
+                    case 'generic':
+                    default:
+                        dialogContent = this.createGenericElementDialog(element);
+                        break;
+                }
+
+                // ダイアログ表示
+                document.body.appendChild(dialogContent);
+                
+                console.log('✅ 要素別最適化UI表示完了:', elementType);
+            }
+
+            // テキスト要素専用ダイアログ
+            createTextElementDialog(element) {
+                const dialog = document.createElement('div');
+                dialog.className = 'autopin-dialog';
+                dialog.innerHTML = `
+                    <div class="dialog-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000;">
+                        <div class="dialog-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; min-width: 450px; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                            <h3 style="margin-top: 0; color: #27ae60; text-align: center;">📝 文字要素の設定</h3>
+                            <div style="background: rgba(46, 204, 113, 0.1); padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center;">
+                                <strong>選択した要素:</strong> 「${element.textContent.substring(0, 30)}${element.textContent.length > 30 ? '...' : ''}」
+                            </div>
+                            
+                            <div style="margin: 25px 0;">
+                                <h4 style="margin-bottom: 15px; color: #2c3e50;">🎯 どこを基準に配置しますか？</h4>
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                                    <label style="display: flex; align-items: center; padding: 12px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+                                        <input type="radio" name="text-position" value="text-start" style="margin-right: 10px;">
+                                        <div>
+                                            <strong>📍 文字の始まり</strong><br>
+                                            <small style="color: #7f8c8d;">文章の最初の文字を基準にします</small>
+                                        </div>
+                                    </label>
+                                    <label style="display: flex; align-items: center; padding: 12px; border: 2px solid #27ae60; border-radius: 8px; cursor: pointer; background: rgba(46, 204, 113, 0.1);">
+                                        <input type="radio" name="text-position" value="text-center" checked style="margin-right: 10px;">
+                                        <div>
+                                            <strong>📍 文字の中央</strong> <span style="color: #27ae60;">（おすすめ）</span><br>
+                                            <small style="color: #7f8c8d;">文章の真ん中を基準にします</small>
+                                        </div>
+                                    </label>
+                                    <label style="display: flex; align-items: center; padding: 12px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+                                        <input type="radio" name="text-position" value="text-end" style="margin-right: 10px;">
+                                        <div>
+                                            <strong>📍 文字の終わり</strong><br>
+                                            <small style="color: #7f8c8d;">文章の最後の文字を基準にします</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div style="margin: 25px 0;">
+                                <h4 style="margin-bottom: 15px; color: #2c3e50;">⚖️ サイズはどうしますか？</h4>
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                                    <label style="display: flex; align-items: center; padding: 12px; border: 2px solid #27ae60; border-radius: 8px; cursor: pointer; background: rgba(46, 204, 113, 0.1);">
+                                        <input type="radio" name="size-mode" value="typography" checked style="margin-right: 10px;">
+                                        <div>
+                                            <strong>📝 文字サイズと連動</strong> <span style="color: #27ae60;">（おすすめ）</span><br>
+                                            <small style="color: #7f8c8d;">文字が大きくなるとピンも大きくなります</small>
+                                        </div>
+                                    </label>
+                                    <label style="display: flex; align-items: center; padding: 12px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+                                        <input type="radio" name="size-mode" value="element-linked" style="margin-right: 10px;">
+                                        <div>
+                                            <strong>🔗 要素サイズと連動</strong><br>
+                                            <small style="color: #7f8c8d;">要素全体のサイズに合わせます</small>
+                                        </div>
+                                    </label>
+                                    <label style="display: flex; align-items: center; padding: 12px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+                                        <input type="radio" name="size-mode" value="fixed-size" style="margin-right: 10px;">
+                                        <div>
+                                            <strong>📐 固定サイズ</strong><br>
+                                            <small style="color: #7f8c8d;">常に同じサイズを保ちます</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div style="margin: 25px 0;">
+                                <h4 style="margin-bottom: 10px; color: #2c3e50;">📏 基準となる文字サイズ</h4>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="range" id="base-font" min="8" max="32" value="16" style="flex: 1;" oninput="document.getElementById('font-display').textContent = this.value + 'px'">
+                                    <span id="font-display" style="min-width: 50px; font-weight: bold; color: #27ae60;">16px</span>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                                <button onclick="this.closest('.dialog-overlay').remove()" style="flex: 1; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">キャンセル</button>
+                                <button onclick="autoPinTest.handleDialogApply('text'); this.closest('.dialog-overlay').remove()" style="flex: 1; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">この設定で決定</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return dialog;
+            }
+
+            // 画像要素専用ダイアログ
+            createImageElementDialog(element) {
+                const dialog = document.createElement('div');
+                dialog.className = 'autopin-dialog';
+                dialog.innerHTML = `
+                    <div class="dialog-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000;">
+                        <div class="dialog-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; min-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                            <h3 style="margin-top: 0; color: #3498db;">🖼️ 画像要素最適化UI</h3>
+                            <div style="background: rgba(52, 152, 219, 0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <strong>要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}<br>
+                                <strong>検出タイプ:</strong> 画像要素<br>
+                                <strong>サイズ:</strong> ${element.offsetWidth} x ${element.offsetHeight}px
+                            </div>
+                            
+                            <div style="margin: 20px 0;">
+                                <label style="display: block; margin-bottom: 10px;"><strong>🎯 9アンカーポイント:</strong></label>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
+                                    <button class="anchor-btn" data-anchor="LT" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">LT</button>
+                                    <button class="anchor-btn" data-anchor="TC" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">TC</button>
+                                    <button class="anchor-btn" data-anchor="RT" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">RT</button>
+                                    <button class="anchor-btn" data-anchor="LC" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">LC</button>
+                                    <button class="anchor-btn selected" data-anchor="CC" style="padding: 8px; border: 1px solid #3498db; background: #3498db; color: white; cursor: pointer;">CC</button>
+                                    <button class="anchor-btn" data-anchor="RC" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">RC</button>
+                                    <button class="anchor-btn" data-anchor="LB" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">LB</button>
+                                    <button class="anchor-btn" data-anchor="BC" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">BC</button>
+                                    <button class="anchor-btn" data-anchor="RB" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">RB</button>
+                                </div>
+                            </div>
+                            
+                            <div style="margin: 20px 0;">
+                                <label style="display: block; margin-bottom: 10px;"><strong>⚖️ スケールモード:</strong></label>
+                                <select id="scale-mode" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                                    <option value="element-linked" selected>🔗 element-linked - 要素サイズ連動</option>
+                                    <option value="fixed-size">📐 fixed-size - 固定サイズ</option>
+                                    <option value="typography">📝 typography - フォントサイズ連動</option>
+                                </select>
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button onclick="this.closest('.dialog-overlay').remove()" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">キャンセル</button>
+                                <button onclick="autoPinTest.handleDialogApply('image'); this.closest('.dialog-overlay').remove()" style="flex: 1; padding: 10px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">適用</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // アンカーボタンのクリック処理
+                dialog.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('anchor-btn')) {
+                        dialog.querySelectorAll('.anchor-btn').forEach(btn => {
+                            btn.classList.remove('selected');
+                            btn.style.background = '#f8f9fa';
+                            btn.style.color = 'black';
+                            btn.style.border = '1px solid #ddd';
+                        });
+                        e.target.classList.add('selected');
+                        e.target.style.background = '#3498db';
+                        e.target.style.color = 'white';
+                        e.target.style.border = '1px solid #3498db';
+                    }
+                });
+
+                return dialog;
+            }
+
+            // リスト要素専用ダイアログ
+            createListElementDialog(element) {
+                const dialog = document.createElement('div');
+                dialog.className = 'autopin-dialog';
+                dialog.innerHTML = `
+                    <div class="dialog-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000;">
+                        <div class="dialog-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; min-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                            <h3 style="margin-top: 0; color: #9b59b6;">📋 リスト要素最適化UI</h3>
+                            <div style="background: rgba(155, 89, 182, 0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <strong>要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}<br>
+                                <strong>検出タイプ:</strong> リスト要素<br>
+                                <strong>内容:</strong> ${element.textContent.substring(0, 50)}...
+                            </div>
+                            
+                            <div style="margin: 20px 0;">
+                                <label style="display: block; margin-bottom: 10px;"><strong>🎯 リスト専用アンカー:</strong></label>
+                                <select id="list-anchor" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                                    <option value="marker" selected>📍 marker - リストマーカー基準</option>
+                                    <option value="text-start">📍 text-start - テキスト開始位置</option>
+                                    <option value="CC">📍 CC - 中央</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin: 20px 0;">
+                                <label style="display: block; margin-bottom: 10px;"><strong>⚖️ スケールモード:</strong></label>
+                                <select id="scale-mode" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                                    <option value="element-linked" selected>🔗 element-linked - 要素サイズ連動</option>
+                                    <option value="fixed-size">📐 fixed-size - 固定サイズ</option>
+                                    <option value="typography">📝 typography - フォントサイズ連動</option>
+                                </select>
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button onclick="this.closest('.dialog-overlay').remove()" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">キャンセル</button>
+                                <button onclick="autoPinTest.handleDialogApply('list'); this.closest('.dialog-overlay').remove()" style="flex: 1; padding: 10px; background: #9b59b6; color: white; border: none; border-radius: 5px; cursor: pointer;">適用</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return dialog;
+            }
+
+            // 汎用要素ダイアログ
+            createGenericElementDialog(element) {
+                const dialog = document.createElement('div');
+                dialog.className = 'autopin-dialog';
+                dialog.innerHTML = `
+                    <div class="dialog-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000;">
+                        <div class="dialog-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; min-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                            <h3 style="margin-top: 0; color: #7f8c8d;">🔧 汎用要素最適化UI</h3>
+                            <div style="background: rgba(127, 140, 141, 0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <strong>要素:</strong> ${element.tagName}${element.id ? '#' + element.id : ''}<br>
+                                <strong>検出タイプ:</strong> 汎用要素<br>
+                                <strong>内容:</strong> ${element.textContent ? element.textContent.substring(0, 50) + '...' : '画像・混在コンテンツ'}
+                            </div>
+                            
+                            <div style="margin: 20px 0;">
+                                <label style="display: block; margin-bottom: 10px;"><strong>🎯 9アンカーポイント:</strong></label>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
+                                    <button class="anchor-btn" data-anchor="LT" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">LT</button>
+                                    <button class="anchor-btn" data-anchor="TC" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">TC</button>
+                                    <button class="anchor-btn" data-anchor="RT" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">RT</button>
+                                    <button class="anchor-btn" data-anchor="LC" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">LC</button>
+                                    <button class="anchor-btn selected" data-anchor="CC" style="padding: 8px; border: 1px solid #7f8c8d; background: #7f8c8d; color: white; cursor: pointer;">CC</button>
+                                    <button class="anchor-btn" data-anchor="RC" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">RC</button>
+                                    <button class="anchor-btn" data-anchor="LB" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">LB</button>
+                                    <button class="anchor-btn" data-anchor="BC" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">BC</button>
+                                    <button class="anchor-btn" data-anchor="RB" style="padding: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">RB</button>
+                                </div>
+                            </div>
+                            
+                            <div style="margin: 20px 0;">
+                                <label style="display: block; margin-bottom: 10px;"><strong>⚖️ スケールモード:</strong></label>
+                                <select id="scale-mode" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                                    <option value="element-linked" selected>🔗 element-linked - 要素サイズ連動</option>
+                                    <option value="fixed-size">📐 fixed-size - 固定サイズ</option>
+                                    <option value="typography">📝 typography - フォントサイズ連動</option>
+                                </select>
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button onclick="this.closest('.dialog-overlay').remove()" style="flex: 1; padding: 10px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">キャンセル</button>
+                                <button onclick="autoPinTest.handleDialogApply('generic'); this.closest('.dialog-overlay').remove()" style="flex: 1; padding: 10px; background: #7f8c8d; color: white; border: none; border-radius: 5px; cursor: pointer;">適用</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // アンカーボタンのクリック処理
+                dialog.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('anchor-btn')) {
+                        dialog.querySelectorAll('.anchor-btn').forEach(btn => {
+                            btn.classList.remove('selected');
+                            btn.style.background = '#f8f9fa';
+                            btn.style.color = 'black';
+                            btn.style.border = '1px solid #ddd';
+                        });
+                        e.target.classList.add('selected');
+                        e.target.style.background = '#7f8c8d';
+                        e.target.style.color = 'white';
+                        e.target.style.border = '1px solid #7f8c8d';
+                    }
+                });
+
+                return dialog;
+            }
+
+            // ダイアログ適用処理
+            handleDialogApply(elementType) {
+                const dialog = document.querySelector('.autopin-dialog');
+                if (!dialog) return;
+
+                console.log('📋 ダイアログ設定適用:', elementType);
+
+                // 設定値収集
+                const settings = {};
+                
+                switch (elementType) {
+                    case 'text':
+                        settings.anchor = dialog.querySelector('#text-anchor').value;
+                        settings.anchorKind = 'text-center';
+                        settings.scaleMode = dialog.querySelector('#scale-mode').value;
+                        settings.baseFontPx = parseInt(dialog.querySelector('#base-font').value);
+                        break;
+                        
+                    case 'image':
+                        const selectedAnchor = dialog.querySelector('.anchor-btn.selected');
+                        settings.anchor = selectedAnchor ? selectedAnchor.dataset.anchor : 'CC';
+                        settings.anchorKind = 'block';
+                        settings.scaleMode = dialog.querySelector('#scale-mode').value;
+                        break;
+                        
+                    case 'list':
+                        settings.anchor = dialog.querySelector('#list-anchor').value;
+                        settings.anchorKind = 'marker';
+                        settings.scaleMode = dialog.querySelector('#scale-mode').value;
+                        break;
+                        
+                    case 'generic':
+                        const selectedGenericAnchor = dialog.querySelector('.anchor-btn.selected');
+                        settings.anchor = selectedGenericAnchor ? selectedGenericAnchor.dataset.anchor : 'CC';
+                        settings.anchorKind = 'block';
+                        settings.scaleMode = dialog.querySelector('#scale-mode').value;
+                        break;
+                }
+
+                console.log('✅ 収集された設定:', settings);
+                
+                // PinContract生成（モック）
+                const mockContract = {
+                    refElement: this.lastSelectedElement,
+                    logicalSize: { w: 600, h: 400 },
+                    anchorKind: settings.anchorKind,
+                    align: settings.anchor,
+                    fit: 'contain',
+                    scaleMode: settings.scaleMode,
+                    baseFontPx: settings.baseFontPx || 16
+                };
+                
+                console.log('📋 生成されたPinContract（モック）:', mockContract);
+                this.updateStatus('設定適用完了', `${elementType}:${settings.anchor}`, settings.scaleMode);
+            }
+
+            setupEventListeners() {
+                // 全てのテスト要素にクリックイベントを追加
+                const testElements = [
+                    // テキスト要素
+                    '#test-heading', '#test-paragraph', '#test-span', '#test-span2', '#test-rtl',
+                    // 画像要素  
+                    '#test-image1', '#test-image2',
+                    // リスト要素
+                    '#test-li1', '#test-li2', '#test-li3', '#test-li4',
+                    // 汎用要素
+                    '#test-div', '#test-button', '#test-button2', '#test-mixed'
+                ];
+
+                testElements.forEach(selector => {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        // クリック可能要素のクラス追加
+                        element.classList.add('clickable-element');
+                        
+                        element.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            this.handleElementClick(element);
+                        });
+                    }
+                });
+
+                console.log(`✅ ${testElements.length}個のテスト要素にイベントリスナー設定完了`);
+            }
+
+            async handleElementClick(element) {
+                try {
+                    console.log('🎯 要素クリック:', element.tagName, element.id || element.className);
+                    
+                    this.lastSelectedElement = element;
+                    
+                    // 要素タイプ検出（AutoPinSelectorの内部メソッドを利用）
+                    const elementType = this.detectElementType(element);
+                    console.log('📋 検出された要素タイプ:', elementType);
+                    
+                    this.updateStatus('要素クリック検出', element.tagName + (element.id ? '#' + element.id : ''), elementType);
+                    
+                    // AutoPinSelector呼び出し
+                    if (this.autopin && typeof this.autopin.selectElement === 'function') {
+                        await this.autopin.selectElement(element);
+                        console.log('✅ AutoPin要素選択完了');
+                    } else {
+                        console.warn('⚠️ AutoPinSelector.selectElement()が利用できません');
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ 要素クリック処理エラー:', error);
+                    this.updateStatus('処理エラー', error.message, 'エラー');
+                }
+            }
+
+            // AutoPinSelectorの要素タイプ検出ロジックを複製（テスト用）
+            detectElementType(element) {
+                const tagName = element.tagName.toLowerCase();
+                
+                // 画像要素
+                if (tagName === 'img') {
+                    return 'image';
+                }
+                
+                // リスト要素
+                if (tagName === 'li') {
+                    return 'list';
+                }
+                
+                // テキスト要素
+                const textTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span'];
+                if (textTags.includes(tagName)) {
+                    return 'text';
+                }
+                
+                // DIV・BUTTONなどの汎用要素 - 内容に応じて判定
+                if (tagName === 'div' || tagName === 'button' || tagName === 'section') {
+                    // テキスト含有チェック
+                    if (element.textContent.trim().length > 0) {
+                        // 画像も含有している場合
+                        if (element.querySelector('img')) {
+                            return 'generic'; // 混在 → 汎用UI
+                        }
+                        return 'text'; // テキストのみ
+                    }
+                    // 画像含有チェック
+                    if (element.querySelector('img')) {
+                        return 'image';
+                    }
+                }
+                
+                return 'generic';
+            }
+
+            updateStatus(state, element, elementType) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.statusContent.innerHTML = `
+                    <div class="status-item"><strong>状態:</strong> ${state}</div>
+                    <div class="status-item"><strong>最終選択:</strong> ${element}</div>
+                    <div class="status-item"><strong>要素タイプ:</strong> ${elementType}</div>
+                    <div class="status-item"><strong>時刻:</strong> ${timestamp}</div>
+                `;
+            }
+
+            // デバッグ用メソッド
+            getTestResults() {
+                return {
+                    autopin: this.autopin,
+                    lastSelected: this.lastSelectedElement,
+                    autoPinStatus: this.autopin ? 'initialized' : 'not_initialized'
+                };
+            }
+        }
+
+        // テスト環境初期化
+        let autoPinTest;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🌟 要素別最適化AutoPinテスト環境開始');
+            autoPinTest = new ElementOptimizedAutoPinTest();
+            
+            // グローバルデバッグアクセス
+            window.autoPinTest = autoPinTest;
+        });
+
+        // デバッグ用グローバル関数
+        window.debugAutoPin = function() {
+            console.log('🔍 AutoPin Debug Info:');
+            console.log(autoPinTest.getTestResults());
+            return autoPinTest.getTestResults();
+        };
+    </script>
+</body>
+</html>

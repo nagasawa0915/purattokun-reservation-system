@@ -14,18 +14,18 @@
 export class ContractGenerator {
     
     /**
-     * AutoPin選択結果からPinContractを生成
+     * AutoPin選択結果からPinContractを生成（要素別最適化対応）
      * @param {Object} selectorResult - AutoPinSelector出力
      * @returns {Object} PinContract
      */
     static generateContract(selectorResult) {
-        // デフォルト値設定
+        // デフォルト値設定（新仕様対応）
         const defaults = {
             logicalSize: { w: 600, h: 400 },
             anchorKind: 'block',
             align: 'CC',
             fit: 'contain',
-            scaleMode: 'container',
+            scaleMode: 'element-linked',  // 新デフォルト：要素サイズ連動
             baseFontPx: 16
         };
         
@@ -42,7 +42,7 @@ export class ContractGenerator {
         
         // alignからat座標への変換
         if (contract.align && !contract.at) {
-            contract.at = this.alignToAnchor(contract.align, contract.logicalSize);
+            contract.at = this.alignToAnchor(contract.align, contract.logicalSize, contract.refElement);
         }
         
         // Contract検証
@@ -53,15 +53,17 @@ export class ContractGenerator {
     }
     
     /**
-     * 9アンカーをAnchor座標に変換
-     * @param {AlignAnchor} align - 9アンカー指定 
+     * 9アンカー・テキストアンカー・要素別アンカーをAnchor座標に変換
+     * @param {AlignAnchor} align - アンカー指定 (9アンカー: LT,TC,RT... / テキスト: text-start,text-end... / 要素: marker)
      * @param {LogicalSize} logicalSize - 論理サイズ
+     * @param {HTMLElement} [element] - 要素別アンカー計算用の参照要素
      * @returns {Anchor} 論理座標でのアンカー位置
      */
-    static alignToAnchor(align, logicalSize) {
+    static alignToAnchor(align, logicalSize, element) {
         const { w, h } = logicalSize;
         
-        const anchorMap = {
+        // 9アンカー（従来システム）
+        const nineAnchorMap = {
             // Top row (論理座標で返す - Observer期待形式に修正)
             'LT': { x: 0, y: 0 },           // Left-Top: 0, 0
             'TC': { x: w * 0.5, y: 0 },     // Top-Center: w/2, 0  
@@ -78,7 +80,37 @@ export class ContractGenerator {
             'RB': { x: w, y: h }            // Right-Bottom: w, h
         };
         
-        return anchorMap[align] || anchorMap['CC']; // デフォルト中央
+        // 9アンカーの場合は従来ロジック
+        if (nineAnchorMap[align]) {
+            return nineAnchorMap[align];
+        }
+        
+        // テキスト専用アンカー
+        if (align === 'text-start') {
+            // 言語方向考慮: LTR言語なら左開始、RTL言語なら右開始
+            const isRTL = element && getComputedStyle(element).direction === 'rtl';
+            return isRTL ? { x: w, y: 0 } : { x: 0, y: 0 };
+        }
+        
+        if (align === 'text-end') {
+            // 言語方向考慮: LTR言語なら右終端、RTL言語なら左終端
+            const isRTL = element && getComputedStyle(element).direction === 'rtl';
+            return isRTL ? { x: 0, y: 0 } : { x: w, y: 0 };
+        }
+        
+        if (align === 'text-center') {
+            // テキスト中央（水平中央・上端基準）
+            return { x: w * 0.5, y: 0 };
+        }
+        
+        // リスト要素専用アンカー
+        if (align === 'marker') {
+            // リストマーカー位置（左端・垂直中央）
+            return { x: 0, y: h * 0.5 };
+        }
+        
+        // 不明なalignの場合はデフォルト中央
+        return nineAnchorMap['CC'];
     }
     
     /**
@@ -129,6 +161,40 @@ export class ContractGenerator {
         if (contract.logicalSize) {
             if (contract.logicalSize.w <= 0 || contract.logicalSize.h <= 0) {
                 errors.push('logicalSize width and height must be positive numbers');
+            }
+        }
+        
+        // AnchorKind妥当性チェック（新仕様対応）
+        const validAnchorKinds = ['block', 'text-start', 'text-end', 'text-center', 'marker'];
+        if (contract.anchorKind && !validAnchorKinds.includes(contract.anchorKind)) {
+            errors.push(`anchorKind must be one of: ${validAnchorKinds.join(', ')}`);
+        }
+        
+        // ScaleMode妥当性チェック（新仕様対応）
+        const validScaleModes = ['element-linked', 'fixed-size', 'typography', 'container'];
+        if (contract.scaleMode && !validScaleModes.includes(contract.scaleMode)) {
+            errors.push(`scaleMode must be one of: ${validScaleModes.join(', ')}`);
+        }
+        
+        // Align妥当性チェック（新仕様対応）
+        if (contract.align) {
+            const validAlignValues = [
+                // 9アンカー
+                'LT', 'TC', 'RT', 'LC', 'CC', 'RC', 'LB', 'BC', 'RB',
+                // テキスト専用アンカー
+                'text-start', 'text-end', 'text-center',
+                // リスト要素専用アンカー
+                'marker'
+            ];
+            if (!validAlignValues.includes(contract.align)) {
+                errors.push(`align must be one of: ${validAlignValues.join(', ')}`);
+            }
+        }
+        
+        // Typography ScaleMode特有の検証
+        if (contract.scaleMode === 'typography') {
+            if (typeof contract.baseFontPx !== 'number' || contract.baseFontPx <= 0) {
+                errors.push('baseFontPx must be a positive number when using typography scaleMode');
             }
         }
         
@@ -249,7 +315,7 @@ export class ContractGenerator {
         // align → at 変換（必要に応じて）
         let resolvedAt = selectorContract.at;
         if (!resolvedAt && selectorContract.align) {
-            resolvedAt = this.alignToAnchor(selectorContract.align, selectorContract.logicalSize);
+            resolvedAt = this.alignToAnchor(selectorContract.align, selectorContract.logicalSize, selectorContract.refElement);
         }
         
         return {
@@ -260,13 +326,36 @@ export class ContractGenerator {
             onUpdate: (payload) => {
                 // scaleMode考慮のスケール計算
                 let finalScale;
-                if (selectorContract.scaleMode === 'typography') {
-                    const currentFont = this.getCurrentFontSize(selectorContract.refElement);
-                    const baseFontPx = selectorContract.baseFontPx || 16;
-                    finalScale = currentFont / baseFontPx;
-                } else {
-                    // container: min(scaleX, scaleY)でアスペクト比維持
-                    finalScale = Math.min(payload.scaleX, payload.scaleY);
+                const scaleMode = selectorContract.scaleMode || 'element-linked';
+                
+                switch (scaleMode) {
+                    case 'typography':
+                        // フォントサイズ基準スケール
+                        const currentFont = this.getCurrentFontSize(selectorContract.refElement);
+                        const baseFontPx = selectorContract.baseFontPx || 16;
+                        finalScale = currentFont / baseFontPx;
+                        break;
+                        
+                    case 'element-linked':
+                        // 要素サイズ連動（新デフォルト）: min(scaleX, scaleY)でアスペクト比維持
+                        finalScale = Math.min(payload.scaleX, payload.scaleY);
+                        break;
+                        
+                    case 'fixed-size':
+                        // 固定サイズ（スケールなし）
+                        finalScale = 1.0;
+                        break;
+                        
+                    case 'container':
+                        // 従来のコンテナ基準（互換性保持）
+                        finalScale = Math.min(payload.scaleX, payload.scaleY);
+                        break;
+                        
+                    default:
+                        // 不明なscaleModeの場合はelement-linkedにフォールバック
+                        console.warn('🔄 Unknown scaleMode:', scaleMode, '→ Using element-linked');
+                        finalScale = Math.min(payload.scaleX, payload.scaleY);
+                        break;
                 }
                 
                 // 座標解決
@@ -277,7 +366,8 @@ export class ContractGenerator {
                     ...payload,
                     contract: selectorContract,
                     finalScale,
-                    position
+                    position,
+                    scaleMode: scaleMode
                 };
                 
                 onUpdateCallback(extendedPayload);
