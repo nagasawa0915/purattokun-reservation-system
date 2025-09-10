@@ -141,6 +141,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## 🤖 Observer システム使い分け（AI混乱防止・2025-09-10追加）
+
+### 🎯 アクティブシステム（使用中）
+- **micromodules/observer/AutoPinObserver.js**: 座標混入問題解決用（責務分離システム・2025-09-08開発）
+- **micromodules/bounding-box/EfficientObserver.js**: BB編集専用
+- **micromodules/environment-observer/PureEnvironmentObserver.js**: 環境監視専用
+
+### 🗄️ レガシーシステム（参照のみ・実装禁止）
+- **micromodules/legacy-element-observer/**: 旧ElementObserver実験群（Phase 1-3完了版）
+- **archive/element-observer-complete-archive/**: 過去の実験・完成版アーカイブ
+  - **experiments/**: 実験ファイル群
+  - **phase2-complete/**: Phase 2完成版モジュール
+  - **root-level-tests/**: ルートレベルテストファイル
+
+### 🚨 AI開発時の重要ルール
+1. **新規Observer開発禁止**: 既存のアクティブシステムを優先使用
+2. **レガシー参照時は要確認**: 実装に使用する前に必ず用途確認
+3. **命名明確化**: 新しいObserver系モジュールは用途を明示（例：AutoPinObserver）
+
+---
+
 ## 🎯 現在の作業状況（2025-09-01更新）
 
 ### ✅ **StableSpineRenderer完成・黒枠問題完全解決（2025-09-02）**

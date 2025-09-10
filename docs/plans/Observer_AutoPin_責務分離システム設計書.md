@@ -127,7 +127,7 @@ export function register(target: ObserveTarget): Unregister;
 - **工数**: 0.5日
 
 #### 4.1.2 Observer核心モジュール実装  
-- **ファイル**: `micromodules/observer/Observer.js`
+- **ファイル**: `micromodules/observer/AutoPinObserver.js`
 - **機能**: register(), Phase 0成果物統合、rAFスロットリング
 - **重点**: ResizeObserver/MutationObserver/window resize統合、DPR補正
 - **工数**: 2日
