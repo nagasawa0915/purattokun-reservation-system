@@ -480,22 +480,22 @@ export class NewPanelSwapController {
                 return {
                     areas: [
                         '"header header header"',
-                        `"outliner ${draggedId} properties"`,
-                        `"outliner ${targetId} properties"`,
+                        `"${draggedId} ${draggedId} properties"`,
+                        `"${targetId} ${targetId} properties"`,
                         '"timeline timeline timeline"'
                     ],
-                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)',
+                    columns: '1fr 1fr var(--properties-width, 300px)',
                     rows: '60px 1fr 1fr var(--timeline-height, 200px)'
                 };
             } else { // bottom
                 return {
                     areas: [
                         '"header header header"',
-                        `"outliner ${targetId} properties"`,
-                        `"outliner ${draggedId} properties"`,
+                        `"${targetId} ${targetId} properties"`,
+                        `"${draggedId} ${draggedId} properties"`,
                         '"timeline timeline timeline"'
                     ],
-                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)',
+                    columns: '1fr 1fr var(--properties-width, 300px)',
                     rows: '60px 1fr 1fr var(--timeline-height, 200px)'
                 };
             }
