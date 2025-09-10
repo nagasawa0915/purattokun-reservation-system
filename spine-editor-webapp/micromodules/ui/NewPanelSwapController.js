@@ -497,7 +497,7 @@ export class NewPanelSwapController {
         // 基本的な実装：対象パネルの位置に応じてgrid-template-areasを動的生成
         const currentAreas = this.getCurrentGridAreas();
         
-        // 簡易実装：プレビューエリアでの分割例
+        // プレビューエリアでの分割
         if (targetId === 'preview') {
             if (position === 'top') {
                 return {
@@ -524,6 +524,60 @@ export class NewPanelSwapController {
             }
         }
         
+        // プロパティパネルでの分割
+        if (targetId === 'properties') {
+            if (position === 'top') {
+                return {
+                    areas: [
+                        '"header header header"',
+                        `"outliner preview ${draggedId}"`,
+                        `"outliner preview ${targetId}"`,
+                        '"timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)',
+                    rows: '60px 1fr 1fr var(--timeline-height, 200px)'
+                };
+            } else { // bottom
+                return {
+                    areas: [
+                        '"header header header"',
+                        `"outliner preview ${targetId}"`,
+                        `"outliner preview ${draggedId}"`,
+                        '"timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)',
+                    rows: '60px 1fr 1fr var(--timeline-height, 200px)'
+                };
+            }
+        }
+        
+        // アウトライナーでの分割
+        if (targetId === 'outliner') {
+            if (position === 'top') {
+                return {
+                    areas: [
+                        '"header header header"',
+                        `"${draggedId} preview properties"`,
+                        `"${targetId} preview properties"`,
+                        '"timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)',
+                    rows: '60px 1fr 1fr var(--timeline-height, 200px)'
+                };
+            } else { // bottom
+                return {
+                    areas: [
+                        '"header header header"',
+                        `"${targetId} preview properties"`,
+                        `"${draggedId} preview properties"`,
+                        '"timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)',
+                    rows: '60px 1fr 1fr var(--timeline-height, 200px)'
+                };
+            }
+        }
+        
         // デフォルト（変更なし）
         return null;
     }
@@ -535,33 +589,82 @@ export class NewPanelSwapController {
         // 横分割の場合、空白エリアを埋める必要がある
         const currentAreas = this.getCurrentGridAreas();
         
-        // アウトライナーへのドロップ（左分割）
+        // アウトライナーでの横分割
         if (targetId === 'outliner') {
             if (position === 'left') {
-                // デフォルトレイアウトに戻す（プロパティ → アウトライナー左辺）
+                // 左にドラッグパネル、右にアウトライナー
                 return {
                     areas: [
                         '"header header header"',
-                        '"outliner preview properties"',
+                        `"${draggedId} ${targetId} properties"`,
                         '"timeline timeline timeline"'
                     ],
-                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)',
+                    columns: 'var(--outliner-width, 300px) var(--outliner-width, 300px) var(--properties-width, 300px)',
                     rows: '60px 1fr var(--timeline-height, 200px)'
                 };
-            }
-        }
-        
-        // プレビューエリアでの分割例
-        if (targetId === 'preview') {
-            if (position === 'right') {
-                // プレビューが左に拡張、ドラッグされたパネルが右に配置
+            } else if (position === 'right') {
+                // 左にアウトライナー、右にドラッグパネル
                 return {
                     areas: [
                         '"header header header"',
                         `"${targetId} ${draggedId} properties"`,
                         '"timeline timeline timeline"'
                     ],
-                    columns: '1fr auto var(--properties-width, 300px)',
+                    columns: 'var(--outliner-width, 300px) var(--outliner-width, 300px) var(--properties-width, 300px)',
+                    rows: '60px 1fr var(--timeline-height, 200px)'
+                };
+            }
+        }
+        
+        // プレビューでの横分割
+        if (targetId === 'preview') {
+            if (position === 'left') {
+                // 左にドラッグパネル、右にプレビューが拡張
+                return {
+                    areas: [
+                        '"header header header"',
+                        `"outliner ${draggedId} ${targetId} properties"`,
+                        '"timeline timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) auto 1fr var(--properties-width, 300px)',
+                    rows: '60px 1fr var(--timeline-height, 200px)'
+                };
+            } else if (position === 'right') {
+                // 左にプレビューが拡張、右にドラッグパネル
+                return {
+                    areas: [
+                        '"header header header"',
+                        `"outliner ${targetId} ${draggedId} properties"`,
+                        '"timeline timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) 1fr auto var(--properties-width, 300px)',
+                    rows: '60px 1fr var(--timeline-height, 200px)'
+                };
+            }
+        }
+        
+        // プロパティパネルでの横分割
+        if (targetId === 'properties') {
+            if (position === 'left') {
+                // 左にドラッグパネル、右にプロパティ
+                return {
+                    areas: [
+                        '"header header header"',
+                        `"outliner preview ${draggedId} ${targetId}"`,
+                        '"timeline timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 150px) var(--properties-width, 150px)',
+                    rows: '60px 1fr var(--timeline-height, 200px)'
+                };
+            } else if (position === 'right') {
+                // 左にプロパティ、右にドラッグパネル
+                return {
+                    areas: [
+                        '"header header header"',
+                        `"outliner preview ${targetId} ${draggedId}"`,
+                        '"timeline timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 150px) var(--properties-width, 150px)',
                     rows: '60px 1fr var(--timeline-height, 200px)'
                 };
             }

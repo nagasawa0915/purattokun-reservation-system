@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>改善された縦積みシステム テスト</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1e1e1e;
+            color: white;
+            height: 100vh;
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "outliner preview properties"
+                "timeline timeline timeline";
+            grid-template-columns: var(--outliner-width, 300px) 1fr var(--properties-width, 300px);
+            grid-template-rows: 60px 1fr var(--timeline-height, 200px);
+            gap: 1px;
+        }
+        
+        /* ヘッダー */
+        .top-bar {
+            grid-area: header;
+            background: #2d2d2d;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .test-btn {
+            background: #007acc;
+            border: 1px solid #0099ff;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .test-btn:hover {
+            background: #0099ff;
+            transform: translateY(-1px);
+        }
+        
+        .test-status {
+            background: #00ff88;
+            color: black;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        /* パネル共通スタイル */
+        .panel {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        .panel:hover {
+            border-color: #555555;
+        }
+        
+        .panel-header {
+            height: 32px;
+            background: #3a3a3a;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            cursor: move;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        
+        .panel-header:hover {
+            background: #4a4a4a;
+        }
+        
+        .panel-header.dragging {
+            background: #007acc;
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(0, 122, 204, 0.4);
+        }
+        
+        .panel-title {
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .panel-content {
+            flex: 1;
+            padding: 15px;
+            overflow: auto;
+        }
+        
+        /* 各パネル配置 */
+        .panel-outliner { grid-area: outliner; }
+        .panel-preview { 
+            grid-area: preview;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+        }
+        .panel-properties { grid-area: properties; }
+        .panel-timeline { grid-area: timeline; }
+        
+        /* プレビューエリア */
+        .preview-area {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            text-align: center;
+        }
+        
+        /* デバッグパネル */
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 11px;
+            max-width: 350px;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+            border: 1px solid #333;
+            z-index: 2000;
+        }
+        
+        .debug-panel:hover {
+            opacity: 1;
+        }
+        
+        .debug-panel h4 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        
+        .debug-info {
+            margin: 4px 0;
+            color: #cccccc;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .debug-info .label {
+            color: #999;
+        }
+        
+        .debug-info .value {
+            color: #00ff88;
+            font-weight: 500;
+        }
+        
+        /* 比較表示 */
+        .comparison-info {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+        
+        .comparison-info h5 {
+            color: #ffdd00;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .comparison-item {
+            margin: 3px 0;
+            font-size: 10px;
+        }
+        
+        .improvement {
+            color: #00ff88;
+        }
+        
+        .issue {
+            color: #ff6b6b;
+        }
+        
+        /* 操作ガイド */
+        .operation-guide {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            max-width: 300px;
+            border: 1px solid #333;
+        }
+        
+        .operation-guide h4 {
+            color: #007acc;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .operation-step {
+            margin: 4px 0;
+            color: #ccc;
+        }
+        
+        .step-number {
+            color: #00ff88;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <div class="top-bar">
+        <div>
+            <span style="font-weight: bold; color: #00ff88;">🧪 改善された縦積みシステム テスト</span>
+        </div>
+        
+        <div class="test-controls">
+            <button class="test-btn" onclick="switchToOriginal()">🔄 従来版切替</button>
+            <button class="test-btn" onclick="switchToImproved()">🚀 改善版切替</button>
+            <button class="test-btn" onclick="resetLayout()">📐 リセット</button>
+            <div class="test-status" id="current-system">改善版アクティブ</div>
+        </div>
+    </div>
+
+    <!-- アウトライナーパネル -->
+    <div class="panel panel-outliner" data-panel="outliner">
+        <div class="panel-header">
+            <span class="panel-title">📁 アウトライナー</span>
+            <div style="font-size: 10px; color: #666;">ドラッグ可能</div>
+        </div>
+        <div class="panel-content">
+            <div style="color: #999; font-size: 13px;">
+                <p>📂 プロジェクト構造</p>
+                <div style="margin: 15px 0; padding: 10px; background: rgba(0, 122, 204, 0.1); border-radius: 4px;">
+                    <strong style="color: #007acc;">🎯 テスト手順:</strong>
+                    <div style="margin-top: 8px; font-size: 11px; line-height: 1.4;">
+                        1. このヘッダーをドラッグ<br>
+                        2. 画面左端/右端に移動<br>
+                        3. 縦積みゾーンの表示確認<br>
+                        4. 他のパネル上でドロップ確認
+                    </div>
+                </div>
+                <ul style="list-style: none; margin-left: 10px;">
+                    <li style="margin: 5px 0;"><span style="color: #00ff88;">🟢</span> SystemCoordinator.js</li>
+                    <li style="margin: 5px 0;"><span style="color: #007acc;">🔵</span> ImprovedDragDrop.js</li>
+                    <li style="margin: 5px 0;"><span style="color: #ffdd00;">🟡</span> LayoutManager.js</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- プレビューパネル -->
+    <div class="panel panel-preview" data-panel="preview">
+        <div class="panel-header">
+            <span class="panel-title">🎬 プレビュー</span>
+            <div style="font-size: 10px; color: #666;">中央エリア</div>
+        </div>
+        <div class="panel-content">
+            <div class="preview-area">
+                <div>
+                    <div style="font-size: 48px; margin-bottom: 15px;">🎭</div>
+                    <p style="margin-bottom: 8px;">改善された縦積みシステム</p>
+                    <p style="font-size: 10px; color: #555;">ドラッグ感度・視覚フィードバック強化版</p>
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(0, 255, 136, 0.1); border-radius: 8px;">
+                        <strong style="color: #00ff88;">✨ 主要改善点:</strong>
+                        <ul style="text-align: left; margin-top: 10px; font-size: 11px;">
+                            <li>🎯 ドラッグ感度向上 (250px → 100px)</li>
+                            <li>🎨 段階的ドロップゾーン表示</li>
+                            <li>⚡ スムーズなアニメーション</li>
+                            <li>🔄 リアルタイムフィードバック</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- プロパティパネル -->
+    <div class="panel panel-properties" data-panel="properties">
+        <div class="panel-header">
+            <span class="panel-title">⚙️ プロパティ</span>
+            <div style="font-size: 10px; color: #666;">設定パネル</div>
+        </div>
+        <div class="panel-content">
+            <div style="font-size: 12px;">
+                <div style="margin-bottom: 15px; padding: 10px; background: rgba(255, 107, 107, 0.1); border-radius: 4px;">
+                    <strong style="color: #ff6b6b;">🔍 従来版の問題:</strong>
+                    <ul style="margin-top: 8px; font-size: 11px; line-height: 1.4;">
+                        <li>• 画面端250px = 感度低すぎ</li>
+                        <li>• ドロップヒント不足</li>
+                        <li>• 重いレイアウト切替</li>
+                        <li>• 直感性に欠ける</li>
+                    </ul>
+                </div>
+                
+                <div style="padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 4px;">
+                    <strong style="color: #00ff88;">✅ 改善版の特徴:</strong>
+                    <ul style="margin-top: 8px; font-size: 11px; line-height: 1.4;">
+                        <li>• 画面端100px = 自然な感度</li>
+                        <li>• 段階的ドロップゾーン</li>
+                        <li>• スムーズアニメーション</li>
+                        <li>• 現代的UI設計準拠</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- タイムラインパネル -->
+    <div class="panel panel-timeline" data-panel="timeline">
+        <div class="panel-header">
+            <span class="panel-title">⏰ タイムライン</span>
+            <div style="font-size: 10px; color: #666;">横長パネル</div>
+        </div>
+        <div class="panel-content">
+            <div style="text-align: center; color: #666;">
+                <div style="font-size: 32px; margin-bottom: 10px;">⏯️</div>
+                <p>アニメーション制御エリア</p>
+                <p style="font-size: 10px; margin-top: 5px;">このパネルも他のパネルと入れ替え可能です</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- デバッグパネル -->
+    <div class="debug-panel">
+        <h4>🔍 改善版システム監視</h4>
+        <div class="debug-info">
+            <span class="label">現在のシステム:</span>
+            <span class="value" id="system-status">改善版</span>
+        </div>
+        <div class="debug-info">
+            <span class="label">ドラッグ状態:</span>
+            <span class="value" id="drag-status">待機中</span>
+        </div>
+        <div class="debug-info">
+            <span class="label">検出ゾーン:</span>
+            <span class="value" id="current-zone">なし</span>
+        </div>
+        <div class="debug-info">
+            <span class="label">エッジ感度:</span>
+            <span class="value" id="edge-threshold">100px</span>
+        </div>
+        
+        <div class="comparison-info">
+            <h5>📊 従来版との比較</h5>
+            <div class="comparison-item improvement">✅ 感度: 250px → 100px (60%向上)</div>
+            <div class="comparison-item improvement">✅ ヒント: 後出し → 段階表示</div>
+            <div class="comparison-item improvement">✅ 操作性: 重い → スムーズ</div>
+            <div class="comparison-item improvement">✅ フィードバック: 最小 → リッチ</div>
+        </div>
+    </div>
+    
+    <!-- 操作ガイド -->
+    <div class="operation-guide">
+        <h4>📖 操作ガイド</h4>
+        <div class="operation-step"><span class="step-number">1.</span> パネルヘッダーをドラッグ開始</div>
+        <div class="operation-step"><span class="step-number">2.</span> 画面左端・右端 (100px以内) で縦積み</div>
+        <div class="operation-step"><span class="step-number">3.</span> 他のパネル上でパネル入れ替え</div>
+        <div class="operation-step"><span class="step-number">4.</span> ESCキーでドラッグキャンセル</div>
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #333; font-size: 10px; color: #777;">
+            💡 改善版では画面端100px = より自然な操作感
+        </div>
+    </div>
+
+    <!-- 改善されたシステム読み込み -->
+    <script type="module">
+        import { ImprovedDragDropController } from './micromodules/ui/ImprovedDragDropController.js';
+        import { LayoutManager } from './micromodules/ui/LayoutManager.js';
+        
+        // 簡易パネルマネージャー
+        class TestPanelManager {
+            getAllPanels() {
+                return ['outliner', 'preview', 'properties', 'timeline'];
+            }
+            
+            findPanel(panelId) {
+                const element = document.querySelector(`.panel[data-panel="${panelId}"]`);
+                return element ? { element, id: panelId } : null;
+            }
+        }
+        
+        // システム初期化
+        let currentSystem = 'improved';
+        let improvedController = null;
+        let layoutManager = null;
+        let panelManager = null;
+        
+        async function initializeImprovedSystem() {
+            console.log('🚀 改善版システム初期化開始');
+            
+            try {
+                // インスタンス作成
+                panelManager = new TestPanelManager();
+                layoutManager = new LayoutManager();
+                improvedController = new ImprovedDragDropController(panelManager, layoutManager);
+                
+                // 初期化
+                const result = await improvedController.initializeDragDrop();
+                
+                // グローバル設定
+                window.improvedSystem = {
+                    controller: improvedController,
+                    layoutManager: layoutManager,
+                    panelManager: panelManager
+                };
+                
+                // デバッグ更新開始
+                startDebugMonitoring();
+                
+                console.log(`✅ 改善版システム初期化完了: ${result}個のパネル`);
+                updateSystemStatus('改善版', 'ready');
+                
+            } catch (error) {
+                console.error('❌ 改善版システム初期化エラー:', error);
+                updateSystemStatus('改善版', 'error');
+            }
+        }
+        
+        // デバッグ監視開始
+        function startDebugMonitoring() {
+            setInterval(() => {
+                if (improvedController) {
+                    const debugInfo = improvedController.getImprovedDebugInfo();
+                    updateDebugDisplay(debugInfo);
+                }
+            }, 100);
+        }
+        
+        // デバッグ表示更新
+        function updateDebugDisplay(debugInfo) {
+            document.getElementById('drag-status').textContent = 
+                debugInfo.isDragging ? `ドラッグ中: ${debugInfo.draggedPanel}` : '待機中';
+                
+            document.getElementById('current-zone').textContent = 
+                debugInfo.currentZone || 'なし';
+                
+            document.getElementById('edge-threshold').textContent = 
+                `${debugInfo.config?.edgeThreshold || 100}px`;
+        }
+        
+        // システム状態更新
+        function updateSystemStatus(system, status) {
+            document.getElementById('system-status').textContent = system;
+            document.getElementById('current-system').textContent = `${system}アクティブ`;
+            
+            const statusElement = document.getElementById('current-system');
+            statusElement.className = 'test-status';
+            
+            if (status === 'ready') {
+                statusElement.style.background = '#00ff88';
+                statusElement.style.color = 'black';
+            } else if (status === 'error') {
+                statusElement.style.background = '#ff6b6b';
+                statusElement.style.color = 'white';
+            }
+        }
+        
+        // テスト機能
+        window.switchToOriginal = function() {
+            alert('従来版切替機能\n（デモ用 - 実際の切替は複雑な実装が必要）');
+        };
+        
+        window.switchToImproved = function() {
+            if (!improvedController) {
+                initializeImprovedSystem();
+            } else {
+                updateSystemStatus('改善版', 'ready');
+            }
+        };
+        
+        window.resetLayout = function() {
+            if (layoutManager) {
+                layoutManager.resetLayout();
+                localStorage.removeItem('spine-editor-stacks');
+                updateSystemStatus('改善版', 'ready');
+                console.log('📐 レイアウトリセット完了');
+            }
+        };
+        
+        // デバッグ用エクスポート
+        window.getImprovedDebugInfo = function() {
+            return improvedController?.getImprovedDebugInfo();
+        };
+        
+        // 初期化実行
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🧪 改善された縦積みシステムテスト開始');
+            initializeImprovedSystem();
+        });
+    </script>
+</body>
+</html>
