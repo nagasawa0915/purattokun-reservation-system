@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 パネル縦積みデバッグテスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: white;
+            padding: 20px;
+        }
+        
+        .debug-section {
+            background: #2d2d2d;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #404040;
+        }
+        
+        .debug-btn {
+            background: #007acc;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 12px;
+        }
+        
+        .debug-btn:hover {
+            background: #005a9e;
+        }
+        
+        .log-output {
+            background: #1a1a1a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        
+        .status.ok { background: #00ff88; color: black; }
+        .status.error { background: #ff6b6b; color: white; }
+        .status.warning { background: #ffdd00; color: black; }
+    </style>
+</head>
+<body>
+    <h1>🔍 パネル縦積み機能デバッグテスト</h1>
+    
+    <div class="debug-section">
+        <h2>📋 1. モジュール読み込みテスト</h2>
+        <button class="debug-btn" onclick="testModuleLoading()">モジュール読み込み確認</button>
+        <button class="debug-btn" onclick="testSystemCoordinator()">SystemCoordinator確認</button>
+        <div id="module-status"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>🎯 2. LayoutManager機能テスト</h2>
+        <button class="debug-btn" onclick="testLayoutManager()">LayoutManager動作確認</button>
+        <button class="debug-btn" onclick="testLayoutSwitch()">レイアウト切替テスト</button>
+        <button class="debug-btn" onclick="testStackedLayout()">縦積みレイアウトテスト</button>
+        <div id="layout-status"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>🔄 3. DragDropController機能テスト</h2>
+        <button class="debug-btn" onclick="testDragDrop()">D&D初期化確認</button>
+        <button class="debug-btn" onclick="testStackZones()">縦積みドロップゾーン確認</button>
+        <button class="debug-btn" onclick="simulateDrag()">仮想ドラッグテスト</button>
+        <div id="dragdrop-status"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>📊 4. リアルタイムログ</h2>
+        <button class="debug-btn" onclick="clearLog()">ログクリア</button>
+        <button class="debug-btn" onclick="openMainApp()">メインアプリ起動</button>
+        <div class="log-output" id="debug-log">デバッグテスト準備完了...\n</div>
+    </div>
+
+    <script type="module">
+        let systemCoordinator = null;
+        
+        function log(message, level = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('debug-log');
+            const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : '✅';
+            logElement.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+        
+        function setStatus(containerId, status, text) {
+            const container = document.getElementById(containerId);
+            const statusClass = status === 'ok' ? 'ok' : status === 'error' ? 'error' : 'warning';
+            container.innerHTML = `<span class="status ${statusClass}">${status.toUpperCase()}</span> ${text}`;
+        }
+        
+        // 1. モジュール読み込みテスト
+        window.testModuleLoading = async function() {
+            log('📋 モジュール読み込みテスト開始');
+            
+            try {
+                // SystemCoordinatorを読み込み・初期化
+                const { SystemCoordinator } = await import('./spine-editor-webapp/micromodules/core/SystemCoordinator.js');
+                log('✅ SystemCoordinator読み込み成功');
+                
+                systemCoordinator = new SystemCoordinator();
+                window.testSystemCoordinator = systemCoordinator;
+                
+                // 初期化完了まで少し待機
+                setTimeout(() => {
+                    log('✅ SystemCoordinator初期化成功');
+                    log(`📐 LayoutManager状態: ${systemCoordinator.layoutManager ? '初期化済み' : '未初期化'}`);
+                    log(`🔄 DragDropController状態: ${systemCoordinator.dragDropController ? '初期化済み' : '未初期化'}`);
+                    setStatus('module-status', 'ok', 'モジュール読み込み完了');
+                }, 500);
+                
+            } catch (error) {
+                log(`❌ モジュール読み込みエラー: ${error.message}`, 'error');
+                log(`詳細: ${error.stack}`, 'error');
+                setStatus('module-status', 'error', `エラー: ${error.message}`);
+            }
+        };
+        
+        // SystemCoordinator状態確認
+        window.testSystemCoordinator = function() {
+            if (!systemCoordinator) {
+                log('⚠️ SystemCoordinatorが初期化されていません', 'warn');
+                return;
+            }
+            
+            log('🎯 SystemCoordinator状態確認:');
+            log(`- 状態: ${systemCoordinator.state}`);
+            log(`- LayoutManager: ${systemCoordinator.layoutManager ? '✅' : '❌'}`);
+            log(`- DragDropController: ${systemCoordinator.dragDropController ? '✅' : '❌'}`);
+            log(`- PanelManager: ${systemCoordinator.panelManager ? '✅' : '❌'}`);
+            
+            setStatus('module-status', 'ok', 'SystemCoordinator動作中');
+        };
+        
+        // 2. LayoutManager機能テスト
+        window.testLayoutManager = function() {
+            if (!systemCoordinator?.layoutManager) {
+                log('❌ LayoutManagerが利用できません', 'error');
+                setStatus('layout-status', 'error', 'LayoutManager未初期化');
+                return;
+            }
+            
+            const layoutManager = systemCoordinator.layoutManager;
+            const currentLayout = layoutManager.getCurrentLayout();
+            
+            log('📐 LayoutManager状態確認:');
+            log(`- 現在のレイアウト: ${currentLayout.id}`);
+            log(`- 利用可能レイアウト: ${currentLayout.availableLayouts.join(', ')}`);
+            
+            setStatus('layout-status', 'ok', `現在: ${currentLayout.id}`);
+        };
+        
+        // レイアウト切替テスト
+        window.testLayoutSwitch = function() {
+            if (!systemCoordinator?.layoutManager) {
+                log('❌ LayoutManagerが利用できません', 'error');
+                return;
+            }
+            
+            const layouts = ['default', 'left-stacked', 'right-stacked'];
+            let currentIndex = 0;
+            
+            const testNext = () => {
+                if (currentIndex >= layouts.length) {
+                    log('✅ 全レイアウト切替テスト完了');
+                    return;
+                }
+                
+                const layoutId = layouts[currentIndex];
+                log(`🔄 レイアウト切替テスト: ${layoutId}`);
+                
+                try {
+                    const result = systemCoordinator.layoutManager.switchLayout(layoutId);
+                    log(`${result ? '✅' : '❌'} ${layoutId}切替: ${result}`);
+                } catch (error) {
+                    log(`❌ ${layoutId}切替エラー: ${error.message}`, 'error');
+                }
+                
+                currentIndex++;
+                setTimeout(testNext, 1000);
+            };
+            
+            testNext();
+        };
+        
+        // 縦積みレイアウトテスト
+        window.testStackedLayout = function() {
+            if (!systemCoordinator?.layoutManager) {
+                log('❌ LayoutManagerが利用できません', 'error');
+                return;
+            }
+            
+            log('📚 縦積みレイアウトテスト開始');
+            
+            // 左サイド縦積みテスト
+            try {
+                const result = systemCoordinator.layoutManager.stackPanelsVertically('left', ['outliner', 'properties']);
+                log(`✅ 左サイド縦積みテスト: ${result}`);
+            } catch (error) {
+                log(`❌ 左サイド縦積みエラー: ${error.message}`, 'error');
+            }
+            
+            setStatus('layout-status', 'ok', '縦積みテスト実行');
+        };
+        
+        // 3. DragDropController機能テスト
+        window.testDragDrop = function() {
+            if (!systemCoordinator?.dragDropController) {
+                log('❌ DragDropControllerが利用できません', 'error');
+                setStatus('dragdrop-status', 'error', 'D&D未初期化');
+                return;
+            }
+            
+            const ddController = systemCoordinator.dragDropController;
+            
+            log('🔄 DragDropController状態確認:');
+            log(`- 状態: ${ddController.state}`);
+            log(`- 縦積みドロップゾーン数: ${ddController.stackDropZones.size}`);
+            log(`- ドラッグ中: ${ddController.isDraggingPanel}`);
+            
+            setStatus('dragdrop-status', 'ok', `状態: ${ddController.state}`);
+        };
+        
+        // 縦積みドロップゾーン確認
+        window.testStackZones = function() {
+            if (!systemCoordinator?.dragDropController) {
+                log('❌ DragDropControllerが利用できません', 'error');
+                return;
+            }
+            
+            const stackZones = systemCoordinator.dragDropController.stackDropZones;
+            
+            log('📚 縦積みドロップゾーン確認:');
+            stackZones.forEach((zone, area) => {
+                const isVisible = zone.style.opacity !== '0';
+                log(`- ${area}サイド: ${zone ? '✅存在' : '❌なし'} (表示: ${isVisible})`);
+                
+                // テスト表示
+                if (zone) {
+                    zone.style.opacity = '0.8';
+                    zone.style.left = area === 'left' ? '50px' : '200px';
+                    zone.style.top = '100px';
+                    zone.style.width = '150px';
+                    zone.style.height = '100px';
+                    
+                    setTimeout(() => {
+                        zone.style.opacity = '0';
+                    }, 2000);
+                }
+            });
+            
+            setStatus('dragdrop-status', 'ok', `ドロップゾーン: ${stackZones.size}個`);
+        };
+        
+        // 仮想ドラッグテスト
+        window.simulateDrag = function() {
+            if (!systemCoordinator?.dragDropController) {
+                log('❌ DragDropControllerが利用できません', 'error');
+                return;
+            }
+            
+            log('🖱️ 仮想ドラッグテスト開始');
+            
+            const ddController = systemCoordinator.dragDropController;
+            
+            // 仮想ドラッグイベント作成
+            const createMouseEvent = (type, x, y) => ({
+                clientX: x,
+                clientY: y,
+                target: document.body,
+                preventDefault: () => {},
+                stopPropagation: () => {}
+            });
+            
+            try {
+                // ドラッグ開始
+                ddController.isDraggingPanel = true;
+                ddController.draggedPanel = 'outliner';
+                log('✅ 仮想ドラッグ開始');
+                
+                // 左端にドラッグ（縦積みゾーン表示テスト）
+                const leftEdgeEvent = createMouseEvent('mousemove', 50, 200);
+                ddController.handlePanelDrag(leftEdgeEvent);
+                log('✅ 左端ドラッグテスト');
+                
+                // 右端にドラッグ
+                const rightEdgeEvent = createMouseEvent('mousemove', window.innerWidth - 50, 200);
+                ddController.handlePanelDrag(rightEdgeEvent);
+                log('✅ 右端ドラッグテスト');
+                
+                // ドラッグ終了
+                ddController.endPanelDrag();
+                log('✅ 仮想ドラッグ終了');
+                
+            } catch (error) {
+                log(`❌ 仮想ドラッグエラー: ${error.message}`, 'error');
+            }
+            
+            setStatus('dragdrop-status', 'ok', '仮想ドラッグテスト完了');
+        };
+        
+        // ユーティリティ関数
+        window.clearLog = function() {
+            document.getElementById('debug-log').innerHTML = 'ログをクリアしました...\n';
+        };
+        
+        window.openMainApp = function() {
+            window.open('./spine-editor-webapp/index-system-coordinator.html', '_blank');
+        };
+        
+        // 自動初期化
+        log('🚀 デバッグ環境準備完了');
+        log('💡 「モジュール読み込み確認」ボタンから開始してください');
+    </script>
+</body>
+</html>

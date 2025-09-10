@@ -84,10 +84,10 @@ export class LayoutManager {
 
         console.log(`🔄 レイアウト切替: ${this.currentLayout} → ${layoutId}`);
         
-        // CSS Grid設定更新
-        document.body.style.gridTemplateAreas = config.areas.map(area => `"${area}"`).join(' ');
-        document.body.style.gridTemplateColumns = config.columns;
-        document.body.style.gridTemplateRows = config.rows;
+        // CSS Grid設定更新（!important でCSS優先度を上書き）
+        document.body.style.setProperty('grid-template-areas', config.areas.map(area => `"${area}"`).join(' '), 'important');
+        document.body.style.setProperty('grid-template-columns', config.columns, 'important');
+        document.body.style.setProperty('grid-template-rows', config.rows, 'important');
 
         // パネル配置更新
         this.updatePanelGridAreas(layoutId);

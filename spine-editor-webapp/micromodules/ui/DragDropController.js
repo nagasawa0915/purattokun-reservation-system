@@ -128,10 +128,17 @@ export class DragDropController {
         // 画面端での縦積みゾーン表示判定
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        const edgeThreshold = 100; // 画面端から100px以内
+        const edgeThreshold = 250; // 画面端から250px以内（感度大幅向上：X=1450でも検出可能）
+        
+        // デバッグ情報を追加（エッジ検出条件を明示）
+        const leftEdge = edgeThreshold;
+        const rightEdge = screenWidth - edgeThreshold;
+        console.log(`🖱️ ドラッグ位置: (${event.clientX}, ${event.clientY}) / 画面: (${screenWidth}, ${screenHeight})`);
+        console.log(`🎯 エッジ検出範囲: 左端 X ≤ ${leftEdge}, 右端 X ≥ ${rightEdge}`);
         
         // 左端検出
         if (event.clientX <= edgeThreshold) {
+            console.log(`📚 縦積みゾーン表示: 左サイド (X=${event.clientX} ≤ ${edgeThreshold})`);
             this.showStackDropZone('left', event);
             this.hideStackDropZone('right');
             this.hideDropZone();
@@ -140,6 +147,7 @@ export class DragDropController {
         
         // 右端検出  
         if (event.clientX >= screenWidth - edgeThreshold) {
+            console.log(`📚 縦積みゾーン表示: 右サイド (X=${event.clientX} ≥ ${screenWidth - edgeThreshold})`);
             this.showStackDropZone('right', event);
             this.hideStackDropZone('left');
             this.hideDropZone();
