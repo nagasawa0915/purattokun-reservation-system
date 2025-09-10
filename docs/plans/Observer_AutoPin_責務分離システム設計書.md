@@ -60,22 +60,69 @@ Observer → 「正規化・座標計算専用」に特化（高精度）
 
 ### 3.1 PinContract（契約情報）
 ```typescript
-type AnchorKind = "block" | "inline-end" | "inline-start" | "marker";
+type AnchorKind = "block" | "text-start" | "text-end" | "text-center" | "marker";
+type ScaleMode = "element-linked" | "fixed-size" | "typography";
 
 type PinContract = {
   refElement: HTMLElement;          // 基準要素（img/div/h2/span等）
   logicalSize: { w: number; h: number }; // 論理座標（例:600×400）
   anchorKind: AnchorKind;           // 取り方指定
   at?: { x: number; y: number };    // 論理座標上の狙い点
-  align?: "LT"|"TC"|"RT"|"LC"|"CC"|"RC"|"LB"|"BC"|"RB"; // 9アンカー
+  align?: "LT"|"TC"|"RT"|"LC"|"CC"|"RC"|"LB"|"BC"|"RB"; // 9アンカー（Block用）
   fit?: "contain"|"cover"|"fill"|"none"; // object-fit相当
   objectPosition?: string;          // "50% 50%" 等
-  scaleMode?: "container"|"typography"; // スケール基準
+  scaleMode: ScaleMode;             // スケール基準
   baseFontPx?: number;              // typography用基準フォント
+  fixedSize?: { width: number; height: number }; // 固定サイズ用
 };
 ```
 
-### 3.2 Observer API
+### 3.2 要素別最適化UI仕様（🆕 2025-09-10追加）
+
+#### 3.2.1 画像要素（IMG）専用UI
+```
+配置オプション:
+• element-linked: 画像リサイズに連動してSpine要素もスケール
+• fixed-size: 固定サイズでSpine要素を維持
+• 9アンカーポイント選択（LT/TC/RT/LC/CC/RC/LB/BC/RB）
+
+使用例: 画像が200px→400px(2倍)時、element-linkedでSpine要素も2倍スケール
+```
+
+#### 3.2.2 テキスト要素（H1-H6, P, SPAN）専用UI
+```
+配置オプション:
+• text-start: テキストの先頭位置（最初の文字の前）
+• text-end: テキストの末尾位置（Range API + getClientRects()使用）
+• text-center: テキストの中央位置
+• typography: フォントサイズ変更連動スケール
+
+Range API実装: 最終行・最終グリフの画素レベル精密取得
+改行対応: ウィンドウリサイズ時の改行位置変更自動追従
+```
+
+#### 3.2.3 リスト要素（LI）専用UI  
+```
+配置オプション:
+• marker: リストマーカー位置（• 1. など箇条書き記号位置）
+• text-start: リストテキストの先頭位置
+• text-end: リストテキストの末尾位置
+
+配置例:
+🎯    • 項目1    ← marker位置
+      🎯項目1    ← text-start位置  
+      項目1🎯    ← text-end位置
+```
+
+#### 3.2.4 その他要素（DIV, BUTTON等）汎用UI
+```
+要素内容による自動判定:
+• テキスト含有 → テキスト要素UI表示
+• 画像含有 → 画像要素UI表示  
+• 混在 → Block + 9アンカー + スケールオプション
+```
+
+### 3.3 Observer API
 ```typescript
 export interface ObserveTarget {
   element: HTMLElement;
@@ -148,17 +195,20 @@ export function register(target: ObserveTarget): Unregister;
 ### Phase 2: AutoPin選択UI特化
 **目標**: 既存AutoPin機能のシンプル化・Contract生成
 
-#### 4.2.1 Contract仕様固定（🆕 微調整提案反映）
-- **仕様確定**: `PinContract = { refElement, logicalSize, anchorKind, align(9点), fit, objectPosition, scaleMode, baseFontPx }`
+#### 4.2.1 Contract仕様拡張（🆕 要素別最適化UI対応）
+- **仕様確定**: `PinContract = { refElement, logicalSize, anchorKind, align?, fit, objectPosition, scaleMode, baseFontPx?, fixedSize? }`
+- **新AnchorKind**: `text-start | text-end | text-center | marker` 追加
+- **新ScaleMode**: `element-linked | fixed-size | typography` 統合
 - **重要方針**: AutoPinは**数値保存ではなくContract保存**に徹する（比率破綻防止）
-- **工数**: 0.2日
+- **工数**: 0.3日（UI最適化分増加）
 
-#### 4.2.2 AutoPin選択UI特化版実装
+#### 4.2.2 AutoPin要素別最適化UI実装
 - **ファイル**: `micromodules/autopin/AutoPinSelector.js`
-- **機能**: 要素選択、アンカー選択、Contract生成
-- **既存**: PureBoundingBoxAutoPin.jsから選択UI部分を抽出・軽量化
-- **目標行数**: 200行以内（既存710行から大幅削減）
-- **工数**: 1.3日
+- **機能**: 要素タイプ別UI自動生成、Range API統合、Contract生成
+- **新機能**: 画像専用UI、テキスト専用UI、リスト専用UI、汎用UI
+- **Range API統合**: text-end選択時の最終グリフ位置取得
+- **目標行数**: 300行以内（要素別UI分増加、既存710行から大幅削減）
+- **工数**: 2.0日（UI最適化・Range API統合）
 
 #### 4.2.3 Contract変換システム
 - **ファイル**: `micromodules/autopin/ContractGenerator.js`  
@@ -166,10 +216,12 @@ export function register(target: ObserveTarget): Unregister;
 - **工数**: 0.5日
 
 #### 🎯 Phase 2 DoD（完了条件・明文化）
-- [ ] **Contract完全性**: 全必須フィールド（refElement, logicalSize, anchorKind, align）の生成
+- [ ] **Contract完全性**: 全必須フィールド（refElement, logicalSize, anchorKind, scaleMode）の生成
+- [ ] **要素別UI**: 画像・テキスト・リスト・汎用UIの自動切り替え
+- [ ] **Range API統合**: text-end選択時の最終グリフ位置精密取得
+- [ ] **スケールモード**: element-linked/fixed-size/typography完全対応
 - [ ] **数値非保存**: px値・比率の固定値保存を完全排除
-- [ ] **9アンカー対応**: LT/TC/RT/LC/CC/RC/LB/BC/RB選択システム
-- [ ] **軽量化**: 既存710行から200行以内への削減達成
+- [ ] **軽量化**: 既存710行から300行以内への削減達成（機能向上込み）
 
 ### Phase 3: システム統合・総合テスト
 **目標**: 責務分離システムの完全動作・既存問題解決確認
@@ -280,20 +332,49 @@ test-observer-autopin-integration.html # 統合テスト
 - **予備**: 1日（調整・ドキュメント）
 - **合計**: 9日
 
-## 10. 🧩 すぐ使える最小統合コード（必要箇所のみ）
+## 10. 🧩 すぐ使える最小統合コード（要素別最適化対応）
 
 ```javascript
 // 受け取った Contract（AutoPin出力）
 const contract = /* PinContract */;
+
+// スケールモード別処理
+function calculateScale(contract, scaleX, scaleY) {
+  switch(contract.scaleMode) {
+    case "typography":
+      return currentFontPx(contract.refElement) / (contract.baseFontPx ?? 16);
+    case "fixed-size":
+      return 1.0; // 固定サイズ
+    case "element-linked":
+    default:
+      return Math.min(scaleX, scaleY); // 要素リサイズ連動
+  }
+}
+
+// アンカー位置取得（Range API対応）
+function getAnchorPosition(contract) {
+  switch(contract.anchorKind) {
+    case "text-end":
+      return getRangeAPILastGlyph(contract.refElement);
+    case "text-start":
+      return getRangeAPIFirstGlyph(contract.refElement);
+    case "text-center":
+      return getRangeAPITextCenter(contract.refElement);
+    case "marker":
+      return getListMarkerPosition(contract.refElement);
+    case "block":
+    default:
+      return resolve(anchorFromAlign(contract.align));
+  }
+}
+
 const unreg = observer.register({
   element: contract.refElement,
   logicalSize: contract.logicalSize,
   fit: contract.fit,
   onUpdate: ({ resolve, scaleX, scaleY }) => {
-    const pin = resolve(anchorFromAlign(contract.align)); // 9アンカー→論理座標点
-    const s = contract.scaleMode === "typography"
-      ? currentFontPx(contract.refElement) / (contract.baseFontPx ?? 16)
-      : Math.min(scaleX, scaleY);
+    const pin = getAnchorPosition(contract);
+    const s = calculateScale(contract, scaleX, scaleY);
 
     state.update(dt);
     state.apply(skeleton);
