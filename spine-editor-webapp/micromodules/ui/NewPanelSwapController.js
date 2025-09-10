@@ -295,7 +295,9 @@ export class NewPanelSwapController {
      * 📏 座標の隣接判定
      */
     isAdjacent(coord1, coord2, tolerance) {
-        return Math.abs(coord1 - coord2) <= tolerance;
+        const isAdj = Math.abs(coord1 - coord2) <= tolerance;
+        console.log(`📏 座標判定: ${coord1.toFixed(1)} vs ${coord2.toFixed(1)} = ${isAdj ? '隣接' : '非隣接'} (差: ${Math.abs(coord1 - coord2).toFixed(1)}px)`);
+        return isAdj;
     }
 
     /**
@@ -533,7 +535,23 @@ export class NewPanelSwapController {
         // 横分割の場合、空白エリアを埋める必要がある
         const currentAreas = this.getCurrentGridAreas();
         
-        // 簡易実装：プレビューエリアでの分割例
+        // アウトライナーへのドロップ（左分割）
+        if (targetId === 'outliner') {
+            if (position === 'left') {
+                // デフォルトレイアウトに戻す（プロパティ → アウトライナー左辺）
+                return {
+                    areas: [
+                        '"header header header"',
+                        '"outliner preview properties"',
+                        '"timeline timeline timeline"'
+                    ],
+                    columns: 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)',
+                    rows: '60px 1fr var(--timeline-height, 200px)'
+                };
+            }
+        }
+        
+        // プレビューエリアでの分割例
         if (targetId === 'preview') {
             if (position === 'right') {
                 // プレビューが左に拡張、ドラッグされたパネルが右に配置
