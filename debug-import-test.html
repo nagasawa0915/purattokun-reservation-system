@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Import Debug Test</title>
+</head>
+<body>
+    <h1>Import Debug Test</h1>
+    <div id="log"></div>
+    
+    <script type="module">
+        function log(message) {
+            document.getElementById('log').innerHTML += `<div>${message}</div>`;
+            console.log(message);
+        }
+        
+        try {
+            log('🔍 ContractGeneratorインポート開始...');
+            
+            const { ContractGenerator } = await import('./micromodules/autopin/ContractGenerator.js');
+            
+            log('✅ ContractGeneratorインポート成功');
+            log(`ContractGenerator type: ${typeof ContractGenerator}`);
+            log(`generateContract method exists: ${typeof ContractGenerator.generateContract}`);
+            
+            if (typeof ContractGenerator.generateContract === 'function') {
+                log('✅ generateContractメソッド確認済み');
+                
+                // テスト実行
+                const testResult = {
+                    element: document.body,
+                    refElement: document.body,
+                    logicalSize: { w: 600, h: 400 },
+                    align: 'CC'
+                };
+                
+                const contract = ContractGenerator.generateContract(testResult);
+                log('✅ generateContract実行成功');
+                log(`Contract: ${JSON.stringify(contract, null, 2)}`);
+                
+            } else {
+                log('❌ generateContractメソッドが存在しません');
+            }
+            
+        } catch (error) {
+            log(`❌ インポートエラー: ${error.message}`);
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

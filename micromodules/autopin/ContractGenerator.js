@@ -14,6 +14,45 @@
 export class ContractGenerator {
     
     /**
+     * AutoPin選択結果からPinContractを生成
+     * @param {Object} selectorResult - AutoPinSelector出力
+     * @returns {Object} PinContract
+     */
+    static generateContract(selectorResult) {
+        // デフォルト値設定
+        const defaults = {
+            logicalSize: { w: 600, h: 400 },
+            anchorKind: 'block',
+            align: 'CC',
+            fit: 'contain',
+            scaleMode: 'container',
+            baseFontPx: 16
+        };
+        
+        // selectorResultとdefaultsをマージ
+        const contract = {
+            refElement: selectorResult.element || selectorResult.refElement,
+            logicalSize: selectorResult.logicalSize || defaults.logicalSize,
+            anchorKind: selectorResult.anchorKind || defaults.anchorKind,
+            align: selectorResult.align || defaults.align,
+            fit: selectorResult.fit || defaults.fit,
+            scaleMode: selectorResult.scaleMode || defaults.scaleMode,
+            baseFontPx: selectorResult.baseFontPx || defaults.baseFontPx
+        };
+        
+        // alignからat座標への変換
+        if (contract.align && !contract.at) {
+            contract.at = this.alignToAnchor(contract.align, contract.logicalSize);
+        }
+        
+        // Contract検証
+        this.validateContract(contract);
+        
+        console.log('📋 PinContract生成完了:', contract);
+        return contract;
+    }
+    
+    /**
      * 9アンカーをAnchor座標に変換
      * @param {AlignAnchor} align - 9アンカー指定 
      * @param {LogicalSize} logicalSize - 論理サイズ
@@ -23,20 +62,20 @@ export class ContractGenerator {
         const { w, h } = logicalSize;
         
         const anchorMap = {
-            // Top row (パーセント値で返す - 呼び出し側が (value/100) * width を期待)
-            'LT': { x: 0, y: 0 },           // Left-Top: 0%, 0%
-            'TC': { x: 50, y: 0 },          // Top-Center: 50%, 0%  
-            'RT': { x: 100, y: 0 },         // Right-Top: 100%, 0%
+            // Top row (論理座標で返す - Observer期待形式に修正)
+            'LT': { x: 0, y: 0 },           // Left-Top: 0, 0
+            'TC': { x: w * 0.5, y: 0 },     // Top-Center: w/2, 0  
+            'RT': { x: w, y: 0 },           // Right-Top: w, 0
             
             // Middle row
-            'LC': { x: 0, y: 50 },          // Left-Center: 0%, 50%
-            'CC': { x: 50, y: 50 },         // Center-Center: 50%, 50%
-            'RC': { x: 100, y: 50 },        // Right-Center: 100%, 50%
+            'LC': { x: 0, y: h * 0.5 },     // Left-Center: 0, h/2
+            'CC': { x: w * 0.5, y: h * 0.5 }, // Center-Center: w/2, h/2
+            'RC': { x: w, y: h * 0.5 },     // Right-Center: w, h/2
             
             // Bottom row  
-            'LB': { x: 0, y: 100 },         // Left-Bottom: 0%, 100%
-            'BC': { x: 50, y: 100 },        // Bottom-Center: 50%, 100%
-            'RB': { x: 100, y: 100 }        // Right-Bottom: 100%, 100%
+            'LB': { x: 0, y: h },           // Left-Bottom: 0, h
+            'BC': { x: w * 0.5, y: h },     // Bottom-Center: w/2, h
+            'RB': { x: w, y: h }            // Right-Bottom: w, h
         };
         
         return anchorMap[align] || anchorMap['CC']; // デフォルト中央

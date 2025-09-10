@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 ObserverAutoPinBridge統合テスト - 95%→100%座標純度達成確認</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .test-controls {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-controls h2 {
+            margin: 0 0 15px 0;
+            color: #007acc;
+        }
+        
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        
+        .controls-row button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .controls-row button:hover {
+            background: #0056b3;
+        }
+        
+        .controls-row button.danger {
+            background: #dc3545;
+        }
+        
+        .controls-row button.danger:hover {
+            background: #c82333;
+        }
+        
+        .status-area {
+            background: #f8f9fa;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 30px;
+            border-radius: 8px;
+            border-left: 4px solid #007acc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-container {
+            position: relative;
+            width: 80%;
+            max-width: 800px;
+            margin: 20px auto;
+            border: 2px solid #6c757d;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+        
+        .hero-image {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-size: cover;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .hero-image h1 {
+            color: white;
+            font-size: 3em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin: 0;
+        }
+        
+        .content-area {
+            padding: 40px;
+            background: white;
+        }
+        
+        .content-area h2 {
+            font-size: 2.5em;
+            color: #333;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .content-area p {
+            font-size: 1.2em;
+            color: #666;
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .sidebar {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            width: 200px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .sidebar h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.3em;
+        }
+        
+        .sidebar p {
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+        
+        /* レスポンシブテスト用 */
+        @media (max-width: 768px) {
+            .test-container {
+                width: 95%;
+            }
+            
+            .sidebar {
+                position: static;
+                width: auto;
+                margin-top: 20px;
+            }
+            
+            .hero-image h1 {
+                font-size: 2em;
+            }
+            
+            .content-area {
+                padding: 20px;
+            }
+            
+            .content-area h2 {
+                font-size: 2em;
+            }
+        }
+        
+        /* 座標精度テスト用マーカー */
+        .precision-marker {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ff0000;
+            z-index: 10000;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-controls">
+        <h2>🎯 ObserverAutoPinBridge統合テスト</h2>
+        <div class="controls-row">
+            <button onclick="testBasicFlow()">🚀 基本フローテスト</button>
+            <button onclick="testPrecision()">📏 精度テスト (±0.5px)</button>
+            <button onclick="testResponsive()">📱 レスポンシブテスト</button>
+            <button onclick="testMultipleElements()">🔗 複数要素テスト</button>
+        </div>
+        <div class="controls-row">
+            <button onclick="debugCoordinates()">🔍 座標デバッグ</button>
+            <button onclick="bridge.debugInfo()">📊 Bridge情報</button>
+            <button onclick="clearAllTests()" class="danger">🛑 全テスト停止</button>
+        </div>
+        <div id="status-area" class="status-area">
+            テスト準備完了。上のボタンでテストを開始してください。
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🖼️ Hero画像テスト</h3>
+        <div class="test-container">
+            <div class="hero-image" id="hero-test">
+                <h1 id="hero-title">Hero Title</h1>
+                <div class="sidebar" id="sidebar-test">
+                    <h3>サイドバー</h3>
+                    <p>このサイドバーは画像の右上に配置されています。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>📝 Typography テスト</h3>
+        <div class="test-container">
+            <div class="content-area">
+                <h2 id="main-heading">メインヘディング</h2>
+                <p id="paragraph-1">
+                    これは段落テストです。フォント相対スケール機能をテストします。
+                    テキストのサイズ変更に応じてSpine要素も適切にスケールされることを確認します。
+                </p>
+                <p id="paragraph-2">
+                    複数の段落がある場合の動作もテストします。
+                    各要素が独立して正確に追従することを確認してください。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🎯 精度測定エリア</h3>
+        <div id="precision-test-area" style="position: relative; height: 200px; background: #f9f9f9; border: 1px solid #ddd;">
+            <div id="precision-target" style="position: absolute; left: 50%; top: 50%; width: 100px; height: 50px; background: #007acc; transform: translate(-50%, -50%);">
+                精度テスト対象
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // メイン初期化関数
+        async function initialize() {
+            try {
+                // キャッシュバスター付きで動的インポート
+                const timestamp = Date.now();
+                const { ObserverAutoPinBridge } = await import(`./micromodules/integration/ObserverAutoPinBridge.js?t=${timestamp}`);
+                
+                // グローバルブリッジインスタンス
+                window.bridge = new ObserverAutoPinBridge();
+                
+                console.log('✅ ObserverAutoPinBridge初期化完了');
+                updateStatus('✅ ObserverAutoPinBridge初期化完了');
+                
+            } catch (error) {
+                console.error('❌ 初期化エラー:', error);
+                updateStatus(`❌ 初期化エラー: ${error.message}`, true);
+            }
+        }
+        
+        // 初期化実行
+        initialize();
+        
+        let testResults = [];
+        
+        function updateStatus(message, isError = false) {
+            const statusArea = document.getElementById('status-area');
+            const timestamp = new Date().toLocaleTimeString();
+            const statusClass = isError ? 'error' : 'success';
+            
+            statusArea.innerHTML += `<div class="${statusClass}">[${timestamp}] ${message}</div>`;
+            statusArea.scrollTop = statusArea.scrollHeight;
+            
+            console.log(`[ObserverAutoPinBridge] ${message}`);
+        }
+        
+        // 基本フローテスト
+        window.testBasicFlow = async function() {
+            updateStatus('🚀 基本フローテスト開始');
+            
+            try {
+                const heroTitle = document.getElementById('hero-title');
+                
+                const result = await bridge.startAutoPinFlow(heroTitle, {
+                    width: 120,
+                    height: 80
+                });
+                
+                if (result.success) {
+                    updateStatus('✅ 基本フロー成功: AutoPin → Contract → Observer → Spine');
+                    testResults.push({ test: 'basic-flow', result: 'success', data: result });
+                } else {
+                    updateStatus(`❌ 基本フロー失敗: ${result.error}`, true);
+                    testResults.push({ test: 'basic-flow', result: 'failed', error: result.error });
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ 基本フローエラー: ${error.message}`, true);
+                testResults.push({ test: 'basic-flow', result: 'error', error: error.message });
+            }
+        };
+        
+        // 精度テスト (±0.5px以内)
+        window.testPrecision = async function() {
+            updateStatus('📏 精度テスト開始 (±0.5px以内確認)');
+            
+            try {
+                const precisionTarget = document.getElementById('precision-target');
+                
+                // 精度測定用マーカーを配置
+                const marker = document.createElement('div');
+                marker.className = 'precision-marker';
+                marker.style.left = '50%';
+                marker.style.top = '50%';
+                precisionTarget.appendChild(marker);
+                
+                const result = await bridge.startAutoPinFlow(precisionTarget, {
+                    width: 60,
+                    height: 30
+                });
+                
+                if (result.success) {
+                    // 精度測定
+                    setTimeout(() => {
+                        const spineElement = result.spineElement;
+                        const targetRect = precisionTarget.getBoundingClientRect();
+                        const spineRect = spineElement.getBoundingClientRect();
+                        
+                        const deltaX = Math.abs(spineRect.left + spineRect.width/2 - (targetRect.left + targetRect.width/2));
+                        const deltaY = Math.abs(spineRect.top + spineRect.height/2 - (targetRect.top + targetRect.height/2));
+                        
+                        const isPrecise = deltaX <= 0.5 && deltaY <= 0.5;
+                        
+                        if (isPrecise) {
+                            updateStatus(`✅ 精度テスト合格: ΔX=${deltaX.toFixed(2)}px, ΔY=${deltaY.toFixed(2)}px`);
+                            testResults.push({ test: 'precision', result: 'success', deltaX, deltaY });
+                        } else {
+                            updateStatus(`❌ 精度テスト不合格: ΔX=${deltaX.toFixed(2)}px, ΔY=${deltaY.toFixed(2)}px`, true);
+                            testResults.push({ test: 'precision', result: 'failed', deltaX, deltaY });
+                        }
+                    }, 1000);
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ 精度テストエラー: ${error.message}`, true);
+                testResults.push({ test: 'precision', result: 'error', error: error.message });
+            }
+        };
+        
+        // レスポンシブテスト
+        window.testResponsive = function() {
+            updateStatus('📱 レスポンシブテスト開始');
+            
+            // ウィンドウサイズ変更シミュレーション
+            const originalWidth = window.innerWidth;
+            
+            // 小さなサイズでテスト
+            Object.defineProperty(window, 'innerWidth', { value: 600, writable: true });
+            window.dispatchEvent(new Event('resize'));
+            
+            setTimeout(() => {
+                // 元のサイズに戻す
+                Object.defineProperty(window, 'innerWidth', { value: originalWidth, writable: true });
+                window.dispatchEvent(new Event('resize'));
+                
+                updateStatus('✅ レスポンシブテスト完了');
+                testResults.push({ test: 'responsive', result: 'success' });
+            }, 2000);
+        };
+        
+        // 複数要素テスト
+        window.testMultipleElements = async function() {
+            updateStatus('🔗 複数要素テスト開始');
+            
+            try {
+                const elements = [
+                    document.getElementById('main-heading'),
+                    document.getElementById('paragraph-1'),
+                    document.getElementById('sidebar-test')
+                ];
+                
+                for (const element of elements) {
+                    const result = await bridge.startAutoPinFlow(element, {
+                        width: 80,
+                        height: 60
+                    });
+                    
+                    if (result.success) {
+                        updateStatus(`✅ ${element.tagName} 追加成功`);
+                    } else {
+                        updateStatus(`❌ ${element.tagName} 失敗: ${result.error}`, true);
+                    }
+                }
+                
+                updateStatus(`✅ 複数要素テスト完了 (${bridge.getActiveContracts().length}個の要素)`);
+                testResults.push({ 
+                    test: 'multiple-elements', 
+                    result: 'success', 
+                    count: bridge.getActiveContracts().length 
+                });
+                
+            } catch (error) {
+                updateStatus(`❌ 複数要素テストエラー: ${error.message}`, true);
+                testResults.push({ test: 'multiple-elements', result: 'error', error: error.message });
+            }
+        };
+        
+        // 座標デバッグ
+        window.debugCoordinates = function() {
+            updateStatus('🔍 座標デバッグ情報出力');
+            
+            const contracts = bridge.getActiveContracts();
+            
+            contracts.forEach(({ element, contract }) => {
+                const rect = element.getBoundingClientRect();
+                console.group(`🎯 ${element.tagName} 座標デバッグ`);
+                console.log('要素矩形:', rect);
+                console.log('Contract:', contract);
+                console.log('論理サイズ:', contract.logicalSize);
+                console.log('アンカー:', contract.at);
+                console.groupEnd();
+            });
+            
+            updateStatus(`🔍 ${contracts.length}個の要素の座標情報をコンソールに出力`);
+        };
+        
+        // 全テスト停止
+        window.clearAllTests = function() {
+            bridge.stopAll();
+            
+            // 精度マーカーも削除
+            document.querySelectorAll('.precision-marker').forEach(marker => marker.remove());
+            
+            updateStatus('🛑 全テスト停止・要素クリア完了');
+            testResults.push({ test: 'cleanup', result: 'success', timestamp: Date.now() });
+        };
+        
+        // ページ読み込み完了
+        updateStatus('🎯 ObserverAutoPinBridge統合テスト準備完了');
+        updateStatus('座標混入問題修正済み: alignToAnchor論理座標化・position:fixed統一');
+        
+        // アンロード時の自動クリーンアップ
+        window.addEventListener('beforeunload', () => {
+            bridge.stopAll();
+        });
+        
+        // テスト結果の最終出力
+        window.getTestResults = function() {
+            return testResults;
+        };
+    </script>
+</body>
+</html>
