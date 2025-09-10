@@ -312,6 +312,9 @@
             try {
                 const precisionTarget = document.getElementById('precision-target');
                 
+                // 既存マーカークリーンアップ
+                document.querySelectorAll('.precision-marker').forEach(marker => marker.remove());
+                
                 // 精度測定用マーカーを配置
                 const marker = document.createElement('div');
                 marker.className = 'precision-marker';

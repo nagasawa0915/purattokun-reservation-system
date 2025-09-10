@@ -34,6 +34,12 @@ export class ObserverAutoPinBridge {
         try {
             console.log('🚀 責務分離フロー開始:', targetElement.tagName);
             
+            // 既存登録チェック・クリーンアップ
+            if (this.activeContracts.has(targetElement)) {
+                console.log('⚠️ 既存登録を検出 - クリーンアップ実行');
+                this.stopAutoPinFlow(targetElement);
+            }
+            
             // Step 1: AutoPin選択UI（選択UI特化）
             // targetElementを直接使用して簡易selectorResultを作成
             const selectorResult = {
