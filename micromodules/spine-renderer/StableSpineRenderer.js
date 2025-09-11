@@ -322,8 +322,22 @@ class StableSpineRenderer {
       console.log("🔗 Blob URL直接読み込みモード選択");
       this.log("🔗 Blob URL直接読み込みモード", "info");
       
-      // AssetManager初期化（ベースパス不要）
-      this.assetManager = new window.spine.AssetManager(this.gl);
+      // AssetManager初期化（空文字列でベースパス無効化）
+      // 🔥 重要：空文字列にすることで、相対パス解決を完全に無効化
+      this.assetManager = new window.spine.AssetManager(this.gl, "");
+      
+      // 🔥 テクスチャBlob URLを直接マッピング
+      // AssetManagerのloadTextureメソッドをオーバーライドして、nezumi.pngをBlob URLに直接マッピング
+      const originalLoadTexture = this.assetManager.loadTexture.bind(this.assetManager);
+      const textureBlob = this.config.blobUrls.texture;
+      this.assetManager.loadTexture = function(path) {
+        console.log(`🎯 loadTextureオーバーライド: ${path}`);
+        if (path === "nezumi.png" || path.includes("nezumi.png")) {
+          console.log(`🔄 テクスチャマッピング: ${path} → ${textureBlob.substring(0, 50)}...`);
+          return originalLoadTexture.call(this, textureBlob);
+        }
+        return originalLoadTexture.call(this, path);
+      };
       
       // Blob URLを直接指定してファイル読み込み
       this.assetManager.loadTextureAtlas(this.config.blobUrls.atlas);
@@ -331,7 +345,7 @@ class StableSpineRenderer {
       
       this.log(`📎 Atlas Blob URL: ${this.config.blobUrls.atlas.substring(0, 50)}...`, "info");
       this.log(`📎 JSON Blob URL: ${this.config.blobUrls.json.substring(0, 50)}...`, "info");
-      this.log(`📎 テクスチャはFileToHttpBridgeインターセプトで自動処理`, "info");
+      this.log(`📎 テクスチャは Atlas ファイル内参照により自動読み込み（Image インターセプトで処理）`, "info");
       
     } else {
       // 従来のHTTPパス方式（後方互換性）
@@ -360,15 +374,60 @@ class StableSpineRenderer {
   /**
    * アセット読み込み完了待機（成功パターンから移植）
    */
-  waitForAssets() {
+  async waitForAssets() {
+    // 🔥 Blob URLモードの場合は、直接データを読み込む
+    if (this.config.blobUrls) {
+      console.log("🔄 Blob URL直接読み込みモード - AssetManager待機をスキップ");
+      
+      try {
+        // Atlas と JSON を直接フェッチ
+        const [atlasResponse, jsonResponse] = await Promise.all([
+          fetch(this.config.blobUrls.atlas),
+          fetch(this.config.blobUrls.json)
+        ]);
+        
+        const atlasText = await atlasResponse.text();
+        const jsonData = await jsonResponse.json();
+        
+        console.log("✅ Blob データ直接読み込み成功:", {
+          atlasSize: atlasText.length,
+          jsonKeys: Object.keys(jsonData).length
+        });
+        
+        // AssetManagerに直接データを設定（内部的な処理）
+        // これにより、isLoadingComplete()が正しく動作するようになる
+        this.atlasData = atlasText;
+        this.skeletonData = jsonData;
+        
+        return;
+      } catch (error) {
+        console.error("❌ Blob URL直接読み込みエラー:", error);
+        throw error;
+      }
+    }
+    
+    // 従来のHTTPモード用の待機処理
     return new Promise((resolve, reject) => {
+      let checkCount = 0;
       const check = () => {
+        checkCount++;
+        console.log(`🔍 読み込み状態チェック #${checkCount}:`, {
+          isLoadingComplete: this.assetManager.isLoadingComplete(),
+          hasErrors: this.assetManager.hasErrors(),
+          errors: this.assetManager.getErrors ? this.assetManager.getErrors() : null
+        });
+        
         if (this.assetManager.isLoadingComplete()) {
+          console.log("✅ 読み込み完了検出");
           resolve();
         } else if (this.assetManager.hasErrors()) {
+          console.log("❌ エラー検出:", this.assetManager.getErrors());
           reject(
             new Error("Asset loading failed: " + this.assetManager.getErrors())
           );
+        } else if (checkCount > 50) {
+          console.log("⚠️ タイムアウト: 5秒経過しても読み込み完了しない");
+          reject(new Error("Asset loading timeout after 5 seconds"));
         } else {
           setTimeout(check, 100);
         }
@@ -383,14 +442,33 @@ class StableSpineRenderer {
   async initializeSkeleton() {
     this.log("🦴 スケルトン初期化開始", "info");
 
-    // アトラス・スケルトンデータ取得（成功パターンと同じ）
-    const atlas = this.assetManager.get(`${this.config.character}.atlas`);
+    let atlas, skeletonJsonData;
+    
+    // 🔥 Blob URLモードの場合は直接データを使用
+    if (this.config.blobUrls && this.atlasData && this.skeletonData) {
+      console.log("🔄 Blob URLモード - 直接データからスケルトン作成");
+      
+      // TextureAtlasを手動で作成
+      const textureLoader = (path) => {
+        console.log(`📎 テクスチャ読み込み: ${path}`);
+        const image = new Image();
+        image.src = this.config.blobUrls.texture;
+        const texture = new window.spine.webgl.GLTexture(this.gl, image);
+        return texture;
+      };
+      
+      atlas = new window.spine.TextureAtlas(this.atlasData, textureLoader);
+      skeletonJsonData = this.skeletonData;
+    } else {
+      // 従来のAssetManager方式
+      atlas = this.assetManager.get(`${this.config.character}.atlas`);
+      skeletonJsonData = this.assetManager.get(`${this.config.character}.json`);
+    }
+    
     const atlasLoader = new window.spine.AtlasAttachmentLoader(atlas);
     const skeletonJson = new window.spine.SkeletonJson(atlasLoader);
 
-    const skeletonData = skeletonJson.readSkeletonData(
-      this.assetManager.get(`${this.config.character}.json`)
-    );
+    const skeletonData = skeletonJson.readSkeletonData(skeletonJsonData);
 
     // スケルトン作成（成功パターンと同じ）
     this.skeleton = new window.spine.Skeleton(skeletonData);

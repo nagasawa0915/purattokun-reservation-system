@@ -73,6 +73,7 @@ class FileToHttpBridge {
     /**
      * HTTPリクエストインターセプトを開始
      * 仮想パスへのリクエストをBlob URLにリダイレクト
+     * fetch, XMLHttpRequest, Image要素の全てをインターセプト
      */
     enableRequestInterceptor() {
         const self = this;
@@ -111,22 +112,28 @@ class FileToHttpBridge {
             const originalOpen = xhr.open;
             
             // XMLHttpRequestインスタンス作成をログ出力
+            console.log('🔧 XMLHttpRequest インスタンス作成');
             self.log(`🔧 XMLHttpRequest インスタンス作成`, 'debug');
             
             xhr.open = function(method, url, async, user, password) {
                 if (typeof url === 'string') {
+                    console.log(`📡 XMLHttpRequest: ${method} ${url}`);
                     self.log(`📡 XMLHttpRequest: ${method} ${url}`, 'debug');
                     
                     // 仮想パスかチェック
                     const blobUrl = self.pathToBlobMapping.get(url);
                     if (blobUrl) {
+                        console.log(`🔄 XMLHttpRequestインターセプト: ${url} → Blob URL`);
                         self.log(`🔄 XMLHttpRequestインターセプト: ${url} → Blob URL`, 'bridge');
                         url = blobUrl;
-                    } else if (url.includes('/temp/spine/')) {
-                        self.log(`⚠️ 仮想パス(XHR)がマッピングに存在しません: ${url}`, 'warning');
-                        self.log(`📋 現在のXHRマッピング:`, 'debug');
-                        for (const [virtualPath, blobUrl] of self.pathToBlobMapping.entries()) {
-                            self.log(`   ${virtualPath} → ${blobUrl.substring(0, 50)}...`, 'debug');
+                    } else {
+                        console.log(`⚠️ マッピングなし: ${url}`, self.pathToBlobMapping);
+                        if (url.includes('/temp/spine/') || url.includes('nezumi')) {
+                            self.log(`⚠️ 仮想パス(XHR)がマッピングに存在しません: ${url}`, 'warning');
+                            self.log(`📋 現在のXHRマッピング:`, 'debug');
+                            for (const [virtualPath, blobUrl] of self.pathToBlobMapping.entries()) {
+                                self.log(`   ${virtualPath} → ${blobUrl.substring(0, 50)}...`, 'debug');
+                            }
                         }
                     }
                 }
@@ -139,6 +146,54 @@ class FileToHttpBridge {
         
         // XMLHttpRequestオーバーライド確認
         self.log(`🔍 XMLHttpRequest オーバーライド確認: ${window.XMLHttpRequest !== self.originalXMLHttpRequest}`, 'debug');
+        
+        // 🔥 Image要素のsrcプロパティをインターセプト（Spine WebGLテクスチャ読み込み対応）
+        const originalImage = window.Image;
+        window.Image = function() {
+            const img = new originalImage();
+            const originalSetSrc = Object.getOwnPropertyDescriptor(Image.prototype, 'src').set;
+            
+            console.log('🖼️ Image インスタンス作成');
+            
+            Object.defineProperty(img, 'src', {
+                set: function(url) {
+                    if (typeof url === 'string') {
+                        console.log(`🖼️ Image.src設定: ${url}`);
+                        
+                        // Blob URLの場合はそのまま使用
+                        if (url.startsWith('blob:')) {
+                            console.log(`🔗 既にBlob URL: ${url} → そのまま使用`);
+                            originalSetSrc.call(this, url);
+                            return;
+                        }
+                        
+                        const blobUrl = self.pathToBlobMapping.get(url);
+                        if (blobUrl) {
+                            console.log(`🔄 Image srcインターセプト: ${url} → ${blobUrl.substring(0, 50)}...`);
+                            url = blobUrl;
+                        } else {
+                            console.log(`⚠️ Image マッピングなし: ${url}`, 'マッピング数:', self.pathToBlobMapping.size);
+                            // マッピングの詳細を表示
+                            for (const [key, value] of self.pathToBlobMapping.entries()) {
+                                console.log(`   🗂️ ${key} → ${value.substring(0, 30)}...`);
+                            }
+                        }
+                    }
+                    originalSetSrc.call(this, url);
+                },
+                get: function() {
+                    return this.getAttribute('src');
+                },
+                configurable: true
+            });
+            
+            return img;
+        };
+        
+        // Image要素コンストラクタのプロトタイプ継承
+        window.Image.prototype = originalImage.prototype;
+        
+        self.log(`🔍 Image オーバーライド確認完了`, 'debug');
         
         this.log('🔧 HTTPリクエストインターセプト有効化 (fetch + XMLHttpRequest)', 'info');
     }
