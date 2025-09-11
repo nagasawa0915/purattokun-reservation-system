@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StableSpineRenderer - 基本動作確認</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        #spine-canvas {
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            background-color: white;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .control-panel {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .animation-list {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 StableSpineRenderer - 基本動作確認</h1>
+    
+    <!-- マニュアル通りのCanvas要素 -->
+    <canvas id="spine-canvas" width="400" height="400"></canvas>
+    
+    <!-- 制御パネル -->
+    <div class="control-panel">
+        <button id="init-btn" onclick="initializeRenderer()">📦 初期化</button>
+        <button id="stop-btn" onclick="stopRenderer()" disabled>⏹️ 停止</button>
+    </div>
+    
+    <!-- アニメーションボタン（purattokun専用） -->
+    <div class="animation-list">
+        <button onclick="playAnimation('taiki')" disabled id="anim-taiki">🐱 待機 (taiki)</button>
+        <button onclick="playAnimation('yarare')" disabled id="anim-yarare">💫 やられ (yarare)</button>
+        <button onclick="playAnimation('syutugen')" disabled id="anim-syutugen">✨ 出現 (syutugen)</button>
+    </div>
+    
+    <!-- ステータス表示 -->
+    <div id="status" class="status">📋 準備完了 - '📦 初期化'ボタンを押してStableSpineRendererを開始してください</div>
+    
+    <!-- マニュアル通りのスクリプト読み込み -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    <script src="../micromodules/spine-renderer/StableSpineRenderer.js"></script>
+    
+    <script>
+        let renderer = null;
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function setAnimationButtonsEnabled(enabled) {
+            const buttons = ['anim-taiki', 'anim-yarare', 'anim-syutugen'];
+            buttons.forEach(id => {
+                document.getElementById(id).disabled = !enabled;
+            });
+        }
+        
+        async function initializeRenderer() {
+            try {
+                updateStatus('🔄 StableSpineRenderer初期化中...', 'info');
+                
+                // ボタン無効化
+                document.getElementById('init-btn').disabled = true;
+                
+                // マニュアル通りの1行作成 + 初期化
+                renderer = StableSpineRenderer.createForCharacter('purattokun');
+                await renderer.initialize();
+                
+                updateStatus('✅ 初期化完了！アニメーションボタンで動作確認してください', 'success');
+                
+                // ボタン有効化
+                document.getElementById('stop-btn').disabled = false;
+                setAnimationButtonsEnabled(true);
+                
+                // マニュアル通りの自動アニメーション再生
+                renderer.playAnimation('taiki');
+                updateStatus('✅ 初期化完了！taikiアニメーション再生中', 'success');
+                
+            } catch (error) {
+                console.error('❌ 初期化エラー:', error);
+                updateStatus(`❌ 初期化失敗: ${error.message}`, 'error');
+                
+                // ボタンリセット
+                document.getElementById('init-btn').disabled = false;
+                document.getElementById('stop-btn').disabled = true;
+                setAnimationButtonsEnabled(false);
+            }
+        }
+        
+        function playAnimation(animationName) {
+            if (!renderer) {
+                updateStatus('❌ エラー: 先に初期化してください', 'error');
+                return;
+            }
+            
+            try {
+                renderer.playAnimation(animationName);
+                updateStatus(`🎬 アニメーション再生中: ${animationName}`, 'success');
+            } catch (error) {
+                console.error(`❌ アニメーション再生エラー:`, error);
+                updateStatus(`❌ アニメーション再生失敗: ${error.message}`, 'error');
+            }
+        }
+        
+        function stopRenderer() {
+            if (renderer) {
+                try {
+                    // レンダラーの停止（dispose等があれば呼び出し）
+                    if (renderer.dispose) {
+                        renderer.dispose();
+                    }
+                    renderer = null;
+                    
+                    updateStatus('⏹️ レンダラーを停止しました', 'info');
+                    
+                    // ボタンリセット
+                    document.getElementById('init-btn').disabled = false;
+                    document.getElementById('stop-btn').disabled = true;
+                    setAnimationButtonsEnabled(false);
+                    
+                    // Canvas クリア
+                    const canvas = document.getElementById('spine-canvas');
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ 停止エラー:', error);
+                    updateStatus(`❌ 停止エラー: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // デバッグ情報表示（コンソール）
+        window.addEventListener('load', () => {
+            console.log('🎯 StableSpineRenderer テストページ読み込み完了');
+            console.log('📋 利用可能な操作:');
+            console.log('  - initializeRenderer(): レンダラー初期化');
+            console.log('  - playAnimation(name): アニメーション再生');
+            console.log('  - stopRenderer(): レンダラー停止');
+            console.log('📂 purattokun利用可能アニメーション: taiki, yarare, syutugen');
+            
+            // デバッグ用グローバル関数
+            window.debugRenderer = () => {
+                console.log('🔍 レンダラー状態:', renderer);
+                if (renderer && renderer.config) {
+                    console.log('⚙️ 設定:', renderer.config);
+                }
+                if (renderer && renderer.skeleton) {
+                    console.log('💀 スケルトン:', renderer.skeleton);
+                    console.log('🎬 利用可能アニメーション:', renderer.skeleton.data.animations.map(a => a.name));
+                }
+            };
+        });
+    </script>
+    
+    <!-- 使用方法 -->
+    <div style="margin-top: 40px; padding: 20px; background-color: #f9f9f9; border-radius: 8px;">
+        <h3>📋 使用方法</h3>
+        <ol>
+            <li><strong>「📦 初期化」ボタン</strong>をクリック → StableSpineRenderer.createForCharacter('purattokun')を実行</li>
+            <li><strong>アニメーションボタン</strong>をクリック → purattokun固有のアニメーションを再生</li>
+            <li><strong>F12コンソール</strong>で詳細なデバッグ情報を確認可能</li>
+        </ol>
+        
+        <h3>🔧 デバッグコマンド（F12コンソール）</h3>
+        <ul>
+            <li><code>debugRenderer()</code> - レンダラーの詳細状態表示</li>
+            <li><code>renderer</code> - 現在のレンダラーオブジェクト参照</li>
+        </ul>
+        
+        <h3>📂 期待される動作</h3>
+        <ul>
+            <li>✅ HTTPサーバー経由でpurattokuんが正常表示</li>
+            <li>✅ 'taiki'アニメーションが自動再生</li>
+            <li>✅ 黒枠なしでクリアな表示</li>
+            <li>✅ 3つのアニメーション（taiki/yarare/syutugen）が切り替え可能</li>
+        </ul>
+    </div>
+    
+</body>
+</html>
