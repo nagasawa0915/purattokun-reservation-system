@@ -410,6 +410,18 @@
         .shortcut-help.show {
             opacity: 1;
         }
+        
+        /* 境界線ドロップゾーンアニメーション */
+        @keyframes borderPulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 0 8px rgba(0, 122, 204, 0.4);
+            }
+            50% { 
+                transform: scale(1.05);
+                box-shadow: 0 0 15px rgba(0, 122, 204, 0.8);
+            }
+        }
     </style>
 </head>
 <body>

@@ -56,11 +56,11 @@ export class SystemCoordinator {
                 this.debugManager.addDebugMessage(`パネル登録完了: ${panelCount}個`, 'info');
             });
 
-            // Phase 3: パネル入れ替えシステム初期化（パネル管理・レイアウト管理後）
+            // Phase 3: パネル入れ替えシステム初期化（従来版で緊急復旧）
             await this.executePhase('panelswap-init', () => {
                 this.panelSwapController = new NewPanelSwapController(this.panelManager, this.layoutManager);
                 const initCount = this.panelSwapController.initialize();
-                this.debugManager.addDebugMessage(`パネル入れ替え機能初期化完了: ${initCount}個（仕様書準拠版）`, 'info');
+                this.debugManager.addDebugMessage(`パネル入れ替え機能初期化完了: ${initCount}個（緊急復旧版）`, 'info');
             });
 
             // Phase 4: リサイズシステム初期化
