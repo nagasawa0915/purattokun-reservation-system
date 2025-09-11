@@ -312,7 +312,17 @@ export class PreviewController {
                 <div style="background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 4px; padding: 8px 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
                     <span style="color: #00ff88; font-size: 14px;">📄</span>
                     <span style="color: #00ff88; font-weight: bold; font-size: 13px;">${this.escapeHtml(fileData.name)}</span>
-                    <span style="color: #666; font-size: 11px; margin-left: auto;">${this.escapeHtml(fileData.path)}</span>
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                        <button onclick="window.previewController?.reloadCurrentFile()" 
+                                style="background: #3a3a3a; color: #00ff88; border: 1px solid #00ff88; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;"
+                                onmouseover="this.style.background='#00ff88'; this.style.color='black';"
+                                onmouseout="this.style.background='#3a3a3a'; this.style.color='#00ff88';"
+                                title="ページを再読み込み">
+                            <span>🔄</span>
+                            <span>リロード</span>
+                        </button>
+                        <span style="color: #666; font-size: 11px;">${this.escapeHtml(fileData.path)}</span>
+                    </div>
                 </div>
                 
                 <!-- iframe コンテンツエリア -->
@@ -372,6 +382,43 @@ export class PreviewController {
                 </button>
             </div>
         `;
+    }
+
+    /**
+     * 現在のファイルを再読み込み
+     */
+    async reloadCurrentFile() {
+        if (!this.currentFileData) {
+            console.warn('⚠️ 再読み込み対象のファイルがありません');
+            return;
+        }
+
+        console.log('🔄 ファイル再読み込み開始:', this.currentFileData.name);
+        
+        try {
+            // ローディング表示
+            this.showLoading(`${this.currentFileData.name} (再読み込み中...)`);
+            
+            // HomepageIntegrationControllerを通じて再読み込み
+            if (window.homepageIntegration?.fileSystemController) {
+                const htmlContent = await window.homepageIntegration.fileSystemController.readHtmlFile(this.currentFileData.path);
+                await this.displayHtmlFile(this.currentFileData, htmlContent);
+                console.log('✅ ファイル再読み込み完了');
+            } else {
+                // フォールバック: iframeのsrcを更新
+                if (this.currentIframe) {
+                    const currentSrc = this.currentIframe.src;
+                    this.currentIframe.src = currentSrc + '?reload=' + Date.now();
+                    console.log('✅ iframe再読み込み完了');
+                } else {
+                    throw new Error('再読み込み方法が利用できません');
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ ファイル再読み込みエラー:', error);
+            this.displayError(`再読み込みエラー: ${error.message}`);
+        }
     }
 
     /**
