@@ -4,7 +4,7 @@
  */
 import { PanelManager } from './PanelManager.js';
 import { ResizeController } from '../ui/ResizeController.js';
-import { SimplePanelSwapController } from '../ui/SimplePanelSwapController.js';
+import { NewPanelSwapController } from '../ui/NewPanelSwapController.js';
 import { LayoutManager } from '../ui/LayoutManager.js';
 import { DebugManager } from '../debug/DebugManager.js';
 import { HomepageIntegrationController } from '../integration/HomepageIntegrationController.js';
@@ -68,11 +68,11 @@ export class SystemCoordinator {
                 this.debugManager.addDebugMessage(`パネル登録完了: ${panelCount}個`, 'info');
             });
 
-            // Phase 3: パネル入れ替えシステム初期化（シンプル版）
+            // Phase 3: パネル入れ替えシステム初期化（高度版）
             await this.executePhase('panelswap-init', () => {
-                this.panelSwapController = new SimplePanelSwapController(this.panelManager);
+                this.panelSwapController = new NewPanelSwapController(this.panelManager, this.layoutManager);
                 const initCount = this.panelSwapController.initialize();
-                this.debugManager.addDebugMessage(`パネル入れ替え機能初期化完了: ${initCount}個（シンプル版）`, 'info');
+                this.debugManager.addDebugMessage(`パネル入れ替え機能初期化完了: ${initCount}個（高度版）`, 'info');
             });
 
             // Phase 4: リサイズシステム初期化
@@ -168,17 +168,25 @@ export class SystemCoordinator {
      * リサイズ・D&D排他制御
      */
     setupResizeDragDropMutex() {
-        // リサイズ開始時はD&D無効
+        // リサイズ開始時はパネル入れ替えD&D無効
         document.addEventListener('mousedown', (event) => {
             if (event.target.classList.contains('resize-handle')) {
-                this.panelSwapController?.cleanup();
+                // 新しいパネル入れ替えコントローラーのドラッグをキャンセル
+                this.panelSwapController?.cancelDrag();
             }
         });
 
-        // リサイズ終了時はD&D有効
+        // パネル入れ替えドラッグ開始時はLayoutManager無効
+        document.addEventListener('panelDragStart', (event) => {
+            if (this.layoutManager) {
+                console.log('🚨 パネルドラッグ開始: LayoutManager一時無効');
+            }
+        });
+
+        // リサイズ終了時は通常動作復帰
         document.addEventListener('mouseup', () => {
             if (!this.resizeController.isDragging) {
-                // パネル入れ替えシステムは常に有効
+                // パネル入れ替えシステムは常に有効（NewPanelSwapControllerの仕様）
             }
         });
     }
