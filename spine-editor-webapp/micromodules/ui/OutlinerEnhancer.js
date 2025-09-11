@@ -14,6 +14,12 @@ export class OutlinerEnhancer {
         this.folderStates = new Map(); // フォルダの展開・折り畳み状態管理
         this.defaultExpanded = true; // デフォルトで展開状態
         
+        // Spine関連の追加プロパティ
+        this.spineCharacters = [];
+        this.spineSelectHandlers = [];
+        this.selectedSpineCharacter = null;
+        this.currentHtmlFiles = [];
+        
         console.log('📋 OutlinerEnhancer初期化');
         this.initializeOutliner();
     }
@@ -22,8 +28,8 @@ export class OutlinerEnhancer {
      * アウトライナー初期化
      */
     initializeOutliner() {
-        // アウトライナーパネル取得
-        this.outlinerPanel = document.querySelector('.panel-outliner');
+        // アウトライナーパネル取得（パネル入れ替え対応：data-panel属性で検索）
+        this.outlinerPanel = document.querySelector('[data-panel="outliner"]');
         if (!this.outlinerPanel) {
             console.error('❌ アウトライナーパネルが見つかりません');
             return;
@@ -51,6 +57,14 @@ export class OutlinerEnhancer {
     }
 
     /**
+     * Spineキャラクター選択イベントリスナー追加
+     * @param {Function} handler - 選択ハンドラー
+     */
+    addSpineSelectListener(handler) {
+        this.spineSelectHandlers.push(handler);
+    }
+
+    /**
      * ファイル選択イベント発火
      * @param {Object} fileData - ファイルデータ
      */
@@ -61,6 +75,21 @@ export class OutlinerEnhancer {
                 handler(fileData);
             } catch (error) {
                 console.error('❌ ファイル選択ハンドラーエラー:', error);
+            }
+        });
+    }
+
+    /**
+     * Spineキャラクター選択イベント発火
+     * @param {Object} characterData - キャラクターデータ
+     */
+    notifySpineSelected(characterData) {
+        this.selectedSpineCharacter = characterData;
+        this.spineSelectHandlers.forEach(handler => {
+            try {
+                handler(characterData);
+            } catch (error) {
+                console.error('❌ Spineキャラクター選択ハンドラーエラー:', error);
             }
         });
     }
@@ -77,19 +106,57 @@ export class OutlinerEnhancer {
             return;
         }
 
+        // HTMLファイルを保存（Spine表示の際に結合表示）
+        this.currentHtmlFiles = folderData.htmlFiles || [];
+
         // HTMLファイルをフォルダ構造で整理
-        const fileTree = this.buildFileTree(folderData.htmlFiles);
+        const fileTree = this.buildFileTree(this.currentHtmlFiles);
         
-        // アウトライナーコンテンツを生成
-        const treeHtml = this.generateTreeHtml(folderData.folderName, fileTree);
+        // アウトライナーコンテンツを生成（Spine付き）
+        const treeHtml = this.generateCombinedTreeHtml(folderData.folderName, fileTree);
         
         // コンテンツ更新
         this.contentArea.innerHTML = treeHtml;
         
         // イベントリスナー追加
-        this.attachFileClickListeners();
+        this.attachAllClickListeners();
         
-        console.log(`✅ ${folderData.htmlFiles.length}個のHTMLファイルを表示`);
+        console.log(`✅ ${this.currentHtmlFiles.length}個のHTMLファイルを表示`);
+    }
+
+    /**
+     * Spineキャラクターデータ表示
+     * @param {Object} spineData - Spineデータ
+     */
+    displaySpineCharacters(spineData) {
+        console.log('🎭 Spineキャラクター表示:', spineData.folderName);
+
+        if (!this.contentArea) {
+            console.error('❌ コンテンツエリアが利用できません');
+            return;
+        }
+
+        // Spineキャラクターデータを保存
+        this.spineCharacters = spineData.characters || [];
+
+        // 結合表示を更新
+        this.updateCombinedDisplay();
+        
+        console.log(`✅ ${this.spineCharacters.length}個のSpineキャラクターを表示`);
+    }
+
+    /**
+     * 結合表示更新（HTML + Spine）
+     */
+    updateCombinedDisplay() {
+        if (!this.contentArea) return;
+
+        // HTMLとSpine両方のデータで表示を更新
+        const htmlFileTree = this.buildFileTree(this.currentHtmlFiles);
+        const combinedHtml = this.generateCombinedTreeHtml('プロジェクト', htmlFileTree);
+        
+        this.contentArea.innerHTML = combinedHtml;
+        this.attachAllClickListeners();
     }
 
     /**
@@ -128,16 +195,17 @@ export class OutlinerEnhancer {
     }
 
     /**
-     * ツリーHTML生成
+     * 結合ツリーHTML生成（HTML + Spine）
      * @param {string} rootName - ルートフォルダ名
-     * @param {Object} tree - ファイルツリー
+     * @param {Object} tree - HTMLファイルツリー
      * @returns {string} HTML文字列
      */
-    generateTreeHtml(rootName, tree) {
+    generateCombinedTreeHtml(rootName, tree) {
         const fileCount = this.countHtmlFiles(tree);
         
         let html = `
             <div style="color: #999; font-size: 13px;">
+                <!-- HTMLファイルセクション -->
                 <div style="margin-bottom: 15px; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 4px; border: 1px solid rgba(0, 255, 136, 0.3);">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <span style="color: #00ff88; font-size: 16px;">📁</span>
@@ -155,22 +223,189 @@ export class OutlinerEnhancer {
                                     title="すべて折り畳み">📁</button>
                         </div>
                     </div>
-                    <div style="font-size: 11px; color: #666;">
-                        ${fileCount}個のHTMLファイル
+                    <div style="color: #666; font-size: 11px;">
+                        📄 ${fileCount}個のHTMLファイル
                     </div>
                 </div>
-                <ul style="list-style: none; padding-left: 10px;">
-        `;
-        
-        // ツリー内容を生成
-        html += this.generateTreeLevel(tree, 0);
-        
-        html += `
-                </ul>
+                
+                <!-- HTMLファイルツリー -->
+                <div id="html-files-section">
+                    ${this.generateTreeLevel(tree, 0)}
+                </div>
+                
+                <!-- Spineキャラクターセクション -->
+                ${this.generateSpineSection()}
+                
             </div>
         `;
         
         return html;
+    }
+
+    /**
+     * Spineセクション生成
+     * @returns {string} SpineセクションHTML
+     */
+    generateSpineSection() {
+        if (this.spineCharacters.length === 0) {
+            return `
+                <div style="margin-top: 20px; padding: 10px; background: rgba(255, 107, 53, 0.1); border-radius: 4px; border: 1px solid rgba(255, 107, 53, 0.3);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="color: #ff6b35; font-size: 16px;">🎭</span>
+                        <span style="color: #ff6b35; font-weight: bold;">Spineキャラクター</span>
+                    </div>
+                    <div style="color: #666; font-size: 11px; text-align: center; padding: 20px 0;">
+                        Spineフォルダを選択してください
+                    </div>
+                </div>
+            `;
+        }
+
+        let spineHtml = `
+            <div style="margin-top: 20px; padding: 10px; background: rgba(255, 107, 53, 0.1); border-radius: 4px; border: 1px solid rgba(255, 107, 53, 0.3);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span style="color: #ff6b35; font-size: 16px;">🎭</span>
+                    <span style="color: #ff6b35; font-weight: bold;">Spineキャラクター</span>
+                    <div style="margin-left: auto;">
+                        <span style="color: #666; font-size: 11px;">🎨 ${this.spineCharacters.length}キャラクター</span>
+                    </div>
+                </div>
+                
+                <div id="spine-characters-list">
+        `;
+
+        this.spineCharacters.forEach(character => {
+            spineHtml += `
+                <div class="spine-character-item" 
+                     data-character="${character.name}" 
+                     data-character-data="${this.escapeHtml(JSON.stringify(character))}"
+                     draggable="true"
+                     style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin: 4px 0; border-radius: 3px; cursor: grab; transition: all 0.2s ease; border: 1px solid transparent;"
+                     onmouseover="this.style.backgroundColor='rgba(255, 107, 53, 0.1)'; this.style.borderColor='rgba(255, 107, 53, 0.3)';"
+                     onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='transparent';"
+                     ondragstart="this.style.cursor='grabbing'; this.style.opacity='0.7';"
+                     ondragend="this.style.cursor='grab'; this.style.opacity='1';">
+                    
+                    <span style="color: #ff6b35; font-size: 14px;">${character.isComplete ? '🎪' : '⚠️'}</span>
+                    <div style="flex: 1;">
+                        <div style="color: #fff; font-size: 12px; font-weight: 500;">
+                            ${this.escapeHtml(character.displayName)}
+                            <span style="color: #007acc; font-size: 10px; margin-left: 4px;">📤 ドラッグ可能</span>
+                        </div>
+                        <div style="color: #888; font-size: 10px;">
+                            ${character.files.atlas} • ${character.files.json}
+                            ${character.animations && character.animations.length > 0 ? ` • ${character.animations.join(', ')}` : ''}
+                        </div>
+                    </div>
+                    
+                    <div style="color: #666; font-size: 10px;">
+                        ${character.isComplete ? '✓ 📤' : '! 📤'}
+                    </div>
+                </div>
+            `;
+        });
+
+        spineHtml += `
+                </div>
+            </div>
+        `;
+
+        return spineHtml;
+    }
+
+    /**
+     * 統合イベントリスナー追加（HTML + Spine）
+     */
+    attachAllClickListeners() {
+        // HTMLファイル選択リスナー
+        this.attachFileClickListeners();
+        
+        // Spineキャラクター選択リスナー
+        this.attachSpineClickListeners();
+        
+        // フォルダ制御ボタンリスナー
+        this.attachFolderControlListeners();
+    }
+
+    /**
+     * Spineキャラクター選択リスナー追加
+     */
+    attachSpineClickListeners() {
+        const spineItems = this.contentArea.querySelectorAll('.spine-character-item');
+        
+        spineItems.forEach(item => {
+            // クリック選択イベント
+            item.addEventListener('click', (event) => {
+                event.preventDefault();
+                
+                const characterName = item.dataset.character;
+                const characterData = this.spineCharacters.find(char => char.name === characterName);
+                
+                if (characterData) {
+                    console.log('🎭 Spineキャラクター選択:', characterData.name);
+                    
+                    // 選択状態の視覚的更新
+                    spineItems.forEach(i => {
+                        i.style.backgroundColor = 'transparent';
+                        i.style.borderColor = 'transparent';
+                    });
+                    item.style.backgroundColor = 'rgba(255, 107, 53, 0.2)';
+                    item.style.borderColor = 'rgba(255, 107, 53, 0.5)';
+                    
+                    // イベント発火
+                    this.notifySpineSelected(characterData);
+                } else {
+                    console.warn('⚠️ Spineキャラクターデータが見つかりません:', characterName);
+                }
+            });
+
+            // ドラッグスタートイベント
+            item.addEventListener('dragstart', (event) => {
+                const characterData = this.spineCharacters.find(char => char.name === item.dataset.character);
+                
+                if (characterData) {
+                    console.log('📤 Spineキャラクタードラッグ開始:', characterData.name);
+                    
+                    // FileSystemFileHandleはJSON.stringify()できないため、グローバル一時保存
+                    window.__draggedSpineFileHandles = characterData.fileHandles;
+                    
+                    // ドラッグデータ設定（fileHandles除外）
+                    const dragData = {
+                        type: 'spine-character',
+                        name: characterData.name,
+                        displayName: characterData.displayName,
+                        files: characterData.files,
+                        basePath: characterData.basePath,
+                        spineConfig: characterData.spineConfig,
+                        isComplete: characterData.isComplete,
+                        animations: characterData.spineConfig?.animations || [],
+                        // fileHandlesは別途グローバル変数で受け渡し
+                        hasFileHandles: true
+                    };
+                    
+                    event.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                    event.dataTransfer.effectAllowed = 'copy';
+                    
+                    // ドラッグ中のビジュアル更新
+                    item.style.cursor = 'grabbing';
+                    item.style.opacity = '0.7';
+                    
+                    console.log('✅ ドラッグデータ設定完了:', dragData.name);
+                    console.log('📁 FileHandlesをグローバル一時保存:', window.__draggedSpineFileHandles);
+                }
+            });
+
+            // ドラッグエンドイベント
+            item.addEventListener('dragend', (event) => {
+                // ビジュアル復元
+                item.style.cursor = 'grab';
+                item.style.opacity = '1';
+                
+                console.log('📤 Spineキャラクタードラッグ終了');
+            });
+        });
+
+        console.log(`✅ ${spineItems.length}個のSpineキャラクターにドラッグ&ドロップ機能を設定`);
     }
 
     /**

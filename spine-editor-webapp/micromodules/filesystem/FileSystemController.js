@@ -11,7 +11,14 @@ export class FileSystemController {
         this.supportedFileTypes = new Set(['.html', '.htm']);
         this.eventListeners = new Map();
         
+        // 🚧 開発用デフォルトフォルダ設定（完成後は削除予定）
+        this.developmentMode = true; // false にすると無効
+        this.defaultFolderPath = 'D:\\クラウドパートナーHP';
+        
         console.log('🗂️ FileSystemController初期化');
+        if (this.developmentMode) {
+            console.log('🚧 開発モード: デフォルトフォルダ自動読み込み有効');
+        }
         this.checkBrowserSupport();
     }
 
@@ -63,6 +70,16 @@ export class FileSystemController {
      */
     async selectHomePageFolder() {
         console.log('📁 ホームページフォルダ選択開始');
+
+        // 🚧 開発モード: デフォルトフォルダ自動読み込み
+        if (this.developmentMode && !this.selectedDirectoryHandle) {
+            console.log('🚧 開発モード: デフォルトフォルダを試行');
+            const defaultResult = await this.tryLoadDefaultFolder();
+            if (defaultResult.success) {
+                return defaultResult;
+            }
+            console.log('⚠️ デフォルトフォルダ読み込み失敗、通常フォルダ選択に切り替え');
+        }
 
         try {
             // ブラウザサポート確認
@@ -125,6 +142,93 @@ export class FileSystemController {
                 error: errorMessage
             };
         }
+    }
+
+    /**
+     * 🚧 開発用: デフォルトフォルダ自動読み込み試行
+     * @returns {Promise<Object>} 読み込み結果
+     */
+    async tryLoadDefaultFolder() {
+        try {
+            console.log(`🚧 デフォルトフォルダ試行: ${this.defaultFolderPath}`);
+            
+            // ファイルシステムアクセス許可が必要
+            if (!this.isSupported) {
+                throw new Error('File System Access API非対応');
+            }
+
+            // 疑似的なフォルダデータ生成（開発用）
+            const mockScanResult = await this.scanDefaultFolderMock();
+            
+            // イベント通知
+            this.dispatchEvent('folderSelected', {
+                directoryHandle: null, // モックなのでnull
+                folderName: 'クラウドパートナーHP (開発用)',
+                htmlFiles: mockScanResult.htmlFiles,
+                totalFiles: mockScanResult.totalFiles,
+                scanTime: mockScanResult.scanTime,
+                isDevelopmentMode: true
+            });
+
+            console.log('🚧 デフォルトフォルダ読み込み成功');
+            return {
+                success: true,
+                folderName: 'クラウドパートナーHP (開発用)',
+                htmlFiles: mockScanResult.htmlFiles,
+                totalFiles: mockScanResult.totalFiles,
+                isDevelopmentMode: true
+            };
+
+        } catch (error) {
+            console.error('🚧 デフォルトフォルダ読み込み失敗:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * 🚧 開発用: デフォルトフォルダのモックスキャン
+     * @returns {Promise<Object>} スキャン結果
+     */
+    async scanDefaultFolderMock() {
+        const startTime = Date.now();
+        
+        // 開発用HTMLファイルリスト（実際に存在するファイルを想定）
+        const mockHtmlFiles = [
+            {
+                name: 'index.html',
+                path: 'index.html',
+                handle: null, // モック用
+                size: null,
+                lastModified: null,
+                isDevelopmentMode: true
+            },
+            {
+                name: 'index2.html', 
+                path: 'index2.html',
+                handle: null, // モック用
+                size: null,
+                lastModified: null,
+                isDevelopmentMode: true
+            }
+        ];
+
+        // ファイル情報を整理
+        this.currentFiles.clear();
+        mockHtmlFiles.forEach(file => {
+            this.currentFiles.set(file.path, file);
+        });
+
+        const scanTime = Date.now() - startTime;
+        console.log(`🚧 デフォルトフォルダモックスキャン完了: ${mockHtmlFiles.length}個のHTMLファイル (${scanTime}ms)`);
+
+        return {
+            htmlFiles: mockHtmlFiles,
+            totalFiles: mockHtmlFiles.length,
+            scanTime: scanTime
+        };
     }
 
     /**
@@ -231,6 +335,12 @@ export class FileSystemController {
 
             console.log(`📖 HTMLファイル読み込み: ${filePath}`);
             
+            // 🚧 開発モード: サーバー経由での読み込み
+            if (fileData.isDevelopmentMode) {
+                console.log('🚧 開発モード: サーバー経由読み込み');
+                return await this.readHtmlFileFromServer(filePath);
+            }
+            
             const file = await fileData.handle.getFile();
             const content = await file.text();
             
@@ -239,6 +349,35 @@ export class FileSystemController {
 
         } catch (error) {
             console.error(`❌ ファイル読み込みエラー (${filePath}):`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * 🚧 開発用: サーバー経由でHTMLファイル読み込み
+     * @param {string} filePath - ファイルパス
+     * @returns {Promise<string>} ファイル内容
+     */
+    async readHtmlFileFromServer(filePath) {
+        try {
+            // サーバーベースURLを構築
+            const currentUrl = window.location.href;
+            const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+            const fileUrl = `${baseUrl}/../${filePath}`;
+            
+            console.log(`🌐 サーバー経由読み込み: ${fileUrl}`);
+            
+            const response = await fetch(fileUrl);
+            if (!response.ok) {
+                throw new Error(`サーバー読み込み失敗: ${response.status} ${response.statusText}`);
+            }
+            
+            const content = await response.text();
+            console.log(`✅ サーバー読み込み成功 (${content.length} bytes)`);
+            return content;
+            
+        } catch (error) {
+            console.error('❌ サーバー読み込みエラー:', error);
             throw error;
         }
     }

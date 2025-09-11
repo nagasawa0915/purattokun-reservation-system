@@ -4,7 +4,7 @@
  */
 import { PanelManager } from './PanelManager.js';
 import { ResizeController } from '../ui/ResizeController.js';
-import { NewPanelSwapController } from '../ui/NewPanelSwapController.js';
+import { SimplePanelSwapController } from '../ui/SimplePanelSwapController.js';
 import { LayoutManager } from '../ui/LayoutManager.js';
 import { DebugManager } from '../debug/DebugManager.js';
 import { HomepageIntegrationController } from '../integration/HomepageIntegrationController.js';
@@ -17,7 +17,17 @@ export class SystemCoordinator {
         
         // マイクロモジュール初期化
         this.panelManager = new PanelManager();
-        this.layoutManager = new LayoutManager();
+        
+        // 🚨 LayoutManager競合問題対策: パネル入れ替え機能を優先する場合は無効化
+        const enableLayoutManager = localStorage.getItem('spine-editor-enable-layout-manager') !== 'false';
+        if (enableLayoutManager) {
+            this.layoutManager = new LayoutManager();
+            console.log('✅ LayoutManager初期化完了（通常モード）');
+        } else {
+            this.layoutManager = null;
+            console.log('🚨 LayoutManager無効化（パネル入れ替え優先モード）');
+        }
+        
         this.resizeController = new ResizeController();
         this.debugManager = new DebugManager();
         this.panelSwapController = null; // PanelManager・LayoutManager初期化後に作成
@@ -58,11 +68,11 @@ export class SystemCoordinator {
                 this.debugManager.addDebugMessage(`パネル登録完了: ${panelCount}個`, 'info');
             });
 
-            // Phase 3: パネル入れ替えシステム初期化（従来版で緊急復旧）
+            // Phase 3: パネル入れ替えシステム初期化（シンプル版）
             await this.executePhase('panelswap-init', () => {
-                this.panelSwapController = new NewPanelSwapController(this.panelManager, this.layoutManager);
+                this.panelSwapController = new SimplePanelSwapController(this.panelManager);
                 const initCount = this.panelSwapController.initialize();
-                this.debugManager.addDebugMessage(`パネル入れ替え機能初期化完了: ${initCount}個（緊急復旧版）`, 'info');
+                this.debugManager.addDebugMessage(`パネル入れ替え機能初期化完了: ${initCount}個（シンプル版）`, 'info');
             });
 
             // Phase 4: リサイズシステム初期化

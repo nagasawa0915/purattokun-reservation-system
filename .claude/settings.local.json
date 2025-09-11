@@ -20,7 +20,8 @@
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
       "Bash(node:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": [],

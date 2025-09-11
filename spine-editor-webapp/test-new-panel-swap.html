@@ -310,6 +310,7 @@
         <div class="test-controls">
             <button class="test-btn" onclick="resetLayout()">📐 レイアウトリセット</button>
             <button class="test-btn" onclick="showSpecification()">📋 仕様書確認</button>
+            <button class="test-btn" onclick="toggleLayoutManager()">🎛️ LayoutManager切替</button>
             <div class="test-status" id="system-status">新システム準備中</div>
         </div>
     </div>
@@ -625,6 +626,22 @@
                 '• 辺エリア: 指定された位置に配置\n' +
                 '• 自動拡張: 空いた空間は隣接パネルが埋める\n\n' +
                 '詳細: docs/PANEL_SWAP_SPECIFICATION.md');
+        };
+        
+        // 🚨 LayoutManager制御機能
+        window.toggleLayoutManager = function() {
+            const current = localStorage.getItem('spine-editor-enable-layout-manager') !== 'false';
+            const newState = !current;
+            
+            localStorage.setItem('spine-editor-enable-layout-manager', newState ? 'true' : 'false');
+            
+            console.log(`🎛️ LayoutManager: ${current ? '有効' : '無効'} → ${newState ? '有効' : '無効'}`);
+            
+            alert(`🎛️ LayoutManager設定変更\n\n` +
+                `現在: ${current ? '有効' : '無効'}\n` +
+                `変更後: ${newState ? '有効' : '無効'}\n\n` +
+                `⚠️ この変更を適用するにはページをリロード（F5）してください。\n\n` +
+                `🚨 パネル入れ替えテスト時は「無効」に設定することを推奨します。`);
         };
         
         // デバッグ用エクスポート
