@@ -4,7 +4,7 @@
  */
 import { PanelManager } from './PanelManager.js';
 import { ResizeController } from '../ui/ResizeController.js';
-import { DragDropController } from '../ui/DragDropController.js';
+import { NewPanelSwapController } from '../ui/NewPanelSwapController.js';
 import { DebugManager } from '../debug/DebugManager.js';
 
 export class SystemCoordinator {
@@ -17,7 +17,7 @@ export class SystemCoordinator {
         this.panelManager = new PanelManager();
         this.resizeController = new ResizeController();
         this.debugManager = new DebugManager();
-        this.dragDropController = null; // PanelManager初期化後に作成
+        this.panelSwapController = null; // PanelManager初期化後に作成
         
         console.log('🎯 SystemCoordinator初期化開始');
         this.init();
@@ -54,11 +54,11 @@ export class SystemCoordinator {
                 this.debugManager.addDebugMessage(`パネル登録完了: ${panelCount}個`, 'info');
             });
 
-            // Phase 3: D&Dシステム初期化（パネル管理後）
-            await this.executePhase('dragdrop-init', () => {
-                this.dragDropController = new DragDropController(this.panelManager);
-                const ddCount = this.dragDropController.initializeDragDrop();
-                this.debugManager.addDebugMessage(`D&D機能初期化完了: ${ddCount}個`, 'info');
+            // Phase 3: パネル入れ替えシステム初期化（パネル管理後）
+            await this.executePhase('panel-swap-init', async () => {
+                this.panelSwapController = new NewPanelSwapController(this.panelManager);
+                const swapCount = await this.panelSwapController.initialize();
+                this.debugManager.addDebugMessage(`パネル入れ替え機能初期化完了: ${swapCount}個`, 'info');
             });
 
             // Phase 4: リサイズシステム初期化
@@ -126,8 +126,8 @@ export class SystemCoordinator {
         window.systemCoordinator = this;
         window.resetLayout = () => this.resetLayout();
         
-        // リサイズとD&Dの排他制御
-        this.setupResizeDragDropMutex();
+        // リサイズとパネル入れ替えの排他制御
+        this.setupResizePanelSwapMutex();
         
         // パネル入れ替えイベント監視
         document.addEventListener('panelSwap', (event) => {
@@ -145,20 +145,20 @@ export class SystemCoordinator {
     }
 
     /**
-     * リサイズ・D&D排他制御
+     * リサイズ・パネル入れ替え排他制御
      */
-    setupResizeDragDropMutex() {
-        // リサイズ開始時はD&D無効
+    setupResizePanelSwapMutex() {
+        // リサイズ開始時はパネル入れ替え無効
         document.addEventListener('mousedown', (event) => {
             if (event.target.classList.contains('resize-handle')) {
-                this.dragDropController?.disable();
+                this.panelSwapController?.state = 'disabled';
             }
         });
 
-        // リサイズ終了時はD&D有効
+        // リサイズ終了時はパネル入れ替え有効
         document.addEventListener('mouseup', () => {
-            if (!this.resizeController.isDragging) {
-                this.dragDropController?.enable();
+            if (!this.resizeController.isDragging && this.panelSwapController?.state === 'disabled') {
+                this.panelSwapController.state = 'ready';
             }
         });
     }
@@ -235,7 +235,7 @@ export class SystemCoordinator {
             modules: {
                 panelManager: this.panelManager?.state || 'not-initialized',
                 resizeController: this.resizeController?.state || 'not-initialized',
-                dragDropController: this.dragDropController?.state || 'not-initialized',
+                panelSwapController: this.panelSwapController?.state || 'not-initialized',
                 debugManager: this.debugManager?.state || 'not-initialized'
             },
             timestamp: Date.now()
@@ -260,8 +260,8 @@ export class SystemCoordinator {
             healthCheck.modules.resize = this.resizeController.getResizeStatus();
         }
         
-        if (this.dragDropController) {
-            healthCheck.modules.dragDrop = this.dragDropController.getDragDropStatus();
+        if (this.panelSwapController) {
+            healthCheck.modules.panelSwap = this.panelSwapController.getDebugInfo();
         }
         
         if (this.debugManager) {
@@ -281,7 +281,7 @@ export class SystemCoordinator {
         try {
             // すべてのドラッグ操作を停止
             this.resizeController?.endResize();
-            this.dragDropController?.endPanelDrag();
+            this.panelSwapController?.cancelDrag();
             
             // 状態をリセット
             this.state = 'emergency-stopped';
@@ -305,7 +305,7 @@ export class SystemCoordinator {
             // 各モジュールのクリーンアップ
             this.panelManager?.cleanup();
             this.resizeController?.cleanup();
-            this.dragDropController?.cleanup();
+            this.panelSwapController?.cleanup();
             this.debugManager?.cleanup();
             
             // グローバル関数クリーンアップ
