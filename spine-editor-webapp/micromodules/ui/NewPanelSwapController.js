@@ -782,6 +782,7 @@ export class NewPanelSwapController {
             switch (dropArea.type) {
                 case 'center':
                     console.log(`🔄 CENTER型ドロップ実行: ${this.draggedPanel} → ${targetPanelId}`);
+                    console.log('🎯 CENTER入れ替え処理を開始します');
                     return this.executeSwap(this.draggedPanel, targetPanelId);
                     
                 case 'top':
@@ -861,25 +862,32 @@ export class NewPanelSwapController {
         });
         
         // 🎯 新アプローチ: body のgrid-template-areasを直接変更
-        console.log('🔧 Grid Template Areas変更アプローチ開始');
+        console.log(`🔄 Grid レイアウト変更: ${draggedId} ↔ ${targetId}`);
         
         // 現在のgrid-template-areasを取得
         const bodyStyle = getComputedStyle(document.body);
         const currentAreas = bodyStyle.gridTemplateAreas;
-        console.log('現在のgrid-template-areas:', currentAreas);
         
-        // grid-template-areasを入れ替え（outliner ⟷ preview）
+        // grid-template-areasを汎用的に入れ替え
+        const tempToken = `TEMP_${Date.now()}`;
         const newAreas = currentAreas
-            .replace(/outliner/g, 'TEMP_OUTLINER')
-            .replace(/preview/g, 'outliner')  
-            .replace(/TEMP_OUTLINER/g, 'preview');
-            
-        console.log('新しいgrid-template-areas:', newAreas);
+            .replace(new RegExp(draggedId, 'g'), tempToken)
+            .replace(new RegExp(targetId, 'g'), draggedId)
+            .replace(new RegExp(tempToken, 'g'), targetId);
+        
+        console.log('🔍 Grid変更詳細:', {
+            変更前: currentAreas,
+            変更後: newAreas,
+            draggedId: draggedId,
+            targetId: targetId
+        });
         
         // bodyのgrid-template-areasを更新
         document.body.style.setProperty('grid-template-areas', newAreas, 'important');
         
-        console.log('🔧 Grid Template Areas変更完了');
+        // 実際の適用確認
+        const appliedAreas = getComputedStyle(document.body).gridTemplateAreas;
+        console.log('✅ 適用結果:', appliedAreas === newAreas ? '成功' : '失敗');
         
         // 変更後の確認
         const newDraggedArea = getComputedStyle(draggedPanel.element).gridArea;
@@ -919,9 +927,15 @@ export class NewPanelSwapController {
         console.log(`  ${draggedId} computed style:`, getComputedStyle(draggedPanel.element));
         console.log(`  ${targetId} computed style:`, getComputedStyle(targetPanel.element));
         
-        // 成功判定
-        const success = (newDraggedArea === targetArea && newTargetArea === draggedArea);
+        // 成功判定（Grid Template Areasアプローチ用）
+        const finalAreas = getComputedStyle(document.body).gridTemplateAreas;
+        const success = finalAreas === newAreas;
         console.log(`${success ? '✅' : '❌'} 入れ替え${success ? '成功' : '失敗'}`);
+        console.log('🔍 成功判定詳細:', {
+            期待値: newAreas,
+            実際値: finalAreas,
+            一致: success
+        });
         
         // 手動確認用のテストコマンド表示
         console.log('🧪 手動テスト用コマンド（コンソールに貼り付けて実行）:');

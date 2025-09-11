@@ -11,6 +11,8 @@ export class OutlinerEnhancer {
         this.selectedFile = null;
         this.fileSelectHandlers = [];
         this.originalContent = null;
+        this.folderStates = new Map(); // フォルダの展開・折り畳み状態管理
+        this.defaultExpanded = true; // デフォルトで展開状態
         
         console.log('📋 OutlinerEnhancer初期化');
         this.initializeOutliner();
@@ -137,9 +139,21 @@ export class OutlinerEnhancer {
         let html = `
             <div style="color: #999; font-size: 13px;">
                 <div style="margin-bottom: 15px; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 4px; border: 1px solid rgba(0, 255, 136, 0.3);">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <span style="color: #00ff88; font-size: 16px;">📁</span>
-                        <span style="color: #00ff88; font-weight: bold;">${this.escapeHtml(rootName)}</span>
+                        <span style="color: #00ff88; font-weight: bold; flex: 1;">${this.escapeHtml(rootName)}</span>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="folder-control-btn" data-action="expand-all" 
+                                    style="background: #3a3a3a; border: 1px solid #555; color: #ccc; padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer; transition: all 0.2s;"
+                                    onmouseover="this.style.backgroundColor='#4a4a4a'; this.style.borderColor='#666';"
+                                    onmouseout="this.style.backgroundColor='#3a3a3a'; this.style.borderColor='#555';"
+                                    title="すべて展開">📂</button>
+                            <button class="folder-control-btn" data-action="collapse-all"
+                                    style="background: #3a3a3a; border: 1px solid #555; color: #ccc; padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer; transition: all 0.2s;"
+                                    onmouseover="this.style.backgroundColor='#4a4a4a'; this.style.borderColor='#666';"
+                                    onmouseout="this.style.backgroundColor='#3a3a3a'; this.style.borderColor='#555';"
+                                    title="すべて折り畳み">📁</button>
+                        </div>
                     </div>
                     <div style="font-size: 11px; color: #666;">
                         ${fileCount}個のHTMLファイル
@@ -163,9 +177,10 @@ export class OutlinerEnhancer {
      * ツリーレベル生成（再帰）
      * @param {Object} level - ツリーレベル
      * @param {number} depth - 現在の深度
+     * @param {string} parentPath - 親フォルダパス（状態管理用）
      * @returns {string} HTML文字列
      */
-    generateTreeLevel(level, depth) {
+    generateTreeLevel(level, depth, parentPath = '') {
         let html = '';
         const indent = depth * 20;
         
@@ -178,17 +193,30 @@ export class OutlinerEnhancer {
         
         entries.forEach(([name, item]) => {
             if (item.type === 'folder') {
-                // フォルダ表示
+                // フォルダパスを構築
+                const folderPath = parentPath ? `${parentPath}/${name}` : name;
+                
+                // フォルダの展開状態を取得
+                const isExpanded = this.getFolderState(folderPath);
+                const toggleIcon = isExpanded ? '🔽' : '▶️';
+                const childrenVisibility = isExpanded ? 'block' : 'none';
+                
+                // フォルダ表示（折り畳み対応）
                 html += `
                     <li style="margin: 6px 0; margin-left: ${indent}px;">
-                        <div style="display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 2px 4px; border-radius: 3px; transition: background-color 0.2s;" 
+                        <div class="folder-header" 
+                             data-folder-path="${this.escapeHtml(folderPath)}"
+                             style="display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 2px 4px; border-radius: 3px; transition: all 0.2s ease; min-width: 0;" 
                              onmouseover="this.style.backgroundColor='rgba(255,255,255,0.05)'" 
                              onmouseout="this.style.backgroundColor='transparent'">
-                            <span style="color: #007acc; font-size: 14px;">📁</span>
-                            <span style="color: #ccc;">${this.escapeHtml(name)}</span>
+                            <span class="folder-toggle" style="color: #007acc; font-size: 12px; width: 16px; text-align: center; user-select: none; flex-shrink: 0;">${toggleIcon}</span>
+                            <span style="color: #007acc; font-size: 14px; flex-shrink: 0;">📁</span>
+                            <span style="color: #ccc; font-size: 13px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(name)}</span>
+                            <span style="color: #666; font-size: 10px; flex-shrink: 0; margin-left: 4px;">${this.countHtmlFiles(item.children)}</span>
                         </div>
-                        <ul style="list-style: none; margin-left: 16px;">
-                            ${this.generateTreeLevel(item.children, depth + 1)}
+                        <ul class="folder-children" 
+                            style="list-style: none; margin-left: 20px; display: ${childrenVisibility}; transition: all 0.3s ease; overflow: hidden;">
+                            ${this.generateTreeLevel(item.children, depth + 1, folderPath)}
                         </ul>
                     </li>
                 `;
@@ -233,6 +261,69 @@ export class OutlinerEnhancer {
     }
 
     /**
+     * フォルダ状態取得
+     * @param {string} folderPath - フォルダパス
+     * @returns {boolean} 展開状態
+     */
+    getFolderState(folderPath) {
+        return this.folderStates.has(folderPath) 
+            ? this.folderStates.get(folderPath) 
+            : this.defaultExpanded;
+    }
+
+    /**
+     * フォルダ状態設定
+     * @param {string} folderPath - フォルダパス
+     * @param {boolean} isExpanded - 展開状態
+     */
+    setFolderState(folderPath, isExpanded) {
+        this.folderStates.set(folderPath, isExpanded);
+        console.log(`📁 フォルダ状態更新: ${folderPath} = ${isExpanded ? '展開' : '折り畳み'}`);
+    }
+
+    /**
+     * フォルダ切り替え処理
+     * @param {string} folderPath - フォルダパス
+     */
+    toggleFolder(folderPath) {
+        const currentState = this.getFolderState(folderPath);
+        const newState = !currentState;
+        
+        this.setFolderState(folderPath, newState);
+        
+        // DOM要素を更新
+        const folderHeader = this.contentArea.querySelector(`[data-folder-path="${folderPath}"]`);
+        const folderChildren = folderHeader?.nextElementSibling;
+        const toggleIcon = folderHeader?.querySelector('.folder-toggle');
+        
+        if (folderHeader && folderChildren && toggleIcon) {
+            // アニメーション付きで切り替え
+            toggleIcon.textContent = newState ? '🔽' : '▶️';
+            
+            if (newState) {
+                // 展開アニメーション
+                folderChildren.style.display = 'block';
+                folderChildren.style.maxHeight = '0px';
+                folderChildren.style.opacity = '0';
+                
+                // アニメーション実行
+                setTimeout(() => {
+                    folderChildren.style.maxHeight = '1000px';
+                    folderChildren.style.opacity = '1';
+                }, 10);
+            } else {
+                // 折り畳みアニメーション
+                folderChildren.style.maxHeight = '0px';
+                folderChildren.style.opacity = '0';
+                
+                setTimeout(() => {
+                    folderChildren.style.display = 'none';
+                }, 300);
+            }
+        }
+    }
+
+    /**
      * ファイルクリックイベント設定
      */
     attachFileClickListeners() {
@@ -263,6 +354,72 @@ export class OutlinerEnhancer {
         });
         
         console.log(`✅ ${fileItems.length}個のファイルにクリックリスナーを設定`);
+        
+        // フォルダクリックイベント設定
+        this.attachFolderClickListeners();
+        
+        // フォルダ操作ボタンのイベント設定
+        this.attachFolderControlListeners();
+    }
+
+    /**
+     * フォルダクリックイベント設定
+     */
+    attachFolderClickListeners() {
+        const folderHeaders = this.contentArea.querySelectorAll('.folder-header');
+        
+        folderHeaders.forEach(header => {
+            header.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const folderPath = header.dataset.folderPath;
+                if (folderPath) {
+                    // フォルダ折り畳み切り替え
+                    this.toggleFolder(folderPath);
+                    
+                    // ホバー効果を一時的にリセット
+                    header.style.backgroundColor = 'rgba(0, 122, 204, 0.2)';
+                    setTimeout(() => {
+                        header.style.backgroundColor = 'transparent';
+                    }, 150);
+                }
+            });
+        });
+        
+        console.log(`✅ ${folderHeaders.length}個のフォルダにクリックリスナーを設定`);
+    }
+
+    /**
+     * フォルダ操作ボタンのイベントリスナー設定
+     */
+    attachFolderControlListeners() {
+        const controlButtons = this.contentArea.querySelectorAll('.folder-control-btn');
+        
+        controlButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const action = button.dataset.action;
+                
+                // ボタンのクリックエフェクト
+                button.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    button.style.transform = 'scale(1)';
+                }, 100);
+                
+                if (action === 'expand-all') {
+                    console.log('📂 全フォルダ展開実行');
+                    this.expandAllFolders();
+                } else if (action === 'collapse-all') {
+                    console.log('📁 全フォルダ折り畳み実行');
+                    this.collapseAllFolders();
+                }
+            });
+        });
+        
+        console.log(`✅ ${controlButtons.length}個のフォルダ操作ボタンにリスナーを設定`);
     }
 
     /**
@@ -321,8 +478,37 @@ export class OutlinerEnhancer {
         if (this.contentArea && this.originalContent) {
             this.contentArea.innerHTML = this.originalContent;
             this.clearFileSelection();
+            this.folderStates.clear(); // フォルダ状態もクリア
             console.log('🔄 アウトライナーを元の状態に復元');
         }
+    }
+
+    /**
+     * 全フォルダ展開
+     */
+    expandAllFolders() {
+        const folderHeaders = this.contentArea.querySelectorAll('.folder-header');
+        folderHeaders.forEach(header => {
+            const folderPath = header.dataset.folderPath;
+            if (folderPath && !this.getFolderState(folderPath)) {
+                this.toggleFolder(folderPath);
+            }
+        });
+        console.log('📂 全フォルダを展開しました');
+    }
+
+    /**
+     * 全フォルダ折り畳み
+     */
+    collapseAllFolders() {
+        const folderHeaders = this.contentArea.querySelectorAll('.folder-header');
+        folderHeaders.forEach(header => {
+            const folderPath = header.dataset.folderPath;
+            if (folderPath && this.getFolderState(folderPath)) {
+                this.toggleFolder(folderPath);
+            }
+        });
+        console.log('📁 全フォルダを折り畳みました');
     }
 
     /**
@@ -353,7 +539,12 @@ export class OutlinerEnhancer {
             isInitialized: !!this.outlinerPanel,
             hasContent: !!this.contentArea,
             selectedFile: this.selectedFile?.path || null,
-            listenerCount: this.fileSelectHandlers.length
+            listenerCount: this.fileSelectHandlers.length,
+            folderCount: this.folderStates.size,
+            defaultExpanded: this.defaultExpanded,
+            expandedFolders: Array.from(this.folderStates.entries())
+                .filter(([,expanded]) => expanded)
+                .map(([path]) => path)
         };
     }
 
@@ -365,5 +556,6 @@ export class OutlinerEnhancer {
         this.resetToOriginal();
         this.fileSelectHandlers = [];
         this.selectedFile = null;
+        this.folderStates.clear();
     }
 }
