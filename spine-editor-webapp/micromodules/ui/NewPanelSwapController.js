@@ -38,10 +38,31 @@ export class NewPanelSwapController {
     }
 
     /**
+     * 🎯 初期パネル配置設定
+     */
+    initializePanelGridAreas() {
+        console.log('📍 初期パネル配置を設定中...');
+        
+        // 各パネルに初期のgrid-areaを設定
+        this.panelManager.getAllPanels().forEach(panelId => {
+            const panel = this.panelManager.findPanel(panelId);
+            if (panel) {
+                panel.element.style.gridArea = panelId;
+                console.log(`  ${panelId}: grid-area設定完了`);
+            }
+        });
+        
+        console.log('✅ 初期パネル配置設定完了');
+    }
+
+    /**
      * 🚀 パネル入れ替えシステム初期化
      */
     async initialize() {
         console.log('🔧 新しいパネル入れ替えシステム初期化');
+        
+        // 初期パネル配置を設定（CSS削除対応）
+        this.initializePanelGridAreas();
         
         try {
             // パネルにドラッグ機能を追加
@@ -888,6 +909,15 @@ export class NewPanelSwapController {
         // 実際の適用確認
         const appliedAreas = getComputedStyle(document.body).gridTemplateAreas;
         console.log('✅ 適用結果:', appliedAreas === newAreas ? '成功' : '失敗');
+        
+        // 🎯 重要: 個別DOM要素のgrid-areaプロパティを直接更新
+        console.log('🔧 個別要素のgrid-areaプロパティを直接更新...');
+        draggedPanel.element.style.gridArea = targetId;
+        targetPanel.element.style.gridArea = draggedId;
+        console.log('✅ 個別要素更新完了:', {
+            [`${draggedId}.style.gridArea`]: draggedPanel.element.style.gridArea,
+            [`${targetId}.style.gridArea`]: targetPanel.element.style.gridArea
+        });
         
         // 変更後の確認
         const newDraggedArea = getComputedStyle(draggedPanel.element).gridArea;
