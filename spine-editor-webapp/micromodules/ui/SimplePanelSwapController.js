@@ -85,6 +85,12 @@ export class SimplePanelSwapController {
      * マウスダウン処理
      */
     handleMouseDown(event, panelId) {
+        // 既にドラッグ中の場合は無視（重複防止）
+        if (this.isDragging) {
+            console.log(`🚫 既にドラッグ中のため無視: ${panelId}`);
+            return;
+        }
+        
         console.log(`🖱️ ドラッグ開始: ${panelId}`);
         
         this.isDragging = true;
@@ -214,6 +220,7 @@ export class SimplePanelSwapController {
             }
         }
         
+        // 即座にドラッグ終了（重複実行完全防止）
         this.endDrag();
     }
 
@@ -223,28 +230,50 @@ export class SimplePanelSwapController {
     executeSwap(draggedId, targetId) {
         console.log(`🔄 パネル入れ替え実行: ${draggedId} ⇄ ${targetId}`);
         
-        const draggedPanel = this.panelManager.findPanel(draggedId);
-        const targetPanel = this.panelManager.findPanel(targetId);
+        // 現在のgrid-template-areasを取得
+        const body = document.body;
+        const currentGridAreas = getComputedStyle(body).getPropertyValue('grid-template-areas');
         
-        if (!draggedPanel || !targetPanel) {
-            throw new Error('パネルが見つかりません');
+        console.log(`📍 現在のGridAreas: ${currentGridAreas}`);
+        
+        // grid-template-areasの文字列内で位置を交換
+        const newGridAreas = this.swapGridTemplateAreas(currentGridAreas, draggedId, targetId);
+        
+        // bodyのgrid-template-areasを更新
+        body.style.setProperty('grid-template-areas', newGridAreas, 'important');
+        
+        console.log(`✅ パネル入れ替え完了: ${newGridAreas}`);
+    }
+
+    /**
+     * grid-template-areas内でパネル名を交換
+     */
+    swapGridTemplateAreas(gridAreas, id1, id2) {
+        if (!gridAreas || gridAreas === 'none') {
+            return gridAreas;
         }
         
-        // 現在のgrid-areaを正確に取得（CSS + inline styleの両方を考慮）
-        const draggedCurrentArea = this.getCurrentGridArea(draggedPanel.element);
-        const targetCurrentArea = this.getCurrentGridArea(targetPanel.element);
+        // 元のgrid-template-areasから各行を抽出
+        const rows = gridAreas.match(/"[^"]+"/g);
+        if (!rows) return gridAreas;
         
-        console.log(`📍 入れ替え前: ${draggedId}=${draggedCurrentArea}, ${targetId}=${targetCurrentArea}`);
+        // 各行内でid1とid2を交換
+        const swappedRows = rows.map(row => {
+            let newRow = row;
+            // 正確な単語境界での置換
+            const regex1 = new RegExp(`\\b${id1}\\b`, 'g');
+            const regex2 = new RegExp(`\\b${id2}\\b`, 'g');
+            
+            // 一時的なプレースホルダーを使用して交換
+            const temp = '___TEMP___';
+            newRow = newRow.replace(regex1, temp);
+            newRow = newRow.replace(regex2, id1);
+            newRow = newRow.replace(new RegExp(`\\b${temp}\\b`, 'g'), id2);
+            
+            return newRow;
+        });
         
-        // grid-area を交換
-        draggedPanel.element.style.gridArea = targetCurrentArea;
-        targetPanel.element.style.gridArea = draggedCurrentArea;
-        
-        // 確認用ログ
-        const draggedNewArea = this.getCurrentGridArea(draggedPanel.element);
-        const targetNewArea = this.getCurrentGridArea(targetPanel.element);
-        
-        console.log(`✅ パネル入れ替え完了: ${draggedId}→${draggedNewArea}, ${targetId}→${targetNewArea}`);
+        return swappedRows.join(' ');
     }
 
     /**

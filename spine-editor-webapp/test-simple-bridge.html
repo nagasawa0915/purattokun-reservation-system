@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileToHttpBridge Simple Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .primary-btn { background: #007bff; color: white; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        #log { 
+            border: 1px solid #ddd; 
+            height: 300px; 
+            padding: 10px; 
+            overflow-y: scroll; 
+            background: #f8f9fa;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 FileToHttpBridge Simple Test</h1>
+    
+    <div class="test-section">
+        <h3>Phase 1: Basic Functionality</h3>
+        <button class="primary-btn" onclick="testBasicFunctionality()">🧪 基本機能テスト</button>
+        <button class="primary-btn" onclick="testFileSelection()">📂 ファイル選択テスト</button>
+        <div id="status"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Debug Log</h3>
+        <button onclick="clearLog()">🗑️ Clear Log</button>
+        <div id="log"></div>
+    </div>
+
+    <!-- Load Dependencies -->
+    <script src="micromodules/bridge/BlobUrlManager.js"></script>
+    <script src="micromodules/bridge/PathGenerator.js"></script>
+    <script src="micromodules/bridge/FileToHttpBridge.js"></script>
+
+    <script>
+        // Global variables
+        let bridge = null;
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Simple Bridge Test Page Loaded');
+            testBasicFunctionality();
+        });
+
+        // Log function
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        // Clear log
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Test basic functionality
+        function testBasicFunctionality() {
+            try {
+                log('🔧 Testing FileToHttpBridge initialization...');
+                
+                // Check if classes are loaded
+                if (typeof BlobUrlManager === 'undefined') {
+                    throw new Error('BlobUrlManager not loaded');
+                }
+                if (typeof PathGenerator === 'undefined') {
+                    throw new Error('PathGenerator not loaded');
+                }
+                if (typeof FileToHttpBridge === 'undefined') {
+                    throw new Error('FileToHttpBridge not loaded');
+                }
+
+                // Initialize bridge
+                bridge = new FileToHttpBridge({
+                    debug: true,
+                    tempBasePath: '/temp/spine/',
+                    logCallback: (message) => log(`[Bridge] ${message}`)
+                });
+
+                log('✅ FileToHttpBridge initialized successfully');
+                document.getElementById('status').innerHTML = '<div class="success">✅ All components loaded successfully</div>';
+                
+            } catch (error) {
+                log(`❌ Initialization failed: ${error.message}`);
+                document.getElementById('status').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Test file selection
+        async function testFileSelection() {
+            try {
+                log('📂 Testing File System Access API...');
+                
+                if (!('showDirectoryPicker' in window)) {
+                    throw new Error('File System Access API not supported in this browser');
+                }
+
+                log('✅ File System Access API is available');
+                log('🎯 Ready for file selection - click a folder when prompted');
+
+                // This would normally open the file picker
+                // const dirHandle = await window.showDirectoryPicker();
+                // log(`📁 Selected folder: ${dirHandle.name}`);
+                
+            } catch (error) {
+                log(`❌ File selection test failed: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

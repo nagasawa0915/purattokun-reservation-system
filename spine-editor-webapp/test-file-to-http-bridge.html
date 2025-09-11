@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileToHttpBridge Phase 1 MVP テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .primary-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .primary-btn:hover {
+            background: #45a049;
+        }
+
+        .secondary-btn {
+            background: #2196F3;
+            color: white;
+        }
+
+        .secondary-btn:hover {
+            background: #1976D2;
+        }
+
+        .danger-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .danger-btn:hover {
+            background: #d32f2f;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .stats-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .stats-card h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .stats-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2196F3;
+        }
+
+        .spine-canvas {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background: #fff;
+            margin: 10px 0;
+        }
+
+        .error {
+            color: #f44336;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: #4CAF50;
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .file-info {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            font-family: monospace;
+        }
+
+        .debug-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-toggle">
+        <label>
+            <input type="checkbox" id="debugMode" checked> デバッグモード
+        </label>
+    </div>
+
+    <div class="header">
+        <h1>🌉 FileToHttpBridge Phase 1 MVP テスト</h1>
+        <p>File API → StableSpineRenderer統合テストエンディングページ</p>
+    </div>
+
+    <!-- Phase 1: 基本機能テスト -->
+    <div class="test-section">
+        <h3>🔧 Phase 1: 基本機能テスト</h3>
+        <div class="controls">
+            <button class="primary-btn" onclick="selectSpineFolder()">📂 Spineフォルダ選択</button>
+            <button class="secondary-btn" onclick="testBlobUrlManager()" disabled>🔗 BlobUrlManager テスト</button>
+            <button class="secondary-btn" onclick="testPathGenerator()">🗂️ PathGenerator テスト</button>
+            <button class="danger-btn" onclick="cleanup()">🧹 クリーンアップ</button>
+        </div>
+        <div id="phase1-status"></div>
+    </div>
+
+    <!-- Phase 2: 変換テスト -->
+    <div class="test-section">
+        <h3>🔄 Phase 2: File → HTTP変換テスト</h3>
+        <div class="controls">
+            <button class="primary-btn" onclick="testConversion()" disabled id="convertBtn">⚡ 変換実行</button>
+            <button class="secondary-btn" onclick="validateConversion()" disabled id="validateBtn">✅ 変換検証</button>
+        </div>
+        <div id="phase2-status"></div>
+        <div id="conversion-result"></div>
+    </div>
+
+    <!-- Phase 3: StableSpineRenderer統合テスト -->
+    <div class="test-section">
+        <h3>🎮 Phase 3: StableSpineRenderer統合テスト</h3>
+        <div class="controls">
+            <button class="primary-btn" onclick="testSpineIntegration()" disabled id="spineBtn">🎯 Spine統合テスト</button>
+        </div>
+        <canvas id="spine-canvas" class="spine-canvas" width="400" height="400"></canvas>
+        <div id="phase3-status"></div>
+    </div>
+
+    <!-- 統計情報表示 -->
+    <div class="test-section">
+        <h3>📊 統計情報・デバッグ情報</h3>
+        <div class="controls">
+            <button class="secondary-btn" onclick="updateStats()">🔄 統計更新</button>
+            <button class="secondary-btn" onclick="clearLogs()">🗑️ ログクリア</button>
+        </div>
+        <div class="stats-grid" id="stats-grid"></div>
+        <div class="log-container" id="log-container"></div>
+    </div>
+
+    <!-- 依存ライブラリ読み込み -->
+    <!-- Spine WebGL CDN（必須） -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    
+    <!-- FileToHttpBridge モジュール -->
+    <script src="micromodules/bridge/BlobUrlManager.js"></script>
+    <script src="micromodules/bridge/PathGenerator.js"></script>
+    <script src="micromodules/bridge/FileToHttpBridge.js"></script>
+    
+    <!-- StableSpineRenderer -->
+    <script src="../micromodules/spine-renderer/StableSpineRenderer.js"></script>
+
+    <script>
+        // グローバル変数
+        let bridge = null;
+        let selectedFiles = null;
+        let conversionResult = null;
+        let spineRenderer = null;
+        let debugMode = true;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeBridge();
+            updateStats();
+            log('🚀 FileToHttpBridge テストページ初期化完了', 'info');
+            
+            // デフォルトファイル自動選択（開発用）
+            loadDefaultSpineFiles();
+            
+            // デバッグモード切り替え
+            document.getElementById('debugMode').addEventListener('change', function(e) {
+                debugMode = e.target.checked;
+                if (bridge) {
+                    bridge.config.debug = debugMode;
+                }
+                log(`🔧 デバッグモード: ${debugMode ? '有効' : '無効'}`, 'info');
+            });
+        });
+
+        // Bridge初期化
+        function initializeBridge() {
+            try {
+                bridge = new FileToHttpBridge({
+                    debug: debugMode,
+                    tempBasePath: '/temp/spine/',
+                    logCallback: (message) => log(message, 'bridge')
+                });
+                
+                showStatus('phase1', '✅ FileToHttpBridge初期化完了', 'success');
+                log('🌉 FileToHttpBridge初期化成功', 'success');
+            } catch (error) {
+                showStatus('phase1', `❌ Bridge初期化エラー: ${error.message}`, 'error');
+                log(`❌ Bridge初期化失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // デフォルトSpineファイル読み込み（開発用）
+        async function loadDefaultSpineFiles() {
+            try {
+                log('📂 デフォルトSpineファイル読み込み開始', 'info');
+                
+                const basePath = '../assets/spine/characters/nezumi/';
+                const fileNames = {
+                    atlas: 'nezumi.atlas',
+                    json: 'nezumi.json',
+                    texture: 'nezumi.png'
+                };
+                
+                // HTTPでファイル取得してFileオブジェクトに変換
+                const fileHandles = {};
+                for (const [type, fileName] of Object.entries(fileNames)) {
+                    try {
+                        const response = await fetch(basePath + fileName);
+                        if (!response.ok) {
+                            throw new Error(`${fileName}: ${response.status} ${response.statusText}`);
+                        }
+                        const arrayBuffer = await response.arrayBuffer();
+                        const blob = new Blob([arrayBuffer]);
+                        
+                        // FileSystemFileHandle風のオブジェクト作成
+                        fileHandles[type] = {
+                            name: fileName,
+                            getFile: async () => new File([blob], fileName, { 
+                                type: type === 'texture' ? 'image/png' : 'text/plain' 
+                            })
+                        };
+                    } catch (error) {
+                        log(`⚠️ ${fileName}読み込み失敗: ${error.message}`, 'warning');
+                    }
+                }
+                
+                // 必要ファイルがすべて読み込めた場合のみ処理続行
+                if (fileHandles.atlas && fileHandles.json && fileHandles.texture) {
+                    selectedFiles = fileHandles;
+                    
+                    // UI更新
+                    document.getElementById('convertBtn').disabled = false;
+                    document.querySelectorAll('button[onclick="testBlobUrlManager()"]')[0].disabled = false;
+                    
+                    // ファイル情報表示
+                    let fileInfo = '<div class="success">✅ デフォルトSpineファイル読み込み完了:</div>';
+                    for (const [type, handle] of Object.entries(fileHandles)) {
+                        fileInfo += `<div class="file-info">${type}: ${handle.name}</div>`;
+                    }
+                    
+                    showStatus('phase1', fileInfo, 'success');
+                    log(`✅ デフォルトSpineファイル読み込み完了: nezumi`, 'success');
+                } else {
+                    throw new Error('必要なファイルの読み込みに失敗しました');
+                }
+                
+            } catch (error) {
+                log(`❌ デフォルトファイル読み込み失敗: ${error.message}`, 'error');
+                log('💡 手動で「📂 Spineフォルダ選択」を使用してください', 'info');
+            }
+        }
+
+        // Spineフォルダ選択（File System Access API）
+        async function selectSpineFolder() {
+            try {
+                log('📂 Spineフォルダ選択開始', 'info');
+
+                if (!('showDirectoryPicker' in window)) {
+                    throw new Error('File System Access APIがサポートされていません');
+                }
+
+                // ディレクトリ選択
+                const dirHandle = await window.showDirectoryPicker({
+                    mode: 'read',
+                    startIn: 'documents'
+                });
+
+                log(`📁 選択フォルダ: ${dirHandle.name}`, 'info');
+
+                // 必要ファイル検索
+                const requiredFiles = ['atlas', 'json', 'png', 'jpg'];
+                const foundFiles = {};
+
+                for await (const [name, handle] of dirHandle.entries()) {
+                    if (handle.kind === 'file') {
+                        const extension = name.split('.').pop().toLowerCase();
+                        
+                        if (extension === 'atlas') {
+                            foundFiles.atlas = handle;
+                        } else if (extension === 'json') {
+                            foundFiles.json = handle;
+                        } else if (['png', 'jpg', 'jpeg'].includes(extension)) {
+                            foundFiles.texture = handle;
+                        }
+                    }
+                }
+
+                // ファイル検証
+                if (!foundFiles.atlas || !foundFiles.json || !foundFiles.texture) {
+                    const missing = [];
+                    if (!foundFiles.atlas) missing.push('atlas');
+                    if (!foundFiles.json) missing.push('json');
+                    if (!foundFiles.texture) missing.push('texture');
+                    throw new Error(`必要なファイルが見つかりません: ${missing.join(', ')}`);
+                }
+
+                selectedFiles = foundFiles;
+                
+                // UI更新
+                document.getElementById('convertBtn').disabled = false;
+                document.querySelectorAll('button[onclick="testBlobUrlManager()"]')[0].disabled = false;
+                
+                // ファイル情報表示
+                let fileInfo = '<div class="success">✅ Spineファイル選択完了:</div>';
+                for (const [type, handle] of Object.entries(foundFiles)) {
+                    fileInfo += `<div class="file-info">${type}: ${handle.name}</div>`;
+                }
+                
+                showStatus('phase1', fileInfo, 'success');
+                log(`✅ Spineファイル選択完了: ${Object.keys(foundFiles).length}件`, 'success');
+
+            } catch (error) {
+                showStatus('phase1', `❌ ファイル選択エラー: ${error.message}`, 'error');
+                log(`❌ ファイル選択失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // BlobUrlManagerテスト
+        async function testBlobUrlManager() {
+            try {
+                log('🔗 BlobUrlManager単体テスト開始', 'info');
+
+                const manager = new BlobUrlManager({ debug: debugMode });
+                
+                // テスト用ファイル作成
+                const testFile = new File(['test content'], 'test.txt', { type: 'text/plain' });
+                
+                // Blob URL作成テスト
+                const url = manager.createBlobUrl(testFile, 'text/plain');
+                log(`📎 Blob URL作成テスト成功: ${url.substring(0, 50)}...`, 'success');
+                
+                // メタデータ取得テスト
+                const metadata = manager.getMetadata(url);
+                log(`📋 メタデータ取得テスト成功: ${JSON.stringify(metadata, null, 2)}`, 'info');
+                
+                // URL解放テスト
+                const revoked = manager.revokeBlobUrl(url);
+                log(`🗑️ URL解放テスト成功: ${revoked}`, 'success');
+                
+                showStatus('phase1', '✅ BlobUrlManager単体テスト完了', 'success');
+
+            } catch (error) {
+                showStatus('phase1', `❌ BlobUrlManagerテストエラー: ${error.message}`, 'error');
+                log(`❌ BlobUrlManagerテスト失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // PathGeneratorテスト
+        function testPathGenerator() {
+            try {
+                log('🗂️ PathGenerator単体テスト開始', 'info');
+
+                // ベースパス生成テスト
+                const basePath = PathGenerator.generateBasePath('nezumi');
+                log(`📁 ベースパス生成テスト: ${basePath}`, 'info');
+
+                // ファイルパス生成テスト
+                const filePath = PathGenerator.generateFilePath(basePath, 'nezumi.atlas', 'atlas');
+                log(`📄 ファイルパス生成テスト: ${filePath}`, 'info');
+
+                // パス正規化テスト
+                const normalized = PathGenerator.normalizePath('//temp//spine\\nezumi\\');
+                log(`🔄 パス正規化テスト: ${normalized}`, 'info');
+
+                // 完全パスセット生成テスト
+                const pathSet = PathGenerator.generateCompletePathSet('nezumi', {
+                    atlas: 'nezumi.atlas',
+                    json: 'nezumi.json',
+                    texture: 'nezumi.png'
+                });
+                log(`📦 完全パスセット生成テスト: ${JSON.stringify(pathSet, null, 2)}`, 'info');
+
+                showStatus('phase1', '✅ PathGenerator単体テスト完了', 'success');
+
+            } catch (error) {
+                showStatus('phase1', `❌ PathGeneratorテストエラー: ${error.message}`, 'error');
+                log(`❌ PathGeneratorテスト失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // File → HTTP変換テスト
+        async function testConversion() {
+            try {
+                if (!selectedFiles) {
+                    throw new Error('Spineファイルが選択されていません');
+                }
+
+                log('⚡ File → HTTP変換テスト開始', 'info');
+                showStatus('phase2', '🔄 変換処理中...', 'info');
+
+                const characterName = 'nezumi';
+                conversionResult = await bridge.convertCharacterFiles(characterName, selectedFiles);
+
+                // 変換結果表示
+                let resultHtml = '<div class="success">✅ 変換完了:</div>';
+                resultHtml += `<div class="file-info">キャラクター名: ${conversionResult.characterName}</div>`;
+                resultHtml += `<div class="file-info">ベースパス: ${conversionResult.basePath}</div>`;
+                resultHtml += `<div class="file-info">変換時間: ${conversionResult.stats.conversionTime}ms</div>`;
+                resultHtml += `<div class="file-info">総ファイルサイズ: ${formatSize(conversionResult.stats.totalSize)}</div>`;
+                
+                resultHtml += '<h4>生成されたファイルパス:</h4>';
+                for (const [type, path] of Object.entries(conversionResult.files)) {
+                    resultHtml += `<div class="file-info">${type}: ${path}</div>`;
+                }
+
+                document.getElementById('conversion-result').innerHTML = resultHtml;
+                showStatus('phase2', '✅ File → HTTP変換完了', 'success');
+
+                // 次のステップ有効化
+                document.getElementById('validateBtn').disabled = false;
+                document.getElementById('spineBtn').disabled = false;
+
+                log(`✅ File → HTTP変換成功: ${characterName}`, 'success');
+
+            } catch (error) {
+                showStatus('phase2', `❌ 変換エラー: ${error.message}`, 'error');
+                log(`❌ 変換失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 変換検証
+        async function validateConversion() {
+            try {
+                if (!conversionResult) {
+                    throw new Error('変換結果がありません');
+                }
+
+                log('✅ 変換結果検証開始', 'info');
+
+                // Blob URL存在確認
+                for (const [type, blobUrl] of Object.entries(conversionResult.blobUrls)) {
+                    try {
+                        const response = await fetch(blobUrl);
+                        if (!response.ok) {
+                            throw new Error(`${type} Blob URLアクセス失敗: ${response.status}`);
+                        }
+                        log(`✅ ${type} Blob URL検証成功: ${blobUrl.substring(0, 50)}...`, 'success');
+                    } catch (error) {
+                        throw new Error(`${type} Blob URL検証失敗: ${error.message}`);
+                    }
+                }
+
+                showStatus('phase2', '✅ 変換結果検証完了 - 全てのBlob URLにアクセス可能', 'success');
+                log('✅ 変換結果検証完了', 'success');
+
+            } catch (error) {
+                showStatus('phase2', `❌ 検証エラー: ${error.message}`, 'error');
+                log(`❌ 検証失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // StableSpineRenderer統合テスト
+        async function testSpineIntegration() {
+            try {
+                if (!conversionResult) {
+                    throw new Error('変換結果がありません');
+                }
+
+                log('🎮 StableSpineRenderer統合テスト開始', 'info');
+                showStatus('phase3', '🔄 Spine初期化中...', 'info');
+
+                // 変換結果のデバッグ情報出力
+                log('📋 変換結果構造確認:', 'debug');
+                log(`  characterName: ${conversionResult.characterName}`, 'debug');
+                log(`  basePath: ${conversionResult.basePath}`, 'debug');
+                log(`  blobUrls存在: ${conversionResult.blobUrls ? 'YES' : 'NO'}`, 'debug');
+                if (conversionResult.blobUrls) {
+                    log(`  atlas: ${conversionResult.blobUrls.atlas ? 'YES' : 'NO'}`, 'debug');
+                    log(`  json: ${conversionResult.blobUrls.json ? 'YES' : 'NO'}`, 'debug');
+                    log(`  texture: ${conversionResult.blobUrls.texture ? 'YES' : 'NO'}`, 'debug');
+                }
+
+                // デバッグ: 変換結果全体をコンソール出力
+                console.log("🔍 conversionResult全体:", conversionResult);
+                console.log("🔍 conversionResult.blobUrls:", conversionResult.blobUrls);
+
+                // StableSpineRenderer初期化
+                const spineConfig = {
+                    canvas: '#spine-canvas',
+                    character: conversionResult.characterName,
+                    basePath: conversionResult.basePath,
+                    blobUrls: conversionResult.blobUrls, // FileToHttpBridge Blob URL統合
+                    debug: debugMode,
+                    logCallback: (message) => log(`[Spine] ${message}`, 'spine')
+                };
+                
+                console.log("🔍 spineConfig:", spineConfig);
+                spineRenderer = new StableSpineRenderer(spineConfig);
+
+                // 初期化実行
+                await spineRenderer.initialize();
+
+                showStatus('phase3', '✅ StableSpineRenderer統合テスト完了 - Spine描画成功', 'success');
+                log('🎉 StableSpineRenderer統合テスト完了', 'success');
+
+            } catch (error) {
+                showStatus('phase3', `❌ Spine統合エラー: ${error.message}`, 'error');
+                log(`❌ Spine統合失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // クリーンアップ
+        function cleanup() {
+            try {
+                log('🧹 クリーンアップ開始', 'info');
+
+                let cleanupCount = 0;
+
+                if (bridge) {
+                    cleanupCount = bridge.cleanup();
+                }
+
+                if (spineRenderer) {
+                    // StableSpineRenderer停止
+                    spineRenderer = null;
+                }
+
+                conversionResult = null;
+
+                // UI初期化
+                document.getElementById('convertBtn').disabled = selectedFiles ? false : true;
+                document.getElementById('validateBtn').disabled = true;
+                document.getElementById('spineBtn').disabled = true;
+                document.getElementById('conversion-result').innerHTML = '';
+
+                // Canvas初期化
+                const canvas = document.getElementById('spine-canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                showStatus('phase1', `✅ クリーンアップ完了: ${cleanupCount}件`, 'success');
+                log(`✅ クリーンアップ完了: ${cleanupCount}件`, 'success');
+
+                updateStats();
+
+            } catch (error) {
+                showStatus('phase1', `❌ クリーンアップエラー: ${error.message}`, 'error');
+                log(`❌ クリーンアップ失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 統計情報更新
+        function updateStats() {
+            try {
+                const stats = bridge ? bridge.getStats() : null;
+                const statsGrid = document.getElementById('stats-grid');
+
+                if (!stats) {
+                    statsGrid.innerHTML = '<div class="stats-card"><h4>統計情報</h4><div class="stats-value">初期化待ち</div></div>';
+                    return;
+                }
+
+                statsGrid.innerHTML = `
+                    <div class="stats-card">
+                        <h4>総変換回数</h4>
+                        <div class="stats-value">${stats.totalConversions}</div>
+                    </div>
+                    <div class="stats-card">
+                        <h4>成功率</h4>
+                        <div class="stats-value">${stats.performance.successRate}</div>
+                    </div>
+                    <div class="stats-card">
+                        <h4>アクティブキャラクター</h4>
+                        <div class="stats-value">${stats.activeCharacters.length}</div>
+                    </div>
+                    <div class="stats-card">
+                        <h4>Blob URL数</h4>
+                        <div class="stats-value">${stats.memoryUsage.blobUrls}</div>
+                    </div>
+                    <div class="stats-card">
+                        <h4>推定メモリ使用量</h4>
+                        <div class="stats-value">${formatSize(stats.memoryUsage.estimatedSize)}</div>
+                    </div>
+                    <div class="stats-card">
+                        <h4>稼働時間</h4>
+                        <div class="stats-value">${Math.round(stats.uptime / 1000)}s</div>
+                    </div>
+                `;
+
+                log('📊 統計情報更新完了', 'info');
+
+            } catch (error) {
+                log(`❌ 統計更新エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // ユーティリティ関数
+        function showStatus(phase, message, type = 'info') {
+            const element = document.getElementById(`${phase}-status`);
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            element.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const timestamp = new Date().toLocaleTimeString();
+            const logClass = type === 'error' ? 'color: #ff6b6b;' : 
+                            type === 'success' ? 'color: #4CAF50;' :
+                            type === 'bridge' ? 'color: #2196F3;' :
+                            type === 'spine' ? 'color: #ff9800;' : 'color: #00ff00;';
+            
+            logContainer.innerHTML += `<div style="${logClass}">[${timestamp}] ${message}</div>`;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('log-container').innerHTML = '';
+            log('🗑️ ログクリア完了', 'info');
+        }
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            const base = 1024;
+            const index = Math.floor(Math.log(bytes) / Math.log(base));
+            return (bytes / Math.pow(base, index)).toFixed(1) + ' ' + units[index];
+        }
+
+        // 定期統計更新
+        setInterval(updateStats, 5000);
+    </script>
+</body>
+</html>

@@ -50,6 +50,9 @@ class StableSpineRenderer {
       // アニメーション設定（自動検出対応）
       defaultAnimation: config.defaultAnimation, // undefined可能（自動検出される）
 
+      // FileToHttpBridge統合設定
+      blobUrls: config.blobUrls, // undefined可能（FileToHttpBridge使用時のみ）
+
       // デバッグ設定
       debug: config.debug || false,
       logCallback: config.logCallback || console.log,
@@ -80,9 +83,17 @@ class StableSpineRenderer {
     // 必須パラメータの検証
     this.validateRequiredConfig();
 
+    console.log("🎯 StableSpineRenderer 初期化", this.config);
     this.log("🎯 StableSpineRenderer 初期化", "info");
     this.log(`📋 使用キャラクター: ${this.config.character}`, "info");
     this.log(`📁 ベースパス: ${this.config.basePath}`, "info");
+    this.log(`🔗 Blob URLs提供: ${this.config.blobUrls ? 'YES' : 'NO'}`, "info");
+    console.log("🔗 Blob URLs詳細:", this.config.blobUrls);
+    if (this.config.blobUrls) {
+      this.log(`📎 Atlas Blob URL: ${this.config.blobUrls.atlas ? 'YES' : 'NO'}`, "info");
+      this.log(`📎 JSON Blob URL: ${this.config.blobUrls.json ? 'YES' : 'NO'}`, "info");
+      this.log(`📎 Texture Blob URL: ${this.config.blobUrls.texture ? 'YES' : 'NO'}`, "info");
+    }
   }
 
   /**
@@ -300,15 +311,43 @@ class StableSpineRenderer {
   async loadAssets() {
     this.log("📁 アセット読み込み開始", "info");
 
-    // AssetManager初期化（成功パターンと同じベースパス方式）
-    const characterPath = `${this.config.basePath}${this.config.character}/`;
-    this.assetManager = new window.spine.AssetManager(this.gl, characterPath);
+    // FileToHttpBridge対応: blobUrlsが提供されている場合は直接使用
+    console.log("🔍 Blob URLチェック:", {
+      blobUrls: !!this.config.blobUrls,
+      atlas: !!(this.config.blobUrls && this.config.blobUrls.atlas),
+      json: !!(this.config.blobUrls && this.config.blobUrls.json)
+    });
+    
+    if (this.config.blobUrls && this.config.blobUrls.atlas && this.config.blobUrls.json) {
+      console.log("🔗 Blob URL直接読み込みモード選択");
+      this.log("🔗 Blob URL直接読み込みモード", "info");
+      
+      // AssetManager初期化（ベースパス不要）
+      this.assetManager = new window.spine.AssetManager(this.gl);
+      
+      // Blob URLを直接指定してファイル読み込み
+      this.assetManager.loadTextureAtlas(this.config.blobUrls.atlas);
+      this.assetManager.loadJson(this.config.blobUrls.json);
+      
+      this.log(`📎 Atlas Blob URL: ${this.config.blobUrls.atlas.substring(0, 50)}...`, "info");
+      this.log(`📎 JSON Blob URL: ${this.config.blobUrls.json.substring(0, 50)}...`, "info");
+      this.log(`📎 テクスチャはFileToHttpBridgeインターセプトで自動処理`, "info");
+      
+    } else {
+      // 従来のHTTPパス方式（後方互換性）
+      console.log("🌐 HTTP パス読み込みモード選択");
+      this.log("🌐 HTTP パス読み込みモード", "info");
+      
+      // AssetManager初期化（成功パターンと同じベースパス方式）
+      const characterPath = `${this.config.basePath}${this.config.character}/`;
+      this.assetManager = new window.spine.AssetManager(this.gl, characterPath);
 
-    this.log(`📂 キャラクターパス: ${characterPath}`, "info");
+      this.log(`📂 キャラクターパス: ${characterPath}`, "info");
 
-    // ファイル読み込み（成功パターンと同じ相対パス）
-    this.assetManager.loadTextureAtlas(`${this.config.character}.atlas`);
-    this.assetManager.loadJson(`${this.config.character}.json`);
+      // ファイル読み込み（成功パターンと同じ相対パス）
+      this.assetManager.loadTextureAtlas(`${this.config.character}.atlas`);
+      this.assetManager.loadJson(`${this.config.character}.json`);
+    }
 
     this.log("⏳ アセット読み込み中...", "info");
 
