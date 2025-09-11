@@ -912,8 +912,18 @@ export class NewPanelSwapController {
         
         // 🎯 重要: 個別DOM要素のgrid-areaプロパティを直接更新
         console.log('🔧 個別要素のgrid-areaプロパティを直接更新...');
-        draggedPanel.element.style.gridArea = targetId;
-        targetPanel.element.style.gridArea = draggedId;
+        console.log('🔍 更新前状態:', {
+            [`${draggedId}.style.gridArea`]: draggedPanel.element.style.gridArea,
+            [`${targetId}.style.gridArea`]: targetPanel.element.style.gridArea
+        });
+        
+        // 🔧 修正: Grid Template Areasに合わせた位置を設定
+        // Grid Template AreasでdraggedIdの場所に配置されるべき要素はtargetPanel
+        // Grid Template AreasでtargetIdの場所に配置されるべき要素はdraggedPanel
+        const tempArea = draggedPanel.element.style.gridArea;
+        draggedPanel.element.style.gridArea = targetPanel.element.style.gridArea;
+        targetPanel.element.style.gridArea = tempArea;
+        
         console.log('✅ 個別要素更新完了:', {
             [`${draggedId}.style.gridArea`]: draggedPanel.element.style.gridArea,
             [`${targetId}.style.gridArea`]: targetPanel.element.style.gridArea
