@@ -501,6 +501,8 @@ export class NewPanelSwapController {
         }
         if (x >= centerStartX && x <= centerStartX + centerW && 
             y >= centerStartY && y <= centerStartY + centerH) {
+            // CENTER検出ログは大量出力を防ぐためコメントアウト
+            // console.log(`🎯 CENTER検出: ${targetPanel.dataset.panel}`);
             return { type: 'center', panel: targetPanel, rect, adjacent: false };
         }
         
@@ -628,7 +630,8 @@ export class NewPanelSwapController {
             this.dropAreas.current = dropArea;
         }
         
-        console.log(`🎯 ドロップエリア検出: ${dropArea.type} on ${dropArea.panel.dataset.panel}`);
+        // ドロップエリア検出ログは大量出力を防ぐためコメントアウト
+        // console.log(`🎯 ドロップエリア検出: ${dropArea.type} on ${dropArea.panel.dataset.panel}`);
     }
 
     /**
@@ -778,6 +781,7 @@ export class NewPanelSwapController {
             
             switch (dropArea.type) {
                 case 'center':
+                    console.log(`🔄 CENTER型ドロップ実行: ${this.draggedPanel} → ${targetPanelId}`);
                     return this.executeSwap(this.draggedPanel, targetPanelId);
                     
                 case 'top':
@@ -827,12 +831,18 @@ export class NewPanelSwapController {
      * 🔄 パネル入れ替え実行
      */
     executeSwap(draggedId, targetId) {
-        console.log(`🔄 パネル入れ替え: ${draggedId} ↔ ${targetId}`);
+        console.log(`🔄 パネル入れ替え開始: ${draggedId} ↔ ${targetId}`);
         
         const draggedPanel = this.panelManager.findPanel(draggedId);
         const targetPanel = this.panelManager.findPanel(targetId);
         
+        console.log('🔍 パネル検索結果:', {
+            draggedPanel: draggedPanel ? draggedPanel.id : 'NOT_FOUND',
+            targetPanel: targetPanel ? targetPanel.id : 'NOT_FOUND'
+        });
+        
         if (!draggedPanel || !targetPanel) {
+            console.error('❌ パネルが見つかりません:', { draggedId, targetId });
             return { success: false, reason: 'Panel not found' };
         }
         
@@ -840,11 +850,88 @@ export class NewPanelSwapController {
         const draggedArea = getComputedStyle(draggedPanel.element).gridArea;
         const targetArea = getComputedStyle(targetPanel.element).gridArea;
         
-        draggedPanel.element.style.gridArea = targetArea;
-        targetPanel.element.style.gridArea = draggedArea;
+        console.log('🔍 Grid Area情報:', {
+            draggedPanel: { id: draggedId, currentArea: draggedArea, willBecome: targetArea },
+            targetPanel: { id: targetId, currentArea: targetArea, willBecome: draggedArea }
+        });
+        
+        console.log('🔍 実際のCSS設定前:', {
+            draggedElement: draggedPanel.element.style.gridArea,
+            targetElement: targetPanel.element.style.gridArea
+        });
+        
+        // 🎯 新アプローチ: body のgrid-template-areasを直接変更
+        console.log('🔧 Grid Template Areas変更アプローチ開始');
+        
+        // 現在のgrid-template-areasを取得
+        const bodyStyle = getComputedStyle(document.body);
+        const currentAreas = bodyStyle.gridTemplateAreas;
+        console.log('現在のgrid-template-areas:', currentAreas);
+        
+        // grid-template-areasを入れ替え（outliner ⟷ preview）
+        const newAreas = currentAreas
+            .replace(/outliner/g, 'TEMP_OUTLINER')
+            .replace(/preview/g, 'outliner')  
+            .replace(/TEMP_OUTLINER/g, 'preview');
+            
+        console.log('新しいgrid-template-areas:', newAreas);
+        
+        // bodyのgrid-template-areasを更新
+        document.body.style.setProperty('grid-template-areas', newAreas, 'important');
+        
+        console.log('🔧 Grid Template Areas変更完了');
+        
+        // 変更後の確認
+        const newDraggedArea = getComputedStyle(draggedPanel.element).gridArea;
+        const newTargetArea = getComputedStyle(targetPanel.element).gridArea;
+        
+        console.log('✅ 入れ替え実行結果:', {
+            draggedPanel: { id: draggedId, newArea: newDraggedArea, expected: targetArea },
+            targetPanel: { id: targetId, newArea: newTargetArea, expected: draggedArea }
+        });
+        
+        console.log('🔍 実際のCSS設定後:', {
+            draggedElement: draggedPanel.element.style.gridArea,
+            targetElement: targetPanel.element.style.gridArea
+        });
+        
+        // より詳細な状態確認
+        console.log('🔍 要素詳細確認:');
+        console.log('  Dragged Panel:', {
+            id: draggedId,
+            element: draggedPanel.element,
+            className: draggedPanel.element.className,
+            computedGridArea: getComputedStyle(draggedPanel.element).gridArea,
+            styleGridArea: draggedPanel.element.style.gridArea
+        });
+        console.log('  Target Panel:', {
+            id: targetId,
+            element: targetPanel.element,
+            className: targetPanel.element.className,
+            computedGridArea: getComputedStyle(targetPanel.element).gridArea,
+            styleGridArea: targetPanel.element.style.gridArea
+        });
+        
+        // 実際のDOM要素を直接確認
+        console.log('🔧 DOM要素検証:');
+        console.log(`  ${draggedId} element:`, draggedPanel.element);
+        console.log(`  ${targetId} element:`, targetPanel.element);
+        console.log(`  ${draggedId} computed style:`, getComputedStyle(draggedPanel.element));
+        console.log(`  ${targetId} computed style:`, getComputedStyle(targetPanel.element));
+        
+        // 成功判定
+        const success = (newDraggedArea === targetArea && newTargetArea === draggedArea);
+        console.log(`${success ? '✅' : '❌'} 入れ替え${success ? '成功' : '失敗'}`);
+        
+        // 手動確認用のテストコマンド表示
+        console.log('🧪 手動テスト用コマンド（コンソールに貼り付けて実行）:');
+        console.log(`  document.querySelector('[data-panel="${draggedId}"]').style.gridArea`);
+        console.log(`  document.querySelector('[data-panel="${targetId}"]').style.gridArea`);
+        console.log(`  getComputedStyle(document.querySelector('[data-panel="${draggedId}"]')).gridArea`);
+        console.log(`  getComputedStyle(document.querySelector('[data-panel="${targetId}"]')).gridArea`);
         
         return { 
-            success: true, 
+            success: success, 
             action: 'swap', 
             panels: [draggedId, targetId] 
         };

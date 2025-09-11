@@ -7,6 +7,7 @@ import { ResizeController } from '../ui/ResizeController.js';
 import { NewPanelSwapController } from '../ui/NewPanelSwapController.js';
 import { LayoutManager } from '../ui/LayoutManager.js';
 import { DebugManager } from '../debug/DebugManager.js';
+import { HomepageIntegrationController } from '../integration/HomepageIntegrationController.js';
 
 export class SystemCoordinator {
     constructor() {
@@ -20,6 +21,7 @@ export class SystemCoordinator {
         this.resizeController = new ResizeController();
         this.debugManager = new DebugManager();
         this.panelSwapController = null; // PanelManager・LayoutManager初期化後に作成
+        this.homepageIntegration = null; // ホームページ統合システム
         
         console.log('🎯 SystemCoordinator初期化開始');
         this.init();
@@ -69,7 +71,13 @@ export class SystemCoordinator {
                 this.debugManager.addDebugMessage(`リサイズハンドル初期化完了: ${resizeCount}個`, 'info');
             });
 
-            // Phase 5: グローバルコマンド・イベント統合
+            // Phase 5: ホームページ統合システム初期化
+            await this.executePhase('homepage-integration', () => {
+                this.homepageIntegration = new HomepageIntegrationController();
+                this.debugManager.addDebugMessage('ホームページ統合システム初期化完了', 'info');
+            });
+
+            // Phase 6: グローバルコマンド・イベント統合
             await this.executePhase('global-integration', () => {
                 this.setupGlobalIntegration();
                 this.debugManager.addDebugMessage('グローバル統合完了', 'info');
@@ -238,7 +246,8 @@ export class SystemCoordinator {
                 panelManager: this.panelManager?.state || 'not-initialized',
                 resizeController: this.resizeController?.state || 'not-initialized',
                 panelSwapController: this.panelSwapController?.state || 'not-initialized',
-                debugManager: this.debugManager?.state || 'not-initialized'
+                debugManager: this.debugManager?.state || 'not-initialized',
+                homepageIntegration: this.homepageIntegration?.integrationState || 'not-initialized'
             },
             timestamp: Date.now()
         };
@@ -268,6 +277,10 @@ export class SystemCoordinator {
         
         if (this.debugManager) {
             healthCheck.modules.debug = this.debugManager.performHealthCheck();
+        }
+        
+        if (this.homepageIntegration) {
+            healthCheck.modules.homepage = this.homepageIntegration.performHealthCheck();
         }
 
         console.log('🏥 SystemCoordinatorヘルスチェック:', healthCheck);
