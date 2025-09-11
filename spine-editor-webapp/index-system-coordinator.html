@@ -93,6 +93,18 @@
             border-color: #ffaa77;
         }
         
+        .toolbar-btn.reset-btn {
+            background: #ff4757;
+            border-color: #ff6b7a;
+            color: white;
+        }
+        
+        .toolbar-btn.reset-btn:hover {
+            background: #ff6b7a;
+            border-color: #ff8a9c;
+            transform: scale(1.02);
+        }
+        
         .btn-icon {
             font-size: 14px;
         }
@@ -225,11 +237,11 @@
             overflow: auto;
         }
         
-        /* 各パネル配置 */
-        .panel-outliner { grid-area: outliner; }
+        /* 各パネル配置 - 動的入れ替え対応のためコメントアウト */
+        /* .panel-outliner { grid-area: outliner; }
         .panel-preview { grid-area: preview; }
         .panel-properties { grid-area: properties; }
-        .panel-timeline { grid-area: timeline; }
+        .panel-timeline { grid-area: timeline; } */
         
         /* リサイズハンドル */
         .resize-handle {
@@ -459,8 +471,9 @@
 
         <!-- 右側: アクション・出力ボタン -->
         <div class="toolbar-right">
-            <button class="toolbar-btn" onclick="resetLayout()" title="レイアウトリセット">
+            <button class="toolbar-btn reset-btn" onclick="resetPanelLayout()" title="パネル配置をリセット">
                 <span class="btn-icon">🔄</span>
+                <span class="btn-text">リセット</span>
             </button>
             <button class="toolbar-btn" onclick="window.systemCoordinator?.performSystemHealthCheck()" title="ヘルスチェック">
                 <span class="btn-icon">🏥</span>
@@ -716,7 +729,63 @@
             console.log('📦 パッケージ出力完了:', exportData);
         };
         
-        // レイアウト関連機能
+        // パネルレイアウトリセット機能（UI用）
+        window.resetPanelLayout = function() {
+            console.log('🔄 パネルレイアウトリセット開始');
+            
+            try {
+                // 1. Grid Template Areasを初期値にリセット
+                const defaultGridAreas = `
+                    "header header header"
+                    "outliner preview properties"
+                    "timeline timeline timeline"
+                `;
+                document.body.style.setProperty('grid-template-areas', defaultGridAreas, 'important');
+                
+                // 2. 各パネルのgrid-areaを初期値にリセット
+                const panels = ['outliner', 'preview', 'properties', 'timeline'];
+                panels.forEach(panelId => {
+                    const panelElement = document.querySelector(`[data-panel="${panelId}"]`);
+                    if (panelElement) {
+                        panelElement.style.gridArea = panelId;
+                        console.log(`  ${panelId}: grid-area初期化完了`);
+                    }
+                });
+                
+                // 3. Grid columns/rowsも初期値にリセット
+                document.body.style.setProperty('grid-template-columns', 'var(--outliner-width, 300px) 1fr var(--properties-width, 300px)', 'important');
+                document.body.style.setProperty('grid-template-rows', '60px 1fr var(--timeline-height, 200px)', 'important');
+                
+                // 4. PanelSwapControllerの状態もリセット
+                if (window.systemCoordinator?.panelSwapController) {
+                    window.systemCoordinator.panelSwapController.initializePanelGridAreas();
+                }
+                
+                // 5. ローカルストレージもクリア
+                localStorage.removeItem('spine-editor-stacks');
+                
+                console.log('✅ パネルレイアウトリセット完了');
+                
+                // 6. SystemCoordinatorのデバッグ情報更新
+                if (window.systemCoordinator?.debugManager) {
+                    window.systemCoordinator.debugManager.addDebugMessage('パネルレイアウトリセット実行', 'info');
+                }
+                
+                // 成功フィードバック
+                const resetBtn = document.querySelector('.reset-btn');
+                const originalText = resetBtn.innerHTML;
+                resetBtn.innerHTML = '<span class="btn-icon">✅</span><span class="btn-text">完了</span>';
+                setTimeout(() => {
+                    resetBtn.innerHTML = originalText;
+                }, 1000);
+                
+            } catch (error) {
+                console.error('❌ パネルレイアウトリセットエラー:', error);
+                alert('リセット中にエラーが発生しました');
+            }
+        };
+        
+        // レイアウト関連機能（既存互換）
         window.resetLayout = function() {
             console.log('🔄 レイアウトリセット');
             if (window.systemCoordinator?.layoutManager) {

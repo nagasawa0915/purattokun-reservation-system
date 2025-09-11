@@ -99,12 +99,18 @@ export class PreviewController {
         iframe.style.borderRadius = '4px';
         iframe.style.background = 'white';
 
-        // HTML Content処理
-        const processedHtml = this.processHtmlContent(htmlContent, fileData);
-        
-        // Data URLで安全にHTMLを読み込み
-        const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(processedHtml)}`;
-        iframe.src = dataUrl;
+        // HTMLファイルをサーバー経由で読み込み（相対パス対応）
+        const serverUrl = this.buildServerUrl(fileData);
+        if (serverUrl) {
+            console.log('🌐 サーバーベースURL使用:', serverUrl);
+            iframe.src = serverUrl;
+        } else {
+            // フォールバック: HTML Content処理
+            const processedHtml = this.processHtmlContent(htmlContent, fileData);
+            const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(processedHtml)}`;
+            iframe.src = dataUrl;
+            console.log('📄 Data URL フォールバック使用');
+        }
 
         // 読み込み完了イベント
         iframe.onload = () => {
@@ -120,6 +126,117 @@ export class PreviewController {
 
         this.currentIframe = iframe;
         return iframe;
+    }
+
+    /**
+     * サーバーベースURL構築
+     * @param {Object} fileData - ファイルデータ
+     * @returns {string|null} サーバーURL
+     */
+    buildServerUrl(fileData) {
+        try {
+            // 現在のサーバーのベースURLを取得
+            const currentUrl = window.location.href;
+            const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+            
+            // ファイルパスをサーバーパスに変換
+            // 例: "D:\クラウドパートナーHP\index.html" → "http://localhost:8001/index.html"
+            let serverPath = fileData.path;
+            
+            // WindowsパスをUnixパスに変換
+            if (serverPath.includes('\\')) {
+                serverPath = serverPath.replace(/\\/g, '/');
+            }
+            
+            // 絶対パスをサーバー相対パスに変換
+            // 様々なプロジェクトルートパターンに対応
+            const rootPatterns = [
+                'クラウドパートナーHP/',
+                'クラウドパートナーHP\\',
+                'spine-editor-webapp/',
+                'spine-editor-webapp\\'
+            ];
+            
+            for (const pattern of rootPatterns) {
+                if (serverPath.includes(pattern)) {
+                    const rootIndex = serverPath.indexOf(pattern);
+                    serverPath = serverPath.substring(rootIndex + pattern.length);
+                    break;
+                }
+            }
+            
+            // さらに上位のディレクトリがある場合の処理
+            // 例: "/mnt/d/クラウドパートナーHP/index.html" の場合
+            if (serverPath.startsWith('/mnt/') || serverPath.startsWith('C:/') || serverPath.startsWith('D:/')) {
+                // ドライブレター・マウントポイントから始まる場合、最後のディレクトリ区切りを見つける
+                const lastSlash = serverPath.lastIndexOf('/');
+                const pathParts = serverPath.split('/');
+                
+                // プロジェクトルートらしきディレクトリを探す
+                for (let i = pathParts.length - 1; i >= 0; i--) {
+                    const part = pathParts[i];
+                    if (part.includes('クラウドパートナー') || part.includes('HP') || part.includes('index')) {
+                        // そのディレクトリから相対パスを構築
+                        serverPath = pathParts.slice(i).join('/');
+                        break;
+                    }
+                }
+            }
+            
+            // 先頭の/を削除
+            if (serverPath.startsWith('/')) {
+                serverPath = serverPath.substring(1);
+            }
+            
+            // 完全なサーバーURLを構築
+            const fullServerUrl = `${baseUrl}/../${serverPath}`;
+            
+            console.log('🔗 URL変換:', {
+                original: fileData.path,
+                serverPath: serverPath,
+                fullUrl: fullServerUrl,
+                currentUrl: currentUrl,
+                baseUrl: baseUrl
+            });
+            
+            // URL有効性をテスト
+            return this.validateServerUrl(fullServerUrl) ? fullServerUrl : null;
+            
+        } catch (error) {
+            console.error('❌ サーバーURL構築エラー:', error);
+            return null;
+        }
+    }
+
+    /**
+     * サーバーURL有効性確認
+     * @param {string} url - 確認するURL
+     * @returns {boolean} 有効かどうか
+     */
+    validateServerUrl(url) {
+        try {
+            // 基本的なURL形式チェック
+            const urlObj = new URL(url);
+            
+            // HTTPサーバーかどうかチェック
+            if (!['http:', 'https:'].includes(urlObj.protocol)) {
+                console.warn('⚠️ 非HTTPプロトコル:', urlObj.protocol);
+                return false;
+            }
+            
+            // ローカルホスト系のチェック
+            if (urlObj.hostname === 'localhost' || urlObj.hostname.startsWith('127.') || urlObj.hostname.startsWith('192.168.')) {
+                console.log('✅ ローカルサーバーURL検証OK:', url);
+                return true;
+            }
+            
+            console.log('✅ サーバーURL検証OK:', url);
+            return true;
+            
+        } catch (error) {
+            console.error('❌ URL検証エラー:', error);
+            return false;
+        }
     }
 
     /**
