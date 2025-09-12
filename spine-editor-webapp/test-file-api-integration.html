@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File API → HTTP変換 → StableSpineRenderer 統合実験</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        .step {
+            background: rgba(255, 255, 255, 0.9);
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .step h3 {
+            margin-top: 0;
+            color: #2c5530;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        #spine-canvas {
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            background-color: white;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .status.info {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status.success {
+            background-color: #e8f5e8;
+            color: #4caf50;
+        }
+        
+        .status.error {
+            background-color: #ffebee;
+            color: #f44336;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .log-info { background: rgba(33, 150, 243, 0.1); }
+        .log-success { background: rgba(76, 175, 80, 0.1); }
+        .log-error { background: rgba(244, 67, 54, 0.1); }
+    </style>
+</head>
+<body>
+    <h1>🔗 File API → HTTP変換 → StableSpineRenderer 統合実験</h1>
+    <p style="text-align: center; font-size: 18px;">マニュアル通りのクリーンな実装で完全統合を確認</p>
+    
+    <!-- Step 1: ファイル選択 -->
+    <div class="step">
+        <h3>📁 Step 1: Spineファイル選択</h3>
+        <p>nezumi用の3ファイル（atlas/json/png）を選択してください</p>
+        <button onclick="selectFiles()" id="select-btn">📂 ファイル選択</button>
+        <div id="file-status" class="status info">準備完了 - ファイル選択を開始してください</div>
+    </div>
+    
+    <!-- Step 2: File API → HTTP変換 -->
+    <div class="step">
+        <h3>🔄 Step 2: FileToHttpBridge変換</h3>
+        <p>File APIオブジェクトをBlob URLに変換</p>
+        <button onclick="convertToHttp()" disabled id="convert-btn">🔄 HTTP変換実行</button>
+        <div id="convert-status" class="status info">Step 1完了後に利用可能</div>
+    </div>
+    
+    <!-- Step 3: StableSpineRenderer描画 -->
+    <div class="step">
+        <h3>🎯 Step 3: StableSpineRenderer描画</h3>
+        <p>変換されたHTTPデータでnezumiを表示</p>
+        <button onclick="renderSpine()" disabled id="render-btn">🎬 Spine描画実行</button>
+        <div id="render-status" class="status info">Step 2完了後に利用可能</div>
+        
+        <!-- Canvas表示エリア -->
+        <canvas id="spine-canvas" width="400" height="400"></canvas>
+    </div>
+    
+    <!-- Step 4: 動作確認 -->
+    <div class="step">
+        <h3>🧪 Step 4: 動作確認・クリーンアップ</h3>
+        <div style="text-align: center;">
+            <button onclick="playAnimation('search')" disabled id="anim-search">🔍 search</button>
+            <button onclick="playAnimation('kettei')" disabled id="anim-kettei">✅ kettei</button>
+            <button onclick="cleanup()" disabled id="cleanup-btn" style="background: #ff6b6b;">🗑️ クリーンアップ</button>
+        </div>
+        <div id="final-status" class="status info">Step 3完了後にアニメーション確認可能</div>
+    </div>
+    
+    <!-- 実行ログ -->
+    <div class="step">
+        <h3>📋 実行ログ</h3>
+        <button onclick="clearLogs()" style="background: #666;">🗑️ ログクリア</button>
+        <div class="log-container" id="logContainer"></div>
+    </div>
+
+    <!-- 必要なライブラリ読み込み -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    <script src="micromodules/spine-renderer/StableSpineRenderer.js"></script>
+    <script src="micromodules/bridge/BlobUrlManager.js"></script>
+    <script src="micromodules/bridge/PathGenerator.js"></script>
+    <script src="micromodules/bridge/FileToHttpBridge.js"></script>
+    
+    <script>
+        // グローバル変数
+        let selectedFiles = {};
+        let bridge = null;
+        let httpData = null;
+        let renderer = null;
+
+        // ログ関数
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // ステータス更新関数
+        function updateStatus(stepId, message, type = 'info') {
+            const statusEl = document.getElementById(stepId);
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        // ログクリア
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            log('ログをクリアしました', 'info');
+        }
+
+        // Step 1: ファイル選択
+        async function selectFiles() {
+            try {
+                log('📁 ファイル選択開始', 'info');
+                updateStatus('file-status', '⏳ ファイル選択中...', 'info');
+
+                // File System Access API使用
+                const fileHandles = await window.showOpenFilePicker({
+                    multiple: true,
+                    types: [{
+                        description: 'Spine files',
+                        accept: {
+                            'application/json': ['.json'],
+                            'text/plain': ['.atlas'],
+                            'image/png': ['.png']
+                        }
+                    }]
+                });
+
+                log(`🎯 ${fileHandles.length}個のファイルが選択されました`, 'success');
+                
+                // FileSystemFileHandleを直接保存（FileToHttpBridge用）
+                selectedFiles = {};
+                for (const handle of fileHandles) {
+                    const file = await handle.getFile();
+                    const extension = handle.name.split('.').pop().toLowerCase();
+                    
+                    if (extension === 'atlas') {
+                        selectedFiles.atlas = handle;  // Handleを保存
+                    } else if (extension === 'json') {
+                        selectedFiles.json = handle;   // Handleを保存
+                    } else if (extension === 'png') {
+                        selectedFiles.texture = handle; // Handleを保存
+                    }
+                    
+                    log(`📄 ${handle.name} (${file.size}バイト)`, 'info');
+                }
+
+                // 必要なファイルが揃っているか確認
+                const required = ['atlas', 'json', 'texture'];
+                const missing = required.filter(type => !selectedFiles[type]);
+                
+                if (missing.length > 0) {
+                    throw new Error(`必要なファイルが不足: ${missing.join(', ')}`);
+                }
+
+                updateStatus('file-status', '✅ 3ファイル選択完了 - Step 2へ進めます', 'success');
+                document.getElementById('convert-btn').disabled = false;
+                
+            } catch (error) {
+                log(`❌ ファイル選択エラー: ${error.message}`, 'error');
+                updateStatus('file-status', `❌ エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // Step 2: FileToHttpBridge変換
+        async function convertToHttp() {
+            try {
+                log('🔄 FileToHttpBridge変換開始', 'info');
+                updateStatus('convert-status', '⏳ HTTP変換中...', 'info');
+                
+                // FileToHttpBridge初期化
+                bridge = new FileToHttpBridge({ debug: true });
+                
+                // File API → HTTP変換実行
+                httpData = await bridge.convertCharacterFiles('nezumi', selectedFiles);
+                
+                log('✅ HTTP変換完了！以下のBlob URL生成:', 'success');
+                log(`  Atlas: ${httpData.blobUrls.atlas.substring(0, 50)}...`, 'info');
+                log(`  JSON: ${httpData.blobUrls.json.substring(0, 50)}...`, 'info');
+                log(`  Texture: ${httpData.blobUrls.texture.substring(0, 50)}...`, 'info');
+                
+                updateStatus('convert-status', '✅ HTTP変換完了 - Step 3へ進めます', 'success');
+                document.getElementById('render-btn').disabled = false;
+                
+            } catch (error) {
+                log(`❌ HTTP変換エラー: ${error.message}`, 'error');
+                console.error('Full convert error:', error);
+                updateStatus('convert-status', `❌ エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // Step 3: StableSpineRenderer描画
+        async function renderSpine() {
+            try {
+                log('🎯 StableSpineRenderer描画開始', 'info');
+                updateStatus('render-status', '⏳ Spine描画中...', 'info');
+                
+                // StableSpineRenderer初期化（マニュアル通り）
+                renderer = StableSpineRenderer.createForCharacter('nezumi');
+                
+                // 🔥重要：StableSpineRendererにBlob URLを直接設定
+                // 標準的なHTTP読み込み方式を拡張してBlob URL対応
+                log('🔧 StableSpineRendererにBlob URL設定中...', 'info');
+                
+                // リモートアセット設定を上書き
+                renderer.config.blobUrls = {
+                    atlas: httpData.blobUrls.atlas,
+                    json: httpData.blobUrls.json,
+                    texture: httpData.blobUrls.texture
+                };
+                
+                await renderer.initialize();
+                
+                log('✅ StableSpineRenderer初期化完了', 'success');
+                
+                // nezumi専用アニメーション自動再生
+                const success = renderer.playAnimation('search', true);
+                if (success) {
+                    log('🎬 searchアニメーション再生開始', 'success');
+                } else {
+                    log('⚠️ searchアニメーション再生失敗 - 手動操作で確認', 'error');
+                }
+                
+                updateStatus('render-status', '✅ nezumi描画完了 - アニメーション確認可能', 'success');
+                document.getElementById('anim-search').disabled = false;
+                document.getElementById('anim-kettei').disabled = false;
+                document.getElementById('cleanup-btn').disabled = false;
+                updateStatus('final-status', '🎉 統合成功！アニメーションボタンで動作確認', 'success');
+                
+            } catch (error) {
+                log(`❌ Spine描画エラー: ${error.message}`, 'error');
+                console.error('Full render error:', error);
+                updateStatus('render-status', `❌ エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // アニメーション再生
+        function playAnimation(animName) {
+            if (!renderer) {
+                log('❌ レンダラー未初期化', 'error');
+                return;
+            }
+            
+            try {
+                const success = renderer.playAnimation(animName, true);
+                if (success) {
+                    log(`🎬 ${animName} アニメーション再生開始`, 'success');
+                } else {
+                    log(`❌ ${animName} アニメーション再生失敗`, 'error');
+                }
+            } catch (error) {
+                log(`❌ アニメーション再生エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // クリーンアップ
+        function cleanup() {
+            try {
+                log('🗑️ クリーンアップ開始', 'info');
+                
+                // レンダラー停止
+                if (renderer && renderer.dispose) {
+                    renderer.dispose();
+                    renderer = null;
+                    log('✅ レンダラー停止完了', 'success');
+                }
+                
+                // Blob URLクリーンアップ
+                if (httpData && httpData.cleanup) {
+                    httpData.cleanup();
+                    httpData = null;
+                    log('✅ Blob URLクリーンアップ完了', 'success');
+                }
+                
+                // UI状態リセット
+                document.getElementById('convert-btn').disabled = true;
+                document.getElementById('render-btn').disabled = true;
+                document.getElementById('anim-search').disabled = true;
+                document.getElementById('anim-kettei').disabled = true;
+                document.getElementById('cleanup-btn').disabled = true;
+                
+                updateStatus('file-status', '準備完了 - ファイル選択を開始してください', 'info');
+                updateStatus('convert-status', 'Step 1完了後に利用可能', 'info');
+                updateStatus('render-status', 'Step 2完了後に利用可能', 'info');
+                updateStatus('final-status', 'Step 3完了後にアニメーション確認可能', 'info');
+                
+                // Canvas クリア
+                const canvas = document.getElementById('spine-canvas');
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                
+                log('🎉 クリーンアップ完了 - 再実行可能', 'success');
+                
+            } catch (error) {
+                log(`❌ クリーンアップエラー: ${error.message}`, 'error');
+            }
+        }
+
+        // ページ読み込み完了時
+        window.addEventListener('load', () => {
+            log('🌟 File API統合実験ページ準備完了', 'info');
+            log('📁 Step 1からファイル選択を開始してください', 'info');
+        });
+    </script>
+</body>
+</html>

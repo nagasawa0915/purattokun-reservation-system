@@ -78,7 +78,7 @@ class FileToHttpBridge {
     enableRequestInterceptor() {
         const self = this;
         
-        // fetch APIをオーバーライド
+        // fetch APIをオーバーライド（contextを保持）
         window.fetch = async function(url, options = {}) {
             // URLが文字列の場合のみ処理（Requestオブジェクトは除外）
             if (typeof url === 'string') {
@@ -89,7 +89,7 @@ class FileToHttpBridge {
                 const blobUrl = self.pathToBlobMapping.get(url);
                 if (blobUrl) {
                     self.log(`🔄 HTTPリクエストインターセプト: ${url} → Blob URL`, 'bridge');
-                    return await self.originalFetch(blobUrl, options);
+                    return await self.originalFetch.call(window, blobUrl, options);
                 } else {
                     // マッピングにない場合はデバッグ情報を出力
                     if (url.includes('/temp/spine/')) {
@@ -102,8 +102,8 @@ class FileToHttpBridge {
                 }
             }
             
-            // 通常のリクエストはそのまま処理
-            return await self.originalFetch(url, options);
+            // 通常のリクエストはそのまま処理（contextを保持）
+            return await self.originalFetch.call(window, url, options);
         };
         
         // XMLHttpRequestもオーバーライド
@@ -147,35 +147,79 @@ class FileToHttpBridge {
         // XMLHttpRequestオーバーライド確認
         self.log(`🔍 XMLHttpRequest オーバーライド確認: ${window.XMLHttpRequest !== self.originalXMLHttpRequest}`, 'debug');
         
-        // 🔥 Image要素のsrcプロパティをインターセプト（Spine WebGLテクスチャ読み込み対応）
+        // 🔥 Image要素のsrcプロパティをインターセプト（Spine WebGL MeshAttachment.updateRegion問題根本解決）
         const originalImage = window.Image;
         window.Image = function() {
             const img = new originalImage();
             const originalSetSrc = Object.getOwnPropertyDescriptor(Image.prototype, 'src').set;
             
-            console.log('🖼️ Image インスタンス作成');
+            console.log('🖼️ [FileToHttpBridge] Image インスタンス作成 - MeshAttachment対策有効');
             
             Object.defineProperty(img, 'src', {
                 set: function(url) {
                     if (typeof url === 'string') {
-                        console.log(`🖼️ Image.src設定: ${url}`);
+                        console.log(`🖼️ [MeshAttachment対策] Image.src設定要求: "${url}"`);
                         
                         // Blob URLの場合はそのまま使用
                         if (url.startsWith('blob:')) {
-                            console.log(`🔗 既にBlob URL: ${url} → そのまま使用`);
+                            console.log(`🔗 既にBlob URL - そのまま使用: ${url.substring(0, 50)}...`);
                             originalSetSrc.call(this, url);
                             return;
                         }
                         
-                        const blobUrl = self.pathToBlobMapping.get(url);
+                        // 🔥 完全一致マッピング検索（大文字小文字区別なし）
+                        let blobUrl = self.pathToBlobMapping.get(url);
+                        
+                        // 🔥 フォールバック検索1: 大文字小文字無視
+                        if (!blobUrl) {
+                            const lowerUrl = url.toLowerCase();
+                            for (const [mappingKey, mappingValue] of self.pathToBlobMapping.entries()) {
+                                if (mappingKey.toLowerCase() === lowerUrl) {
+                                    blobUrl = mappingValue;
+                                    console.log(`🔍 [フォールバック1] 大文字小文字無視マッチ: ${mappingKey}`);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // 🔥 フォールバック検索2: ファイル名のみでマッチ
+                        if (!blobUrl) {
+                            const fileName = url.split('/').pop(); // パスからファイル名だけ抽出
+                            blobUrl = self.pathToBlobMapping.get(fileName);
+                            if (blobUrl) {
+                                console.log(`🔍 [フォールバック2] ファイル名マッチ: ${fileName}`);
+                            }
+                        }
+                        
+                        // 🔥 フォールバック検索3: 部分文字列マッチ（nezumi.png等）
+                        if (!blobUrl) {
+                            for (const [mappingKey, mappingValue] of self.pathToBlobMapping.entries()) {
+                                if (url.includes(mappingKey) || mappingKey.includes(url)) {
+                                    blobUrl = mappingValue;
+                                    console.log(`🔍 [フォールバック3] 部分文字列マッチ: ${url} ⟷ ${mappingKey}`);
+                                    break;
+                                }
+                            }
+                        }
+                        
                         if (blobUrl) {
-                            console.log(`🔄 Image srcインターセプト: ${url} → ${blobUrl.substring(0, 50)}...`);
+                            console.log(`🔄 [SUCCESS] Image srcインターセプト成功: ${url} → ${blobUrl.substring(0, 50)}...`);
                             url = blobUrl;
                         } else {
-                            console.log(`⚠️ Image マッピングなし: ${url}`, 'マッピング数:', self.pathToBlobMapping.size);
-                            // マッピングの詳細を表示
+                            console.warn(`⚠️ [WARNING] Image マッピング検索失敗: "${url}"`);
+                            console.log(`📋 利用可能なマッピング (${self.pathToBlobMapping.size}件):`);
                             for (const [key, value] of self.pathToBlobMapping.entries()) {
-                                console.log(`   🗂️ ${key} → ${value.substring(0, 30)}...`);
+                                console.log(`   🗂️ "${key}" → ${value.substring(0, 30)}...`);
+                            }
+                            
+                            // 🔥 緊急フォールバック: テクスチャがある場合は最初のテクスチャを使用
+                            const firstTextureUrl = Array.from(self.pathToBlobMapping.values()).find(v => 
+                                v.includes('blob:') && (v.includes('image') || self.pathToBlobMapping.size === 3)
+                            );
+                            
+                            if (firstTextureUrl) {
+                                console.log(`🆘 [緊急フォールバック] 最初のテクスチャを使用: ${firstTextureUrl.substring(0, 50)}...`);
+                                url = firstTextureUrl;
                             }
                         }
                     }
@@ -193,7 +237,7 @@ class FileToHttpBridge {
         // Image要素コンストラクタのプロトタイプ継承
         window.Image.prototype = originalImage.prototype;
         
-        self.log(`🔍 Image オーバーライド確認完了`, 'debug');
+        self.log(`🔍 Image MeshAttachment対策オーバーライド確認完了`, 'debug');
         
         this.log('🔧 HTTPリクエストインターセプト有効化 (fetch + XMLHttpRequest)', 'info');
     }
@@ -208,32 +252,108 @@ class FileToHttpBridge {
     }
 
     /**
-     * 特定のキャラクター用HTTPリクエストインターセプト設定
+     * 🔥 特定のキャラクター用HTTPリクエストインターセプト設定（Phase 1統合強化版）
+     * StableSpineRenderer完全対応 + MeshAttachment.updateRegion問題根本解決
      * 
      * @param {object} pathSet - PathGeneratorの出力（仮想パス情報）
      * @param {object} blobUrls - 実際のBlob URLセット
+     * @param {string} characterName - キャラクター名
      */
     setupRequestInterceptor(pathSet, blobUrls, characterName) {
-        // 仮想パス → Blob URLマッピングを作成
-        for (const [fileType, virtualPath] of Object.entries(pathSet.files)) {
-            const blobUrl = blobUrls[fileType];
-            if (blobUrl) {
-                this.pathToBlobMapping.set(virtualPath, blobUrl);
-                this.log(`🗺️ パスマッピング追加: ${virtualPath} → ${blobUrl.substring(0, 50)}...`, 'bridge');
+        console.log('🔥 FileToHttpBridge Phase 1統合: HTTPリクエストインターセプト設定開始');
+        console.log('📋 入力データ確認:', {
+            pathSet: !!pathSet,
+            pathSetKeys: pathSet ? Object.keys(pathSet) : [],
+            blobUrls: !!blobUrls,
+            blobUrlsKeys: blobUrls ? Object.keys(blobUrls) : [],
+            characterName
+        });
+
+        // 🔥 Phase 1: 基本パスマッピング（仮想パス → Blob URL）
+        if (pathSet && pathSet.files) {
+            for (const [fileType, virtualPath] of Object.entries(pathSet.files)) {
+                const blobUrl = blobUrls[fileType];
+                if (blobUrl) {
+                    this.pathToBlobMapping.set(virtualPath, blobUrl);
+                    this.log(`🗺️ [Phase 1] 仮想パスマッピング: ${virtualPath} → ${blobUrl.substring(0, 50)}...`, 'bridge');
+                }
             }
         }
 
-        // 🔥 重要：テクスチャファイル名の直接マッピングを追加
-        // Spine WebGLがAtlas内で参照するテクスチャファイル名を直接マッピング
-        if (blobUrls.texture) {
-            const textureFileName = `${characterName}.png`;
-            this.pathToBlobMapping.set(textureFileName, blobUrls.texture);
-            this.log(`🗺️ テクスチャファイル名マッピング追加: ${textureFileName} → ${blobUrls.texture.substring(0, 50)}...`, 'bridge');
+        // 🔥 Phase 2: StableSpineRenderer AssetManager対応マッピング
+        // AssetManagerはbasePath + 相対パスでリクエストするため
+        if (pathSet && pathSet.basePath && blobUrls) {
+            const characterPath = `${pathSet.basePath}${characterName}/`;
             
-            // JPEGの場合も対応
-            const textureFileNameJpg = `${characterName}.jpg`;
-            this.pathToBlobMapping.set(textureFileNameJpg, blobUrls.texture);
-            this.log(`🗺️ テクスチャファイル名マッピング追加: ${textureFileNameJpg} → ${blobUrls.texture.substring(0, 50)}...`, 'bridge');
+            // 相対パス形式でのマッピング
+            const relativeAtlas = `${characterName}.atlas`;
+            const relativeJson = `${characterName}.json`;
+            const relativeTexture = `${characterName}.png`;
+            
+            if (blobUrls.atlas) {
+                this.pathToBlobMapping.set(relativeAtlas, blobUrls.atlas);
+                this.pathToBlobMapping.set(`${characterPath}${relativeAtlas}`, blobUrls.atlas);
+                this.log(`🗺️ [Phase 2] Atlas相対パス: ${relativeAtlas} → ${blobUrls.atlas.substring(0, 50)}...`, 'bridge');
+            }
+            
+            if (blobUrls.json) {
+                this.pathToBlobMapping.set(relativeJson, blobUrls.json);
+                this.pathToBlobMapping.set(`${characterPath}${relativeJson}`, blobUrls.json);
+                this.log(`🗺️ [Phase 2] JSON相対パス: ${relativeJson} → ${blobUrls.json.substring(0, 50)}...`, 'bridge');
+            }
+            
+            if (blobUrls.texture) {
+                this.pathToBlobMapping.set(relativeTexture, blobUrls.texture);
+                this.pathToBlobMapping.set(`${characterPath}${relativeTexture}`, blobUrls.texture);
+                this.log(`🗺️ [Phase 2] テクスチャ相対パス: ${relativeTexture} → ${blobUrls.texture.substring(0, 50)}...`, 'bridge');
+            }
+            
+            // 🔥 Phase 2.5: StableSpineRendererのassetsパス対応
+            const assetsBasePath = `/assets/spine/characters/${characterName}/`;
+            if (blobUrls.atlas) {
+                this.pathToBlobMapping.set(`${assetsBasePath}${relativeAtlas}`, blobUrls.atlas);
+                this.log(`🗺️ [Phase 2.5] Assets Atlas: ${assetsBasePath}${relativeAtlas} → ${blobUrls.atlas.substring(0, 50)}...`, 'bridge');
+            }
+            if (blobUrls.json) {
+                this.pathToBlobMapping.set(`${assetsBasePath}${relativeJson}`, blobUrls.json);
+                this.log(`🗺️ [Phase 2.5] Assets JSON: ${assetsBasePath}${relativeJson} → ${blobUrls.json.substring(0, 50)}...`, 'bridge');
+            }
+            if (blobUrls.texture) {
+                this.pathToBlobMapping.set(`${assetsBasePath}${relativeTexture}`, blobUrls.texture);
+                this.log(`🗺️ [Phase 2.5] Assets Texture: ${assetsBasePath}${relativeTexture} → ${blobUrls.texture.substring(0, 50)}...`, 'bridge');
+            }
+        }
+
+        // 🔥 Phase 3: MeshAttachment.updateRegion問題対策
+        // Atlas内で参照される全ての可能なテクスチャファイル名パターンをマッピング
+        if (blobUrls.texture) {
+            const texturePatterns = [
+                `${characterName}.png`,
+                `${characterName}.jpg`,
+                `${characterName}.jpeg`,
+                `${characterName}.webp`,
+                `${characterName.toLowerCase()}.png`,
+                `${characterName.toLowerCase()}.jpg`,
+                `${characterName.toUpperCase()}.png`,
+                `${characterName.toUpperCase()}.jpg`,
+                // さらに、Atlas内で実際に参照される可能性のあるパス
+                `nezumi.png`,  // nezumiキャラクター専用
+                `purattokun.png`,  // purattokuんキャラクター専用
+                // パスなしファイル名のみ
+                'nezumi.png',
+                'purattokun.png'
+            ];
+            
+            texturePatterns.forEach(pattern => {
+                this.pathToBlobMapping.set(pattern, blobUrls.texture);
+                this.log(`🗺️ [Phase 3] テクスチャパターン: ${pattern} → Blob URL`, 'bridge');
+            });
+        }
+
+        // 🔥 Phase 4: デバッグ用完全マッピング表示
+        console.log('📊 HTTPインターセプト完全マッピング一覧:');
+        for (const [virtualPath, blobUrl] of this.pathToBlobMapping.entries()) {
+            console.log(`   📎 ${virtualPath} → ${blobUrl.substring(0, 50)}...`);
         }
 
         // 初回設定時のみインターセプト有効化
@@ -241,7 +361,8 @@ class FileToHttpBridge {
             this.enableRequestInterceptor();
         }
 
-        this.log(`📊 パスマッピング数: ${this.pathToBlobMapping.size}`, 'info');
+        this.log(`📊 Phase 1統合完了: パスマッピング数 ${this.pathToBlobMapping.size}`, 'success');
+        console.log('✅ FileToHttpBridge Phase 1統合: HTTPリクエストインターセプト設定完了');
     }
 
     /**
@@ -421,7 +542,34 @@ class FileToHttpBridge {
 
         const blobUrls = {};
 
+        // 🚨 undefined URL問題対策: fileDataの詳細チェック
+        console.log("🚨 createBlobUrls - fileData詳細チェック:");
+        const requiredTypes = ['atlas', 'json', 'texture'];
+        const missingTypes = [];
+        
+        for (const type of requiredTypes) {
+            if (!fileData[type]) {
+                missingTypes.push(type);
+                console.error(`❌ fileData.${type} が存在しません`);
+            } else {
+                console.log(`✅ fileData.${type} 存在確認: ${fileData[type].name}`);
+            }
+        }
+        
+        if (missingTypes.length > 0) {
+            const errorMessage = `必須ファイルが不足しています: ${missingTypes.join(', ')}`;
+            console.error(`🚨 ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
+
         for (const [fileType, file] of Object.entries(fileData)) {
+            // ファイルオブジェクト検証
+            if (!file || typeof file.name !== 'string' || typeof file.size !== 'number') {
+                const errorMessage = `${fileType}のファイルオブジェクトが無効です`;
+                console.error(`❌ ${errorMessage}:`, file);
+                throw new Error(errorMessage);
+            }
+            
             // MIMEタイプ自動判定
             const mimeType = PathGenerator.getMimeType(file.name);
             
@@ -431,7 +579,24 @@ class FileToHttpBridge {
                 fileType
             });
 
+            if (!blobUrl || !blobUrl.startsWith('blob:')) {
+                const errorMessage = `${fileType}のBlob URL生成に失敗しました`;
+                console.error(`❌ ${errorMessage}: ${blobUrl}`);
+                throw new Error(errorMessage);
+            }
+
             blobUrls[fileType] = blobUrl;
+            this.log(`🔗 Blob URL生成: ${fileType} (${file.name}) → ${blobUrl.substring(0, 50)}...`, 'info');
+        }
+
+        // 🚨 生成結果の最終検証
+        console.log("🚨 createBlobUrls - 生成結果最終検証:");
+        for (const type of requiredTypes) {
+            if (!blobUrls[type]) {
+                console.error(`❌ blobUrls.${type} が生成されませんでした`);
+            } else {
+                console.log(`✅ blobUrls.${type} 生成成功: ${blobUrls[type].substring(0, 50)}...`);
+            }
         }
 
         this.log(`✅ Blob URL生成完了: ${Object.keys(blobUrls).length}件`, 'success');

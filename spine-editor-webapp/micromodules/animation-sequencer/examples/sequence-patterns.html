@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Animation Sequencer パターン例</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { margin: 0; font-size: 2em; }
+        .header p { margin: 10px 0 0; opacity: 0.9; }
+        
+        .patterns {
+            padding: 30px;
+        }
+        
+        .pattern {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f9f9f9;
+        }
+        
+        .pattern h3 {
+            margin: 0 0 15px;
+            color: #2c3e50;
+            font-size: 1.3em;
+        }
+        
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .demo-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 5px;
+            background: #3498db;
+            color: white;
+            transition: all 0.2s;
+        }
+        .demo-button:hover { 
+            background: #2980b9; 
+            transform: translateY(-2px);
+        }
+        
+        .output {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .success { color: #27ae60; }
+        .info { color: #3498db; }
+        .warning { color: #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Animation Sequencer パターン例</h1>
+            <p>v3.0から移植した自然遷移アニメーション実装パターン</p>
+        </div>
+
+        <div class="patterns">
+            <!-- パターン1: 基本的な単発アニメーション -->
+            <div class="pattern">
+                <h3>🎯 パターン1: 基本的な単発アニメーション</h3>
+                <p>最もシンプルな1つのアニメーション実行パターン</p>
+                
+                <div class="code-block">const sequencer = new AnimationSequencer();
+
+// 待機アニメーション開始
+const sequence = sequencer.generateSequence({
+    characterId: "purattokun",
+    animationName: "taiki",
+    sequenceType: "single",
+    timingConfig: {
+        delay: 0,
+        duration: 3000,
+        loop: true
+    }
+});
+
+const result = sequencer.executeSequence(sequence.sequenceId);</div>
+                
+                <button class="demo-button" onclick="demoBasicAnimation()">デモ実行</button>
+                <div id="output1" class="output">実行結果がここに表示されます...</div>
+            </div>
+
+            <!-- パターン2: v3.0式自然遷移アニメーション -->
+            <div class="pattern">
+                <h3>🌊 パターン2: v3.0式自然遷移アニメーション</h3>
+                <p>出現アニメーション → 自動的に待機アニメーションに遷移</p>
+                
+                <div class="code-block">// v3.0の自然遷移：syutugen → taiki
+const transitionSequence = sequencer.generateSequence({
+    characterId: "purattokun",
+    animationName: "syutugen",
+    sequenceType: "transition",
+    timingConfig: {
+        delay: 1500,    // 1.5秒待機
+        duration: 2000, // 出現アニメーション2秒
+        loop: false
+    }
+});
+
+sequencer.executeSequence(transitionSequence.sequenceId);
+// 2秒後に自動的にtaikiアニメーションに切り替わる</div>
+                
+                <button class="demo-button" onclick="demoTransitionAnimation()">デモ実行</button>
+                <div id="output2" class="output">実行結果がここに表示されます...</div>
+            </div>
+
+            <!-- パターン3: チェーンアニメーション -->
+            <div class="pattern">
+                <h3>🔗 パターン3: チェーンアニメーション</h3>
+                <p>複数のアニメーションを順番に実行</p>
+                
+                <div class="code-block">// 出現 → クリック → 待機の連続実行
+const chainSequence = sequencer.generateSequence({
+    characterId: "purattokun",
+    sequenceType: "chain",
+    chain: [
+        { animationName: "syutugen", duration: 2000 },
+        { animationName: "click", duration: 1000 },
+        { animationName: "taiki", duration: 3000, loop: true }
+    ]
+});
+
+sequencer.executeSequence(chainSequence.sequenceId);</div>
+                
+                <button class="demo-button" onclick="demoChainAnimation()">デモ実行</button>
+                <div id="output3" class="output">実行結果がここに表示されます...</div>
+            </div>
+
+            <!-- パターン4: フェードイン付きアニメーション -->
+            <div class="pattern">
+                <h3>✨ パターン4: フェードイン付きアニメーション</h3>
+                <p>フェード効果と組み合わせたアニメーション</p>
+                
+                <div class="code-block">// フェードイン効果付きアニメーション
+const fadeSequence = sequencer.generateSequence({
+    characterId: "purattokun",
+    animationName: "taiki",
+    sequenceType: "single",
+    timingConfig: {
+        delay: 0,
+        duration: 3000,
+        loop: true
+    },
+    fadeIn: true,
+    fadeDelay: 1000,     // 1秒待機後フェード開始
+    fadeDuration: 2000   // 2秒かけてフェードイン
+});
+
+sequencer.executeSequence(fadeSequence.sequenceId);</div>
+                
+                <button class="demo-button" onclick="demoFadeAnimation()">デモ実行</button>
+                <div id="output4" class="output">実行結果がここに表示されます...</div>
+            </div>
+
+            <!-- パターン5: タイミング計算デモ -->
+            <div class="pattern">
+                <h3>⏱️ パターン5: 高精度タイミング計算</h3>
+                <p>フレームレート・進行率計算のデモ</p>
+                
+                <div class="code-block">// 高精度タイミング計算
+const timing = sequencer.calculateTiming({
+    characterId: "purattokun",
+    delay: 500,
+    duration: 2000,
+    interval: 16,        // 60fps
+    fadeIn: true,
+    fadeDuration: 1000,
+    fadeEasing: "ease-out"
+});
+
+// プログレス計算例
+const progress = timing.timingData.getProgressAt(
+    Date.now(), 
+    Date.now() - 1000  // 1秒経過
+);</div>
+                
+                <button class="demo-button" onclick="demoTimingCalculation()">デモ実行</button>
+                <div id="output5" class="output">実行結果がここに表示されます...</div>
+            </div>
+
+            <!-- パターン6: 複数キャラクター同時制御 -->
+            <div class="pattern">
+                <h3>👥 パターン6: 複数キャラクター同時制御</h3>
+                <p>複数のキャラクターのアニメーションを同時管理</p>
+                
+                <div class="code-block">// 複数キャラクターの同時アニメーション
+const characters = ["purattokun", "nezumi", "hero"];
+const sequences = [];
+
+characters.forEach((charId, index) => {
+    const seq = sequencer.generateSequence({
+        characterId: charId,
+        animationName: "syutugen",
+        sequenceType: "transition",
+        timingConfig: {
+            delay: index * 500,  // 0.5秒ずつ遅延
+            duration: 2000,
+            loop: false
+        }
+    });
+    
+    sequences.push(seq);
+    sequencer.executeSequence(seq.sequenceId);
+});</div>
+                
+                <button class="demo-button" onclick="demoMultiCharacter()">デモ実行</button>
+                <div id="output6" class="output">実行結果がここに表示されます...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Animation Sequencer モジュール読み込み -->
+    <script src="../animation-sequencer.js"></script>
+
+    <script>
+        // グローバル変数
+        let sequencer = null;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                sequencer = new AnimationSequencer();
+                console.log('🎬 Animation Sequencer 初期化完了');
+            } catch (error) {
+                console.error('❌ 初期化エラー:', error);
+            }
+        });
+
+        function updateOutput(elementId, message, type = 'info') {
+            const output = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const classStr = type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            
+            output.innerHTML += `<span class="${classStr}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        // パターン1: 基本的な単発アニメーション
+        function demoBasicAnimation() {
+            clearOutput('output1');
+            updateOutput('output1', '🎯 基本アニメーションデモ開始...');
+            
+            try {
+                const sequence = sequencer.generateSequence({
+                    characterId: "demo_basic",
+                    animationName: "taiki",
+                    sequenceType: "single",
+                    timingConfig: {
+                        delay: 0,
+                        duration: 3000,
+                        loop: true
+                    }
+                });
+
+                updateOutput('output1', `✅ シーケンス生成完了: ${sequence.sequenceId}`, 'success');
+                updateOutput('output1', JSON.stringify(sequence, null, 2));
+
+                const result = sequencer.executeSequence(sequence.sequenceId);
+                updateOutput('output1', `🎬 アニメーション実行: ${result.status}`, 'success');
+                updateOutput('output1', JSON.stringify(result, null, 2));
+
+            } catch (error) {
+                updateOutput('output1', `❌ エラー: ${error.message}`, 'warning');
+            }
+        }
+
+        // パターン2: v3.0式自然遷移アニメーション
+        function demoTransitionAnimation() {
+            clearOutput('output2');
+            updateOutput('output2', '🌊 トランジションアニメーションデモ開始...');
+            
+            try {
+                const sequence = sequencer.generateSequence({
+                    characterId: "demo_transition",
+                    animationName: "syutugen",
+                    sequenceType: "transition",
+                    timingConfig: {
+                        delay: 1500,
+                        duration: 2000,
+                        loop: false
+                    }
+                });
+
+                updateOutput('output2', `✅ トランジションシーケンス生成完了`, 'success');
+                updateOutput('output2', `遷移パターン: ${sequence.transition.fromAnimation} → ${sequence.transition.toAnimation}`);
+                updateOutput('output2', JSON.stringify(sequence, null, 2));
+
+                const result = sequencer.executeSequence(sequence.sequenceId);
+                updateOutput('output2', `🎬 トランジション実行: ${result.status}`, 'success');
+                updateOutput('output2', `自動遷移予定時刻: ${new Date(result.timingData.transitionTime).toLocaleTimeString()}`);
+
+            } catch (error) {
+                updateOutput('output2', `❌ エラー: ${error.message}`, 'warning');
+            }
+        }
+
+        // パターン3: チェーンアニメーション
+        function demoChainAnimation() {
+            clearOutput('output3');
+            updateOutput('output3', '🔗 チェーンアニメーションデモ開始...');
+            
+            try {
+                const sequence = sequencer.generateSequence({
+                    characterId: "demo_chain",
+                    sequenceType: "chain",
+                    chain: [
+                        { animationName: "syutugen", duration: 2000 },
+                        { animationName: "click", duration: 1000 },
+                        { animationName: "taiki", duration: 3000, loop: true }
+                    ]
+                });
+
+                updateOutput('output3', `✅ チェーンシーケンス生成完了`, 'success');
+                updateOutput('output3', `チェーン構成: ${sequence.chain.length}ステップ`);
+                sequence.chain.forEach((step, index) => {
+                    updateOutput('output3', `  ${index + 1}. ${step.animationName} (${step.duration}ms)`);
+                });
+
+                const result = sequencer.executeSequence(sequence.sequenceId);
+                updateOutput('output3', `🎬 チェーン実行開始: ${result.status}`, 'success');
+                updateOutput('output3', JSON.stringify(result.timingData, null, 2));
+
+            } catch (error) {
+                updateOutput('output3', `❌ エラー: ${error.message}`, 'warning');
+            }
+        }
+
+        // パターン4: フェードイン付きアニメーション
+        function demoFadeAnimation() {
+            clearOutput('output4');
+            updateOutput('output4', '✨ フェードアニメーションデモ開始...');
+            
+            try {
+                const sequence = sequencer.generateSequence({
+                    characterId: "demo_fade",
+                    animationName: "taiki",
+                    sequenceType: "single",
+                    timingConfig: {
+                        delay: 0,
+                        duration: 3000,
+                        loop: true
+                    },
+                    fadeIn: true,
+                    fadeDelay: 1000,
+                    fadeDuration: 2000
+                });
+
+                updateOutput('output4', `✅ フェードシーケンス生成完了`, 'success');
+                updateOutput('output4', `フェード設定: 遅延${sequence.fadeDelay}ms, 継続${sequence.fadeDuration}ms`);
+                updateOutput('output4', JSON.stringify(sequence, null, 2));
+
+                const result = sequencer.executeSequence(sequence.sequenceId);
+                updateOutput('output4', `🎬 フェードアニメーション実行: ${result.status}`, 'success');
+
+            } catch (error) {
+                updateOutput('output4', `❌ エラー: ${error.message}`, 'warning');
+            }
+        }
+
+        // パターン5: タイミング計算デモ
+        function demoTimingCalculation() {
+            clearOutput('output5');
+            updateOutput('output5', '⏱️ タイミング計算デモ開始...');
+            
+            try {
+                const timing = sequencer.calculateTiming({
+                    characterId: "demo_timing",
+                    delay: 500,
+                    duration: 2000,
+                    interval: 16,
+                    fadeIn: true,
+                    fadeDuration: 1000,
+                    fadeEasing: "ease-out"
+                });
+
+                updateOutput('output5', `✅ タイミング計算完了`, 'success');
+                updateOutput('output5', `フレームレート: ${timing.timingData.fps.toFixed(1)}fps`);
+                updateOutput('output5', `総フレーム数: ${timing.timingData.totalFrames}フレーム`);
+                updateOutput('output5', `総継続時間: ${timing.metadata.totalDuration}ms`);
+
+                // プログレス計算例
+                const startTime = Date.now();
+                const testTimes = [500, 1000, 1500, 2000, 2500];
+                
+                updateOutput('output5', '\n📊 プログレス計算例:');
+                testTimes.forEach(elapsed => {
+                    const progress = timing.timingData.getProgressAt(startTime + elapsed, startTime);
+                    updateOutput('output5', `${elapsed}ms経過: ${(progress * 100).toFixed(1)}%`);
+                });
+
+                updateOutput('output5', '\n📋 詳細データ:');
+                updateOutput('output5', JSON.stringify(timing, null, 2));
+
+            } catch (error) {
+                updateOutput('output5', `❌ エラー: ${error.message}`, 'warning');
+            }
+        }
+
+        // パターン6: 複数キャラクター同時制御
+        function demoMultiCharacter() {
+            clearOutput('output6');
+            updateOutput('output6', '👥 複数キャラクター制御デモ開始...');
+            
+            try {
+                const characters = ["purattokun", "nezumi", "hero"];
+                const sequences = [];
+
+                characters.forEach((charId, index) => {
+                    const seq = sequencer.generateSequence({
+                        characterId: charId,
+                        animationName: "syutugen",
+                        sequenceType: "transition",
+                        timingConfig: {
+                            delay: index * 500,
+                            duration: 2000,
+                            loop: false
+                        }
+                    });
+                    
+                    sequences.push(seq);
+                    updateOutput('output6', `✅ ${charId} シーケンス生成 (遅延: ${index * 500}ms)`, 'success');
+                });
+
+                updateOutput('output6', '\n🎬 全キャラクター実行開始:');
+                const results = [];
+                sequences.forEach(seq => {
+                    const result = sequencer.executeSequence(seq.sequenceId);
+                    results.push(result);
+                    updateOutput('output6', `${seq.characterId}: ${result.status}`);
+                });
+
+                updateOutput('output6', '\n📊 実行統計:');
+                updateOutput('output6', `合計シーケンス: ${sequences.length}個`);
+                updateOutput('output6', `実行中: ${results.filter(r => r.status === 'playing').length}個`);
+
+                // 状態確認
+                const state = sequencer.getState();
+                updateOutput('output6', '\n🔍 システム状態:');
+                updateOutput('output6', JSON.stringify(state, null, 2));
+
+            } catch (error) {
+                updateOutput('output6', `❌ エラー: ${error.message}`, 'warning');
+            }
+        }
+    </script>
+</body>
+</html>

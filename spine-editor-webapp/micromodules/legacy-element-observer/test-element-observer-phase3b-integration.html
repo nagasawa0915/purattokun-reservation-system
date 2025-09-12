@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElementObserver Phase 3-B統合テスト - 環境揺れ吸収モジュール</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .test-section {
+            margin: 30px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        /* 6.1 背景画像同期テスト用 - 本番背景画像使用 */
+        .background-sync-test {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: 
+                /* 本番サイトの背景画像 */
+                url('../../assets/images/クラウドパートナーTOP.png'),
+                /* フォールバック用グラデーション */
+                linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-size: cover, cover;
+            background-position: center center, center;
+            background-repeat: no-repeat, no-repeat;
+            border: 3px solid #4CAF50;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        .spine-character-mock {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #4CAF50, #2e7d32);
+            border-radius: 50%;
+            border: 3px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* 実際のSpineキャラクター表示 */
+        .spine-character-real {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(76, 175, 80, 0.5);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        #nezumi-canvas {
+            width: 600px;  /* 固定サイズに拡大 */
+            height: 400px; /* 固定サイズに拡大 */
+            border-radius: 6px;
+            border: 2px solid #00ff00; /* 緑の境界線で可視化 */
+        }
+        
+        /* 6.3 画像ピンテスト用 */
+        .image-pin-test {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .test-image {
+            width: 200px;
+            height: 150px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 10px;
+            position: relative;
+            border: 2px solid #333;
+        }
+        
+        .pin-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #ff4444;
+            border-radius: 50%;
+            border: 2px solid white;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* 6.2 テキストRangeピンテスト用 */
+        .text-pin-test {
+            font-size: 18px;
+            line-height: 1.8;
+            color: #333;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            position: relative;
+        }
+        
+        .text-pin-marker {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: #4CAF50;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* コントロールパネル */
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* ログ表示 */
+        .log-panel {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 2px solid #333;
+        }
+        
+        .performance-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .perf-metric {
+            background: #f0f8ff;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid #4CAF50;
+        }
+        
+        .perf-metric .label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .perf-metric .value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        /* レスポンシブテスト用 */
+        @media (max-width: 768px) {
+            .background-sync-test { height: 250px; }
+            .image-pin-test { flex-direction: column; }
+            .test-image { width: 100%; max-width: 300px; }
+            .container { margin: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌊 ElementObserver Phase 3-B統合テスト</h1>
+            <p>環境揺れ吸収モジュール - 6.1背景同期・6.2テキストピン・6.3画像ピン機能</p>
+            <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">🐭 <strong>nezumi</strong> PureSpineLoader v4.0統合版</p>
+        </div>
+        
+        <!-- パフォーマンス表示 -->
+        <div class="test-section">
+            <h2>📊 Phase 3-A高速化成果確認</h2>
+            <div class="performance-display">
+                <div class="perf-metric">
+                    <div class="label">Phase 3-A処理時間</div>
+                    <div class="value" id="phase3a-time">測定中...</div>
+                </div>
+                <div class="perf-metric">
+                    <div class="label">環境観測処理時間</div>
+                    <div class="value" id="env-observer-time">測定中...</div>
+                </div>
+                <div class="perf-metric">
+                    <div class="label">総合処理時間</div>
+                    <div class="value" id="total-time">測定中...</div>
+                </div>
+                <div class="perf-metric">
+                    <div class="label">監視対象数</div>
+                    <div class="value" id="observer-count">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 6.1 背景画像同期テスト -->
+        <div class="test-section">
+            <h2>🎯 6.1 背景画像Spine同期テスト</h2>
+            <div class="control-panel">
+                <div class="control-group">
+                    <label>背景位置制御:</label>
+                    <button onclick="resizeBackground(0.8)">縮小</button>
+                    <button onclick="resizeBackground(1.2)">拡大</button>
+                    <button onclick="moveBackground('left')">←移動</button>
+                    <button onclick="moveBackground('right')">移動→</button>
+                </div>
+                <div class="control-group">
+                    <label>同期制御:</label>
+                    <button onclick="startBackgroundSync()">同期開始</button>
+                    <button onclick="stopBackgroundSync()">同期停止</button>
+                    <button onclick="testAnchorPoints()">アンカーテスト</button>
+                </div>
+            </div>
+            <div class="background-sync-test" id="background-test">
+                <!-- 実際のSpineキャラクター：nezumi -->
+                <div class="spine-character-real" id="spine-char" style="left: 50%; top: 20%; transform: translate(-50%, 0); width: 620px; height: 420px;">
+                    <canvas id="nezumi-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 6.2 テキストRangeピンテスト -->
+        <div class="test-section">
+            <h2>📝 6.2 テキストRangeピン機能テスト</h2>
+            <div class="control-panel">
+                <div class="control-group">
+                    <label>テキストピン制御:</label>
+                    <button onclick="startTextRangePin()">Rangeピン開始</button>
+                    <button onclick="stopTextRangePin()">ピン停止</button>
+                    <button onclick="changeTextContent()">テキスト変更</button>
+                    <button onclick="addLineBreaks()">改行追加</button>
+                </div>
+                <div class="control-group">
+                    <label>Range戦略:</label>
+                    <button onclick="switchStrategy('range')">Range API</button>
+                    <button onclick="switchStrategy('span')">Span挿入</button>
+                    <button onclick="switchStrategy('element')">Element監視</button>
+                </div>
+            </div>
+            <div class="text-pin-test" id="text-test">
+                <p>この文章は<strong>テキストRangeピン機能</strong>のテストです。文章の末尾にSpineキャラクターが追従します。<span id="text-target">←ここに追従</span></p>
+                <p>レスポンシブ対応により、ウィンドウサイズ変更や改行変化にも対応します。</p>
+            </div>
+        </div>
+        
+        <!-- 6.3 画像ピン機能テスト -->
+        <div class="test-section">
+            <h2>🖼️ 6.3 画像ピン機能テスト</h2>
+            <div class="control-panel">
+                <div class="control-group">
+                    <label>画像ピン制御:</label>
+                    <button onclick="startImagePin('tl')">左上ピン</button>
+                    <button onclick="startImagePin('tr')">右上ピン</button>
+                    <button onclick="startImagePin('bl')">左下ピン</button>
+                    <button onclick="startImagePin('br')">右下ピン</button>
+                    <button onclick="startImagePin('center')">中央ピン</button>
+                </div>
+                <div class="control-group">
+                    <label>画像制御:</label>
+                    <button onclick="resizeImage(0.8)">縮小</button>
+                    <button onclick="resizeImage(1.2)">拡大</button>
+                    <button onclick="stopImagePin()">ピン停止</button>
+                </div>
+            </div>
+            <div class="image-pin-test">
+                <div class="test-image" id="test-image-1">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold;">画像1</div>
+                </div>
+                <div class="test-image" id="test-image-2">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold;">画像2</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- デバッグログ -->
+        <div class="test-section">
+            <h2>🔍 デバッグログ・環境監視</h2>
+            <div class="control-panel">
+                <div class="control-group">
+                    <button onclick="clearLog()">ログクリア</button>
+                    <button onclick="exportLog()">ログ出力</button>
+                    <button onclick="testDPRChange()">DPR変化テスト</button>
+                    <button onclick="testWindowResize()">リサイズテスト</button>
+                </div>
+                <div class="control-group">
+                    <label>nezumiデバッグ:</label>
+                    <button onclick="debugNezumiInfo()">nezumi状態確認</button>
+                    <button onclick="testPurattokuAnimations()">アニメーションテスト</button>
+                </div>
+            </div>
+            <div class="log-panel" id="log-panel"></div>
+        </div>
+    </div>
+
+    <!-- Spine WebGL読み込み -->
+    <script src="../../assets/js/libs/spine-webgl.js"></script>
+    
+    <!-- PureSpineLoader v4.0 正式版 -->
+    <script src="../spine-loader/PureSpineLoader.js"></script>
+    
+    <!-- ElementObserver Phase 3-B統合システム読み込み -->
+    <script src="ElementObserverCore.js"></script>
+    <script src="ElementObserver.js"></script>
+    <script src="ElementObserverAdvanced.js"></script>
+    
+    <script>
+        // 🌊 Phase 3-B統合テストシステム
+        class Phase3BIntegrationTest {
+            constructor() {
+                this.observer = null;
+                this.activeObservations = new Map();
+                this.performanceMetrics = {
+                    phase3aTime: 0,
+                    envObserverTime: 0,
+                    totalTime: 0
+                };
+                this.logElement = document.getElementById('log-panel');
+                
+                // Spine WebGL関連
+                this.spineApp = null;
+                this.nezumiSkeleton = null;
+                this.animationState = null;
+                this.canvas = null;
+                
+                this.init();
+            }
+            
+            async init() {
+                this.log('🌊 ElementObserver Phase 3-B統合テスト開始');
+                
+                try {
+                    // Spine WebGL初期化（nezumi）
+                    await this.initializeSpineSystem();
+                    
+                    // ElementObserverAdvanced初期化
+                    this.observer = new ElementObserverAdvanced();
+                    this.log('✅ ElementObserverAdvanced初期化完了');
+                    
+                    // Phase 3-A性能確認
+                    await this.measurePhase3APerformance();
+                    
+                    // 環境監視システム初期化
+                    this.setupEnvironmentMonitoring();
+                    
+                    this.log('🎯 Phase 3-B統合テスト準備完了');
+                    this.updatePerformanceDisplay();
+                    
+                } catch (error) {
+                    this.log(`❌ 初期化エラー: ${error.message}`, 'error');
+                }
+            }
+            
+            async initializeSpineSystem() {
+                try {
+                    this.log('🌟 nezumi Spine初期化開始');
+                    
+                    // SpineWebGL環境確認
+                    this.log('🔍 SpineWebGL環境チェック...');
+                    console.log('window.spine:', typeof window.spine);
+                    if (window.spine) {
+                        console.log('利用可能なSpineクラス:', Object.keys(window.spine));
+                        console.log('AssetManager:', typeof window.spine.AssetManager);
+                        console.log('SkeletonJson:', typeof window.spine.SkeletonJson);
+                        console.log('AtlasAttachmentLoader:', typeof window.spine.AtlasAttachmentLoader);
+                    }
+                    
+                    this.canvas = document.getElementById('nezumi-canvas');
+                    if (!this.canvas) {
+                        throw new Error('Canvasが見つかりません');
+                    }
+                    
+                    // Canvas情報デバッグ出力
+                    this.log('🎨 Canvas情報:', {
+                        width: this.canvas.width,
+                        height: this.canvas.height,
+                        clientWidth: this.canvas.clientWidth,
+                        clientHeight: this.canvas.clientHeight,
+                        style: this.canvas.style.cssText
+                    });
+                    
+                    // Spine WebGL利用可能チェック
+                    if (typeof spine === 'undefined') {
+                        this.log('⚠️ Spine WebGLが利用不可 - フォールバック表示', 'warning');
+                        this.createFallbackPurattokun();
+                        return;
+                    }
+                    
+                    // Spine WebGLアプリケーション作成
+                    const config = {
+                        alpha: true,
+                        premultipliedAlpha: false,
+                        preserveDrawingBuffer: true
+                    };
+                    
+                    this.spineApp = new spine.SpineCanvas(this.canvas, config);
+                    
+                    // カメラ位置設定（マニュアル推奨）
+                    if (this.spineApp.renderer && this.spineApp.renderer.camera) {
+                        this.spineApp.renderer.camera.position.x = 0;
+                        this.spineApp.renderer.camera.position.y = 0;
+                        this.spineApp.renderer.camera.setViewport(this.canvas.width, this.canvas.height);
+                        this.spineApp.renderer.camera.update();
+                        this.log('📐 カメラ設定完了: position(0,0)');
+                    }
+                    
+                    // 🎯 PureSpineLoader v4.0を使用したぷらっとくん読み込み（テスト用）
+                    this.log('🔄 PureSpineLoader v4.0でぷらっとくん読み込み開始（表示テスト）...');
+                    
+                    // 📊 詳細環境デバッグ
+                    this.log('🔍 環境確認開始 ---------');
+                    this.log('🌐 window.spine:', typeof window.spine);
+                    this.log('🧪 PureSpineLoader:', typeof window.PureSpineLoader);
+                    
+                    if (window.spine) {
+                        this.log('📦 利用可能なSpineクラス一覧:', Object.keys(window.spine));
+                        
+                        // 個別クラス確認（修正されたバージョンのチェック）
+                        const requiredClasses = [
+                            'AssetManager', 'SkeletonJson', 'AtlasAttachmentLoader', 
+                            'PolygonBatcher', 'SkeletonRenderer', 'Skeleton', 'AnimationState'
+                        ];
+                        
+                        requiredClasses.forEach(className => {
+                            const classExists = !!window.spine[className];
+                            this.log(`🔧 ${className}:`, classExists ? '✅' : '❌');
+                        });
+                    }
+                    this.log('🔍 環境確認終了 ---------');
+                    
+                    // まずPureSpineLoaderの組み込みテストを実行
+                    this.log('🧪 PureSpineLoader組み込みテスト実行...');
+                    try {
+                        const testResult = await PureSpineLoader.test();
+                        this.log('📋 組み込みテスト結果:', JSON.stringify(testResult, null, 2));
+                        if (!testResult.success) {
+                            throw new Error(`組み込みテスト失敗: ${testResult.error}`);
+                        }
+                    } catch (testError) {
+                        this.log(`⚠️ 組み込みテスト実行エラー: ${testError.message}`, 'warning');
+                        this.log('📊 エラー詳細:', testError);
+                    }
+                    
+                    this.log('🎯 PureSpineLoaderインスタンス作成中...');
+                    const spineLoader = new PureSpineLoader({
+                        basePath: '/assets/spine/characters/purattokun/',
+                        atlasPath: '/assets/spine/characters/purattokun/purattokun.atlas',
+                        jsonPath: '/assets/spine/characters/purattokun/purattokun.json',
+                        scale: 1.0
+                    });
+                    this.log('✅ PureSpineLoaderインスタンス作成完了');
+                    
+                    this.log('⚙️ PureSpineLoader設定確認:', spineLoader.getOutput());
+                    
+                    // 🔍 マニュアル推奨デバッグ手順実行
+                    this.log('🔍 マニュアル推奨デバッグ開始 -----------');
+                    
+                    // 1. 設定確認
+                    this.log('1️⃣ Config確認:', spineLoader.getOutput().config);
+                    
+                    // 2. ファイル存在確認
+                    this.log('2️⃣ ファイル存在確認中...');
+                    try {
+                        const atlasResponse = await fetch('/assets/spine/characters/purattokun/purattokun.atlas');
+                        this.log('📄 Atlasファイル:', atlasResponse.ok ? '✅ 存在' : '❌ 不在');
+                        
+                        const jsonResponse = await fetch('/assets/spine/characters/purattokun/purattokun.json');
+                        this.log('📄 JSONファイル:', jsonResponse.ok ? '✅ 存在' : '❌ 不在');
+                        
+                        const pngResponse = await fetch('/assets/spine/characters/purattokun/purattokun.png');
+                        this.log('🖼️ PNGファイル:', pngResponse.ok ? '✅ 存在' : '❌ 不在');
+                    } catch (fetchError) {
+                        this.log('⚠️ ファイル確認エラー:', fetchError.message);
+                    }
+                    
+                    // 3. Spineライブラリ確認
+                    this.log('3️⃣ Spineライブラリ詳細確認:');
+                    this.log('   typeof window.spine:', typeof window.spine);
+                    this.log('   AssetManager:', typeof spine?.AssetManager);
+                    this.log('   SkeletonRenderer:', typeof spine?.SkeletonRenderer);  
+                    this.log('   PolygonBatcher:', typeof spine?.PolygonBatcher);
+                    
+                    this.log('🔍 マニュアル推奨デバッグ終了 -----------');
+                    
+                    this.log('⚡ PureSpineLoader.execute()実行開始...');
+                    const loadResult = await spineLoader.execute();
+                    this.log('⚡ PureSpineLoader.execute()実行完了');
+                    
+                    // 詳細なログ出力
+                    this.log('🔍 PureSpineLoader実行結果:', {
+                        loaded: loadResult.loaded,
+                        loading: loadResult.loading, 
+                        error: loadResult.error,
+                        config: loadResult.config
+                    });
+                    
+                    if (!loadResult.loaded) {
+                        this.log(`❌ ぷらっとくん読み込み失敗詳細: ${loadResult.error}`, 'error');
+                        throw new Error(`ぷらっとくん読み込みエラー: ${loadResult.error}`);
+                    }
+                    
+                    this.log('✅ ぷらっとくん読み込み成功!', loadResult.spineData);
+                    
+                    // 読み込み完了後はクリーンアップ
+                    spineLoader.cleanup();
+                    
+                    // 🎯 PureSpineLoaderのデータを使用してnezumi作成
+                    const { skeletonData, atlas } = loadResult.spineData;
+                    
+                    // マニュアル通りの正しい座標設定
+                    this.nezumiSkeleton = new spine.Skeleton(skeletonData);
+                    this.nezumiSkeleton.x = 0;    // Spine座標系の基準点
+                    this.nezumiSkeleton.y = 0;    // Spine座標系の基準点（地面レベル）
+                    this.nezumiSkeleton.setToSetupPose();
+                    this.nezumiSkeleton.updateWorldTransform();
+                    
+                    this.log('📐 nezumi座標設定完了: x=0, y=0 (マニュアル推奨)');
+                    
+                    // アニメーション状態初期化
+                    this.animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                    this.animationState.setAnimation(0, 'taiki', true);
+                    
+                    this.log('🎬 nezumiアニメーション開始: taiki');
+                    
+                    // 描画ループ開始
+                    this.startRenderLoop();
+                    
+                    this.log('✅ nezumi Spine初期化完了', 'success');
+                    
+                } catch (error) {
+                    this.log(`❌ Spine初期化エラー: ${error.message}`, 'error');
+                    this.log('🔄 フォールバック表示に切り替え', 'warning');
+                    this.createFallbackPurattokun();
+                }
+            }
+            
+            createFallbackPurattokun() {
+                // Spine初期化失敗時のフォールバック表示（非表示化）
+                const spineContainer = document.getElementById('spine-char');
+                if (spineContainer) {
+                    spineContainer.innerHTML = `
+                        <div style="display: none;">
+                            <!-- オレンジの丸アイコンを非表示化 -->
+                        </div>
+                    `;
+                    this.log('🚫 オレンジ丸アイコンを非表示化', 'info');
+                }
+                
+                // フォールバック版nezumi制御（非表示版）
+                this.nezumiSkeleton = {
+                    isFallback: true,
+                    element: null,
+                    x: 0, y: 0, scaleX: 1, scaleY: 1
+                };
+                
+                this.log('✅ フォールバック処理完了（非表示）', 'info');
+            }
+            
+            startRenderLoop() {
+                const render = (time) => {
+                    if (!this.spineApp || !this.nezumiSkeleton || !this.animationState) return;
+                    
+                    try {
+                        // 🎨 シンプルな描画方法（SpineCanvasの基本API）
+                        
+                        // アニメーション更新
+                        this.animationState.update(0.016); // 60fps
+                        this.animationState.apply(this.nezumiSkeleton);
+                        
+                        // マニュアル推奨座標設定
+                        this.nezumiSkeleton.x = 0;    // Spine座標系の基準点
+                        this.nezumiSkeleton.y = 0;    // Spine座標系の基準点（地面レベル）
+                        this.nezumiSkeleton.scaleX = 0.5;  // 見やすいサイズ
+                        this.nezumiSkeleton.scaleY = 0.5;
+                        
+                        this.nezumiSkeleton.updateWorldTransform();
+                        
+                        // 最もシンプルな描画（SpineCanvasの標準方式）
+                        this.spineApp.render(this.nezumiSkeleton);
+                        
+                        // デバッグ情報（5秒おき）
+                        if (Math.floor(time / 1000) % 5 === 0 && time % 100 < 16) {
+                            this.log(`🎯 描画実行: skeleton.x=${this.nezumiSkeleton.x}, y=${this.nezumiSkeleton.y}, scale=${this.nezumiSkeleton.scaleX}`);
+                        }
+                        
+                    } catch (error) {
+                        // エラー詳細を表示（API問題特定用）
+                        this.log(`❌ 描画エラー: ${error.message}`, 'error');
+                        this.log('🔍 SpineApp利用可能メソッド:', Object.getOwnPropertyNames(this.spineApp));
+                    }
+                    
+                    requestAnimationFrame(render);
+                };
+                
+                requestAnimationFrame(render);
+            }
+            
+            async measurePhase3APerformance() {
+                this.log('📊 Phase 3-A性能測定開始');
+                
+                const testElement = document.getElementById('background-test');
+                const iterations = 1000;
+                
+                const startTime = performance.now();
+                
+                for (let i = 0; i < iterations; i++) {
+                    // Phase 3-AのsetUnifiedPosition()呼び出し
+                    if (this.observer.setUnifiedPosition) {
+                        await this.observer.setUnifiedPosition(testElement, {
+                            x: Math.random() * 100,
+                            y: Math.random() * 100,
+                            mode: 'dom'
+                        });
+                    }
+                }
+                
+                const endTime = performance.now();
+                const totalTime = endTime - startTime;
+                const avgTime = totalTime / iterations;
+                
+                this.performanceMetrics.phase3aTime = avgTime;
+                this.log(`🚀 Phase 3-A平均処理時間: ${avgTime.toFixed(4)}ms`);
+                
+                // 目標0.01ms確認
+                if (avgTime <= 0.01) {
+                    this.log('✅ Phase 3-A目標性能達成 (≤0.01ms)', 'success');
+                } else if (avgTime <= 0.1) {
+                    this.log('⚠️ Phase 3-A性能やや劣化 (≤0.1ms)', 'warning');
+                } else {
+                    this.log('❌ Phase 3-A性能大幅劣化 (>0.1ms)', 'error');
+                }
+            }
+            
+            setupEnvironmentMonitoring() {
+                // 環境変化の監視
+                window.addEventListener('resize', () => {
+                    this.log('🔄 ウィンドウリサイズ検出');
+                    this.measureEnvironmentObserverTime();
+                });
+                
+                // DPR変化の監視
+                this.monitorDPRChanges();
+                
+                this.log('🔍 環境監視システム開始');
+            }
+            
+            async measureEnvironmentObserverTime() {
+                const startTime = performance.now();
+                
+                // 環境観測処理実行
+                if (this.observer.handleEnvironmentChange) {
+                    await this.observer.handleEnvironmentChange();
+                }
+                
+                const endTime = performance.now();
+                this.performanceMetrics.envObserverTime = endTime - startTime;
+                this.performanceMetrics.totalTime = this.performanceMetrics.phase3aTime + this.performanceMetrics.envObserverTime;
+                
+                this.updatePerformanceDisplay();
+            }
+            
+            monitorDPRChanges() {
+                let lastDPR = window.devicePixelRatio || 1;
+                
+                setInterval(() => {
+                    const currentDPR = window.devicePixelRatio || 1;
+                    if (Math.abs(currentDPR - lastDPR) > 0.1) {
+                        this.log(`📐 DPR変化検出: ${lastDPR} → ${currentDPR}`);
+                        lastDPR = currentDPR;
+                        this.measureEnvironmentObserverTime();
+                    }
+                }, 1000);
+            }
+            
+            updatePerformanceDisplay() {
+                document.getElementById('phase3a-time').textContent = 
+                    `${this.performanceMetrics.phase3aTime.toFixed(4)}ms`;
+                document.getElementById('env-observer-time').textContent = 
+                    `${this.performanceMetrics.envObserverTime.toFixed(4)}ms`;
+                document.getElementById('total-time').textContent = 
+                    `${this.performanceMetrics.totalTime.toFixed(4)}ms`;
+                document.getElementById('observer-count').textContent = 
+                    this.activeObservations.size;
+            }
+            
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const color = {
+                    'info': '#00ff00',
+                    'success': '#00ff88', 
+                    'warning': '#ffaa00',
+                    'error': '#ff4444'
+                }[type] || '#00ff00';
+                
+                const logEntry = document.createElement('div');
+                logEntry.style.color = color;
+                logEntry.innerHTML = `[${timestamp}] ${message}`;
+                
+                this.logElement.appendChild(logEntry);
+                this.logElement.scrollTop = this.logElement.scrollHeight;
+            }
+        }
+        
+        // グローバル変数・関数定義
+        let integrationTest;
+        let backgroundSyncActive = false;
+        let textRangePinActive = false;
+        let imagePinActive = false;
+        let currentStrategy = 'range';
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            integrationTest = new Phase3BIntegrationTest();
+        });
+        
+        // 6.1 背景画像同期機能（nezumin統合版）
+        async function startBackgroundSync() {
+            if (!integrationTest.observer) return;
+            
+            const backgroundElement = document.getElementById('background-test');
+            const spineElement = document.getElementById('spine-char');
+            
+            try {
+                integrationTest.log('🎯 6.1背景画像同期開始（nezumin）');
+                
+                // カスタムコールバックでnezumiの位置を直接制御
+                const customCallback = (backgroundRect, anchor) => {
+                    if (integrationTest.nezumiSkeleton) {
+                        // 背景要素の変化をnezumiの位置に反映
+                        const anchorPosition = calculateAnchorPosition(backgroundRect, anchor);
+                        updatePurattokuPosition(anchorPosition.x, anchorPosition.y);
+                        integrationTest.log(`😺 nezumin位置更新: ${anchorPosition.x.toFixed(1)}px, ${anchorPosition.y.toFixed(1)}px`);
+                    }
+                };
+                
+                const unobserve = integrationTest.observer.observeBackgroundSync(backgroundElement, spineElement, {
+                    anchor: 'center',
+                    mode: 'dom',
+                    responsive: true,
+                    customCallback: customCallback
+                });
+                
+                integrationTest.activeObservations.set('background-sync', unobserve);
+                backgroundSyncActive = true;
+                integrationTest.log('✅ 背景画像同期アクティブ（nezumin統合）', 'success');
+                integrationTest.updatePerformanceDisplay();
+                
+            } catch (error) {
+                integrationTest.log(`❌ 背景同期エラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // アンカー位置計算
+        function calculateAnchorPosition(rect, anchor) {
+            const positions = {
+                'tl': { x: rect.left, y: rect.top },
+                'tr': { x: rect.right, y: rect.top },
+                'bl': { x: rect.left, y: rect.bottom },
+                'br': { x: rect.right, y: rect.bottom },
+                'center': { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+            };
+            return positions[anchor] || positions.center;
+        }
+        
+        // nezumiの位置を直接更新
+        function updatePurattokuPosition(x, y) {
+            if (!integrationTest.nezumiSkeleton) return;
+            
+            // DOM要素の位置も同期
+            const spineElement = document.getElementById('spine-char');
+            if (spineElement) {
+                spineElement.style.left = `${x}px`;
+                spineElement.style.top = `${y}px`;
+                spineElement.style.transform = 'translate(-50%, -50%)';
+            }
+            
+            // フォールバック版nezumiの場合の追加処理
+            if (integrationTest.nezumiSkeleton.isFallback) {
+                integrationTest.nezumiSkeleton.x = x;
+                integrationTest.nezumiSkeleton.y = y;
+                integrationTest.log(`😺 フォールバックnezumin位置: ${x.toFixed(1)}px, ${y.toFixed(1)}px`);
+            }
+        }
+        
+        function stopBackgroundSync() {
+            const unobserve = integrationTest.activeObservations.get('background-sync');
+            if (unobserve) {
+                unobserve();
+                integrationTest.activeObservations.delete('background-sync');
+                backgroundSyncActive = false;
+                integrationTest.log('⏹️ 背景画像同期停止');
+                integrationTest.updatePerformanceDisplay();
+            }
+        }
+        
+        function resizeBackground(scale) {
+            const background = document.getElementById('background-test');
+            const currentWidth = background.offsetWidth;
+            const newWidth = currentWidth * scale;
+            background.style.width = `${newWidth}px`;
+            integrationTest.log(`📐 背景サイズ変更: ${currentWidth}px → ${newWidth}px`);
+        }
+        
+        function moveBackground(direction) {
+            const background = document.getElementById('background-test');
+            const currentMargin = parseInt(getComputedStyle(background).marginLeft) || 0;
+            const offset = direction === 'left' ? -20 : 20;
+            background.style.marginLeft = `${currentMargin + offset}px`;
+            integrationTest.log(`↔️ 背景位置移動: ${direction} ${Math.abs(offset)}px`);
+        }
+        
+        function testAnchorPoints() {
+            const anchors = ['tl', 'tr', 'bl', 'br', 'center'];
+            let index = 0;
+            
+            const testNext = () => {
+                if (index >= anchors.length) {
+                    integrationTest.log('🎯 nezumiアンカーテスト完了', 'success');
+                    return;
+                }
+                
+                const anchor = anchors[index];
+                integrationTest.log(`📍 nezumiアンカーテスト: ${anchor}`);
+                
+                // 背景要素のrectを取得
+                const backgroundElement = document.getElementById('background-test');
+                const backgroundRect = backgroundElement.getBoundingClientRect();
+                
+                // アンカー位置計算してnezumin更新
+                const anchorPosition = calculateAnchorPosition(backgroundRect, anchor);
+                updatePurattokuPosition(anchorPosition.x, anchorPosition.y);
+                
+                // nezumiのアニメーション変更
+                if (integrationTest.animationState) {
+                    const animations = ['taiki', 'click', 'syutugen'];
+                    const randomAnim = animations[index % animations.length];
+                    integrationTest.animationState.setAnimation(0, randomAnim, anchor === 'center');
+                    integrationTest.log(`😺 nezumiアニメーション: ${randomAnim}`);
+                }
+                
+                index++;
+                setTimeout(testNext, 1500);
+            };
+            
+            testNext();
+        }
+        
+        // 6.2 テキストRangeピン機能（nezumin統合版）
+        async function startTextRangePin() {
+            if (!integrationTest.observer) return;
+            
+            const targetSpan = document.getElementById('text-target');
+            
+            try {
+                integrationTest.log(`📝 6.2テキストRangeピン開始（nezumin・戦略: ${currentStrategy}）`);
+                
+                // カスタムコールバックでnezumiをテキスト末尾に追従
+                const customCallback = (textRect, anchor, offset) => {
+                    if (integrationTest.nezumiSkeleton) {
+                        const pinPosition = {
+                            x: textRect.right + (offset?.x || 10),
+                            y: textRect.top + (offset?.y || -10)
+                        };
+                        
+                        // 小さいnezumiにしてテキスト横に表示
+                        updatePurattokuForTextPin(pinPosition.x, pinPosition.y);
+                        integrationTest.log(`📝😺 nezumin テキストピン位置: ${pinPosition.x.toFixed(1)}px, ${pinPosition.y.toFixed(1)}px`);
+                    }
+                };
+                
+                const unobserve = integrationTest.observer.observeTextRangePin(targetSpan, {
+                    strategy: currentStrategy,
+                    anchor: 'tr',
+                    mode: 'dom',
+                    offset: { x: 10, y: -10 },
+                    customCallback: customCallback
+                });
+                
+                integrationTest.activeObservations.set('text-pin', unobserve);
+                textRangePinActive = true;
+                integrationTest.log('✅ テキストRangeピンアクティブ（nezumin統合）', 'success');
+                integrationTest.updatePerformanceDisplay();
+                
+            } catch (error) {
+                integrationTest.log(`❌ テキストピンエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // テキストピン用nezumin位置更新
+        function updatePurattokuForTextPin(x, y) {
+            if (!integrationTest.nezumiSkeleton) return;
+            
+            // DOM要素位置更新（小さく表示）
+            const spineElement = document.getElementById('spine-char');
+            if (spineElement) {
+                spineElement.style.left = `${x}px`;
+                spineElement.style.top = `${y}px`;
+                spineElement.style.width = '80px';  // 小さく
+                spineElement.style.height = '80px';
+                spineElement.style.transform = 'translate(-50%, -50%)';
+            }
+            
+            // nezumiアニメーションを「注目」系に
+            if (integrationTest.animationState) {
+                integrationTest.animationState.setAnimation(0, 'click', false);
+            }
+        }
+        
+        function stopTextRangePin() {
+            const unobserve = integrationTest.activeObservations.get('text-pin');
+            if (unobserve) {
+                unobserve();
+                integrationTest.activeObservations.delete('text-pin');
+                textRangePinActive = false;
+                integrationTest.log('⏹️ テキストRangeピン停止');
+                integrationTest.updatePerformanceDisplay();
+            }
+        }
+        
+        function changeTextContent() {
+            const textTest = document.getElementById('text-test');
+            const newTexts = [
+                'これは変更されたテキストです。<strong>新しい内容</strong>で末尾追従をテストします。<span id="text-target">←新しい位置</span>',
+                '長いテキストでの動作確認です。文章が複数行にわたる場合の動作を確認し、レスポンシブ対応も含めて総合的にテストします。<span id="text-target">←長文末尾</span>',
+                'シンプルなテスト。<span id="text-target">←短文</span>'
+            ];
+            
+            const randomText = newTexts[Math.floor(Math.random() * newTexts.length)];
+            textTest.innerHTML = `<p>${randomText}</p>`;
+            integrationTest.log('📝 テキスト内容変更');
+        }
+        
+        function addLineBreaks() {
+            const textTest = document.getElementById('text-test');
+            textTest.innerHTML += '<p>追加された段落です。<br>改行を含んでいます。<span id="text-target">←追加末尾</span></p>';
+            integrationTest.log('📝 改行・段落追加');
+        }
+        
+        function switchStrategy(strategy) {
+            currentStrategy = strategy;
+            integrationTest.log(`🔄 Range戦略切り替え: ${strategy}`);
+            
+            if (textRangePinActive) {
+                stopTextRangePin();
+                setTimeout(() => startTextRangePin(), 100);
+            }
+        }
+        
+        // 6.3 画像ピン機能
+        async function startImagePin(anchor) {
+            if (!integrationTest.observer) return;
+            
+            const imageElement = document.getElementById('test-image-1');
+            
+            try {
+                integrationTest.log(`🖼️ 6.3画像ピン開始 (アンカー: ${anchor})`);
+                
+                const unobserve = integrationTest.observer.observeImagePin(imageElement, {
+                    anchor: anchor,
+                    mode: 'dom',
+                    offset: { x: 5, y: 5 }
+                });
+                
+                integrationTest.activeObservations.set('image-pin', unobserve);
+                imagePinActive = true;
+                integrationTest.log('✅ 画像ピンアクティブ', 'success');
+                
+                // ピンマーカー表示
+                showPinMarker(imageElement, anchor);
+                integrationTest.updatePerformanceDisplay();
+                
+            } catch (error) {
+                integrationTest.log(`❌ 画像ピンエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        function stopImagePin() {
+            const unobserve = integrationTest.activeObservations.get('image-pin');
+            if (unobserve) {
+                unobserve();
+                integrationTest.activeObservations.delete('image-pin');
+                imagePinActive = false;
+                integrationTest.log('⏹️ 画像ピン停止');
+                
+                // ピンマーカー除去
+                document.querySelectorAll('.pin-marker').forEach(marker => marker.remove());
+                integrationTest.updatePerformanceDisplay();
+            }
+        }
+        
+        function showPinMarker(imageElement, anchor) {
+            // 既存マーカー除去
+            document.querySelectorAll('.pin-marker').forEach(marker => marker.remove());
+            
+            const marker = document.createElement('div');
+            marker.className = 'pin-marker';
+            
+            const positions = {
+                'tl': { left: '0%', top: '0%' },
+                'tr': { left: '100%', top: '0%' },
+                'bl': { left: '0%', top: '100%' },
+                'br': { left: '100%', top: '100%' },
+                'center': { left: '50%', top: '50%' }
+            };
+            
+            Object.assign(marker.style, positions[anchor]);
+            imageElement.appendChild(marker);
+        }
+        
+        function resizeImage(scale) {
+            const image = document.getElementById('test-image-1');
+            const currentWidth = image.offsetWidth;
+            const newWidth = currentWidth * scale;
+            image.style.width = `${newWidth}px`;
+            image.style.height = `${newWidth * 0.75}px`; // アスペクト比維持
+            integrationTest.log(`📐 画像サイズ変更: ${currentWidth}px → ${newWidth}px`);
+        }
+        
+        // ユーティリティ機能
+        function clearLog() {
+            integrationTest.logElement.innerHTML = '';
+            integrationTest.log('🧹 ログクリア');
+        }
+        
+        function exportLog() {
+            const logContent = integrationTest.logElement.innerText;
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `phase3b-test-log-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            integrationTest.log('💾 ログファイル出力');
+        }
+        
+        function testDPRChange() {
+            integrationTest.log('📐 DPR変化シミュレーション');
+            // DPR変化のシミュレーション（実際の変化ではないが、システムの反応をテスト）
+            if (integrationTest.observer.handleDPRChange) {
+                integrationTest.observer.handleDPRChange(window.devicePixelRatio * 1.5);
+            }
+            integrationTest.measureEnvironmentObserverTime();
+        }
+        
+        function testWindowResize() {
+            integrationTest.log('🔄 ウィンドウリサイズシミュレーション');
+            window.dispatchEvent(new Event('resize'));
+        }
+        
+        // nezumin専用デバッグ機能
+        function debugPurattokuInfo() {
+            if (integrationTest.nezumiSkeleton) {
+                if (integrationTest.nezumiSkeleton.isFallback) {
+                    // フォールバック版nezumin
+                    const info = {
+                        type: 'フォールバック版',
+                        position: {
+                            x: integrationTest.nezumiSkeleton.x,
+                            y: integrationTest.nezumiSkeleton.y
+                        },
+                        scale: {
+                            x: integrationTest.nezumiSkeleton.scaleX,
+                            y: integrationTest.nezumiSkeleton.scaleY
+                        },
+                        currentAnimation: 'CSS Animation'
+                    };
+                    integrationTest.log(`😺 nezumin状態（フォールバック）: ${JSON.stringify(info, null, 2)}`);
+                    return info;
+                } else if (integrationTest.animationState) {
+                    // 通常のSpine版nezumin
+                    const info = {
+                        type: 'Spine WebGL版',
+                        position: {
+                            x: integrationTest.nezumiSkeleton.x,
+                            y: integrationTest.nezumiSkeleton.y
+                        },
+                        scale: {
+                            x: integrationTest.nezumiSkeleton.scaleX,
+                            y: integrationTest.nezumiSkeleton.scaleY
+                        },
+                        currentAnimation: integrationTest.animationState.tracks[0]?.animation?.name || 'none'
+                    };
+                    integrationTest.log(`😺 nezumin状態（Spine）: ${JSON.stringify(info, null, 2)}`);
+                    return info;
+                }
+            }
+            
+            integrationTest.log('❌ nezumiが初期化されていません', 'error');
+            return null;
+        }
+        
+        // nezumiアニメーション切り替えテスト
+        function testPurattokuAnimations() {
+            if (!integrationTest.animationState) return;
+            
+            const animations = ['taiki', 'click', 'syutugen'];
+            let index = 0;
+            
+            const playNext = () => {
+                if (index >= animations.length) {
+                    integrationTest.log('😺 nezumiアニメーションテスト完了', 'success');
+                    return;
+                }
+                
+                const anim = animations[index];
+                integrationTest.animationState.setAnimation(0, anim, anim === 'taiki');
+                integrationTest.log(`😺 nezumiアニメーション再生: ${anim}`);
+                
+                index++;
+                setTimeout(playNext, 2000);
+            };
+            
+            playNext();
+        }
+    </script>
+</body>
+</html>

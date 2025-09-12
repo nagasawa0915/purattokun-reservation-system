@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 PureBoundingBox v5.0 マイクロモジュール版デモ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .demo-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn.primary {
+            background: rgba(255, 107, 107, 0.8);
+            border-color: rgba(255, 107, 107, 1);
+        }
+        
+        .btn.primary:hover {
+            background: rgba(255, 107, 107, 1);
+        }
+        
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .test-element {
+            position: absolute;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .info-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .info-title {
+            color: #feca57;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-left: 3px solid #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🎯 PureBoundingBox v5.0</h1>
+            <p class="subtitle">マイクロモジュール版 - bounding-boxフォルダ内完結・外部依存なし</p>
+        </div>
+        
+        <div class="demo-area">
+            <h2>🎮 マイクロモジュールテスト</h2>
+            <div class="controls">
+                <button class="btn primary" onclick="runModularTest()">マイクロモジュール版テスト</button>
+                <button class="btn" onclick="createMultipleElements()">複数要素テスト</button>
+                <button class="btn" onclick="testSmallElement()">小要素テスト</button>
+                <button class="btn" onclick="clearAll()">すべてクリア</button>
+            </div>
+            
+            <div class="canvas-container" id="demo-container">
+                <!-- テスト要素がここに表示されます -->
+            </div>
+            
+            <div class="info-panel">
+                <div class="info-title">🎯 マイクロモジュール構成</div>
+                <ul>
+                    <li><strong>PureBoundingBoxCore.js</strong>: 核心データ・状態管理 (118行)</li>
+                    <li><strong>PureBoundingBoxBounds.js</strong>: v2互換bounds座標系計算 (148行)</li>
+                    <li><strong>PureBoundingBoxUI.js</strong>: UI生成・表示制御 (139行)</li>
+                    <li><strong>PureBoundingBoxEvents.js</strong>: イベント処理 (155行)</li>
+                    <li><strong>PureBoundingBox.js</strong>: 統合インターフェース (142行)</li>
+                    <li><strong>合計</strong>: 約700行 → 5つの50-160行モジュールに分割</li>
+                </ul>
+                
+                <div class="log" id="log-output">
+                    <div style="color: #feca57;">📝 操作ログがここに表示されます...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎯 マイクロモジュール読み込み（順序重要） -->
+    <script src="bounding-box/PureBoundingBoxCore.js"></script>
+    <script src="bounding-box/PureBoundingBoxBounds.js"></script>
+    <script src="bounding-box/PureBoundingBoxUI.js"></script>
+    <script src="bounding-box/PureBoundingBoxEvents.js"></script>
+    <script src="bounding-box/PureBoundingBox.js"></script>
+    
+    <script>
+        // グローバル状態
+        let activeBoxes = [];
+        let logElement = document.getElementById('log-output');
+        
+        // ログ出力
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : 
+                         type === 'success' ? '#2ecc71' : '#74b9ff';
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.color = color;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(message);
+        }
+        
+        // マイクロモジュール版テスト
+        async function runModularTest() {
+            log('🧪 マイクロモジュール版テスト開始...', 'info');
+            
+            try {
+                // テスト要素作成
+                const testElement = createTestElement('v5.0マイクロ', 200, 150, 180, 120);
+                
+                // マイクロモジュール版バウンディングボックス
+                const boundingBox = new PureBoundingBox({
+                    targetElement: testElement,
+                    minWidth: 50,
+                    minHeight: 50
+                });
+                
+                // 実行
+                const result = await boundingBox.execute({visible: true});
+                activeBoxes.push({box: boundingBox, element: testElement});
+                
+                log(`✅ マイクロモジュール版テスト成功!`, 'success');
+                log(`📊 構成: Core + Bounds + UI + Events + 統合`, 'info');
+                log('🖱️ v2完全互換操作を確認してください', 'info');
+                
+            } catch (error) {
+                log(`❌ テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 複数要素テスト
+        async function createMultipleElements() {
+            log('📦 複数要素テスト開始...', 'info');
+            
+            const positions = [
+                {x: 100, y: 100, width: 120, height: 80, text: 'A'},
+                {x: 300, y: 150, width: 140, height: 100, text: 'B'},
+                {x: 500, y: 100, width: 100, height: 120, text: 'C'}
+            ];
+            
+            for (let i = 0; i < positions.length; i++) {
+                const pos = positions[i];
+                const element = createTestElement(pos.text, pos.x, pos.y, pos.width, pos.height);
+                
+                const boundingBox = new PureBoundingBox({
+                    targetElement: element,
+                    minWidth: 40,
+                    minHeight: 40
+                });
+                
+                await boundingBox.execute({visible: true});
+                activeBoxes.push({box: boundingBox, element: element});
+            }
+            
+            log('✅ 複数要素作成完了 - 各要素独立操作可能', 'success');
+        }
+        
+        // 小要素テスト
+        async function testSmallElement() {
+            log('🔍 小要素テスト開始...', 'info');
+            
+            const element = createTestElement('小', 400, 250, 60, 60);
+            element.style.background = 'linear-gradient(45deg, #e74c3c, #f39c12)';
+            
+            const boundingBox = new PureBoundingBox({
+                targetElement: element,
+                minWidth: 30,
+                minHeight: 30
+            });
+            
+            await boundingBox.execute({visible: true});
+            activeBoxes.push({box: boundingBox, element: element});
+            
+            log('✅ 小要素でも正確な操作が可能です', 'success');
+        }
+        
+        // テスト要素作成
+        function createTestElement(text, x, y, width, height) {
+            const element = document.createElement('div');
+            element.className = 'test-element';
+            element.textContent = text;
+            element.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${width}px;
+                height: ${height}px;
+            `;
+            
+            document.getElementById('demo-container').appendChild(element);
+            return element;
+        }
+        
+        // すべてクリア
+        function clearAll() {
+            log('🧹 全要素クリア中...', 'info');
+            
+            activeBoxes.forEach(item => {
+                item.box.cleanup();
+                item.element.remove();
+            });
+            
+            activeBoxes = [];
+            log('✅ 全要素クリア完了', 'success');
+        }
+        
+        // ページロード時
+        window.addEventListener('load', () => {
+            log('🚀 PureBoundingBox v5.0 マイクロモジュール版 準備完了', 'success');
+            log('📋 各ボタンをクリックしてテストを開始してください', 'info');
+        });
+        
+        // ページ離脱時のクリーンアップ
+        window.addEventListener('beforeunload', () => {
+            clearAll();
+        });
+    </script>
+</body>
+</html>

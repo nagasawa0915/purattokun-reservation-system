@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModularPanelSystem統合テスト - spine-editor-webapp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1e1e1e;
+            color: white;
+            height: 100vh;
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "outliner preview properties"
+                "timeline timeline timeline";
+            grid-template-columns: var(--outliner-width, 300px) 1fr var(--properties-width, 300px);
+            grid-template-rows: 60px 1fr var(--timeline-height, 200px);
+            gap: 1px;
+            transition: grid-template-areas 0.3s ease;
+        }
+        
+        /* ヘッダー */
+        .test-header {
+            grid-area: header;
+            background: #2d2d2d;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            gap: 20px;
+        }
+        
+        .test-header h1 {
+            font-size: 16px;
+            color: #00ff88;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .test-btn {
+            background: #007acc;
+            border: 1px solid #0099ff;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        .test-btn:hover {
+            background: #0099ff;
+            transform: translateY(-1px);
+        }
+        
+        .test-btn:active {
+            transform: translateY(0);
+        }
+        
+        .reset-btn {
+            background: #ff6b35;
+            border-color: #ff8555;
+        }
+        
+        .reset-btn:hover {
+            background: #ff8555;
+        }
+        
+        .status-display {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+        }
+        
+        /* パネル共通スタイル */
+        .panel {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .panel:hover {
+            border-color: #555555;
+        }
+        
+        /* ドラッグ中のパネルスタイル */
+        .panel[draggable="true"] {
+            cursor: grab;
+        }
+        
+        .panel[draggable="true"]:active {
+            cursor: grabbing;
+        }
+        
+        .panel.dragging {
+            opacity: 0.7;
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(0, 122, 204, 0.4);
+            border-color: #007acc;
+        }
+        
+        .panel-header {
+            height: 32px;
+            background: #3a3a3a;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        
+        .panel-header:hover {
+            background: #4a4a4a;
+        }
+        
+        .panel-title {
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .panel-content {
+            flex: 1;
+            padding: 15px;
+            overflow: auto;
+        }
+        
+        /* 各パネル配置 */
+        .panel-outliner { grid-area: outliner; }
+        .panel-preview { grid-area: preview; }
+        .panel-properties { grid-area: properties; }
+        .panel-timeline { grid-area: timeline; }
+        
+        /* ドラッグインジケーター */
+        .drag-insert-indicator {
+            position: fixed;
+            width: 3px;
+            background: #007acc;
+            z-index: 9999;
+            display: none;
+            border-radius: 2px;
+            box-shadow: 0 0 8px rgba(0, 122, 204, 0.8);
+            animation: indicatorPulse 1s infinite;
+        }
+        
+        @keyframes indicatorPulse {
+            0%, 100% { opacity: 0.8; transform: scaleY(1); }
+            50% { opacity: 1; transform: scaleY(1.1); }
+        }
+        
+        /* テスト結果表示エリア */
+        .test-results {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+        
+        .test-results:hover {
+            transform: scale(1.02);
+        }
+        
+        .test-results h3 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .test-log {
+            margin: 5px 0;
+            padding: 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .test-log.success {
+            background: rgba(0, 255, 136, 0.2);
+            border-left: 3px solid #00ff88;
+            color: #ccffdd;
+        }
+        
+        .test-log.info {
+            background: rgba(0, 122, 204, 0.2);
+            border-left: 3px solid #007acc;
+            color: #ccddff;
+        }
+        
+        .test-log.warning {
+            background: rgba(255, 221, 0, 0.2);
+            border-left: 3px solid #ffdd00;
+            color: #ffffcc;
+        }
+        
+        .test-log.error {
+            background: rgba(255, 107, 107, 0.2);
+            border-left: 3px solid #ff6b6b;
+            color: #ffcccc;
+        }
+        
+        /* Grid Template Areas 表示エリア */
+        .grid-areas-display {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-family: monospace;
+            border: 1px solid #333;
+            min-width: 280px;
+        }
+        
+        .grid-areas-display h4 {
+            color: #00ff88;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .current-areas {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            color: #cccccc;
+            border: 1px solid #444;
+        }
+        
+        /* アニメーション効果 */
+        .panel-transition {
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .success-flash {
+            animation: successFlash 0.6s ease-out;
+        }
+        
+        @keyframes successFlash {
+            0% { background: rgba(0, 255, 136, 0.3); transform: scale(1); }
+            50% { background: rgba(0, 255, 136, 0.6); transform: scale(1.02); }
+            100% { background: transparent; transform: scale(1); }
+        }
+        
+        /* プレビューエリア強化 */
+        .preview-area {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .preview-content {
+            text-align: center;
+            z-index: 2;
+        }
+        
+        /* デバッグヘルプ */
+        .debug-help {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #ccc;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            max-width: 200px;
+        }
+        
+        .debug-help.show {
+            opacity: 1;
+        }
+        
+        /* レスポンシブ対応 */
+        @media (max-width: 1024px) {
+            body {
+                grid-template-columns: 250px 1fr 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- テストヘッダー -->
+    <div class="test-header">
+        <h1>
+            🧪 ModularPanelSystem統合テスト
+        </h1>
+        
+        <div class="test-controls">
+            <button class="test-btn" onclick="runTest('test1')">
+                🔄 テスト1: パネル1→2の前
+            </button>
+            <button class="test-btn" onclick="runTest('test2')">
+                🔄 テスト2: パネル3→1の後
+            </button>
+            <button class="test-btn" onclick="runTest('test3')">
+                🔄 テスト3: パネル2→3の前
+            </button>
+            <button class="test-btn reset-btn" onclick="resetPanels()">
+                🏠 リセット
+            </button>
+            <div class="status-display" id="test-status">
+                待機中
+            </div>
+        </div>
+    </div>
+
+    <!-- アウトライナーパネル -->
+    <div class="panel panel-outliner" data-panel="outliner" draggable="true">
+        <div class="panel-header">
+            <span class="panel-title">📁 1. アウトライナー</span>
+            <div style="font-size: 10px; color: #666;">Ctrl+1</div>
+        </div>
+        <div class="panel-content">
+            <div style="color: #999; font-size: 13px;">
+                <p style="margin-bottom: 15px;">📂 プロジェクト階層</p>
+                <ul style="list-style: none; padding-left: 10px;">
+                    <li style="margin: 8px 0;">
+                        <span style="color: #00ff88;">📁</span> spine-editor-webapp
+                        <ul style="margin-left: 20px; margin-top: 8px;">
+                            <li style="margin: 5px 0;">
+                                <span style="color: #007acc;">📁</span> micromodules
+                                <ul style="margin-left: 20px; margin-top: 5px;">
+                                    <li style="color: #ffdd00;">🟡 DragDetector.js</li>
+                                    <li style="color: #ffdd00;">🟡 PanelInserter.js</li>
+                                    <li style="color: #ffdd00;">🟡 ModularPanelSystem.js</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                <div style="margin-top: 15px; padding: 8px; background: rgba(0, 122, 204, 0.1); border-radius: 4px;">
+                    <div style="font-size: 10px; color: #007acc;">💡 ドラッグでパネル移動可能</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- プレビューパネル -->
+    <div class="panel panel-preview" data-panel="preview" draggable="true">
+        <div class="panel-header">
+            <span class="panel-title">🎬 2. プレビュー</span>
+            <div style="font-size: 10px; color: #666;">Ctrl+2</div>
+        </div>
+        <div class="panel-content">
+            <div class="preview-area">
+                <div class="preview-content">
+                    <div style="font-size: 48px; margin-bottom: 15px;">🎭</div>
+                    <p style="margin-bottom: 8px;">ModularPanelSystem</p>
+                    <p style="font-size: 12px; color: #666;">統合テスト環境</p>
+                    <div style="margin-top: 20px; padding: 10px; background: rgba(0, 255, 136, 0.1); border-radius: 4px;">
+                        <div style="font-size: 10px; color: #00ff88;">✅ ドラッグ&ドロップ対応</div>
+                        <div style="font-size: 10px; color: #00ff88;">✅ リアルタイム位置検出</div>
+                        <div style="font-size: 10px; color: #00ff88;">✅ Grid Template Areas更新</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- プロパティパネル -->
+    <div class="panel panel-properties" data-panel="properties" draggable="true">
+        <div class="panel-header">
+            <span class="panel-title">⚙️ 3. プロパティ</span>
+            <div style="font-size: 10px; color: #666;">Ctrl+3</div>
+        </div>
+        <div class="panel-content">
+            <div style="color: #999; font-size: 12px;">
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #00ff88; margin-bottom: 8px;">🎯 ModularPanelSystem設定</h4>
+                    <div style="background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 4px;">
+                        <div style="margin: 5px 0;">DragDetector: <span style="color: #00ff88;">有効</span></div>
+                        <div style="margin: 5px 0;">PanelInserter: <span style="color: #00ff88;">有効</span></div>
+                        <div style="margin: 5px 0;">挿入位置検出: <span style="color: #00ff88;">before/after</span></div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #007acc; margin-bottom: 8px;">📊 テスト状況</h4>
+                    <div id="test-statistics" style="background: rgba(0, 122, 204, 0.1); padding: 8px; border-radius: 4px; font-size: 11px;">
+                        <div>実行回数: <span id="test-count">0</span></div>
+                        <div>成功: <span id="success-count">0</span></div>
+                        <div>失敗: <span id="error-count">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- タイムラインパネル -->
+    <div class="panel panel-timeline" data-panel="timeline">
+        <div class="panel-header">
+            <span class="panel-title">⏰ 4. タイムライン</span>
+            <div style="font-size: 10px; color: #666;">固定パネル</div>
+        </div>
+        <div class="panel-content">
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                <div style="text-align: center;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">⏯️</div>
+                    <p style="margin-bottom: 5px;">タイムラインパネル</p>
+                    <p style="font-size: 10px; color: #555;">(ドラッグ対象外)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- テスト結果表示 -->
+    <div class="test-results">
+        <h3>🧪 テスト実行ログ</h3>
+        <div id="test-log-container">
+            <div class="test-log info">
+                <span>💡</span>
+                <span>ModularPanelSystem統合テスト環境起動</span>
+            </div>
+        </div>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; font-size: 10px; color: #777;">
+            <div>💡 パネルをドラッグして他のパネルの左右に移動</div>
+            <div>💡 挿入位置は青いラインで表示</div>
+            <div>💡 タイムラインパネルはドラッグ対象外</div>
+        </div>
+    </div>
+
+    <!-- Grid Template Areas 表示 -->
+    <div class="grid-areas-display">
+        <h4>📐 Grid Template Areas</h4>
+        <div class="current-areas" id="current-areas-display">
+"header header header"
+"outliner preview properties"
+"timeline timeline timeline"
+        </div>
+        <div style="margin-top: 8px; font-size: 10px; color: #777;">
+            リアルタイム更新
+        </div>
+    </div>
+
+    <!-- デバッグヘルプ -->
+    <div class="debug-help" id="debug-help">
+        <div>🔧 デバッグ機能</div>
+        <div>F12コンソールでモジュール状態確認</div>
+        <div>window.modularPanelSystem</div>
+        <div>window.testController</div>
+    </div>
+
+    <!-- DragDetector読み込み -->
+    <script src="micromodules/ui/modular-panel-system/DragDetector.js"></script>
+    
+    <!-- ModularPanelSystem統合テスト -->
+    <script type="module">
+        import { ModularPanelSystem } from './micromodules/ui/modular-panel-system/ModularPanelSystem.js';
+        
+        // テスト制御クラス
+        class TestController {
+            constructor() {
+                this.testCount = 0;
+                this.successCount = 0;
+                this.errorCount = 0;
+                this.modularPanelSystem = null;
+                
+                this.init();
+            }
+            
+            init() {
+                // ModularPanelSystem初期化
+                try {
+                    this.modularPanelSystem = new ModularPanelSystem();
+                    window.modularPanelSystem = this.modularPanelSystem;
+                    
+                    this.logTest('ModularPanelSystem初期化完了', 'success');
+                    this.updateStatus('システム準備完了');
+                    
+                    // カスタムイベントリスナー設定
+                    this.setupEventListeners();
+                    
+                    // Grid Template Areas監視開始
+                    this.startGridAreasMonitoring();
+                    
+                } catch (error) {
+                    this.logTest(`初期化エラー: ${error.message}`, 'error');
+                    this.updateStatus('初期化失敗');
+                }
+            }
+            
+            setupEventListeners() {
+                // パネル挿入成功イベント
+                document.addEventListener('panelInserted', (event) => {
+                    this.successCount++;
+                    this.updateStatistics();
+                    this.logTest(`パネル挿入成功: ${event.detail.operation}`, 'success');
+                    this.updateStatus('挿入完了');
+                    
+                    // 成功フラッシュ効果
+                    this.flashSuccess();
+                });
+                
+                // パネル挿入失敗イベント
+                document.addEventListener('panelInsertFailed', (event) => {
+                    this.errorCount++;
+                    this.updateStatistics();
+                    this.logTest(`パネル挿入失敗: ${event.detail.error}`, 'error');
+                    this.updateStatus('挿入失敗');
+                });
+                
+                // ドラッグ開始・終了の視覚フィードバック
+                document.querySelectorAll('[data-panel][draggable="true"]').forEach(panel => {
+                    panel.addEventListener('dragstart', () => {
+                        panel.classList.add('dragging');
+                        this.updateStatus('ドラッグ中...');
+                    });
+                    
+                    panel.addEventListener('dragend', () => {
+                        panel.classList.remove('dragging');
+                        this.updateStatus('ドラッグ終了');
+                    });
+                });
+            }
+            
+            // プログラマティックテスト実行
+            async runTest(testId) {
+                this.testCount++;
+                this.updateStatistics();
+                
+                try {
+                    this.updateStatus(`テスト${testId}実行中...`);
+                    
+                    let result;
+                    switch (testId) {
+                        case 'test1':
+                            // パネル1をパネル2の前に挿入 → "properties preview outliner"
+                            result = this.modularPanelSystem.panelInserter.insertHorizontally(
+                                'properties', 'preview', 'before'
+                            );
+                            this.logTest('テスト1: properties → preview の前', 'info');
+                            break;
+                            
+                        case 'test2':
+                            // パネル3をパネル1の後に挿入 → "outliner properties preview"
+                            result = this.modularPanelSystem.panelInserter.insertHorizontally(
+                                'properties', 'outliner', 'after'
+                            );
+                            this.logTest('テスト2: properties → outliner の後', 'info');
+                            break;
+                            
+                        case 'test3':
+                            // パネル2をパネル3の前に挿入 → "outliner preview properties"
+                            result = this.modularPanelSystem.panelInserter.insertHorizontally(
+                                'preview', 'properties', 'before'
+                            );
+                            this.logTest('テスト3: preview → properties の前', 'info');
+                            break;
+                            
+                        default:
+                            throw new Error(`未知のテストID: ${testId}`);
+                    }
+                    
+                    if (result.success) {
+                        this.successCount++;
+                        this.logTest(`${testId}成功: ${result.newOrder.join(' → ')}`, 'success');
+                        this.updateStatus('テスト成功');
+                        this.flashSuccess();
+                    } else {
+                        this.errorCount++;
+                        this.logTest(`${testId}失敗: ${result.error}`, 'error');
+                        this.updateStatus('テスト失敗');
+                    }
+                    
+                } catch (error) {
+                    this.errorCount++;
+                    this.logTest(`${testId}エラー: ${error.message}`, 'error');
+                    this.updateStatus('テストエラー');
+                }
+                
+                this.updateStatistics();
+            }
+            
+            // パネルリセット
+            resetPanels() {
+                try {
+                    const result = this.modularPanelSystem.panelInserter.resetToDefaultLayout();
+                    if (result.success) {
+                        this.logTest('パネルレイアウトリセット完了', 'success');
+                        this.updateStatus('リセット完了');
+                        this.flashSuccess();
+                    } else {
+                        this.logTest(`リセット失敗: ${result.error}`, 'error');
+                        this.updateStatus('リセット失敗');
+                    }
+                } catch (error) {
+                    this.logTest(`リセットエラー: ${error.message}`, 'error');
+                    this.updateStatus('リセットエラー');
+                }
+            }
+            
+            // Grid Template Areas監視
+            startGridAreasMonitoring() {
+                const updateDisplay = () => {
+                    const gridContainer = document.body;
+                    const computedStyle = getComputedStyle(gridContainer);
+                    const areas = computedStyle.getPropertyValue('grid-template-areas');
+                    
+                    const display = document.getElementById('current-areas-display');
+                    if (display) {
+                        display.textContent = areas || '未設定';
+                    }
+                };
+                
+                // 初回更新
+                updateDisplay();
+                
+                // 定期更新（500ms間隔）
+                setInterval(updateDisplay, 500);
+            }
+            
+            // UI更新メソッド
+            updateStatus(status) {
+                const statusEl = document.getElementById('test-status');
+                if (statusEl) {
+                    statusEl.textContent = status;
+                }
+            }
+            
+            updateStatistics() {
+                document.getElementById('test-count').textContent = this.testCount;
+                document.getElementById('success-count').textContent = this.successCount;
+                document.getElementById('error-count').textContent = this.errorCount;
+            }
+            
+            logTest(message, type = 'info') {
+                const logContainer = document.getElementById('test-log-container');
+                const logEntry = document.createElement('div');
+                logEntry.className = `test-log ${type}`;
+                
+                const icon = {
+                    'success': '✅',
+                    'info': '💡',
+                    'warning': '⚠️',
+                    'error': '❌'
+                }[type] || '💬';
+                
+                const timestamp = new Date().toLocaleTimeString('ja-JP');
+                logEntry.innerHTML = `
+                    <span>${icon}</span>
+                    <span>[${timestamp}] ${message}</span>
+                `;
+                
+                // 最新ログを上に追加
+                logContainer.insertBefore(logEntry, logContainer.firstChild);
+                
+                // ログ数制限（最新20件まで）
+                while (logContainer.children.length > 20) {
+                    logContainer.removeChild(logContainer.lastChild);
+                }
+            }
+            
+            flashSuccess() {
+                document.body.classList.add('success-flash');
+                setTimeout(() => {
+                    document.body.classList.remove('success-flash');
+                }, 600);
+            }
+        }
+        
+        // テストコントローラー初期化
+        const testController = new TestController();
+        window.testController = testController;
+        
+        // グローバル関数（HTML側から呼び出し）
+        window.runTest = (testId) => {
+            testController.runTest(testId);
+        };
+        
+        window.resetPanels = () => {
+            testController.resetPanels();
+        };
+        
+        // デバッグヘルプ表示制御
+        let helpTimeout;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F1') {
+                e.preventDefault();
+                document.getElementById('debug-help').classList.add('show');
+                clearTimeout(helpTimeout);
+                helpTimeout = setTimeout(() => {
+                    document.getElementById('debug-help').classList.remove('show');
+                }, 5000);
+            }
+        });
+        
+        // 初期化完了メッセージ
+        console.log('🧪 ModularPanelSystem統合テスト環境準備完了');
+        console.log('🔧 デバッグオブジェクト:');
+        console.log('  window.modularPanelSystem - ModularPanelSystemインスタンス');
+        console.log('  window.testController - テストコントローラー');
+        console.log('💡 F1キーでデバッグヘルプ表示');
+        
+    </script>
+</body>
+</html>

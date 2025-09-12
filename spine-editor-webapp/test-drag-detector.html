@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DragDetector Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            display: grid;
+            grid-template-areas: 
+                "outliner preview properties"
+                "timeline timeline timeline";
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 1fr auto;
+            gap: 10px;
+            height: 500px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 6px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .panel:active {
+            cursor: grabbing;
+        }
+        
+        .panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .panel[data-panel="outliner"] {
+            grid-area: outliner;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .panel[data-panel="preview"] {
+            grid-area: preview;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .panel[data-panel="properties"] {
+            grid-area: properties;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        
+        .panel[data-panel="timeline"] {
+            grid-area: timeline;
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            height: 100px;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            color: #00ff00;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+        }
+        
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #005a99;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 DragDetector 動作確認テスト</h1>
+    
+    <div class="instructions">
+        <h3>📋 操作手順:</h3>
+        <ol>
+            <li><strong>「DragDetector初期化」</strong>ボタンをクリック</li>
+            <li>パネルを<strong>ドラッグ</strong>して他のパネルに重ねる</li>
+            <li>境界線（左半分/右半分）での<strong>挿入位置検出</strong>を確認</li>
+            <li>青い縦線（挿入インジケーター）が表示されることを確認</li>
+            <li>ログでドラッグ操作の詳細を確認</li>
+        </ol>
+    </div>
+    
+    <div class="controls">
+        <button onclick="initializeTest()">🚀 DragDetector初期化</button>
+        <button onclick="clearLog()">🧹 ログクリア</button>
+        <button onclick="resetPanels()">🔄 パネル位置リセット</button>
+    </div>
+    
+    <div class="test-container" id="testContainer">
+        <div class="panel" data-panel="outliner">Outliner</div>
+        <div class="panel" data-panel="preview">Preview</div>
+        <div class="panel" data-panel="properties">Properties</div>
+        <div class="panel" data-panel="timeline">Timeline</div>
+    </div>
+    
+    <div class="log" id="logContainer">
+        <div class="log-entry">🔧 DragDetector テストログ - 準備完了</div>
+        <div class="log-entry">💡 上の「DragDetector初期化」ボタンを押してテストを開始してください</div>
+    </div>
+    
+    <script src="micromodules/ui/modular-panel-system/DragDetector.js"></script>
+    <script>
+        let dragDetector = null;
+        let logContainer = document.getElementById('logContainer');
+        
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function initializeTest() {
+            if (dragDetector) {
+                dragDetector.destroy();
+            }
+            
+            dragDetector = new DragDetector({
+                onDragStart: (e, source) => {
+                    addLog(`🎯 ドラッグ開始: ${source.dataset.panel}`);
+                    source.style.opacity = '0.7';
+                },
+                onDragOver: (e, target, position) => {
+                    addLog(`🔄 ドラッグオーバー: ${target.dataset.panel} (${position})`);
+                },
+                onDrop: (e, source, target, operation) => {
+                    addLog(`✅ ドロップ完了: ${operation.source} → ${operation.target} (${operation.position})`);
+                    addLog(`📋 操作詳細: ${JSON.stringify(operation)}`);
+                    source.style.opacity = '1';
+                },
+                onDragEnd: (e) => {
+                    addLog('🏁 ドラッグ終了');
+                    // 透明度をリセット
+                    document.querySelectorAll('.panel').forEach(panel => {
+                        panel.style.opacity = '1';
+                    });
+                }
+            });
+            
+            // パネルをドラッグ可能に設定
+            document.querySelectorAll('[data-panel]').forEach(panel => {
+                panel.draggable = true;
+                panel.style.cursor = 'grab';
+            });
+            
+            addLog('🚀 DragDetector 初期化完了 - ドラッグテスト可能');
+        }
+        
+        function clearLog() {
+            logContainer.innerHTML = '<div class="log-entry">🧹 ログクリア完了</div>';
+        }
+        
+        function resetPanels() {
+            const container = document.getElementById('testContainer');
+            container.style.gridTemplateAreas = `
+                "outliner preview properties"
+                "timeline timeline timeline"`;
+            addLog('🔄 パネル位置リセット完了');
+        }
+        
+        // ページ読み込み時に説明を表示
+        window.addEventListener('load', () => {
+            addLog('📚 DragDetector.js 機能テスト環境');
+            addLog('💡 パネル境界での挿入位置検出 (before/after)');
+            addLog('🔍 水平方向のドラッグ&ドロップ操作をテスト');
+            addLog('⚡ 青い縦線が挿入インジケーターです');
+        });
+    </script>
+</body>
+</html>

@@ -254,6 +254,21 @@ class PathGenerator {
             if (blobUrl) {
                 mapping.virtualToBlob.set(virtualPath, blobUrl);
                 mapping.blobToVirtual.set(blobUrl, virtualPath);
+                
+                // 🔧 AssetManager用: 相対パス形式も追加
+                // AssetManagerはbasePath + 相対パスでアクセスするため
+                const relativePath = virtualPath.replace(pathSet.basePath, '');
+                if (relativePath && relativePath !== virtualPath) {
+                    mapping.virtualToBlob.set(relativePath, blobUrl);
+                    console.log(`📋 相対パスマッピング追加: ${relativePath} -> ${blobUrl.substring(0, 50)}...`);
+                }
+                
+                // 🔧 ファイル名のみでもアクセス可能にする（AssetManager互換性）
+                const fileName = virtualPath.split('/').pop();
+                if (fileName) {
+                    mapping.virtualToBlob.set(fileName, blobUrl);
+                    console.log(`📋 ファイル名マッピング追加: ${fileName} -> ${blobUrl.substring(0, 50)}...`);
+                }
             }
         }
 

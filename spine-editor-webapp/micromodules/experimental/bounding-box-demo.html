@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PureBoundingBox v2.0 デモ - 瞬間移動問題解決版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .demo-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .test-element {
+            position: absolute;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .test-element:hover {
+            transform: scale(1.05);
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn.primary {
+            background: rgba(255, 107, 107, 0.8);
+            border-color: rgba(255, 107, 107, 1);
+        }
+        
+        .btn.primary:hover {
+            background: rgba(255, 107, 107, 1);
+        }
+        
+        .info-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .info-title {
+            color: #feca57;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-left: 3px solid #ff6b6b;
+        }
+        
+        .spine-canvas {
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status.success {
+            background: rgba(46, 204, 113, 0.8);
+            color: white;
+        }
+        
+        .status.error {
+            background: rgba(231, 76, 60, 0.8);
+            color: white;
+        }
+        
+        .status.working {
+            background: rgba(241, 196, 15, 0.8);
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🎯 PureBoundingBox v2.0 デモ</h1>
+            <p class="subtitle">瞬間移動問題解決版 - マイクロモジュール設計準拠</p>
+        </div>
+        
+        <div class="demo-area">
+            <h2>🎮 インタラクティブテスト</h2>
+            <div class="controls">
+                <button class="btn primary" onclick="runBasicTest()">基本テスト実行</button>
+                <button class="btn" onclick="createSpineDemo()">Spine統合デモ</button>
+                <button class="btn" onclick="testMultipleBounds()">複数バウンディングボックス</button>
+                <button class="btn" onclick="testDragAccuracy()">ドラッグ精度テスト</button>
+                <button class="btn" onclick="clearAll()">すべてクリア</button>
+            </div>
+            
+            <div class="canvas-container" id="demo-container">
+                <!-- デモ要素がここに表示されます -->
+            </div>
+            
+            <div class="info-panel">
+                <div class="info-title">📊 改良ポイント</div>
+                <ul>
+                    <li><strong>座標系統一</strong>: ドラッグ開始時の基準点を固定し、相対計算で一貫性確保</li>
+                    <li><strong>瞬間移動防止</strong>: startX/Y更新を排除、deltaX/Yベースの計算に変更</li>
+                    <li><strong>正確なリサイズ</strong>: 8ハンドル全てで正確な座標計算を実現</li>
+                    <li><strong>タッチ対応</strong>: モバイルデバイスでも同じ操作感を保証</li>
+                    <li><strong>完全クリーンアップ</strong>: memory leak防止、元状態への完全復元</li>
+                </ul>
+                
+                <div class="log" id="log-output">
+                    <div style="color: #feca57;">📝 操作ログがここに表示されます...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PureBoundingBox v2.0 読み込み -->
+    <script src="PureBoundingBox_v2.js"></script>
+    <script src="PureSpineLoader.js"></script>
+    
+    <script>
+        // グローバル状態
+        let activeBoxes = [];
+        let logElement = document.getElementById('log-output');
+        
+        // ログ出力関数
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : 
+                         type === 'success' ? '#2ecc71' : '#74b9ff';
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.color = color;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(message);
+        }
+        
+        // 基本テスト実行
+        async function runBasicTest() {
+            log('🧪 基本テスト開始...', 'info');
+            
+            try {
+                // テスト要素作成
+                const testElement = createTestElement('基本テスト要素', 200, 150, 180, 120);
+                
+                // バウンディングボックス作成
+                const boundingBox = new PureBoundingBox({
+                    targetElement: testElement,
+                    initialBounds: {x: 180, y: 130, width: 200, height: 150}
+                });
+                
+                // 実行
+                const result = await boundingBox.execute({visible: true});
+                activeBoxes.push({box: boundingBox, element: testElement});
+                
+                log(`✅ 基本テスト成功: ${JSON.stringify(result.bounds)}`, 'success');
+                log('🖱️ ドラッグして移動・リサイズしてください', 'info');
+                
+            } catch (error) {
+                log(`❌ 基本テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // Spine統合デモ
+        async function createSpineDemo() {
+            log('🎭 Spine統合デモ準備中...', 'info');
+            
+            try {
+                // Spineキャンバス作成（PureSpineLoaderを使用する場合）
+                const spineCanvas = document.createElement('canvas');
+                spineCanvas.className = 'spine-canvas';
+                spineCanvas.width = 300;
+                spineCanvas.height = 200;
+                spineCanvas.style.cssText = `
+                    position: absolute;
+                    left: 400px;
+                    top: 200px;
+                    background: rgba(0, 0, 0, 0.1);
+                `;
+                
+                document.getElementById('demo-container').appendChild(spineCanvas);
+                
+                // Spineデータ（ダミー）
+                const spineData = {
+                    skeleton: {name: 'demo-character'},
+                    bounds: {x: 0, y: 0, width: 300, height: 200}
+                };
+                
+                // バウンディングボックス作成
+                const boundingBox = new PureBoundingBox({
+                    targetElement: spineCanvas,
+                    initialBounds: {x: 380, y: 180, width: 340, height: 240}
+                });
+                
+                const result = await boundingBox.execute({visible: true});
+                activeBoxes.push({box: boundingBox, element: spineCanvas});
+                
+                log('✅ Spine統合デモ作成成功', 'success');
+                log('🎮 Spineキャンバスにバウンディングボックスが表示されました', 'info');
+                
+            } catch (error) {
+                log(`❌ Spine統合デモエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // 複数バウンディングボックステスト
+        async function testMultipleBounds() {
+            log('📦 複数バウンディングボックステスト開始...', 'info');
+            
+            try {
+                const positions = [
+                    {x: 50, y: 50, width: 120, height: 80},
+                    {x: 250, y: 100, width: 140, height: 100},
+                    {x: 450, y: 50, width: 100, height: 120}
+                ];
+                
+                for (let i = 0; i < positions.length; i++) {
+                    const pos = positions[i];
+                    const element = createTestElement(`要素${i + 1}`, pos.x, pos.y, pos.width, pos.height);
+                    
+                    const boundingBox = new PureBoundingBox({
+                        targetElement: element,
+                        initialBounds: {
+                            x: pos.x - 20, 
+                            y: pos.y - 20, 
+                            width: pos.width + 40, 
+                            height: pos.height + 40
+                        }
+                    });
+                    
+                    await boundingBox.execute({visible: true});
+                    activeBoxes.push({box: boundingBox, element: element});
+                }
+                
+                log('✅ 複数バウンディングボックス作成完了', 'success');
+                log('🎯 各要素を独立してドラッグ・リサイズできます', 'info');
+                
+            } catch (error) {
+                log(`❌ 複数テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        // ドラッグ精度テスト
+        async function testDragAccuracy() {
+            log('🎯 ドラッグ精度テスト開始...', 'info');
+            
+            // 精密テスト用の小さな要素
+            const testElement = createTestElement('精度テスト', 300, 250, 60, 60);
+            testElement.style.background = 'linear-gradient(45deg, #e74c3c, #f39c12)';
+            
+            const boundingBox = new PureBoundingBox({
+                targetElement: testElement,
+                initialBounds: {x: 290, y: 240, width: 80, height: 80},
+                minWidth: 30,
+                minHeight: 30
+            });
+            
+            await boundingBox.execute({visible: true});
+            activeBoxes.push({box: boundingBox, element: testElement});
+            
+            log('✅ 精度テスト要素作成完了', 'success');
+            log('🔍 小さな要素でも正確なドラッグ操作が可能です', 'info');
+        }
+        
+        // テスト要素作成補助関数
+        function createTestElement(text, x, y, width, height) {
+            const element = document.createElement('div');
+            element.className = 'test-element';
+            element.textContent = text;
+            element.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${width}px;
+                height: ${height}px;
+            `;
+            
+            document.getElementById('demo-container').appendChild(element);
+            return element;
+        }
+        
+        // すべてクリア
+        function clearAll() {
+            log('🧹 全要素クリア中...', 'info');
+            
+            // バウンディングボックスクリーンアップ
+            activeBoxes.forEach(item => {
+                item.box.cleanup();
+                item.element.remove();
+            });
+            
+            activeBoxes = [];
+            log('✅ 全要素クリア完了', 'success');
+        }
+        
+        // ページロード時
+        window.addEventListener('load', () => {
+            log('🚀 PureBoundingBox v2.0 デモ準備完了', 'success');
+            log('📋 上記のボタンをクリックしてテストを開始してください', 'info');
+        });
+        
+        // ページ離脱時のクリーンアップ
+        window.addEventListener('beforeunload', () => {
+            clearAll();
+        });
+    </script>
+</body>
+</html>

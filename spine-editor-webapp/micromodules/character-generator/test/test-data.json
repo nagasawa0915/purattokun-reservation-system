@@ -1,0 +1,63 @@
+{
+  "testCases": [
+    {
+      "name": "基本キャラクター生成",
+      "input": {
+        "characterType": "hero",
+        "count": 2,
+        "namePrefix": "test"
+      },
+      "expectedOutput": {
+        "arrayLength": 2,
+        "requiredFields": ["characterId", "characterType", "spineData", "metadata"]
+      }
+    },
+    {
+      "name": "大量生成テスト",
+      "input": {
+        "characterType": "soldier",
+        "count": 10,
+        "namePrefix": "army",
+        "spineFilePath": "assets/soldier.json"
+      },
+      "expectedOutput": {
+        "arrayLength": 10,
+        "characterType": "soldier"
+      }
+    },
+    {
+      "name": "最小生成テスト",
+      "input": {
+        "characterType": "minimal"
+      },
+      "expectedOutput": {
+        "arrayLength": 1,
+        "characterType": "minimal"
+      }
+    },
+    {
+      "name": "無効入力テスト",
+      "input": null,
+      "expectedOutput": {
+        "arrayLength": 0
+      }
+    }
+  ],
+  "mockDOMElements": [
+    {
+      "id": "purattokun-canvas",
+      "tagName": "CANVAS",
+      "className": "spine-canvas"
+    },
+    {
+      "id": "nezumi-canvas", 
+      "tagName": "CANVAS",
+      "className": "character-canvas"
+    },
+    {
+      "id": "test-spine-character",
+      "tagName": "CANVAS",
+      "className": ""
+    }
+  ]
+}

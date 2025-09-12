@@ -1,0 +1,254 @@
+/**
+ * PureBoundingBox.js
+ * 
+ * 🎯 統合インターフェースマイクロモジュール
+ * - 外部依存: 同フォルダ内の4つのモジュール
+ * - 責務: モジュール統合・公開API提供のみ
+ */
+
+class PureBoundingBox {
+    constructor(config) {
+        // 必要モジュールの存在確認
+        if (!window.PureBoundingBoxCore || !window.PureBoundingBoxBounds || 
+            !window.PureBoundingBoxUI || !window.PureBoundingBoxEvents) {
+            throw new Error('❌ 必要なマイクロモジュールが不足しています。bounding-boxフォルダ内の全ファイルを読み込んでください。');
+        }
+        
+        // 🎯 マイクロモジュール統合
+        this.core = new window.PureBoundingBoxCore(config);
+        this.bounds = new window.PureBoundingBoxBounds(this.core);
+        this.ui = new window.PureBoundingBoxUI(this.core);
+        this.events = new window.PureBoundingBoxEvents(this.core, this.bounds, this.ui);
+        
+        // 🎯 AutoPin統合（オプショナル）
+        if (window.PureBoundingBoxAutoPin) {
+            // ElementObserver Phase 1 インスタンスを作成して渡す
+            let elementObserver = null;
+            if (window.ElementObserver) {
+                try {
+                    elementObserver = new window.ElementObserver();
+                    console.log('✅ ElementObserver Phase 1 インスタンス作成成功');
+                } catch (error) {
+                    console.warn('⚠️ ElementObserver Phase 1 インスタンス作成失敗:', error.message);
+                }
+            }
+            
+            this.autoPin = new window.PureBoundingBoxAutoPin(this.core, elementObserver);
+            
+            // 🎯 UIにAutoPin参照を渡す
+            this.ui.setAutoPinReference(this.autoPin);
+            
+            console.log('🎯 AutoPin機能統合完了');
+        } else {
+            console.log('⚠️ AutoPinモジュールが見つかりません（オプション機能のため問題なし）');
+        }
+        
+        console.log('🚀 PureBoundingBox v5.0 マイクロモジュール版 初期化完了');
+    }
+    
+    /**
+     * 実行開始
+     */
+    async execute(options = {}) {
+        try {
+            // v2互換: 初期bounds設定
+            this.initializeBounds();
+            
+            // UI作成
+            this.ui.createBoundingBoxUI();
+            
+            // イベント登録
+            this.events.attachEvents();
+            this.events.attachTouchEvents();
+            
+            // 表示制御
+            if (options.visible !== false) {
+                this.ui.show();
+            }
+            
+            // 初期位置同期
+            this.ui.syncPosition();
+            
+            console.log('✅ PureBoundingBox 実行開始完了');
+            
+            return {
+                success: true,
+                bounds: {...this.core.bounds},
+                nodeId: this.core.config.nodeId
+            };
+            
+        } catch (error) {
+            console.error('❌ PureBoundingBox 実行エラー:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+    
+    /**
+     * 表示制御
+     */
+    show() {
+        this.ui.show();
+    }
+    
+    hide() {
+        this.ui.hide();
+    }
+    
+    /**
+     * 完全クリーンアップ
+     */
+    cleanup() {
+        try {
+            // イベント削除
+            this.events.detachEvents();
+            
+            // UI削除
+            this.ui.remove();
+            
+            // 状態リセット
+            this.core.dragState.isDragging = false;
+            this.core.swapState.currentMode = 'idle';
+            
+            console.log('✅ PureBoundingBox クリーンアップ完了');
+            
+        } catch (error) {
+            console.error('❌ PureBoundingBox クリーンアップエラー:', error);
+        }
+    }
+    
+    /**
+     * v2互換: 初期bounds設定
+     */
+    initializeBounds() {
+        const element = this.core.config.targetElement;
+        const computedStyle = window.getComputedStyle(element);
+        
+        // v2正確パターン: 要素の現在のスタイル値を使用
+        this.core.bounds = {
+            x: parseInt(computedStyle.left) || 0,
+            y: parseInt(computedStyle.top) || 0,
+            width: parseInt(computedStyle.width) || 100,
+            height: parseInt(computedStyle.height) || 100
+        };
+        
+        console.log('📎 初期bounds設定:', this.core.bounds);
+        
+        // 🎯 スケール計算用の真の初期bounds保存（新しいサイズを常に優先）
+        const storageKey = `original-bounds-${this.core.config.nodeId}`;
+        const existing = localStorage.getItem(storageKey);
+        
+        // 新しい初期boundsを保存（既存より新しいサイズがある場合は更新）
+        const originalBounds = {
+            width: this.core.bounds.width,
+            height: this.core.bounds.height,
+            timestamp: Date.now()
+        };
+        
+        let shouldSave = true;
+        if (existing) {
+            try {
+                const stored = JSON.parse(existing);
+                console.log('💎 既存の初期bounds確認:', stored);
+                
+                // 既存データが有効で、新しいサイズが同じ場合のみスキップ
+                if (stored.width === originalBounds.width && stored.height === originalBounds.height) {
+                    shouldSave = false;
+                    console.log('💎 既存の初期boundsが一致 - 保存スキップ');
+                } else {
+                    console.log('💎 新しいサイズを検出 - 初期bounds更新:', originalBounds);
+                }
+            } catch (error) {
+                console.warn('⚠️ 既存データ解析失敗 - 新しいデータで上書き:', error.message);
+            }
+        }
+        
+        if (shouldSave) {
+            localStorage.setItem(storageKey, JSON.stringify(originalBounds));
+            console.log('💎 真の初期bounds保存完了（スケール計算用）:', originalBounds);
+        }
+    }
+    
+    /**
+     * 状態取得
+     */
+    getState() {
+        return this.core.getState();
+    }
+    
+    /**
+     * 設定更新
+     */
+    updateConfig(newConfig) {
+        Object.assign(this.core.config, newConfig);
+    }
+    
+    /**
+     * bounds取得
+     */
+    getBounds() {
+        return {...this.core.bounds};
+    }
+    
+    /**
+     * transform取得
+     */
+    getTransform() {
+        return {...this.core.transform};
+    }
+    
+    /**
+     * 単独テスト
+     */
+    static async test() {
+        console.log('🧪 PureBoundingBox v5.0 マイクロモジュール版テスト開始');
+        
+        try {
+            // テスト要素作成
+            const testElement = document.createElement('div');
+            testElement.style.cssText = `
+                position: absolute;
+                left: 200px;
+                top: 150px;
+                width: 150px;
+                height: 100px;
+                background: rgba(0, 150, 255, 0.3);
+                border: 1px solid #0096ff;
+            `;
+            document.body.appendChild(testElement);
+            
+            // バウンディングボックス作成
+            const boundingBox = new PureBoundingBox({
+                targetElement: testElement
+            });
+            
+            // 実行
+            const result = await boundingBox.execute({visible: true});
+            
+            console.log('✅ テスト成功:', result);
+            
+            return {
+                success: true,
+                boundingBox: boundingBox,
+                element: testElement
+            };
+            
+        } catch (error) {
+            console.error('❌ テスト失敗:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+}
+
+// フォルダ内完結: グローバル公開
+if (typeof window !== 'undefined') {
+    window.PureBoundingBox = PureBoundingBox;
+    
+    // テスト関数もグローバルに
+    window.testBoundingBox = PureBoundingBox.test;
+}

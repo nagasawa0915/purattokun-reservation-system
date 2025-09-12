@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP → StableSpineRenderer 確実動作テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .step {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #45a049;
+        }
+        
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+        
+        .status.info {
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196F3;
+        }
+        
+        .spine-canvas {
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            background: #000;
+            display: block;
+            margin: 20px auto;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .log-info { background: rgba(33, 150, 243, 0.2); }
+        .log-success { background: rgba(76, 175, 80, 0.2); }
+        .log-error { background: rgba(244, 67, 54, 0.2); }
+        .log-warning { background: rgba(255, 193, 7, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 HTTP → StableSpineRenderer 確実動作テスト</h1>
+        
+        <!-- Step 1: HTTPファイル確認 -->
+        <div class="step">
+            <h2>📁 Step 1: HTTPファイル確認</h2>
+            <p>サーバー上のnezumiファイルが正しく配信されているか確認</p>
+            <button class="btn" onclick="checkHttpFiles()">🔍 HTTPファイル確認</button>
+            <div id="step1-status"></div>
+        </div>
+
+        <!-- Step 2: StableSpineRenderer初期化 -->
+        <div class="step">
+            <h2>🎯 Step 2: StableSpineRenderer初期化</h2>
+            <p>HTTPパスを使ってStableSpineRendererで確実に読み込み</p>
+            <button class="btn" onclick="testStableSpineRenderer()" id="testBtn" disabled>🚀 StableSpineRenderer テスト</button>
+            <div id="step2-status"></div>
+            
+            <!-- Canvas表示エリア -->
+            <canvas id="spineCanvas" class="spine-canvas" width="800" height="600"></canvas>
+        </div>
+
+        <!-- ログ表示 -->
+        <div class="step">
+            <h2>📋 実行ログ</h2>
+            <button class="btn" onclick="clearLogs()" style="background: #718096;">🗑️ ログクリア</button>
+            <div class="log-container" id="logContainer"></div>
+        </div>
+    </div>
+
+    <!-- 必要なライブラリ読み込み -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    <script src="micromodules/spine-renderer/StableSpineRenderer.js"></script>
+
+    <script>
+        // グローバル変数
+        let httpFilesChecked = false;
+        let spineRenderer = null;
+
+        // nezumiファイルのHTTPパス
+        const HTTP_PATHS = {
+            atlas: '/assets/spine/characters/nezumi/nezumi.atlas',
+            json: '/assets/spine/characters/nezumi/nezumi.json', 
+            texture: '/assets/spine/characters/nezumi/nezumi.png'
+        };
+
+        // ログ関数
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // ステータス設定関数
+        function setStatus(stepId, message, type) {
+            const statusDiv = document.getElementById(`${stepId}-status`);
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        // ログクリア
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            log('ログをクリアしました', 'info');
+        }
+
+        // HTTPファイル確認
+        async function checkHttpFiles() {
+            try {
+                log('🔍 HTTPファイル確認開始...', 'info');
+                setStatus('step1', '⏳ HTTPファイル確認中...', 'info');
+
+                const results = {};
+                
+                for (const [type, url] of Object.entries(HTTP_PATHS)) {
+                    log(`📡 ${type}ファイル確認: ${url}`, 'info');
+                    
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const size = response.headers.get('content-length') || 'unknown';
+                        results[type] = { status: 'OK', size: size };
+                        log(`✅ ${type}: ${response.status} (${size}bytes)`, 'success');
+                    } else {
+                        results[type] = { status: 'ERROR', size: 0 };
+                        log(`❌ ${type}: ${response.status} ${response.statusText}`, 'error');
+                    }
+                }
+
+                // 結果確認
+                const allOK = Object.values(results).every(result => result.status === 'OK');
+                
+                if (allOK) {
+                    setStatus('step1', '✅ 全HTTPファイル確認完了 - StableSpineRendererテスト準備OK', 'success');
+                    document.getElementById('testBtn').disabled = false;
+                    httpFilesChecked = true;
+                    log('🎉 HTTPファイル確認成功 - Step 2を実行可能', 'success');
+                } else {
+                    setStatus('step1', '❌ 一部HTTPファイルのアクセスに失敗', 'error');
+                    log('❌ HTTPファイル確認失敗 - サーバー設定を確認してください', 'error');
+                }
+
+            } catch (error) {
+                log(`❌ HTTPファイル確認エラー: ${error.message}`, 'error');
+                setStatus('step1', `❌ エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // StableSpineRenderer テスト
+        async function testStableSpineRenderer() {
+            try {
+                if (!httpFilesChecked) {
+                    throw new Error('先にHTTPファイル確認を実行してください');
+                }
+
+                log('🚀 StableSpineRenderer テスト開始...', 'info');
+                setStatus('step2', '⏳ StableSpineRenderer初期化中...', 'info');
+
+                // Canvas準備
+                const canvas = document.getElementById('spineCanvas');
+                canvas.width = 800;
+                canvas.height = 600;
+
+                log('📦 StableSpineRenderer初期化中...', 'info');
+
+                // StableSpineRenderer初期化（マニュアル通り）
+                spineRenderer = StableSpineRenderer.createForCharacter('nezumi', canvas);
+
+                log('✅ StableSpineRenderer作成完了', 'success');
+                
+                // 初期化（マニュアル通り）
+                log('📋 初期化中...', 'info');
+                await spineRenderer.initialize();
+                log('✅ 初期化完了', 'success');
+
+                // レンダリング開始
+                log('🎬 レンダリング開始...', 'info');
+                spineRenderer.startRendering();
+
+                // アニメーション一覧取得
+                const animations = spineRenderer.getAvailableAnimations();
+                log(`🎭 利用可能アニメーション: ${animations.join(', ')}`, 'info');
+
+                // nezumi用のアニメーション再生（マニュアル通り）
+                const nezumiAnimation = 'search';  // nezumi専用アニメーション
+                const result = spineRenderer.playAnimation(nezumiAnimation, true);  // ループ再生
+                if (result) {
+                    log(`▶️ nezumi専用アニメーション再生開始: ${nezumiAnimation}`, 'success');
+                } else {
+                    log(`❌ nezumi専用アニメーション再生失敗: ${nezumiAnimation}`, 'error');
+                    
+                    // フォールバック: 利用可能なアニメーション一覧表示
+                    if (animations.length > 0) {
+                        log(`💡 利用可能アニメーション: ${animations.join(', ')}`, 'info');
+                        const fallbackResult = spineRenderer.playAnimation(animations[0], true);
+                        log(`🔄 フォールバックアニメーション: ${animations[0]} ${fallbackResult ? '成功' : '失敗'}`, fallbackResult ? 'success' : 'error');
+                    }
+                }
+
+                setStatus('step2', '✅ StableSpineRenderer テスト完了 - キャラクター表示中', 'success');
+                log('🎉 HTTP → StableSpineRenderer テスト成功！', 'success');
+
+            } catch (error) {
+                log(`❌ StableSpineRenderer テストエラー: ${error.message}`, 'error');
+                console.error('StableSpineRenderer test full error:', error);
+                setStatus('step2', `❌ エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // ページ読み込み完了時
+        window.addEventListener('load', () => {
+            log('🌟 HTTP → StableSpineRenderer テストページ準備完了', 'info');
+            log('📁 Step 1: HTTPファイル確認を実行してください', 'info');
+        });
+    </script>
+</body>
+</html>

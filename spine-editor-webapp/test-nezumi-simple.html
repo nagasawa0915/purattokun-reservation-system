@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nezumi - シンプル動作確認</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        #spine-canvas {
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            background-color: white;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .control-panel {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .status.info {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status.success {
+            background-color: #e8f5e8;
+            color: #4caf50;
+        }
+        
+        .status.error {
+            background-color: #ffebee;
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐭 Nezumi - シンプル動作確認</h1>
+    
+    <!-- Canvas -->
+    <canvas id="spine-canvas" width="400" height="400"></canvas>
+    
+    <!-- コントロールパネル -->
+    <div class="control-panel">
+        <button onclick="initializeRenderer()" id="init-btn">📦 nezumi初期化</button>
+        <button onclick="stopRenderer()" disabled id="stop-btn">⏹️ 停止</button>
+    </div>
+    
+    <!-- アニメーションボタン -->
+    <div class="control-panel">
+        <button onclick="playAnimation('search')" disabled id="anim-search">🔍 サーチ (search)</button>
+        <button onclick="playAnimation('kettei')" disabled id="anim-kettei">✅ 決定 (kettei)</button>
+    </div>
+    
+    <!-- ステータス表示 -->
+    <div id="status" class="status">📋 準備完了 - 'nezumi初期化'ボタンを押してください</div>
+    
+    <!-- マニュアル通りのスクリプト読み込み -->
+    <script src="https://unpkg.com/@esotericsoftware/spine-webgl@4.1.24/dist/iife/spine-webgl.js"></script>
+    <script src="micromodules/spine-renderer/StableSpineRenderer.js"></script>
+    
+    <script>
+        let renderer = null;
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function setAnimationButtonsEnabled(enabled) {
+            const buttons = ['anim-search', 'anim-kettei'];
+            buttons.forEach(id => {
+                document.getElementById(id).disabled = !enabled;
+            });
+        }
+        
+        async function initializeRenderer() {
+            try {
+                updateStatus('🔄 nezumi初期化中...', 'info');
+                
+                // ボタン無効化
+                document.getElementById('init-btn').disabled = true;
+                
+                // マニュアル通りの1行作成 + 初期化（nezumi用）
+                renderer = StableSpineRenderer.createForCharacter('nezumi');
+                await renderer.initialize();
+                
+                updateStatus('✅ nezumi初期化完了！アニメーションボタンで動作確認してください', 'success');
+                
+                // ボタン有効化
+                document.getElementById('stop-btn').disabled = false;
+                setAnimationButtonsEnabled(true);
+                
+                // nezumi用の自動アニメーション再生
+                renderer.playAnimation('search', true);  // ループ再生
+                updateStatus('✅ nezumi初期化完了！searchアニメーション再生中', 'success');
+                
+            } catch (error) {
+                console.error('Nezumi initialization error:', error);
+                updateStatus(`❌ 初期化エラー: ${error.message}`, 'error');
+                
+                // エラー時はボタンを再有効化
+                document.getElementById('init-btn').disabled = false;
+            }
+        }
+        
+        function playAnimation(animationName) {
+            if (!renderer) {
+                updateStatus('❌ エラー: 先に初期化してください', 'error');
+                return;
+            }
+            
+            try {
+                const success = renderer.playAnimation(animationName, true);  // ループ再生
+                if (success) {
+                    updateStatus(`▶️ ${animationName} アニメーション再生中`, 'success');
+                } else {
+                    updateStatus(`❌ アニメーション再生失敗: ${animationName}`, 'error');
+                }
+            } catch (error) {
+                console.error('Animation play error:', error);
+                updateStatus(`❌ アニメーションエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        function stopRenderer() {
+            if (renderer && renderer.dispose) {
+                renderer.dispose();
+                renderer = null;
+                updateStatus('⏹️ レンダラーを停止しました', 'info');
+                
+                // ボタン状態をリセット
+                document.getElementById('init-btn').disabled = false;
+                document.getElementById('stop-btn').disabled = true;
+                setAnimationButtonsEnabled(false);
+            }
+        }
+        
+        // ページ読み込み完了時
+        window.addEventListener('load', () => {
+            updateStatus('🌟 nezumiシンプルテストページ準備完了', 'info');
+        });
+        
+        // エラーハンドリング
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            updateStatus(`❌ システムエラー: ${event.error?.message || 'Unknown error'}`, 'error');
+        });
+    </script>
+</body>
+</html>

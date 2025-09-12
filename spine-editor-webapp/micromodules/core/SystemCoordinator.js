@@ -4,7 +4,7 @@
  */
 import { PanelManager } from './PanelManager.js';
 import { ResizeController } from '../ui/ResizeController.js';
-import { NewPanelSwapController } from '../ui/NewPanelSwapController.js';
+import { UltraSimplePanelSwap } from '../ui/UltraSimplePanelSwap.js';
 import { LayoutManager } from '../ui/LayoutManager.js';
 import { DebugManager } from '../debug/DebugManager.js';
 import { HomepageIntegrationController } from '../integration/HomepageIntegrationController.js';
@@ -68,11 +68,41 @@ export class SystemCoordinator {
                 this.debugManager.addDebugMessage(`パネル登録完了: ${panelCount}個`, 'info');
             });
 
-            // Phase 3: パネル入れ替えシステム初期化（高度版）
-            await this.executePhase('panelswap-init', () => {
-                this.panelSwapController = new NewPanelSwapController(this.panelManager, this.layoutManager);
+            // Phase 3: パネル入れ替えシステム初期化（ModularPanelSystem対応版）
+            await this.executePhase('panelswap-init', async () => {
+                // localStorage設定でModularPanelSystemかUltraSimplePanelSwapを選択
+                const useModularPanels = localStorage.getItem('spine-editor-use-modular-panels') === 'true';
+                
+                if (useModularPanels) {
+                    // ModularPanelSystemの動的読み込み完了を待機
+                    let attempts = 0;
+                    while (typeof window.ModularPanelSystem === 'undefined' && attempts < 50) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        attempts++;
+                    }
+                    
+                    if (typeof window.ModularPanelSystem !== 'undefined') {
+                        this.panelSwapController = new window.ModularPanelSystem();
+                        this.debugManager.addDebugMessage('ModularPanelSystem初期化完了', 'info');
+                        
+                        // UltraSimplePanelSwapのボタンを削除
+                        const existingButtons = document.getElementById('ultra-simple-swap-buttons');
+                        if (existingButtons) {
+                            existingButtons.remove();
+                            console.log('✅ UltraSimplePanelSwapボタン削除完了');
+                        }
+                    } else {
+                        console.warn('⚠️ ModularPanelSystem読み込み失敗 - UltraSimplePanelSwapで継続');
+                        this.panelSwapController = new UltraSimplePanelSwap();
+                        this.debugManager.addDebugMessage('UltraSimplePanelSwap初期化完了（フォールバック）', 'info');
+                    }
+                } else {
+                    this.panelSwapController = new UltraSimplePanelSwap();
+                    this.debugManager.addDebugMessage('UltraSimplePanelSwap初期化完了（超シンプル版）', 'info');
+                }
+                
                 const initCount = this.panelSwapController.initialize();
-                this.debugManager.addDebugMessage(`パネル入れ替え機能初期化完了: ${initCount}個（高度版）`, 'info');
+                return initCount;
             });
 
             // Phase 4: リサイズシステム初期化
@@ -168,26 +198,17 @@ export class SystemCoordinator {
      * リサイズ・D&D排他制御
      */
     setupResizeDragDropMutex() {
-        // リサイズ開始時はパネル入れ替えD&D無効
+        // シンプルな競合制御：リサイズとパネル入れ替えの基本的な分離
         document.addEventListener('mousedown', (event) => {
             if (event.target.classList.contains('resize-handle')) {
-                // 新しいパネル入れ替えコントローラーのドラッグをキャンセル
-                this.panelSwapController?.cancelDrag();
+                console.log('🔧 リサイズ開始: パネル入れ替えは自動的に無効');
             }
         });
 
-        // パネル入れ替えドラッグ開始時はLayoutManager無効
-        document.addEventListener('panelDragStart', (event) => {
-            if (this.layoutManager) {
-                console.log('🚨 パネルドラッグ開始: LayoutManager一時無効');
-            }
-        });
-
-        // リサイズ終了時は通常動作復帰
-        document.addEventListener('mouseup', () => {
-            if (!this.resizeController.isDragging) {
-                // パネル入れ替えシステムは常に有効（NewPanelSwapControllerの仕様）
-            }
+        // パネル入れ替え完了イベント監視
+        document.addEventListener('panelSwapped', (event) => {
+            console.log('🔄 パネル入れ替え完了:', event.detail.method);
+            this.debugManager?.addDebugMessage('パネル入れ替え完了', 'info');
         });
     }
 

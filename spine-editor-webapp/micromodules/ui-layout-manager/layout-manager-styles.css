@@ -1,0 +1,499 @@
+/* ===== Layout Manager Styles ===== */
+
+/* レイアウト管理コントロール */
+.layout-controls {
+    position: relative;
+    margin-right: 12px;
+}
+
+.layout-dropdown {
+    position: relative;
+}
+
+.btn-layout-menu {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 120px;
+    justify-content: space-between;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.btn-layout-menu:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-light);
+}
+
+.btn-layout-menu .layout-name {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80px;
+}
+
+.btn-layout-menu .dropdown-arrow {
+    font-size: 10px;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.btn-layout-menu:hover .dropdown-arrow {
+    transform: translateY(1px);
+}
+
+/* レイアウトメニュー */
+.layout-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 280px;
+    max-width: 320px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    padding: 8px 0;
+    margin-top: 2px;
+}
+
+.menu-section {
+    margin-bottom: 8px;
+}
+
+.menu-section:last-child {
+    margin-bottom: 0;
+}
+
+.menu-title {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 4px 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 4px;
+}
+
+.menu-item {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+    font-size: var(--font-size-sm);
+    position: relative;
+}
+
+.menu-item:hover {
+    background: var(--bg-hover);
+}
+
+.menu-item:active {
+    background: var(--bg-selected);
+}
+
+.menu-item.active {
+    background: var(--accent-blue);
+    color: #ffffff;
+}
+
+.menu-item.active .layout-desc {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.menu-item .icon {
+    width: 16px;
+    text-align: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.layout-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.layout-info .layout-name {
+    font-weight: 500;
+    font-size: var(--font-size-sm);
+    color: inherit;
+    margin-bottom: 2px;
+}
+
+.layout-info .layout-desc {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* プリセット・カスタムレイアウト項目 */
+.preset-item,
+.custom-item {
+    padding: 10px 12px;
+}
+
+.custom-item {
+    position: relative;
+}
+
+.custom-item .delete-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.custom-item:hover .delete-btn {
+    display: flex;
+}
+
+.custom-item .delete-btn:hover {
+    background: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+    color: #000000;
+}
+
+/* レイアウト保存ダイアログ */
+.layout-save-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+}
+
+.dialog-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.dialog-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    width: 100%;
+    max-width: 400px;
+    animation: dialogSlideIn 0.3s ease;
+}
+
+@keyframes dialogSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dialog-header h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.dialog-close {
+    width: 24px;
+    height: 24px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.dialog-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.dialog-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+    max-height: 120px;
+}
+
+.dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.dialog-footer .btn {
+    min-width: 80px;
+    justify-content: center;
+}
+
+.btn-cancel {
+    background: var(--bg-hover);
+    border-color: var(--border-color);
+}
+
+.btn-cancel:hover {
+    background: var(--bg-selected);
+}
+
+.btn-save {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: #ffffff;
+}
+
+.btn-save:hover {
+    background: #005a9e;
+    border-color: #005a9e;
+}
+
+/* メニュー項目アイコン色分け */
+.menu-item .icon {
+    opacity: 0.8;
+}
+
+.preset-item .icon {
+    filter: hue-rotate(0deg);
+}
+
+.custom-item .icon {
+    color: var(--accent-cyan);
+}
+
+.save-layout .icon {
+    color: var(--accent-green);
+}
+
+.reset-layout .icon {
+    color: var(--accent-yellow);
+}
+
+.export-layouts .icon,
+.import-layouts .icon {
+    color: var(--accent-blue);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .layout-menu {
+        min-width: 260px;
+        max-width: 300px;
+    }
+    
+    .btn-layout-menu {
+        min-width: 100px;
+    }
+    
+    .btn-layout-menu .layout-name {
+        max-width: 60px;
+    }
+    
+    .dialog-content {
+        margin: 0 16px;
+        max-width: none;
+    }
+    
+    .dialog-body {
+        padding: 16px;
+    }
+    
+    .dialog-footer {
+        padding: 12px 16px;
+    }
+}
+
+/* アニメーション効果 */
+.layout-menu {
+    animation: menuFadeIn 0.2s ease;
+}
+
+@keyframes menuFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.menu-item {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 状態インジケーター */
+.menu-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent-cyan);
+    border-radius: 0 2px 2px 0;
+}
+
+/* ホバー効果の強化 */
+.menu-item:hover {
+    transform: translateX(2px);
+    box-shadow: inset 4px 0 0 rgba(0, 212, 255, 0.3);
+}
+
+.menu-item:active {
+    transform: translateX(0);
+}
+
+/* ツールチップ風効果 */
+.layout-menu::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 16px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid var(--bg-secondary);
+}
+
+/* ダークテーマ強化 */
+.layout-menu {
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dialog-overlay {
+    backdrop-filter: blur(4px);
+}
+
+.dialog-content {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ===== リサイズハンドル強化スタイル ===== */
+.resize-handle {
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.resize-handle:hover {
+    background-color: var(--accent-blue) !important;
+    box-shadow: 0 0 8px rgba(0, 122, 204, 0.5);
+}
+
+.resize-handle.dragging {
+    background-color: var(--accent-cyan) !important;
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.8);
+    z-index: 200;
+}
+
+/* ドラッグ中の全体カーソル */
+.col-resizing {
+    cursor: col-resize !important;
+}
+
+.col-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+/* パフォーマンス最適化 */
+.resize-handle {
+    will-change: transform, background-color;
+}
+
+.dragging .resize-handle {
+    will-change: auto;
+}

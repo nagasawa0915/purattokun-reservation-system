@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Generator - 基本使用例</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .output { background: #f5f5f5; padding: 10px; border-radius: 3px; font-family: monospace; white-space: pre-wrap; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Character Generator マイクロモジュール - 基本使用例</h1>
+        
+        <div class="section">
+            <h2>📋 モジュール読み込み状況</h2>
+            <div id="loadStatus">読み込み中...</div>
+        </div>
+
+        <div class="section">
+            <h2>🎮 新規キャラクター生成テスト</h2>
+            <button onclick="testCharacterGeneration()">キャラクター生成実行</button>
+            <div id="generationOutput" class="output"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔍 既存キャラクター検出テスト</h2>
+            <button onclick="testCharacterDetection()">既存キャラクター検出実行</button>
+            <div id="detectionOutput" class="output"></div>
+        </div>
+
+        <div class="section">
+            <h2>🧪 単独テスト</h2>
+            <button onclick="runStandaloneTest()">単独テスト実行</button>
+            <div id="testOutput" class="output"></div>
+        </div>
+
+        <div class="section">
+            <h2>🧹 クリーンアップテスト</h2>
+            <button onclick="testCleanup()">クリーンアップ実行</button>
+            <div id="cleanupOutput" class="output"></div>
+        </div>
+
+        <!-- テスト用のモックSpineキャラクター要素 -->
+        <div style="display: none;">
+            <canvas id="purattokun-canvas" class="spine-canvas"></canvas>
+            <canvas id="nezumi-canvas" class="character-canvas"></canvas>
+            <canvas id="test-spine-character"></canvas>
+        </div>
+    </div>
+
+    <!-- Character Generator モジュール読み込み -->
+    <script src="../character-generator.js"></script>
+
+    <script>
+        let generator = null;
+
+        // 初期化チェック
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadStatusEl = document.getElementById('loadStatus');
+            
+            if (typeof CharacterGenerator !== 'undefined') {
+                loadStatusEl.innerHTML = '<span class="success">✅ Character Generator モジュール読み込み成功</span>';
+                generator = new CharacterGenerator();
+            } else {
+                loadStatusEl.innerHTML = '<span class="error">❌ Character Generator モジュール読み込み失敗</span>';
+            }
+        });
+
+        // 新規キャラクター生成テスト
+        function testCharacterGeneration() {
+            const outputEl = document.getElementById('generationOutput');
+            
+            if (!generator) {
+                outputEl.textContent = 'エラー: Character Generator が初期化されていません';
+                return;
+            }
+
+            try {
+                const result = generator.generate({
+                    characterType: "hero",
+                    count: 3,
+                    namePrefix: "demo",
+                    spineFilePath: "assets/demo-hero.json"
+                });
+
+                outputEl.textContent = `✅ 生成成功 (${result.length}個):\n\n` + JSON.stringify(result, null, 2);
+            } catch (error) {
+                outputEl.textContent = `❌ 生成エラー: ${error.message}`;
+            }
+        }
+
+        // 既存キャラクター検出テスト
+        function testCharacterDetection() {
+            const outputEl = document.getElementById('detectionOutput');
+            
+            if (!generator) {
+                outputEl.textContent = 'エラー: Character Generator が初期化されていません';
+                return;
+            }
+
+            try {
+                const result = generator.detectExistingCharacters();
+                outputEl.textContent = `✅ 検出成功 (${result.length}個):\n\n` + JSON.stringify(result, null, 2);
+            } catch (error) {
+                outputEl.textContent = `❌ 検出エラー: ${error.message}`;
+            }
+        }
+
+        // 単独テスト実行
+        function runStandaloneTest() {
+            const outputEl = document.getElementById('testOutput');
+            
+            try {
+                const testResult = CharacterGenerator.test();
+                outputEl.textContent = testResult ? 
+                    '✅ 単独テスト成功: すべてのテストケースが正常に動作しました' :
+                    '❌ 単独テスト失敗: 一部のテストケースで問題が発生しました';
+            } catch (error) {
+                outputEl.textContent = `❌ テストエラー: ${error.message}`;
+            }
+        }
+
+        // クリーンアップテスト
+        function testCleanup() {
+            const outputEl = document.getElementById('cleanupOutput');
+            
+            if (!generator) {
+                outputEl.textContent = 'エラー: Character Generator が初期化されていません';
+                return;
+            }
+
+            try {
+                // クリーンアップ前の状態
+                const stateBefore = generator.getState();
+                
+                // クリーンアップ実行
+                generator.cleanup();
+                
+                // クリーンアップ後の状態
+                const stateAfter = generator.getState();
+                
+                outputEl.textContent = `✅ クリーンアップ完了:\n\n` +
+                    `クリーンアップ前: ${JSON.stringify(stateBefore, null, 2)}\n\n` +
+                    `クリーンアップ後: ${JSON.stringify(stateAfter, null, 2)}`;
+            } catch (error) {
+                outputEl.textContent = `❌ クリーンアップエラー: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
